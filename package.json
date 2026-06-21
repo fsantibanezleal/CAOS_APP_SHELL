@@ -1,13 +1,20 @@
 {
   "name": "@fasl-work/caos-app-shell",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Shared web-app shell + content primitives + design system for the CAOS / Faena public apps (ADR-0016).",
   "license": "MIT",
   "author": "Felipe Santibáñez-Leal",
-  "repository": { "type": "git", "url": "git+https://github.com/fsantibanezleal/CAOS_APP_SHELL.git" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fsantibanezleal/CAOS_APP_SHELL.git"
+  },
   "type": "module",
-  "publishConfig": { "access": "public" },
-  "sideEffects": ["*.css"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": [
+    "*.css"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -15,7 +22,10 @@
     },
     "./styles.css": "./styles.css"
   },
-  "files": ["dist", "styles.css"],
+  "files": [
+    "dist",
+    "styles.css"
+  ],
   "scripts": {
     "build": "tsup",
     "prepublishOnly": "npm run build"

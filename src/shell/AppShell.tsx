@@ -1,10 +1,11 @@
-import type { ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Boxes, Briefcase, Github, Globe } from 'lucide-react';
+import { Boxes, Briefcase, Github, Globe, Info } from 'lucide-react';
 import { useShellLang } from '../lib/lang';
 import { chrome } from '../lib/chrome';
 import { ThemeToggle } from './ThemeToggle';
 import { LanguageToggle } from './LanguageToggle';
+import { type ArchitectureConfig, ArchitectureModal } from './ArchitectureModal';
 
 export interface ShellRoute {
   path: string;
@@ -21,6 +22,8 @@ export interface ShellConfig {
   links: { github: string; personal?: string; portfolio?: string };
   /** Human version string (X.XX.XXX) shown in the footer. */
   version: string;
+  /** In-app Architecture / "How it works" modal (ADR-0058). When present, an ⓘ button appears in the header. */
+  architecture?: ArchitectureConfig;
 }
 
 const PERSONAL = 'https://fsantibanezleal.github.io';
@@ -34,6 +37,8 @@ export function AppShell({ config, children }: { config: ShellConfig; children: 
   const routes = config.routes ?? [];
   const personal = config.links.personal ?? PERSONAL;
   const portfolio = config.links.portfolio ?? PORTFOLIO;
+  const [archOpen, setArchOpen] = useState(false);
+  const archLabel = lang === 'es' ? 'Arquitectura / Cómo funciona' : 'Architecture / How it works';
 
   return (
     <div className="app-shell">
@@ -69,12 +74,21 @@ export function AppShell({ config, children }: { config: ShellConfig; children: 
             <a className="icon-btn" href={portfolio} target="_blank" rel="noreferrer noopener" aria-label={c.portfolio} title={c.portfolio}>
               <Briefcase size={18} aria-hidden="true" />
             </a>
+            {config.architecture && (
+              <button className="icon-btn" type="button" onClick={() => setArchOpen(true)} aria-label={archLabel} title={archLabel}>
+                <Info size={18} aria-hidden="true" />
+              </button>
+            )}
             <span className="header-sep" aria-hidden="true" />
             <LanguageToggle />
             <ThemeToggle />
           </div>
         </div>
       </header>
+
+      {config.architecture && archOpen && (
+        <ArchitectureModal config={config.architecture} onClose={() => setArchOpen(false)} />
+      )}
 
       <main className="page">{children}</main>
 
