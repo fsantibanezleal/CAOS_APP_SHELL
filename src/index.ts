@@ -4,6 +4,8 @@
 
 export { AppShell } from './shell/AppShell';
 export type { ShellConfig, ShellRoute } from './shell/AppShell';
+export { ArchitectureModal } from './shell/ArchitectureModal';
+export type { ArchitectureConfig, ArchTab } from './shell/ArchitectureModal';
 export { ThemeToggle } from './shell/ThemeToggle';
 export { LanguageToggle } from './shell/LanguageToggle';
 
