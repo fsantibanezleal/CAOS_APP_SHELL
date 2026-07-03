@@ -1,5 +1,8 @@
 # @fasl-work/caos-app-shell
 
+[![License](https://img.shields.io/github/license/fsantibanezleal/CAOS_APP_SHELL)](LICENSE)
+[![Version](https://img.shields.io/github/v/tag/fsantibanezleal/CAOS_APP_SHELL?label=version&sort=semver)](https://github.com/fsantibanezleal/CAOS_APP_SHELL/tags)
+
 The shared **web-app shell + content primitives + design system** for the CAOS / Faena public apps
 (implements [ADR-0016](https://github.com/fsantibanezleal)). Define the header, footer, theme, language
 toggle and content primitives **once** here; every app consumes them so the chrome is identical and a
