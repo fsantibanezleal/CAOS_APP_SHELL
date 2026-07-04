@@ -19,6 +19,19 @@ export type { PausedVizController, UsePausedVizOptions } from './lib/usePausedVi
 export { createVizLoop } from './lib/vizLoop';
 export type { VizFrame, VizLoop, VizLoopOptions, VizLoopDeps } from './lib/vizLoop';
 
+export { CaseSelector } from './case/CaseSelector';
+export type { CaseSelectorProps, CaseSelectorText } from './case/CaseSelector';
+export {
+  caseKind,
+  casesInSource,
+  caseTooltip,
+  groupByCategory,
+  readCaseParam,
+  sourcesPresent,
+  withCaseParam,
+} from './case/caseModel';
+export type { CaseDef, CaseGroup, CaseKind } from './case/caseModel';
+
 export { Tabs } from './content/Tabs';
 export type { TabDef } from './content/Tabs';
 export { SubTabs } from './content/SubTabs';

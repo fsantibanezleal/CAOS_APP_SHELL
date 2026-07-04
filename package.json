@@ -28,7 +28,7 @@
   ],
   "scripts": {
     "build": "tsup",
-    "test": "node --import tsx --test test/vizLoop.test.ts",
+    "test": "node --import tsx --test test/vizLoop.test.ts test/caseModel.test.ts",
     "prepublishOnly": "npm run build"
   },
   "peerDependencies": {
