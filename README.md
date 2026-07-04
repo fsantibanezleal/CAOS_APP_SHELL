@@ -52,11 +52,17 @@ const config: ShellConfig = {
 - **Hub case (Faena):** pass `routes: []` (or one) → the nav is hidden, header/footer identical.
 - **Deep pages:** compose with `Tabs`, `SubTabs`, `Equation`/`InlineMath`, `Callout`, `Figure`, and
   `CitationsProvider` + `Cite`/`Refs`/`ReferenceList`. Read the current language with `useShellLang()`.
+- **Case + source picking:** use `CaseSelector` for the interactive tool's source/case selection
+  (labelled groups, `Synthetic | Real | Uploaded` source control, locked-knobs explanation, divergence
+  badge, `?case=` deep-linking).
+- **Animated views:** drive every canvas/3D loop through `usePausedViz` (default paused, run-once,
+  halt on a hidden tab) — never call `requestAnimationFrame` directly.
 
 ## Exports
 
 `AppShell`, `ThemeToggle`, `LanguageToggle`, `useThemeStore`, `applyTheme`, `readTheme`, `useLangStore`,
-`useShellLang`, `Tabs`, `SubTabs`, `Callout`, `Equation`, `InlineMath`, `Figure`, `CitationsProvider`,
-`Cite`, `Refs`, `ReferenceList`, plus the `@fasl-work/caos-app-shell/styles.css` design system.
+`useShellLang`, `usePausedViz`, `createVizLoop`, `CaseSelector` (+ `caseModel` helpers), `Tabs`, `SubTabs`,
+`Callout`, `Equation`, `InlineMath`, `Figure`, `CitationsProvider`, `Cite`, `Refs`, `ReferenceList`, plus
+the `@fasl-work/caos-app-shell/styles.css` design system.
 
 MIT · part of the Faena mining-analytics hub.

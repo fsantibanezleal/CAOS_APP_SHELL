@@ -1,6 +1,6 @@
 {
   "name": "@fasl-work/caos-app-shell",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Shared web-app shell + content primitives + design system for the CAOS / Faena public apps (ADR-0016).",
   "license": "MIT",
   "author": "Felipe Santibáñez-Leal",
