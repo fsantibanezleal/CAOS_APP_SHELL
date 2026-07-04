@@ -28,6 +28,7 @@
   ],
   "scripts": {
     "build": "tsup",
+    "test": "node --import tsx --test test/vizLoop.test.ts",
     "prepublishOnly": "npm run build"
   },
   "peerDependencies": {
@@ -48,6 +49,7 @@
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.1.1",
     "tsup": "^8.3.5",
+    "tsx": "^4.23.0",
     "typescript": "^5.7.3",
     "zustand": "^5.0.2"
   }
