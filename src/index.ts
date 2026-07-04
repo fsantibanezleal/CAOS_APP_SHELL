@@ -14,6 +14,11 @@ export type { Theme } from './lib/theme';
 export { useLangStore, useShellLang } from './lib/lang';
 export type { Lang } from './lib/lang';
 
+export { usePausedViz } from './lib/usePausedViz';
+export type { PausedVizController, UsePausedVizOptions } from './lib/usePausedViz';
+export { createVizLoop } from './lib/vizLoop';
+export type { VizFrame, VizLoop, VizLoopOptions, VizLoopDeps } from './lib/vizLoop';
+
 export { Tabs } from './content/Tabs';
 export type { TabDef } from './content/Tabs';
 export { SubTabs } from './content/SubTabs';
