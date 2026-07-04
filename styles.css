@@ -219,3 +219,24 @@ code, kbd { font-family: var(--font-mono); }
 .banner.warn { border-left-color: var(--color-warn); color: var(--color-warn); }
 .banner.error { border-left-color: var(--color-bad); color: var(--color-bad); }
 .range { width: 100%; accent-color: var(--color-accent); }
+
+/* ── CaseSelector v2 (shared source + case picker) ── */
+.cs { display: flex; flex-direction: column; gap: 0.7rem; }
+.cs-source { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.cs-source-label { font-size: 0.78rem; font-weight: 600; color: var(--color-fg-subtle); text-transform: uppercase; letter-spacing: 0.03em; }
+.cs-source-tabs { display: inline-flex; gap: 0.35rem; flex-wrap: wrap; }
+.cs-locked { margin: 0; border-left-color: var(--color-accent); }
+.cs-group { display: flex; flex-direction: column; gap: 0.35rem; }
+.cs-group-label { font-size: 0.76rem; font-weight: 600; color: var(--color-fg-subtle); text-transform: uppercase; letter-spacing: 0.03em; }
+.cs-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.cs-chip { display: inline-flex; align-items: baseline; gap: 0.4rem; padding: 0.32rem 0.6rem; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-surface); color: var(--color-fg-subtle); font-size: 0.84rem; font-weight: 500; transition: color 0.15s, background-color 0.15s, border-color 0.15s; }
+.cs-chip:hover:not(:disabled) { color: var(--color-fg); background: var(--color-surface-2); }
+.cs-chip.on { color: var(--color-accent); background: var(--color-accent-soft); border-color: color-mix(in oklab, var(--color-accent) 40%, transparent); font-weight: 600; }
+.cs-chip:disabled { opacity: 0.45; cursor: default; }
+.cs-chip-id { font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.76rem; font-weight: 600; opacity: 0.85; }
+.cs-chip-name { }
+.cs-kind { font-size: 0.62rem; font-weight: 700; line-height: 1; padding: 0.12rem 0.28rem; border-radius: 4px; border: 1px solid var(--color-border); color: var(--color-fg-faint); background: var(--color-surface-2); align-self: center; }
+.cs-kind-real { color: var(--color-accent-2); border-color: color-mix(in oklab, var(--color-accent-2) 40%, transparent); }
+.cs-kind-uploaded { color: var(--color-warn); border-color: color-mix(in oklab, var(--color-warn) 40%, transparent); }
+.cs-modified { display: flex; align-items: center; gap: 0.5rem; }
+.cs-reset { border: none; background: transparent; color: var(--color-accent); font-size: 0.8rem; font-weight: 600; padding: 0.1rem 0.2rem; text-decoration: underline; text-underline-offset: 2px; }
