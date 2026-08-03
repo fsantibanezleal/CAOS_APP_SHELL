@@ -60,9 +60,20 @@ const config: ShellConfig = {
 
 ## Exports
 
-`AppShell`, `ThemeToggle`, `LanguageToggle`, `useThemeStore`, `applyTheme`, `readTheme`, `useLangStore`,
+`AppShell`, `WorkbenchShell`, `ThemeToggle`, `LanguageToggle`, `useThemeStore`, `applyTheme`, `readTheme`, `useLangStore`,
 `useShellLang`, `usePausedViz`, `createVizLoop`, `CaseSelector` (+ `caseModel` helpers), `Tabs`, `SubTabs`,
 `Callout`, `Equation`, `InlineMath`, `Figure`, `CitationsProvider`, `Cite`, `Refs`, `ReferenceList`, plus
 the `@fasl-work/caos-app-shell/styles.css` design system.
+
+### Authenticated workbenches
+
+`WorkbenchShell` is the shared frame for products whose authenticated UI needs a desktop sidebar and
+mobile bottom navigation. It renders typed routes and the main landmark while the product supplies its
+own stateful controls through `brand`, `sidebarFooter`, `headerLead`, `headerActions`, and `overlays`.
+Authentication, account policy, preference persistence, chat, and modal content remain product-owned.
+The component uses the stable core `NavLink` contract and supports `react-router` 6, 7, and 8.
+Browser applications on 6/7 install the matching `react-router-dom`, which supplies the core peer;
+Router 8 applications provide `react-router` directly. Do not mix different core and DOM majors in
+one application.
 
 MIT · part of the Faena mining-analytics hub.
