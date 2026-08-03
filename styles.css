@@ -25,7 +25,8 @@
   --color-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 16px rgba(0, 0, 0, 0.45);
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  --maxw: 1200px;
+  --maxw: 1200px;          /* reading width, for PROSE pages */
+  --maxw-wide: 100%;       /* instrument width, for workbench pages */
 }
 
 [data-theme="light"] {
@@ -69,6 +70,10 @@ code, kbd { font-family: var(--font-mono); }
 .container { width: 100%; max-width: var(--maxw); margin-inline: auto; padding-inline: 1.5rem; }
 .page { flex: 1 1 auto; width: 100%; }
 .page-body { width: 100%; max-width: var(--maxw); margin-inline: auto; padding: 2.25rem 1.5rem 3rem; }
+/* A WORKBENCH is not prose. Capping an instrument at a 1200px reading measure wastes every pixel beyond
+   it, which is why the App surfaces across the line render their visualization as a thumbnail on a wide
+   display. Prose pages keep the reading width; the App route opts into the full viewport. */
+.page-body.wide { max-width: var(--maxw-wide); padding-inline: 1.25rem; }
 .muted { color: var(--color-fg-subtle); }
 .faint { color: var(--color-fg-faint); }
 .mono { font-family: var(--font-mono); font-size: 0.9em; }
@@ -155,7 +160,18 @@ code, kbd { font-family: var(--font-mono); }
 .callout-body p:last-child { margin-bottom: 0; }
 
 /* ── Tabs ── */
-.tablist { display: flex; gap: 0.35rem; padding-bottom: 0.6rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--color-border); flex-wrap: wrap; }
+.tablist { display: flex; gap: 0.35rem; padding-bottom: 0.6rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--color-border); flex-wrap: nowrap; }
+/* SINGLE-LINE TAB BAR.
+   `flex-wrap: wrap` lets a 14-to-18 tab bar spill onto a second and third row, and every extra row is
+   vertical space taken from the instrument below it, permanently, on every render. A tab bar is
+   navigation chrome: it gets ONE row and scrolls horizontally when it does not fit.
+   Scrollbar is hidden but the row stays scrollable by wheel, trackpad, drag and keyboard. */
+.tablist { flex-wrap: nowrap !important; overflow-x: auto; overflow-y: hidden;
+  scrollbar-width: none; -ms-overflow-style: none; padding-bottom: 0.4rem; margin-bottom: 0.9rem;
+  scroll-behavior: smooth; }
+.tablist::-webkit-scrollbar { display: none; }
+.tablist .tab, .tablist button { flex: 0 0 auto; white-space: nowrap; }
+
 .tab { padding: 0.5rem 1rem; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--color-fg-subtle); font-size: 0.92rem; font-weight: 550; transition: color 0.15s, background-color 0.15s, border-color 0.15s; }
 .tab:hover { color: var(--color-fg); background: var(--color-surface-2); }
 .tab.active { color: var(--color-accent); background: var(--color-accent-soft); border-color: color-mix(in oklab, var(--color-accent) 35%, transparent); font-weight: 650; }
@@ -240,3 +256,48 @@ code, kbd { font-family: var(--font-mono); }
 .cs-kind-uploaded { color: var(--color-warn); border-color: color-mix(in oklab, var(--color-warn) 40%, transparent); }
 .cs-modified { display: flex; align-items: center; gap: 0.5rem; }
 .cs-reset { border: none; background: transparent; color: var(--color-accent); font-size: 0.8rem; font-weight: 600; padding: 0.1rem 0.2rem; text-decoration: underline; text-underline-offset: 2px; }
+
+/* Authenticated workbench frame. Product styles may refine tokens and controls, but the package owns
+   the responsive navigation/layout contract and keeps route/content landmarks consistent. */
+.caos-workbench-shell { min-height: 100vh; display: grid; grid-template-columns: 238px minmax(0, 1fr); }
+.caos-workbench-sidebar { position: fixed; inset: 0 auto 0 0; z-index: 20; width: 238px; display: flex; flex-direction: column; padding: 1.25rem 0.875rem; border-right: 1px solid var(--color-border); background: var(--color-surface); }
+.caos-workbench-sidebar nav { display: grid; gap: 0.25rem; }
+.caos-workbench-sidebar nav a { display: flex; align-items: center; gap: 0.75rem; padding: 0.625rem 0.7rem; border: 1px solid transparent; border-radius: 0.7rem; color: var(--color-fg-subtle); font-size: 0.9rem; font-weight: 650; }
+.caos-workbench-sidebar nav a:hover { color: var(--color-fg); background: var(--color-surface-2); text-decoration: none; }
+.caos-workbench-sidebar nav a.active { color: var(--color-accent); border-color: color-mix(in oklab, var(--color-accent) 24%, transparent); background: var(--color-accent-soft); }
+.caos-workbench-main { grid-column: 2; min-width: 0; }
+.caos-workbench-header { position: sticky; top: 0; z-index: 15; min-height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0 2rem; border-bottom: 1px solid var(--color-border); background: color-mix(in oklab, var(--color-bg) 88%, transparent); backdrop-filter: blur(12px); }
+.caos-workbench-content { width: min(1540px, 100%); margin: 0 auto; padding: 2.25rem 2rem 4rem; }
+
+@media (max-width: 760px) {
+  .caos-workbench-shell { display: block; padding-bottom: 66px; }
+  .caos-workbench-sidebar { inset: auto 0 0; width: auto; height: 62px; display: block; border: 0; border-top: 1px solid var(--color-border); padding: 5px 8px; }
+  .caos-workbench-sidebar > :not(nav) { display: none; }
+  .caos-workbench-sidebar nav { grid-template-columns: repeat(var(--caos-workbench-route-count, 5), minmax(0, 1fr)); }
+  .caos-workbench-sidebar nav a { display: grid; justify-items: center; gap: 2px; overflow: hidden; padding: 5px; font-size: 0.7rem; text-overflow: ellipsis; white-space: nowrap; }
+  .caos-workbench-main { min-width: 0; }
+  .caos-workbench-header { min-height: 58px; padding: 0 1rem; }
+  .caos-workbench-content { padding: 1.5rem 1rem 2.5rem; }
+}
+
+/* CONTAINED LAYOUT. A `nowrap` tab bar sizes its container to its intrinsic width unless every
+   ancestor is allowed to shrink: a flex/grid item defaults to `min-width: auto`. Without this, making
+   the tab bar a single scrollable row pushes the whole page wider than the viewport and the user has to
+   drag sideways to reach the right edge. Measured on ChargeCascade: scrollWidth 1817 on a 1600 viewport. */
+html, body { overflow-x: hidden; }
+.page-body { max-width: 100%; }
+.tabs, .tabpanel { min-width: 0; max-width: 100%; }
+.tablist { min-width: 0; max-width: 100%; width: 100%; }
+
+/* NO MAGIC CHROME NUMBER. An app surface must not compute its height from a hardcoded guess at the
+   header and footer: the guess drifts the moment either changes, leaving either a dead gap above the
+   footer or a few pixels of scroll. Measured on ChargeCascade: guess 150px, real 175px (header 57 +
+   footer 70 + 48px body padding), so 25px of scroll and a 48px gap. Apps that fill the viewport add
+   `.app-shell.fixed` and let flex distribute the height. */
+.app-shell.fixed { height: 100dvh; min-height: 100dvh; overflow: hidden; }
+.app-shell.fixed > .page { flex: 1 1 auto; min-height: 0; display: flex; }
+.app-shell.fixed .page-body.wide { flex: 1 1 auto; min-height: 0; padding-top: 1rem; padding-bottom: 1rem; }
+
+/* A viewport-filling app must not carry the prose footer margin: it becomes dead space between the
+   content and the chrome. Measured on ChargeCascade as exactly 48px (3rem). */
+.app-shell.fixed .site-footer { margin-top: 0; }
