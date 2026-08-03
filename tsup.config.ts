@@ -9,5 +9,5 @@ export default defineConfig({
   clean: true,
   sourcemap: false,
   treeshake: true,
-  external: ['react', 'react-dom', 'react/jsx-runtime', 'react-router-dom', 'lucide-react', 'katex', 'zustand'],
+  external: ['react', 'react-dom', 'react/jsx-runtime', 'react-router', 'lucide-react', 'katex', 'zustand'],
 });

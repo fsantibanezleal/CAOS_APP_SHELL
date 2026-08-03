@@ -1,5 +1,5 @@
 import { type ReactNode, useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink } from 'react-router';
 import { Boxes, Briefcase, Github, Globe, Info } from 'lucide-react';
 import { useShellLang } from '../lib/lang';
 import { chrome } from '../lib/chrome';
