@@ -1,3 +1,20 @@
+## [0.05.000] - 2026-08-03
+
+### Added
+
+- `WorkbenchShell`, a typed authenticated-console frame with shared route rendering, desktop sidebar,
+  mobile bottom navigation and extension slots for product-owned brand, sidebar trust/actions, command
+  surface, account/chat controls, overlays and canonical content.
+- A server-rendered contract test proving route activation, slot preservation, the main-content
+  landmark and overlay placement without coupling the package to product state.
+
+### Changed
+
+- The shell now consumes the stable `react-router` core peer contract across major versions 6, 7 and
+  8. Browser applications can keep `react-router-dom` 6/7, while core-only Router 8 applications are
+  supported without a downgrade. The package is built/tested against 8.3.0 and retains `AppShell`.
+- Package, display version, lockfile, README and changelog now advance together for the npm release.
+
 ## [0.04.000] - 2026-07-28
 
 ### Added (the ADR-0071 UI floor, so every product inherits it instead of fixing it alone)
