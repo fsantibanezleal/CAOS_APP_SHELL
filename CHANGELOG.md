@@ -1,3 +1,47 @@
+## [0.05.000] - 2026-08-03
+
+### Added
+
+- `WorkbenchShell`, a typed authenticated-console frame with shared route rendering, desktop sidebar,
+  mobile bottom navigation and extension slots for product-owned brand, sidebar trust/actions, command
+  surface, account/chat controls, overlays and canonical content.
+- A server-rendered contract test proving route activation, slot preservation, the main-content
+  landmark and overlay placement without coupling the package to product state.
+
+### Changed
+
+- The shell now consumes the stable `react-router` core peer contract across major versions 6, 7 and
+  8. Browser applications can keep `react-router-dom` 6/7, while core-only Router 8 applications are
+  supported without a downgrade. The package is built/tested against 8.3.0 and retains `AppShell`.
+- Package, display version, lockfile, README and changelog now advance together for the npm release.
+
+## [0.04.000] - 2026-07-28
+
+### Added (the ADR-0071 UI floor, so every product inherits it instead of fixing it alone)
+- **`.page-body.wide`**: a workbench is not prose. App surfaces take the full viewport; the 1200px
+  reading measure (`--maxw`) stays for prose pages. Capping an instrument at a reading width discarded
+  400px on a 1600px display and over half of a 2560px one, which is why the visualization read as a
+  thumbnail across the whole product line.
+- **`.app-shell.fixed`**: an app surface sized by flex rather than by a hardcoded guess at the chrome.
+  Products were computing `calc(100dvh - 150px)` while real chrome measured 175px, leaving a few pixels
+  of scroll; the constant also has to be maintained whenever the header or footer changes.
+- **`.app-shell.fixed .site-footer { margin-top: 0 }`**: the prose footer margin (3rem) is dead space in
+  a viewport-filling app. It was exactly the 48px gap users saw above the footer.
+
+### Changed
+- **The tab bar is a single row.** `flex-wrap: wrap` let a 12-to-18 tab bar occupy two and three rows,
+  and every extra row is vertical space taken from the content permanently, on every render.
+- **Layout containment.** `html, body { overflow-x: hidden }` plus `min-width: 0` and `max-width: 100%`
+  on `.tabs`, `.tabpanel` and `.tablist`. A flex or grid item defaults to `min-width: auto` and will not
+  shrink below its content, so a single `nowrap` row silently sized the page to 1817px on a 1600px
+  viewport and the user had to drag sideways to reach the right edge.
+
+### Note for consumers
+A tab row that must scroll horizontally MUST NOT use `overflow-x` on the row itself if it hosts dropdown
+menus: in CSS a box cannot keep `overflow-y: visible` when the other axis is anything else, so the
+declared value computes to `auto` and the row clips its own menu. Either keep the row short enough not to
+scroll (group the tabs, per ADR-0071) or position the menu `fixed`.
+
 # Changelog
 
 All notable changes to this product. Format: `X.XX.XXX` (display, see the workspace `versioning.md`); stays `0.x` while pre-1.0. Tag every release.
