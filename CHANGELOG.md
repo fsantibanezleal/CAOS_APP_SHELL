@@ -1,3 +1,24 @@
+## [0.06.000] - 2026-08-23
+
+### Added
+
+- **Bilingual architecture diagrams (ADR-0058).** The ArchitectureModal panel now carries
+  `data-arch-lang`, and the stylesheet ships the three rules that act on it. A diagram tags each
+  translatable `<text>` twice at the same coordinates, `class="... l-en"` and `class="... l-es"`,
+  and exactly one is shown. Diagrams previously rendered English text inside a fully Spanish UI,
+  which was the last untranslated surface in an otherwise bilingual shell.
+
+  ONE file carries both languages on purpose. Two files would be two things to keep in step, and
+  the one not on screen is the one that goes stale. Anything language-neutral, a number, a file
+  name, an identifier, needs no pair.
+
+  Backwards compatible: a diagram with no `l-en`/`l-es` classes renders exactly as before.
+
+### Fixed
+
+- `npm test` listed its test files by hand, so a newly added test file silently never ran. It now
+  discovers `test/**/*.test.ts(x)`, which immediately picked up two tests that had been invisible.
+
 ## [0.05.000] - 2026-08-03
 
 ### Added
