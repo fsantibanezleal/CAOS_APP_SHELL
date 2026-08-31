@@ -301,3 +301,11 @@ html, body { overflow-x: hidden; }
 /* A viewport-filling app must not carry the prose footer margin: it becomes dead space between the
    content and the chrome. Measured on ChargeCascade as exactly 48px (3rem). */
 .app-shell.fixed .site-footer { margin-top: 0; }
+
+/* ADR-0058 diagram i18n. A hand-authored architecture SVG carries BOTH languages inside ONE file,
+   and the modal wrapper picks one. Two files would be two things to keep in step, and the one not
+   on screen is the one that goes stale. The rules are scoped to [data-arch-lang] so the short class
+   names cannot collide with an app's own styles. */
+[data-arch-lang] .l-es { display: none; }
+[data-arch-lang="es"] .l-en { display: none; }
+[data-arch-lang="es"] .l-es { display: inline; }

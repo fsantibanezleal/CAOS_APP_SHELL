@@ -14,7 +14,15 @@ export interface ArchTab {
   /** the explanation body (paragraphs separated by a blank line). */
   body_en: string;
   body_es: string;
-  /** an inline '<svg…>…</svg>' string OR a path under the app's public/ (fetched + inlined). */
+  /**
+   * an inline '<svg…>…</svg>' string OR a path under the app's public/ (fetched + inlined).
+   *
+   * ONE file carries BOTH languages (ADR-0058). Tag each translatable `<text>` twice at the same
+   * coordinates, `class="… l-en"` and `class="… l-es"`; the modal wrapper sets `data-arch-lang`
+   * and the shell stylesheet shows exactly one. Two files would be two things to keep in step, and
+   * the one that is not on screen is the one that goes stale. Anything language-neutral (a number,
+   * a file name, an identifier) needs no pair.
+   */
   svg: string;
 }
 
@@ -92,7 +100,9 @@ export function ArchitectureModal({ config, onClose }: { config: ArchitectureCon
           })}
         </div>
 
-        <div role="tabpanel" style={{ overflowY: 'auto', padding: '14px 16px 18px' }}>
+        {/* data-arch-lang lives on the panel, not on the diagram wrapper: the wrapper only exists
+            once the SVG has loaded, and the stylesheet needs a stable ancestor to key on. */}
+        <div role="tabpanel" data-arch-lang={es ? 'es' : 'en'} style={{ overflowY: 'auto', padding: '14px 16px 18px' }}>
           {body.map((p, i) => (
             <p key={i} style={{ color: 'var(--color-fg)', fontSize: 13, lineHeight: 1.65, margin: i === 0 ? '0 0 10px' : '10px 0' }}>{p}</p>
           ))}
