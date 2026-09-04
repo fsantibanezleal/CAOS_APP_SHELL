@@ -316,3 +316,7 @@ html, body { overflow-x: hidden; }
 [data-arch-lang] .l-es { display: none; }
 [data-arch-lang="es"] .l-en { display: none; }
 [data-arch-lang="es"] .l-es { display: inline; }
+
+/* The compact one-of-N case picker (ADR-0071 rule 7). Ten cases in four categories
+   cost a 308px chip block, 21% of a 2560x1440 viewport, and one row as a dropdown. */
+.cs-select { width: 100%; max-width: 460px; }

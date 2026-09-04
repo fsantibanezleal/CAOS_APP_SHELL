@@ -1,3 +1,15 @@
+## [0.06.002] - 2026-09-03
+
+### Added
+
+- **`CaseSelector layout="select"`** — the compact one-of-N picker ADR-0071 rule 7 asks for:
+  a native dropdown with one `optgroup` per category, preserving the category structure the
+  chip layout carries. The chip layout spends vertical space linearly in the number of cases,
+  and that space comes out of the instrument on every render. Measured on Porvenir at
+  2560x1440: ten cases in four categories occupied a 308px block, 21 percent of the viewport,
+  for a choice one control expresses. Default stays `chips`, so nothing changes for existing
+  consumers until they opt in.
+
 ## [0.06.001] - 2026-09-03
 
 ### Fixed

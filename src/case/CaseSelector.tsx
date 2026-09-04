@@ -72,6 +72,19 @@ export interface CaseSelectorProps {
   deepLink?: boolean | string;
   ariaLabel?: string;
   className?: string;
+
+  /**
+   * How the one-of-N choice is presented. Default 'chips' keeps the labelled chip
+   * blocks; 'select' renders a native dropdown with one optgroup per category.
+   *
+   * ADR-0071 rule 7 asks for the dropdown whenever the deck is a categorised
+   * one-of-N choice, because the chip layout spends vertical space linearly in the
+   * number of cases and that space is taken from the instrument on every render.
+   * Measured on Porvenir at 2560x1440: ten cases in four categories occupied a
+   * 308px block, 21% of the viewport, for a choice one control expresses. The
+   * category structure is preserved either way; only the height changes.
+   */
+  layout?: 'chips' | 'select';
 }
 
 /**
@@ -99,6 +112,7 @@ export function CaseSelector(props: CaseSelectorProps) {
     deepLink,
     ariaLabel,
     className,
+    layout = 'chips',
   } = props;
 
   const t = { ...TEXT[lang], ...text };
@@ -154,7 +168,26 @@ export function CaseSelector(props: CaseSelectorProps) {
         <p className="cs-locked banner">{lockedNote ?? t.lockedNote}</p>
       )}
 
-      {groups.map((g) => (
+      {layout === 'select' && (
+        <select
+          className="select cs-select"
+          aria-label={ariaLabel ?? 'Case selector'}
+          value={selectedId}
+          onChange={(e) => onSelect(e.target.value)}
+        >
+          {groups.map((g) => (
+            <optgroup key={g.category || '_'} label={g.category || ' '}>
+              {g.cases.map((c) => (
+                <option key={c.id} value={c.id} disabled={c.disabled} title={caseTooltip(c) || undefined}>
+                  {`${c.id} · ${c.name}`}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+      )}
+
+      {layout === 'chips' && groups.map((g) => (
         <div key={g.category || '_'} className="cs-group" role="group" aria-label={g.category || undefined}>
           {g.category && <span className="cs-group-label">{g.category}</span>}
           <div className="cs-chips">
