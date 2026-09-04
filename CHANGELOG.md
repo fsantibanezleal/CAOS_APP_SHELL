@@ -1,3 +1,25 @@
+## [0.06.001] - 2026-09-03
+
+### Fixed
+
+- **Every prose page in every product on this shell rendered full-bleed.** `styles.css` defined
+  `.page-body { max-width: var(--maxw) }`, the 1200px reading measure ADR-0017 s1.1 specifies, and
+  then 216 lines later a containment fix added a second unscoped `.page-body { max-width: 100% }`.
+  CSS takes the last one, so the cap was silently removed everywhere. Measured on Porvenir at
+  1600x900: the doc routes rendered 1600px wide instead of 1200px centered, so body text ran the
+  full width of the display.
+
+  The overriding rule was itself written to fix a real bug (a `nowrap` row sizing its whole column
+  and pushing the page wider than the viewport, ADR-0071 rule 3). Containment is about letting a box
+  SHRINK below its content, which is `min-width: 0`; capping it at 100% does nothing for that and
+  costs the measure. Changed to `min-width: 0`. `.page-body.wide` is more specific and still wins,
+  so workbench routes keep the full viewport.
+
+  Nothing could see this. The package built, the types were correct, and every consumer imported the
+  right class. `test/layout-primitives.test.ts` now asserts that the LAST declaration of a capped
+  property on each layout primitive is the intended one, so a later rule overriding a primitive fails
+  here instead of shipping to every app. Verified non-vacuous: re-adding the rule fails the test.
+
 ## [0.06.000] - 2026-08-23
 
 ### Added

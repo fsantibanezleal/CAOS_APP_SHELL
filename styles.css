@@ -285,7 +285,14 @@ code, kbd { font-family: var(--font-mono); }
    the tab bar a single scrollable row pushes the whole page wider than the viewport and the user has to
    drag sideways to reach the right edge. Measured on ChargeCascade: scrollWidth 1817 on a 1600 viewport. */
 html, body { overflow-x: hidden; }
-.page-body { max-width: 100%; }
+/* `min-width: 0`, NOT `max-width: 100%`. Containment is about letting a box SHRINK below its
+   content; capping it at 100% does nothing for that and, because this rule comes after the
+   `.page-body` definition above, it silently OVERRODE `max-width: var(--maxw)` and removed the
+   1200px reading cap from every prose page in every product on this shell. Measured on Porvenir at
+   1600x900: doc routes rendered 1600px wide instead of 1200px centered, so body text ran the full
+   width of the display, which is the opposite of what ADR-0017 s1.1 specifies. The wide workbench
+   opt-in is `.page-body.wide`; a prose page must keep the measure. */
+.page-body { min-width: 0; }
 .tabs, .tabpanel { min-width: 0; max-width: 100%; }
 .tablist { min-width: 0; max-width: 100%; width: 100%; }
 
