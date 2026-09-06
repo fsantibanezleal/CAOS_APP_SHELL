@@ -1,3 +1,61 @@
+## [0.06.003] - 2026-09-06
+
+### Added
+
+- **`ShellConfig.fixedRoutes` and `ShellConfig.fixed`** — the per-route opt-in to the contained
+  layout ADR-0071 rule 1 requires (the app surface IS the viewport; the one container that
+  owns long content scrolls, the document never does). `styles.css` has carried
+  `.app-shell.fixed` since the containment fix with the note "apps that fill the viewport add
+  it", and no app could: `AppShell` rendered a fixed class string. Measured on Porvenir before
+  this field existed: every tab of the App route scrolled the document by 200 to 770px at
+  1600x900, and the ADR gate could not see it because it never measured scrollHeight. A route
+  in `fixedRoutes` (exact for `/`, prefix for any other path) gets the class; `fixed: true`
+  contains every route of a single-surface app. Nothing changes for consumers that set neither.
+
+### Fixed
+
+- **`test/layout-primitives.test.ts` could not see a compound or descendant override.** It
+  inspected only blocks whose selector list contained exactly `.page-body`; appending
+  `.app-shell .page-body { max-width: 100%; margin-inline: 0 }` to the stylesheet removed the
+  reading cap and the centering from every product and all five tests passed. The test now
+  walks every rule whose subject carries the class, requires the plain rule to hold the
+  intended value, and refuses any competing declaration outside the documented `.wide`
+  opt-in; proven on that exact override (two failures) and clean on the shipped stylesheet.
+
+## [0.06.002] - 2026-09-03
+
+### Added
+
+- **`CaseSelector layout="select"`** — the compact one-of-N picker ADR-0071 rule 7 asks for:
+  a native dropdown with one `optgroup` per category, preserving the category structure the
+  chip layout carries. The chip layout spends vertical space linearly in the number of cases,
+  and that space comes out of the instrument on every render. Measured on Porvenir at
+  2560x1440: ten cases in four categories occupied a 308px block, 21 percent of the viewport,
+  for a choice one control expresses. Default stays `chips`, so nothing changes for existing
+  consumers until they opt in.
+
+## [0.06.001] - 2026-09-03
+
+### Fixed
+
+- **Every prose page in every product on this shell rendered full-bleed.** `styles.css` defined
+  `.page-body { max-width: var(--maxw) }`, the 1200px reading measure ADR-0017 s1.1 specifies, and
+  then 216 lines later a containment fix added a second unscoped `.page-body { max-width: 100% }`.
+  CSS takes the last one, so the cap was silently removed everywhere. Measured on Porvenir at
+  1600x900: the doc routes rendered 1600px wide instead of 1200px centered, so body text ran the
+  full width of the display.
+
+  The overriding rule was itself written to fix a real bug (a `nowrap` row sizing its whole column
+  and pushing the page wider than the viewport, ADR-0071 rule 3). Containment is about letting a box
+  SHRINK below its content, which is `min-width: 0`; capping it at 100% does nothing for that and
+  costs the measure. Changed to `min-width: 0`. `.page-body.wide` is more specific and still wins,
+  so workbench routes keep the full viewport.
+
+  Nothing could see this. The package built, the types were correct, and every consumer imported the
+  right class. `test/layout-primitives.test.ts` now asserts that the LAST declaration of a capped
+  property on each layout primitive is the intended one, so a later rule overriding a primitive fails
+  here instead of shipping to every app. Verified non-vacuous: re-adding the rule fails the test.
+
 ## [0.06.000] - 2026-08-23
 
 ### Added
