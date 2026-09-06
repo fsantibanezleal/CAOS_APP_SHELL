@@ -1,3 +1,27 @@
+## [0.06.003] - 2026-09-06
+
+### Added
+
+- **`ShellConfig.fixedRoutes` and `ShellConfig.fixed`** — the per-route opt-in to the contained
+  layout ADR-0071 rule 1 requires (the app surface IS the viewport; the one container that
+  owns long content scrolls, the document never does). `styles.css` has carried
+  `.app-shell.fixed` since the containment fix with the note "apps that fill the viewport add
+  it", and no app could: `AppShell` rendered a fixed class string. Measured on Porvenir before
+  this field existed: every tab of the App route scrolled the document by 200 to 770px at
+  1600x900, and the ADR gate could not see it because it never measured scrollHeight. A route
+  in `fixedRoutes` (exact for `/`, prefix for any other path) gets the class; `fixed: true`
+  contains every route of a single-surface app. Nothing changes for consumers that set neither.
+
+### Fixed
+
+- **`test/layout-primitives.test.ts` could not see a compound or descendant override.** It
+  inspected only blocks whose selector list contained exactly `.page-body`; appending
+  `.app-shell .page-body { max-width: 100%; margin-inline: 0 }` to the stylesheet removed the
+  reading cap and the centering from every product and all five tests passed. The test now
+  walks every rule whose subject carries the class, requires the plain rule to hold the
+  intended value, and refuses any competing declaration outside the documented `.wide`
+  opt-in; proven on that exact override (two failures) and clean on the shipped stylesheet.
+
 ## [0.06.002] - 2026-09-03
 
 ### Added
