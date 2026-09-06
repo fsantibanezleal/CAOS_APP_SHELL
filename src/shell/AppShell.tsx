@@ -1,5 +1,5 @@
 import { type ReactNode, useState } from 'react';
-import { NavLink } from 'react-router';
+import { NavLink, useLocation } from 'react-router';
 import { Boxes, Briefcase, Github, Globe, Info } from 'lucide-react';
 import { useShellLang } from '../lib/lang';
 import { chrome } from '../lib/chrome';
@@ -31,6 +31,21 @@ export interface ShellConfig {
     provenance?: { en: string; es: string };
     disclaimer?: { en: string; es: string };
   };
+  /**
+   * Routes whose surface IS the viewport (ADR-0071 rule 1): on these the shell adds
+   * `.app-shell.fixed`, which sizes the page to 100dvh and lets flex distribute the
+   * height, so the ONE container that owns long content scrolls and the document
+   * never does. A doc route is not listed and keeps the document scroll. Matching is
+   * exact, or by prefix for a non-root path (`/lab` matches `/lab/case-1`).
+   *
+   * The stylesheet has carried `.app-shell.fixed` with the note "apps that fill the
+   * viewport add it" since the containment fix, and no app could: this component
+   * rendered a fixed class string. Measured on Porvenir before this field existed:
+   * every tab of the App route scrolled the document by 200 to 770px.
+   */
+  fixedRoutes?: string[];
+  /** Every route fixed: a single-surface app (a hub, a one-page tool). */
+  fixed?: boolean;
 }
 
 const PERSONAL = 'https://fsantibanezleal.github.io';
@@ -46,9 +61,13 @@ export function AppShell({ config, children }: { config: ShellConfig; children: 
   const portfolio = config.links.portfolio ?? PORTFOLIO;
   const [archOpen, setArchOpen] = useState(false);
   const archLabel = lang === 'es' ? 'Arquitectura / Cómo funciona' : 'Architecture / How it works';
+  const { pathname } = useLocation();
+  const fixed =
+    config.fixed === true ||
+    (config.fixedRoutes ?? []).some((p) => p === pathname || (p !== '/' && pathname.startsWith(p.replace(/\/$/, '') + '/')));
 
   return (
-    <div className="app-shell">
+    <div className={fixed ? 'app-shell fixed' : 'app-shell'}>
       <header className="site-header">
         <div className="header-inner">
           <NavLink to="/" className="brand" aria-label={config.product.name}>
