@@ -1,3 +1,19 @@
+## [0.06.004] - 2026-09-06
+
+### Fixed
+
+- **A wide table in a vertical sub-tab panel pushed the page past the viewport.** The
+  `.subtabs-vertical` grid used a bare `1fr` panel track, which is `minmax(auto, 1fr)`: the
+  panel's min-content width is the table's width, so the grid sized itself to the table
+  instead of letting the table scroll inside its wrapper (ADR-0071 rule 3). Measured on
+  Porvenir's Datasets tab at 1280x800: the panel column rendered 1380px wide on a 1280px
+  viewport. The track is now `minmax(0, 1fr)`, and `.subtabs`, `.subtabpanels` and
+  `.subtabpanel` carry `min-width: 0` beside `.tabs` and `.tabpanel`.
+- **On a contained surface (`.app-shell.fixed`) the footer took 178px.** A product's
+  provenance and disclaimer wrapped into five lines at 1600x900 and the instrument fell from
+  56 to 42 percent of the viewport, under the ADR-0071 rule 8 floor. The footer keeps its
+  text (ADR-0016 s2) and is set compact on fixed routes only: two to three lines.
+
 ## [0.06.003] - 2026-09-06
 
 ### Added
