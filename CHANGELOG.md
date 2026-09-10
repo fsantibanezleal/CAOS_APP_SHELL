@@ -181,3 +181,9 @@ All notable changes to this product. Format: `X.XX.XXX` (display, see the worksp
 - Architecture dialogs keep keyboard focus within the modal and return it to the opener on close. Tabs support arrow keys, Home and End with explicit tab-panel relationships.
 - Architecture diagrams offer a contained native-size reading view and a fit toggle in English and Spanish. Native-size viewing preserves authored text size on mobile while retaining the selected theme and language.
 - A real Chromium consumer checks keyboard navigation, Escape, focus restoration, native-size scrolling and diagram fit in both languages and themes at mobile and desktop widths (`npm run test:browser`).
+## [0.06.008] - 2026-09-10
+
+### Fixed
+
+- All configured page routes remain reachable on mobile through a compact second header row. Links scroll horizontally inside the header, retain their active-page semantics and remain visible when reached by keyboard focus.
+- Real-browser navigation tests exercise all six routes by click and keyboard at 320, 390 and 1440 px, in EN/ES and both themes. They verify viewport containment and a header below 100 px so the main instrument retains most of the viewport.
