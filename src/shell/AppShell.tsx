@@ -28,6 +28,10 @@ export interface ShellConfig {
    * license (e.g. "Engine: lingbot-map (arXiv:2604.14141, Apache-2.0)") and the one-line honest
    * disclaimer of how the app runs. Both optional, both bilingual. */
   footer?: {
+    /** Explicit product attribution, or false when the product excludes personal attribution. */
+    attribution?: { en: string; es: string } | false;
+    /** The consuming product's license; the shell's MIT license is not inherited by applications. */
+    license?: { en: string; es: string };
     provenance?: { en: string; es: string };
     disclaimer?: { en: string; es: string };
   };
@@ -128,8 +132,10 @@ export function AppShell({ config, children }: { config: ShellConfig; children: 
             <span>{c.complement}</span>
             <span aria-hidden="true">·</span>
             <span className="footer-build"><span>{c.version}{config.version}</span></span>
-            <span aria-hidden="true">·</span>
-            <span>{c.attribution}</span>
+            {config.footer?.attribution !== false && <>
+              <span aria-hidden="true">·</span>
+              <span>{config.footer?.attribution?.[lang] ?? c.attribution}</span>
+            </>}
             {config.footer?.provenance && (
               <>
                 <span aria-hidden="true">·</span>
@@ -139,7 +145,7 @@ export function AppShell({ config, children }: { config: ShellConfig; children: 
             <span aria-hidden="true">·</span>
             <a href={config.links.github} target="_blank" rel="noreferrer noopener">{c.github}</a>
             <span aria-hidden="true">·</span>
-            <span className="faint">{c.license}</span>
+            <span className="faint">{config.footer?.license?.[lang] ?? c.license}</span>
             {config.footer?.disclaimer && (
               <>
                 <span aria-hidden="true">·</span>
