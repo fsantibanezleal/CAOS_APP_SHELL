@@ -67,6 +67,14 @@ test('without the field nothing changes for existing consumers', () => {
   assert.doesNotMatch(render(base, '/'), /app-shell fixed/);
 });
 
+test('the repository action retains an accessible destination with a renderable icon', () => {
+  const html = render(base, '/');
+  const link = html.match(/<a\b[^>]*href="https:\/\/github\.com\/fsantibanezleal\/probe"[^>]*>[\s\S]*?<\/a>/)?.[0];
+  assert.ok(link, 'Repository link remains available');
+  assert.match(link, /aria-label="[^"]+"/);
+  assert.match(link, /<svg\b[^>]*aria-hidden="true"/);
+});
+
 test('product license and attribution are configurable without changing legacy defaults', () => {
   const legacy = render(base, '/');
   assert.match(legacy, /Developed by/);

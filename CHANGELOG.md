@@ -1,3 +1,10 @@
+## [0.06.006] - 2026-09-10
+
+### Fixed
+
+- The repository link now uses the supported `CodeXml` icon. Lucide 1.x removed the `Github` export, which broke consumer browser builds despite satisfying the shell's declared peer range. The accessible repository link and destination remain intact.
+- Development validation now uses Lucide 1.43.0, with a browser-bundle regression test that resolves its actual ESM exports instead of externalizing the dependency.
+
 ## [0.06.005] - 2026-09-10
 
 ### Added
