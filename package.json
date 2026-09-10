@@ -1,6 +1,6 @@
 {
   "name": "@fasl-work/caos-app-shell",
-  "version": "0.6.5",
+  "version": "0.6.6",
   "description": "Shared web-app shell + content primitives + design system for the CAOS / Faena public apps (ADR-0016).",
   "license": "MIT",
   "author": "Felipe Santibáñez-Leal",
@@ -43,8 +43,9 @@
     "@types/katex": "^0.16.7",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "esbuild": "0.28.1",
     "katex": "^0.16.11",
-    "lucide-react": "^0.469.0",
+    "lucide-react": "1.43.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router": "^8.3.0",

@@ -1,6 +1,6 @@
 import { type ReactNode, useState } from 'react';
 import { NavLink, useLocation } from 'react-router';
-import { Boxes, Briefcase, Github, Globe, Info } from 'lucide-react';
+import { Boxes, Briefcase, CodeXml, Globe, Info } from 'lucide-react';
 import { useShellLang } from '../lib/lang';
 import { chrome } from '../lib/chrome';
 import { ThemeToggle } from './ThemeToggle';
@@ -96,7 +96,7 @@ export function AppShell({ config, children }: { config: ShellConfig; children: 
 
           <div className="header-actions">
             <a className="icon-btn" href={config.links.github} target="_blank" rel="noreferrer noopener" aria-label={c.github} title={c.github}>
-              <Github size={18} aria-hidden="true" />
+              <CodeXml size={18} aria-hidden="true" />
             </a>
             <a className="icon-btn" href={personal} target="_blank" rel="noreferrer noopener" aria-label={c.personal} title={c.personal}>
               <Globe size={18} aria-hidden="true" />
