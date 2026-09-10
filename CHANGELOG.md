@@ -1,3 +1,9 @@
+## [0.06.005] - 2026-09-10
+
+### Added
+
+- Optional bilingual `footer.attribution` (or `false`) and `footer.license` let applications use their actual authorship/privacy requirements and code license while retaining the shared shell. Existing consumers keep their previous footer by default.
+
 ## [0.06.004] - 2026-09-06
 
 ### Fixed
