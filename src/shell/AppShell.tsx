@@ -86,6 +86,7 @@ export function AppShell({ config, children }: { config: ShellConfig; children: 
                   key={r.path}
                   to={r.path}
                   end={r.path === '/'}
+                  onFocus={(event) => event.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' })}
                   className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
                 >
                   {lang === 'es' ? r.es : r.en}
