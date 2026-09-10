@@ -49,6 +49,7 @@ const config: ShellConfig = {
 ```
 
 - **Land on the tool:** make `/` your interactive tool; Introduction/Methodology/etc. are separate routes.
+- **Product metadata:** `footer.attribution` accepts bilingual text or `false` when a product excludes personal attribution. `footer.license` accepts the product's bilingual license label. Omitting these keeps existing consumer defaults. A product does not inherit the shell's MIT license.
 - **Hub case (Faena):** pass `routes: []` (or one) → the nav is hidden, header/footer identical.
 - **Deep pages:** compose with `Tabs`, `SubTabs`, `Equation`/`InlineMath`, `Callout`, `Figure`, and
   `CitationsProvider` + `Cite`/`Refs`/`ReferenceList`. Read the current language with `useShellLang()`.

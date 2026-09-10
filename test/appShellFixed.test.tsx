@@ -66,3 +66,15 @@ test('fixed: true contains every route', () => {
 test('without the field nothing changes for existing consumers', () => {
   assert.doesNotMatch(render(base, '/'), /app-shell fixed/);
 });
+
+test('product license and attribution are configurable without changing legacy defaults', () => {
+  const legacy = render(base, '/');
+  assert.match(legacy, /Developed by/);
+  assert.match(legacy, /MIT licensed/);
+  const anonymous = render({ ...base, footer: { attribution: false, license: { en: 'Apache-2.0', es: 'Apache-2.0' } } }, '/');
+  assert.doesNotMatch(anonymous, /Developed by/);
+  assert.doesNotMatch(anonymous, /MIT licensed/);
+  assert.match(anonymous, /Apache-2.0/);
+  const team = render({ ...base, footer: { attribution: { en: 'Maintained by the project team', es: 'Mantenido por el equipo' } } }, '/');
+  assert.match(team, /Maintained by the project team/);
+});
