@@ -1,3 +1,9 @@
+## [0.06.009] - 2026-09-24
+
+### Fixed
+
+- Keep route navigation in the same compact header row on narrow screens, with keyboard-accessible horizontal route scrolling and no document overflow.
+
 ## [0.06.006] - 2026-09-10
 
 ### Fixed
