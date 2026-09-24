@@ -56,7 +56,7 @@ for(const width of [320,390,1440]) for(const es of [false,true]) for(const light
       }
       const dimensions=await page.evaluate(()=>({width:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight,viewport:innerHeight,header:document.querySelector('header')!.getBoundingClientRect().height,main:document.querySelector('main')!.getBoundingClientRect().height}));
       assert.ok(dimensions.width<=width && dimensions.height<=844);
-      assert.ok(dimensions.header<=100,'header remains compact');
+      assert.ok(dimensions.header<=60,'header remains one row');
       assert.ok(dimensions.main>dimensions.viewport*0.65,'instrument keeps most of the viewport');
       await expect(page.locator('html')).toHaveAttribute('data-theme',light?'light':'dark');
       assert.deepEqual(errors,[]);
