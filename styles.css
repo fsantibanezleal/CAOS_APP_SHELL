@@ -355,3 +355,27 @@ html, body { overflow-x: hidden; }
 /* The compact one-of-N case picker (ADR-0071 rule 7). Ten cases in four categories
    cost a 308px chip block, 21% of a 2560x1440 viewport, and one row as a dropdown. */
 .cs-select { width: 100%; max-width: 460px; }
+
+/* ADR-0070: additive, shell-owned, full-viewport scenario focus frame. */
+.caos-focus-shell { position: fixed; inset: 0; z-index: 100; display: grid; grid-template-columns: minmax(0,1fr) clamp(300px,20vw,340px); min-width: 0; height: 100dvh; background: var(--color-bg); color: var(--color-fg); }
+.caos-focus-stage { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: var(--color-bg); }
+.caos-focus-instrument { position: absolute; inset: 0; min-width: 0; min-height: 0; }
+.caos-focus-label, .caos-focus-hud > div { background: color-mix(in oklab,var(--color-surface) 82%,transparent); backdrop-filter: blur(6px); border: 1px solid var(--color-border); border-radius: 6px; }
+.caos-focus-label { position: absolute; top: 14px; left: 14px; max-width: min(46ch,calc(100% - 230px)); display: grid; gap: 4px; padding: 10px 12px; pointer-events: none; }
+.caos-focus-label strong { font-size: 0.96rem; line-height: 1.2; }
+.caos-focus-label span { font-size: 0.78rem; line-height: 1.4; color: var(--color-fg-subtle); }
+.caos-focus-hud { position: absolute; left: 14px; top: 104px; display: grid; gap: 6px; pointer-events: none; }
+.caos-focus-hud > div { display: grid; gap: 1px; padding: 7px 10px; min-width: 120px; }
+.caos-focus-hud strong { font: 700 1rem var(--font-mono,monospace); }
+.caos-focus-hud span { color: var(--color-fg-subtle); font-size: 0.61rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; }
+.caos-focus-actions { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; align-items: center; padding: 4px; border: 1px solid var(--color-border); border-radius: 6px; background: color-mix(in oklab,var(--color-surface) 90%,transparent); backdrop-filter: blur(6px); }
+.caos-focus-actions button { border: 0; border-radius: 4px; padding: 6px 9px; background: var(--color-surface-2); color: var(--color-fg); font-size: 0.75rem; font-weight: 700; cursor: pointer; }
+.caos-focus-rail { min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; border-left: 1px solid var(--color-border); background: var(--color-surface); }
+@media (max-width: 860px) {
+  .caos-focus-shell { grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,54dvh) minmax(0,46dvh); }
+  .caos-focus-rail { border-left: 0; border-top: 1px solid var(--color-border); }
+  .caos-focus-label { max-width: calc(100% - 16px); top: 49px; left: 8px; padding: 6px 8px; }
+  .caos-focus-hud { top: auto; bottom: 8px; left: 8px; right: 8px; display: flex; overflow-x: auto; }
+  .caos-focus-hud > div { min-width: 90px; }
+  .caos-focus-actions { top: 7px; right: 7px; }
+}
