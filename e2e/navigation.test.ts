@@ -54,9 +54,16 @@ for(const width of [320,390,1440]) for(const es of [false,true]) for(const light
         await page.keyboard.press('Enter');await expect(links.nth(i)).toHaveAttribute('aria-current','page');
         await page.keyboard.press('Tab');
       }
-      const dimensions=await page.evaluate(()=>({width:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight,viewport:innerHeight,header:document.querySelector('header')!.getBoundingClientRect().height,main:document.querySelector('main')!.getBoundingClientRect().height}));
+      const dimensions=await page.evaluate(()=>({width:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight,viewport:innerHeight,header:document.querySelector('header')!.getBoundingClientRect().height,footer:document.querySelector('footer')!.getBoundingClientRect().height,main:document.querySelector('main')!.getBoundingClientRect().height}));
       assert.ok(dimensions.width<=width && dimensions.height<=844);
       assert.ok(dimensions.header<=60,'header remains one row');
+      if(width<=760) assert.ok(dimensions.footer<=40,'footer leaves the instrument visible');
+      if(width<=760){
+        const footerLink=page.getByRole('contentinfo').getByRole('link');
+        await footerLink.focus();
+        const linkBox=(await footerLink.boundingBox())!, footerBox=(await page.locator('.footer-meta').boundingBox())!;
+        assert.ok(linkBox.x>=footerBox.x-1 && linkBox.x+linkBox.width<=footerBox.x+footerBox.width+1,'footer source stays reachable by keyboard');
+      }
       assert.ok(dimensions.main>dimensions.viewport*0.65,'instrument keeps most of the viewport');
       await expect(page.locator('html')).toHaveAttribute('data-theme',light?'light':'dark');
       assert.deepEqual(errors,[]);
