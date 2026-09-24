@@ -334,6 +334,14 @@ html, body { overflow-x: hidden; }
    text stays (ADR-0016 s2: provenance and the honest disclaimer are the footer's job); it is set
    compact, so it takes two to three lines, not five. */
 .app-shell.fixed .site-footer .footer-inner { padding: 0.45rem 1.5rem; gap: 0.4rem; font-size: 0.74rem; line-height: 1.3; }
+@media (max-width: 760px) {
+  /* A long, correctly attributed provenance must not consume the instrument.
+     Footer metadata remains accessible by horizontal scroll and keyboard focus. */
+  .app-shell.fixed .site-footer .footer-inner { padding: 0.35rem 0.55rem; }
+  .app-shell.fixed .footer-meta { flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+  .app-shell.fixed .footer-meta::-webkit-scrollbar { display: none; }
+  .app-shell.fixed .footer-meta > * { flex: none; }
+}
 
 /* ADR-0058 diagram i18n. A hand-authored architecture SVG carries BOTH languages inside ONE file,
    and the modal wrapper picks one. Two files would be two things to keep in step, and the one not

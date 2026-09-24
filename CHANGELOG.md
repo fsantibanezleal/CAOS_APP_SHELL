@@ -3,6 +3,7 @@
 ### Fixed
 
 - Keep route navigation in the same compact header row on narrow screens, with keyboard-accessible horizontal route scrolling and no document overflow.
+- Keep complete mobile footer provenance accessible in one horizontally scrollable row instead of consuming instrument height.
 
 ## [0.06.006] - 2026-09-10
 
