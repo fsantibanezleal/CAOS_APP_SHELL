@@ -1,6 +1,6 @@
 {
   "name": "@fasl-work/caos-app-shell",
-  "version": "0.6.8",
+  "version": "0.6.9",
   "description": "Shared web-app shell + content primitives + design system for the CAOS / Faena public apps (ADR-0016).",
   "license": "MIT",
   "author": "Felipe Santibáñez-Leal",
@@ -30,6 +30,7 @@
     "build": "tsup",
     "test": "node --import tsx --test \"test/**/*.test.ts\" \"test/**/*.test.tsx\"",
     "test:browser": "node --import tsx --test \"e2e/**/*.test.ts\"",
+    "prepare": "npm run build",
     "prepublishOnly": "npm run build"
   },
   "peerDependencies": {
