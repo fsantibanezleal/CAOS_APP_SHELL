@@ -30,6 +30,7 @@
     "build": "tsup",
     "test": "node --import tsx --test \"test/**/*.test.ts\" \"test/**/*.test.tsx\"",
     "test:browser": "node --import tsx --test \"e2e/**/*.test.ts\"",
+    "prepare": "npm run build",
     "prepublishOnly": "npm run build"
   },
   "peerDependencies": {
