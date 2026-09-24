@@ -144,7 +144,7 @@ export function AppShell({ config, children }: { config: ShellConfig; children: 
               </>
             )}
             <span aria-hidden="true">·</span>
-            <a href={config.links.github} target="_blank" rel="noreferrer noopener">{c.github}</a>
+            <a href={config.links.github} target="_blank" rel="noreferrer noopener" onFocus={(event) => event.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' })}>{c.github}</a>
             <span aria-hidden="true">·</span>
             <span className="faint">{config.footer?.license?.[lang] ?? c.license}</span>
             {config.footer?.disclaimer && (
