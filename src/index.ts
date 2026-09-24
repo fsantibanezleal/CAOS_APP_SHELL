@@ -5,6 +5,8 @@
 export { AppShell } from './shell/AppShell';
 export type { ShellConfig, ShellRoute } from './shell/AppShell';
 export { WorkbenchShell } from './shell/WorkbenchShell';
+export { FocusShell } from './shell/FocusShell';
+export type { FocusShellProps } from './shell/FocusShell';
 export type { WorkbenchRoute, WorkbenchShellProps } from './shell/WorkbenchShell';
 export { ArchitectureModal } from './shell/ArchitectureModal';
 export type { ArchitectureConfig, ArchTab } from './shell/ArchitectureModal';
