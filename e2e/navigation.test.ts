@@ -62,7 +62,7 @@ for(const width of [320,390,1440]) for(const es of [false,true]) for(const light
         const footerLink=page.getByRole('contentinfo').getByRole('link');
         await footerLink.focus();
         const linkBox=(await footerLink.boundingBox())!, footerBox=(await page.locator('.footer-meta').boundingBox())!;
-        assert.ok(linkBox.x>=footerBox.x-1 && linkBox.x+linkBox.width<=footerBox.x+footerBox.width+1,'footer source stays reachable by keyboard');
+        assert.ok(linkBox.x>=footerBox.x-1 && linkBox.x+linkBox.width<=footerBox.x+footerBox.width+1,`footer source stays reachable by keyboard: ${JSON.stringify({linkBox,footerBox})}`);
       }
       assert.ok(dimensions.main>dimensions.viewport*0.65,'instrument keeps most of the viewport');
       await expect(page.locator('html')).toHaveAttribute('data-theme',light?'light':'dark');
