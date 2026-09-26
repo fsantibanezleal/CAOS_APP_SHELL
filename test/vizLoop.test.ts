@@ -133,7 +133,7 @@ test('elapsed excludes time spent hidden (no dt jump on resume)', () => {
   h.step(0); // baseline e0
   h.step(50); // e50
   loop.setHidden(true);
-  h.skip(10_000); // 10s pass in the background — must NOT count
+  h.skip(10_000); // 10s pass in the background, must NOT count
   loop.setHidden(false);
   h.step(16); // first frame back: baseline reset, dt ~0
   assert.equal(lastDt, 0, 'dt does not include the hidden gap');

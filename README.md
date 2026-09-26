@@ -57,7 +57,7 @@ const config: ShellConfig = {
   (labelled groups, `Synthetic | Real | Uploaded` source control, locked-knobs explanation, divergence
   badge, `?case=` deep-linking).
 - **Animated views:** drive every canvas/3D loop through `usePausedViz` (default paused, run-once,
-  halt on a hidden tab) — never call `requestAnimationFrame` directly.
+  halt on a hidden tab), never call `requestAnimationFrame` directly.
 
 ## Exports
 

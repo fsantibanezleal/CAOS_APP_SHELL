@@ -6,7 +6,7 @@
 export type CaseKind = 'synthetic' | 'real' | 'uploaded';
 
 export interface CaseDef {
-  /** stable slug — the value used in the ?case= deep link and reported to onSelect. */
+  /** stable slug, the value used in the ?case= deep link and reported to onSelect. */
   id: string;
   /** short human name shown ON the chip next to the id (never demoted to a tooltip-only string). */
   name: string;
@@ -14,9 +14,9 @@ export interface CaseDef {
   category?: string;
   /** which source lane this case belongs to. Defaults to 'synthetic'. */
   kind?: CaseKind;
-  /** validation anchor (e.g. "published optimum 26,086,899") — surfaced in the chip tooltip. */
+  /** validation anchor (e.g. "published optimum 26,086,899"), surfaced in the chip tooltip. */
   anchor?: string;
-  /** expected-range hint — surfaced in the chip tooltip. */
+  /** expected-range hint, surfaced in the chip tooltip. */
   expectedBand?: string;
   disabled?: boolean;
 }
