@@ -1,4 +1,4 @@
-// In-app "Architecture / How it works" modal (ADR-0058 — the ⓘ standard, generalised from Veta + Circuita).
+// In-app "Architecture / How it works" modal (ADR-0058, the ⓘ standard, generalised from Veta + Circuita).
 // A header ⓘ button opens this modal; each tab pairs ONE hand-authored THEMED SVG (CSS-variable tokens of the shell
 // palette, so it repaints with the active theme) with a bilingual explanation. The SVG is fetched + INLINED (an <img>
 // would NOT inherit the CSS variables). Apps pass their tabs via ShellConfig.architecture; the depth must be COMPLETE
@@ -157,7 +157,7 @@ export function ArchitectureModal({ config, onClose }: { config: ArchitectureCon
               </button>
               <div id={`${id}-diagram`} role="region" aria-label={es ? 'Diagrama de arquitectura' : 'Architecture diagram'} tabIndex={0} style={{ border: '1px solid var(--color-border)', borderRadius: 8, padding: 8, background: 'var(--color-bg, var(--color-surface))', overflow: 'auto', maxWidth: '100%' }}>
                 <div ref={diagramRef} className="caos-architecture-diagram" style={{ width: fullSize ? nativeWidth : '100%', maxWidth: fullSize ? 'none' : '100%' }}
-                     // Own static asset, hand-authored in the app repo — not user input.
+                     // Own static asset, hand-authored in the app repo, not user input.
                      dangerouslySetInnerHTML={{ __html: svg }} />
               </div>
             </>

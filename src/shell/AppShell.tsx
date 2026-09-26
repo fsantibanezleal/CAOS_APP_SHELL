@@ -123,7 +123,7 @@ export function AppShell({ config, children }: { config: ShellConfig; children: 
 
       <main className="page">{children}</main>
 
-      {/* ADR-0016 §2: one compact wrapping line — provenance + honesty, not re-advertising.
+      {/* ADR-0016 §2: one compact wrapping line: provenance + honesty, not re-advertising.
           The header (§1) already carries the personal/portfolio links; NEVER repeat them here. */}
       <footer className="site-footer">
         <div className="footer-inner">

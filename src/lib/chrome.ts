@@ -1,6 +1,6 @@
 import type { Lang } from './lang';
 
-// Header/footer chrome strings — identical across every CAOS / Faena app (the shell owns them so
+// Header/footer chrome strings, identical across every CAOS / Faena app (the shell owns them so
 // header & footer can never drift). App-specific strings (nav labels, page content) live in the app.
 const CHROME = {
   en: {

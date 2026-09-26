@@ -1,3 +1,36 @@
+## [0.06.012] - 2026-09-25
+
+### Added
+
+- Continuous integration, for the first time in this package: build, the node test suite, and the
+  guards every product repo already carries (no tracked `.env` or `dist/`, no leaked local path,
+  no em-dash or emoji per ADR-0067, the ADR-0074 CI budget gate, and version coherence per
+  ADR-0068). Trunk-only triggers, a concurrency group, a timeout per job.
+
+### Fixed
+
+- `VERSION` had stayed at `0.06.008` through three tagged releases while `package.json` moved to
+  `0.6.11`, and `0.06.010` and `0.06.011` had no changelog entry. All four sources now agree, and the
+  two entries below are transcribed from the commits they tag.
+- Twenty-two em-dashes in comments, docstrings, the README, this changelog and one UI string
+  (`CaseSelector.lockedNote`), replaced per ADR-0067.
+
+## [0.06.011] - 2026-09-24
+
+### Fixed
+
+- On a phone viewport the focus HUD no longer overflows: below 860px it is a four-column grid with
+  ellipsised labels and compact value text instead of a horizontally scrolling flex row.
+
+## [0.06.010] - 2026-09-24
+
+### Added
+
+- `FocusShell`, the shell-owned full-viewport scenario focus frame (ADR-0070): the product supplies
+  its instrument (`stage`), its controls (`rail`), a title, a description and HUD readouts; the shell
+  owns the layout, the language and theme toggles, the exit action, and the phone breakpoint that
+  stacks stage over rail. Exported from the package barrel with its props type and a contract test.
+
 ## [0.06.009] - 2026-09-24
 
 ### Fixed
@@ -42,7 +75,7 @@
 
 ### Added
 
-- **`ShellConfig.fixedRoutes` and `ShellConfig.fixed`** — the per-route opt-in to the contained
+- **`ShellConfig.fixedRoutes` and `ShellConfig.fixed`**, the per-route opt-in to the contained
   layout ADR-0071 rule 1 requires (the app surface IS the viewport; the one container that
   owns long content scrolls, the document never does). `styles.css` has carried
   `.app-shell.fixed` since the containment fix with the note "apps that fill the viewport add
@@ -66,7 +99,7 @@
 
 ### Added
 
-- **`CaseSelector layout="select"`** — the compact one-of-N picker ADR-0071 rule 7 asks for:
+- **`CaseSelector layout="select"`**, the compact one-of-N picker ADR-0071 rule 7 asks for:
   a native dropdown with one `optgroup` per category, preserving the category structure the
   chip layout carries. The chip layout spends vertical space linearly in the number of cases,
   and that space comes out of the instrument on every render. Measured on Porvenir at
@@ -168,13 +201,13 @@ All notable changes to this product. Format: `X.XX.XXX` (display, see the worksp
 ## [0.03.000] · 2026-07-04
 
 ### Added
-- **`usePausedViz` + `createVizLoop`** — a no-compute-bomb animation loop for canvases/3D views:
+- **`usePausedViz` + `createVizLoop`**, a no-compute-bomb animation loop for canvases/3D views:
   default paused, run-once-then-stop (looping opt-in), optional `durationMs` hard cap, and auto-halt
   on a hidden tab (visibilitychange). The state machine (`createVizLoop`) is framework-free with
   injected `requestAnimationFrame`/`cancelAnimationFrame`, unit-tested with a fake clock (10 tests).
   `usePausedViz` is the React wrapper. Animated views should mount through it instead of calling rAF
   directly. Enforces the portfolio "no autoplay, no compute bomb" rule at the shell level.
-- **`CaseSelector` v2** — shared source + case picker. Chips show `ID · name`; cases render in
+- **`CaseSelector` v2**, shared source + case picker. Chips show `ID · name`; cases render in
   labelled category groups; an optional first-level `Synthetic | Real | Uploaded` source control
   filters the deck and shows a locked-knobs explanation on non-synthetic lanes; a "modified from CASE"
   divergence badge with reset; opt-in `?case=` deep-linking. Pure model (`caseModel.ts`) unit-tested

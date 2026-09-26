@@ -31,7 +31,7 @@ const TEXT: Record<Lang, CaseSelectorText> = {
     synthetic: 'Synthetic',
     real: 'Real',
     uploaded: 'Uploaded',
-    lockedNote: 'Scenario knobs are locked on a real sample — you pick which datum; every tool runs on it as-is.',
+    lockedNote: 'Scenario knobs are locked on a real sample: you pick which datum; every tool runs on it as-is.',
     modifiedPrefix: 'modified from',
     reset: 'reset',
   },
@@ -54,7 +54,7 @@ export interface CaseSelectorProps {
   onSelect: (id: string) => void;
 
   /** When provided, renders the first-level source control and filters cases to the active lane.
-   *  Controlled — pair with onSourceChange. Omit for a single-lane deck (no source control). */
+   *  Controlled, pair with onSourceChange. Omit for a single-lane deck (no source control). */
   source?: CaseKind;
   onSourceChange?: (k: CaseKind) => void;
   /** Overrides the default locked-knobs explanation shown for a non-synthetic source. */
@@ -88,7 +88,7 @@ export interface CaseSelectorProps {
 }
 
 /**
- * CaseSelector v2 — the shared source + case picker. Renders (1) an optional first-level source
+ * CaseSelector v2, the shared source + case picker. Renders (1) an optional first-level source
  * segmented control (Synthetic | Real | Uploaded, only the lanes present), (2) a labelled group per
  * case category, each case a chip showing "ID · name" with its validation anchor as the tooltip and
  * a source tag, (3) a locked-knobs explanation when a non-synthetic source is active, and (4) a

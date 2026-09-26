@@ -16,14 +16,14 @@ export interface VizLoopOptions {
   /** Auto-complete the pass once `elapsed` reaches this many ms (a hard cap so a frame that never
    *  returns false still stops). The final frame is drawn clamped to exactly this value. */
   durationMs?: number;
-  /** Fired once each time the loop stops on its own (a completed pass with loop=false) — not on a
+  /** Fired once each time the loop stops on its own (a completed pass with loop=false), not on a
    *  manual pause and not on a visibility halt. */
   onComplete?: () => void;
   /** Notified whenever the running state changes, so a React wrapper can mirror it into state. */
   onPlayingChange?: (playing: boolean) => void;
 }
 
-/** Injected side effects — real ones in the hook, fakes in tests. The frame timestamp comes from
+/** Injected side effects, real ones in the hook, fakes in tests. The frame timestamp comes from
  *  the rAF callback argument, so no separate clock is needed. */
 export interface VizLoopDeps {
   raf: (cb: (now: number) => void) => number;
@@ -54,7 +54,7 @@ export function createVizLoop(frame: VizFrame, options: VizLoopOptions, deps: Vi
   let want = false; // the user's intent to animate (survives a hidden-tab halt)
   let hidden = false;
   let last = 0; // timestamp of the previous frame
-  let baseline = true; // take the next frame as a fresh dt baseline (dt 0) — set on play/resume/loop
+  let baseline = true; // take the next frame as a fresh dt baseline (dt 0), set on play/resume/loop
   let elapsed = 0; // accumulated ms for the current pass (excludes hidden time)
 
   const playing = () => handle !== null;
