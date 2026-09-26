@@ -1,3 +1,11 @@
+## [0.06.013] - 2026-09-26
+
+### Added
+
+- `publish-npm.yml`: trusted publishing to npm from a GitHub release (OIDC, provenance attached, no token stored).
+  npm no longer issues 2FA-bypass tokens, which is why 0.6.9 to 0.6.12 never reached the registry; this release
+  is the first published since 0.6.8 and carries everything those four entries describe.
+
 ## [0.06.012] - 2026-09-25
 
 ### Added
