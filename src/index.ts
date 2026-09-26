@@ -1,4 +1,4 @@
-// @fasl-work/caos-app-shell — public barrel.
+// @fasl-work/caos-app-shell, public barrel.
 // The shared shell + content primitives + design system for the CAOS / Faena apps (ADR-0016).
 // Import the CSS once per app:  import "@fasl-work/caos-app-shell/styles.css";
 

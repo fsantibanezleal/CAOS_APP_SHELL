@@ -12,7 +12,7 @@ export interface PausedVizController {
 }
 
 export interface UsePausedVizOptions extends VizLoopOptions {
-  /** Begin playing on mount. Default false — the mandatory no-autoplay default: a page must never
+  /** Begin playing on mount. Default false, the mandatory no-autoplay default: a page must never
    *  burn CPU unattended. Opt in only for a view the user explicitly expects to move on arrival. */
   autoStart?: boolean;
 }
