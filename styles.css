@@ -1,6 +1,6 @@
 @import "katex/dist/katex.min.css";
 
-/* @fasl-work/caos-app-shell — shared design system (ADR-0016 + visual-standards palette).
+/* @fasl-work/caos-app-shell, shared design system (ADR-0016 + visual-standards palette).
  * Theming via CSS custom properties keyed on data-theme on <html> (set pre-paint by an inline
  * script in index.html, kept in sync by the shell theme store). Import once per app:
  *   import "@fasl-work/caos-app-shell/styles.css"; */
