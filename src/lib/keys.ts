@@ -16,3 +16,6 @@ export const THEME_BOOT_SCRIPT =
   `(function(){try{var t=localStorage.getItem('${THEME_STORAGE_KEY}');if(t!=='light'&&t!=='dark'){t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'}` +
   `document.documentElement.dataset.theme=t;var l=localStorage.getItem('${LANG_STORAGE_KEY}');document.documentElement.lang=l==='es'?'es':'en'}` +
   "catch(e){document.documentElement.dataset.theme='dark'}})();";
+
+/** The six standard routes, for build scripts that run without React (route materialisation, the gate). */
+export { STANDARD_ROUTES } from '../shell/routes';
