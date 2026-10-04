@@ -30,7 +30,9 @@
     },
     "./styles.css": "./styles.css",
     "./chart.css": "./chart.css",
-    "./reserved-classes.json": "./reserved-classes.json"
+    "./reserved-classes.json": "./reserved-classes.json",
+    "./serve": "./gate/serve.mjs",
+    "./gate": "./gate/run.mjs"
   },
   "files": [
     "dist",
