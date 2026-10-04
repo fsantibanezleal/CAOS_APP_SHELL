@@ -575,6 +575,8 @@ html, body { overflow-x: hidden; }
 .caos-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; font-variant-numeric: tabular-nums; color: var(--color-fg); }
 .caos-table th, .caos-table td { padding: 0.35rem 0.6rem; border-bottom: 1px solid var(--color-border); text-align: right; white-space: nowrap; }
 .caos-table th:first-child, .caos-table td:first-child { text-align: left; }
+/* A column of words (a description, an expected band) reads left-aligned and wraps; numbers stay right-aligned. */
+.caos-table th.caos-col-text, .caos-table td.caos-col-text { text-align: left; white-space: normal; min-width: 16ch; }
 .caos-table thead th { position: sticky; top: 0; background: var(--color-surface); color: var(--color-fg-subtle); font-weight: 600; border-bottom-color: var(--color-fg-faint); }
 .caos-table tbody tr:hover { background: var(--color-surface-2); }
 /* A phone wraps the cells instead of pushing the table past the page (found by the gate on the template, 390 px). */
