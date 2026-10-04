@@ -572,6 +572,8 @@ html, body { overflow-x: hidden; }
 .caos-table th:first-child, .caos-table td:first-child { text-align: left; }
 .caos-table thead th { position: sticky; top: 0; background: var(--color-surface); color: var(--color-fg-subtle); font-weight: 600; border-bottom-color: var(--color-fg-faint); }
 .caos-table tbody tr:hover { background: var(--color-surface-2); }
+/* A phone wraps the cells instead of pushing the table past the page (found by the gate on the template, 390 px). */
+@media (max-width: 600px) { .caos-table th, .caos-table td { white-space: normal; padding: 0.3rem 0.4rem; } }
 
 /* A view whose data is not there yet: it says so (and declares data-state="loading" for the gate). */
 .caos-pending { margin: auto; padding: 1.5rem; color: var(--color-fg-faint); font-size: 0.86rem; text-align: center; }
