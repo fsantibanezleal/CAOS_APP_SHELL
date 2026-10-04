@@ -15,6 +15,8 @@ export interface ChartSeries {
   color?: ShellToken;
   width?: number;
   dash?: number[];
+  /** `points` draws markers only (a scatter of cases over a curve); `null` values are simply absent. */
+  mode?: 'line' | 'points';
 }
 
 export interface ChartAxis {
@@ -74,7 +76,7 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlo
   const yLabel = pick(y.label, lang);
   // Everything that changes the plot's structure, by value.
   const structure = JSON.stringify({
-    s: series.map((s, i) => [pick(s.label, lang), s.color ?? ROTATION[i % ROTATION.length], s.width ?? 2, s.dash ?? null]),
+    s: series.map((s, i) => [pick(s.label, lang), s.color ?? ROTATION[i % ROTATION.length], s.width ?? 2, s.dash ?? null, s.mode ?? 'line']),
     x: [xLabel, x.unit ?? '', Boolean(x.time), x.format ?? null],
     y: [yLabel, y.unit ?? '', Boolean(y.log), y.range ?? null, y.format ?? null],
     m: (marks ?? []).map((m) => [m.x, pick(m.label, lang)]),
@@ -126,13 +128,12 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlo
       ],
       series: [
         {},
-        ...series.map((s, i) => ({
-          label: pick(s.label, lang),
-          stroke: resolveToken(s.color ?? ROTATION[i % ROTATION.length], '#4a8'),
-          width: s.width ?? 2,
-          dash: s.dash,
-          spanGaps: false,
-        })),
+        ...series.map((s, i) => {
+          const stroke = resolveToken(s.color ?? ROTATION[i % ROTATION.length], '#4a8');
+          return s.mode === 'points'
+            ? { label: pick(s.label, lang), stroke, width: 1.5, paths: () => null, points: { show: true, space: 0, size: 9, fill: stroke } }
+            : { label: pick(s.label, lang), stroke, width: s.width ?? 2, dash: s.dash, spanGaps: false };
+        }),
       ],
       hooks: {
         setCursor: [
