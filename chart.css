@@ -1,0 +1,8 @@
+@import "uplot/dist/uPlot.min.css";
+
+/* @fasl-work/caos-app-shell/chart.css: the house chart (UPlotChart). The cursor value is shown in a readout row under
+   the plot, never in uPlot's legend, which a sized host clips (known shell defect 3). */
+.caos-chart { position: relative; min-width: 0; width: 100%; }
+.caos-chart .u-legend { display: none; }
+.caos-chart-readout { margin: 0.3rem 0 0; font-family: var(--font-mono); font-size: 0.78rem; color: var(--color-fg-subtle); min-height: 1.2em; }
+.caos-chart .u-cursor-x, .caos-chart .u-cursor-y { border-color: var(--color-fg-faint) !important; }

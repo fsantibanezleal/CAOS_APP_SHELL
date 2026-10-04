@@ -1,7 +1,8 @@
 import { create } from 'zustand';
+import { THEME_STORAGE_KEY } from './keys';
 
 export type Theme = 'light' | 'dark';
-const KEY = 'caos.theme';
+const KEY = THEME_STORAGE_KEY;
 
 export function readTheme(): Theme {
   try {

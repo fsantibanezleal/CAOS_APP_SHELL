@@ -45,6 +45,7 @@ test('a rail given as sections shows one section at a time, never all of them (A
 test('CaseWorkbench orders the groups, then the comparison, then the context (ADR-0016 §9 amended)', () => {
   const out = html(
     <CaseWorkbench
+      caseId="c1"
       groups={[
         { id: 'model', label: 'Model', content: 'M' },
         { id: 'validation', label: 'Validation', lane: 'live', content: 'V' },
@@ -60,7 +61,7 @@ test('CaseWorkbench orders the groups, then the comparison, then the context (AD
 
 test('CaseWorkbench refuses more than six peer groups (ADR-0071 rule 5)', () => {
   const groups = Array.from({ length: MAX_WORKBENCH_GROUPS }, (_, i) => ({ id: `g${i}`, label: `G${i}`, content: i }));
-  assert.throws(() => html(<CaseWorkbench groups={groups} context={{ content: 'x' }} />), /at most 6 peers/);
+  assert.throws(() => html(<CaseWorkbench caseId="c1" groups={groups} context={{ content: 'x' }} />), /at most 6 peers/);
 });
 
 test('VariantBar shows the count, the active regime, its note and its lane on one row', () => {
@@ -86,19 +87,29 @@ test('LaneBadge states the lane in the user language, English by default', () =>
   assert.match(html(<LaneBadge lane="offline" />), /Offline only/);
 });
 
-test('readouts, gauge, verdict and plot card render their values and labels', () => {
+test('readouts format numbers in the interface language and show absent values honestly (S7, S8)', () => {
   const out = html(
     <>
-      <Readout items={[{ label: 'AUC', value: '0.781', tone: 'good', hint: 'area under the ROC curve' }]} />
-      <Gauge title="PSI" value={0.12} min={0} max={0.5} zones={[{ from: 0, to: 0.1, tone: 'good', label: 'little' }]} />
-      <Verdict tone="warn" title="Opinion" verdict="Approve with conditions" />
-      <PlotCard title="ROC">chart</PlotCard>
+      <Readout
+        lane="live"
+        provenance="real"
+        items={[
+          { label: 'AUC', value: 0.78134, unitless: true, better: 'higher', good: 0.75, bad: 0.6, format: { decimals: 3 } },
+          { label: 'Peak', value: null, unit: 'obligors' },
+        ]}
+      />
+      <Gauge title="PSI" value={0.12} min={0} max={0.5} unitless zones={[{ from: 0, to: 0.1, tone: 'good', label: 'little' }]} />
+      <Verdict title="Opinion" code="cond" messages={{ cond: { tone: 'warn', text: 'Approve with conditions' } }} />
+      <PlotCard title="ROC" lane="replay" provenance="synthetic">chart</PlotCard>
     </>,
   );
-  assert.match(out, /0\.781/);
+  assert.match(out, /0.781/);
+  assert.match(out, /tone-good/);
+  assert.match(out, /not available/);
   assert.match(out, /role="meter"[^>]*aria-valuenow="0.12"/);
   assert.match(out, /data-verdict="warn"/);
-  assert.match(out, /class="caos-plot"/);
+  assert.match(out, /Approve with conditions/);
+  assert.match(out, /class="caos-plot"[^>]*data-lane="replay"[^>]*data-provenance="synthetic"/);
 });
 
 test('DocSection ends in its own references, and a section without them must say why (ADR-0017 §4)', () => {
@@ -121,7 +132,7 @@ test('DocSection ends in its own references, and a section without them must say
 test('ShellConfig.contain makes every route the viewport', () => {
   const out = renderToStaticMarkup(
     <MemoryRouter initialEntries={['/methodology']}>
-      <AppShell config={{ product: { name: 'P' }, links: { github: 'https://github.com/x/y' }, version: '0.07.000', contain: true }}>
+      <AppShell config={{ product: { name: 'P' }, links: { github: 'https://github.com/x/y' }, version: '0.07.000', license: 'MIT', visibility: 'public', contain: true }}>
         <div />
       </AppShell>
     </MemoryRouter>,

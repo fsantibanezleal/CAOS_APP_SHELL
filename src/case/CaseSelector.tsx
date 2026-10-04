@@ -170,6 +170,7 @@ export function CaseSelector(props: CaseSelectorProps) {
 
       {layout === 'select' && (
         <select
+          data-control="case"
           className="select cs-select"
           aria-label={ariaLabel ?? 'Case selector'}
           value={selectedId}
@@ -179,7 +180,7 @@ export function CaseSelector(props: CaseSelectorProps) {
             <optgroup key={g.category || '_'} label={g.category || ' '}>
               {g.cases.map((c) => (
                 <option key={c.id} value={c.id} disabled={c.disabled} title={caseTooltip(c) || undefined}>
-                  {`${c.id} · ${c.name}`}
+                  {c.name}
                 </option>
               ))}
             </optgroup>
@@ -188,7 +189,7 @@ export function CaseSelector(props: CaseSelectorProps) {
       )}
 
       {layout === 'chips' && groups.map((g) => (
-        <div key={g.category || '_'} className="cs-group" role="group" aria-label={g.category || undefined}>
+        <div key={g.category || '_'} className="cs-group" role="group" aria-label={g.category || undefined} data-control="case">
           {g.category && <span className="cs-group-label">{g.category}</span>}
           <div className="cs-chips">
             {g.cases.map((c) => {
@@ -204,8 +205,8 @@ export function CaseSelector(props: CaseSelectorProps) {
                   disabled={c.disabled}
                   title={tip || undefined}
                   onClick={() => onSelect(c.id)}
+                  data-case={c.id}
                 >
-                  <span className="cs-chip-id">{c.id}</span>
                   <span className="cs-chip-name">{c.name}</span>
                   <span className={`cs-kind cs-kind-${caseKindOf(c)}`} aria-hidden="true">
                     {KIND_TAG[caseKindOf(c)]}

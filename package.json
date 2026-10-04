@@ -20,19 +20,32 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./styles.css": "./styles.css"
+    "./chart": {
+      "types": "./dist/chart.d.ts",
+      "import": "./dist/chart.js"
+    },
+    "./keys": {
+      "types": "./dist/keys.d.ts",
+      "import": "./dist/keys.js"
+    },
+    "./styles.css": "./styles.css",
+    "./chart.css": "./chart.css",
+    "./reserved-classes.json": "./reserved-classes.json"
   },
   "files": [
     "dist",
     "styles.css",
-    "bin"
+    "chart.css",
+    "bin",
+    "reserved-classes.json"
   ],
   "scripts": {
     "build": "tsup",
     "test": "node --import tsx --test \"test/**/*.test.ts\" \"test/**/*.test.tsx\"",
     "test:browser": "node --import tsx --test \"e2e/**/*.test.ts\"",
     "prepare": "npm run build",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "prebuild": "node scripts/reserved-classes.mjs"
   },
   "peerDependencies": {
     "katex": "^0.16.0",
@@ -41,7 +54,8 @@
     "react-dom": "^18 || ^19",
     "react-router": "^6 || ^7 || ^8",
     "zustand": "^4 || ^5",
-    "playwright": ">=1.40"
+    "playwright": ">=1.40",
+    "uplot": "^1.6.30"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
@@ -57,7 +71,8 @@
     "tsup": "^8.3.5",
     "tsx": "^4.23.0",
     "typescript": "^5.7.3",
-    "zustand": "^5.0.2"
+    "zustand": "^5.0.2",
+    "uplot": "1.6.32"
   },
   "overrides": {
     "esbuild": "0.28.1"
@@ -67,6 +82,9 @@
   },
   "peerDependenciesMeta": {
     "playwright": {
+      "optional": true
+    },
+    "uplot": {
       "optional": true
     }
   }

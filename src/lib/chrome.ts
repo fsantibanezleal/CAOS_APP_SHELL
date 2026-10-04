@@ -13,7 +13,7 @@ const CHROME = {
     dark: 'Dark',
     attribution: 'Developed by Felipe Santibáñez-Leal',
     complement: 'A CAOS research project',
-    license: 'MIT licensed · open source',
+    license: '',
     version: 'v',
   },
   es: {
@@ -26,7 +26,7 @@ const CHROME = {
     dark: 'Oscuro',
     attribution: 'Desarrollado por Felipe Santibáñez-Leal',
     complement: 'Un proyecto de investigación CAOS',
-    license: 'Licencia MIT · código abierto',
+    license: '',
     version: 'v',
   },
 } as const;

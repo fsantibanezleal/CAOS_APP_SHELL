@@ -1,9 +1,12 @@
 import { createContext, useContext, type ReactNode } from 'react';
+import { useShellLang } from '../lib/lang';
+import { type BiText, pick } from '../lib/text';
 
 export interface Citation {
   id: string;
-  /** Short inline label, e.g. "Little 1961". */
-  label: string;
+  /** Short inline label, e.g. "Little 1961"; `{ en, es }` when it has words to translate ("Laplante and
+   * Staunton" / "Laplante y Staunton"), known shell defect 9. The bibliographic record stays verbatim. */
+  label: BiText;
   /** Full bibliographic string for the reference list. */
   citation: string;
   doi?: string;
@@ -36,16 +39,18 @@ function href(c: Citation): string | undefined {
 /** Inline reference linked to its DOI/URL, e.g. "(Little 1961)". */
 export function Cite({ id, paren = true }: { id: string; paren?: boolean }) {
   const { byId } = useContext(CitationsContext);
+  const lang = useShellLang();
   const c = byId[id];
   if (!c) {
     console.error(`[caos-app-shell] Cite of an unknown citation id ${id}`);
     return <cite className="cite-inline">[{id}]</cite>;
   }
   const h = href(c);
+  const text = pick(c.label, lang);
   const label = h ? (
-    <a href={h} target="_blank" rel="noreferrer noopener">{c.label}</a>
+    <a href={h} target="_blank" rel="noreferrer noopener">{text}</a>
   ) : (
-    <span>{c.label}</span>
+    <span>{text}</span>
   );
   return (
     <cite className="cite-inline">
