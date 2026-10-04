@@ -287,7 +287,8 @@ code, kbd { font-family: var(--font-mono); }
 .cs-kind { font-size: 0.62rem; font-weight: 700; line-height: 1; padding: 0.12rem 0.28rem; border-radius: 4px; border: 1px solid var(--color-border); color: var(--color-fg-faint); background: var(--color-surface-2); align-self: center; }
 .cs-kind-real { color: var(--color-accent-2); border-color: color-mix(in oklab, var(--color-accent-2) 40%, transparent); }
 .cs-kind-uploaded { color: var(--color-warn); border-color: color-mix(in oklab, var(--color-warn) 40%, transparent); }
-.cs-modified { display: flex; align-items: center; gap: 0.5rem; }
+.cs-modified { display: flex; align-items: center; gap: 0.35rem 0.5rem; flex-wrap: wrap; min-width: 0; }
+.cs-modified .badge { white-space: normal; max-width: 100%; }
 .cs-reset { border: none; background: transparent; color: var(--color-accent); font-size: 0.8rem; font-weight: 600; padding: 0.1rem 0.2rem; text-decoration: underline; text-underline-offset: 2px; }
 
 /* Authenticated workbench frame. Product styles may refine tokens and controls, but the package owns

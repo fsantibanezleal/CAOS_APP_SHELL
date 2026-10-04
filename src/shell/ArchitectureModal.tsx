@@ -57,7 +57,11 @@ export function validateArchitectureConfig(config: ArchitectureConfig): string[]
     for (const name of new Set([...svg.matchAll(/var\((--[a-z0-9-]+)/gi)].map((x) => x[1]))) {
       if (!known.has(name)) out.push(`architecture tab "${t.id}" uses ${name}, which the shell does not define`);
     }
-    const hex = svg.match(/#[0-9a-f]{3,8}\b/gi);
+    // A fragment reference (url(#marker-id), href="#id") is not a colour; strip those before looking for hex values.
+    const hex = svg
+      .replace(/url\(\s*#[^)]*\)/gi, '')
+      .replace(/href\s*=\s*["']#[^"']*["']/gi, '')
+      .match(/#[0-9a-f]{3,8}\b/gi);
     if (hex) {
       out.push(`architecture tab "${t.id}" uses hex colours (${[...new Set(hex)].slice(0, 3).join(', ')}); use shell tokens so it follows the theme`);
     }
