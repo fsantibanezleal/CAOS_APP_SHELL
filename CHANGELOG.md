@@ -67,6 +67,8 @@
   takes its container's height; below 900 px a filling view gets a fixed readable height. Before this, a `Stage`
   inside a `PlotCard` resolved to zero height and never drew.
 - `.caos-table`: tables in views and documents (tabular figures, a header that stays in view).
+- `UPlotChart` series `mode: 'points'` (a scatter of cases over a curve); `.caos-pending` for a view whose data is not
+  there yet (it declares `data-state="loading"`); the `BiText` type is exported.
 - `caos-shell-gate` rebuilt as `gate/` (G1 to G9 of the 2026-10-04 history): subject and mode identity with the
   exported storage keys; console, page and HTTP errors; deep links with and without a trailing slash, artifacts
   answered as JSON and a missing asset answered 404, through a built-in server that answers as GitHub Pages does

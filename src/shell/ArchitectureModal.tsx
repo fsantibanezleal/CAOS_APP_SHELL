@@ -16,7 +16,8 @@ export interface ArchTab {
   body_en: string;
   body_es: string;
   /**
-   * an inline '<svg…>…</svg>' string OR a path under the app's public/ (fetched + inlined).
+   * an inline '<svg…>…</svg>' string (import it with `?raw`); a URL is refused, because an `<img>` or a fetched
+   * file cannot read the page's theme tokens and a path goes stale (S11).
    *
    * ONE file carries BOTH languages (ADR-0058). Tag each translatable `<text>` twice at the same
    * coordinates, `class="… l-en"` and `class="… l-es"`; the modal wrapper sets `data-arch-lang`
