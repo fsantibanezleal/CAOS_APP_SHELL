@@ -32,8 +32,55 @@
 - `STANDARD_ROUTES`: the six product routes with EN/ES labels, one definition for header, router and gate.
 - `THEME_BOOT_SCRIPT`: the inline pre-paint script that applies the stored theme and language before the first
   frame; `AppShell` keeps `<html lang>` in step with the language toggle (ADR-0011).
+- The base requirements of the 2026-10-04 failure history (S1 to S13, S17, S18), each with a test in
+  `test/base07.test.tsx`:
+  - S3 `PanelBoundary`: a failing view is contained, named (`data-panel-error`) and reported; every tab panel,
+    every `PlotCard` and the shell root sit inside one.
+  - S4 `Tabs` and `SubTabs` are controllable (`value`, `onChange`), render only the open panel inside a boundary,
+    carry `data-tab` and `data-panel`, report more than six peers, and fade their overflowing edge;
+    `TabGroups` puts views under question groups when one row cannot hold them.
+  - S7 to S10 the workbench state: `Provenance` (`real`, `synthetic`, `published`) beside the lane on every
+    `Readout`, `PlotCard` and workbench group; `makeStateKey` and `useWorkbenchState`, so a view showing data
+    for an earlier selection is overlaid as stale; `CaseWorkbench` writes `data-case`, `data-variant`,
+    `data-source`, `data-state-key` and `data-replay-only` for the gate.
+  - S8 `formatNumber` and `useFormat`: numbers follow the interface language (es-CL decimal comma), and an
+    absent or non-finite value reads "not available" instead of `NaN`.
+  - S10 `Knob` and `ChipGroup`: the instrument's controls, registered with `data-control` so the gate can check
+    that each one changes the state key.
+  - S11 `SHELL_TOKENS`, `resolveToken` and `useThemeTokens`: the colour tokens the shell defines, resolved to
+    concrete values for canvas and WebGL; `validateArchitectureConfig` checks the modal on mount (at least five
+    tabs, inline SVG strings only, only defined tokens, no hex colours, both languages).
+  - S12 `UPlotChart` from the separate entry `@fasl-work/caos-app-shell/chart` (with `chart.css`): sized by its
+    container, colours resolved from the theme and rebuilt on theme or language change, options compared by
+    value, null-safe localised ticks, a y axis sized to its widest label, a cursor readout row instead of the
+    clipped legend, and labelled marks. `uplot` is an optional peer dependency.
+  - S13 `Stage` and `useStageSize`: an instrument draws only once its box has a size, declares
+    `data-drawn`, `data-width` and `data-height`, and reports a stage still at zero size after 1.5 s.
+  - S17 `reserved-classes.json`: every class the stylesheet styles, generated at build, for the product guard
+    that forbids redefining them.
+  - S18 `AppShell` reports a missing router context and names the duplicated-React cause.
+  - `@fasl-work/caos-app-shell/keys`: the storage keys (`caos.theme`, `caos.lang`) for the gate and the boot
+    script.
+
+### Changed
+
+- `ShellConfig.license` and `ShellConfig.visibility` are required (S5): the footer shows the product's own
+  licence with no default, and a private product shows no source link. `ShellConfig.build` adds the build id to
+  the footer beside the version, which must be `X.XX.XXX` (S6); both are written as `data-version` and
+  `data-build`.
+- `Readout` items take a numeric `value` (or `null`) with a unit or `unitless: true` and are formatted by the
+  shell; `lane` and `provenance` are required on `Readout` and `PlotCard`.
+- `CaseSelector` shows each case by name only (the id is written as `data-case`).
+- The architecture modal takes inline SVG strings only; the URL fetch and cache are removed.
 
 ### Fixed
+
+- The document could not scroll on a page taller than the viewport (`html, body, #root { height: 100% }`); it is
+  now `height: auto; min-height: 100%` (S1).
+- `[hidden]` lost to component `display` rules and showed hidden panels; it now always hides (S2). Each theme
+  declares `color-scheme`, so native scrollbars and form controls follow it.
+- The header navigation pushed the actions off a narrow screen; it shrinks and scrolls at every width.
+  Native selects and inputs follow the theme, sub-tab rows stay on one row, and the footer wraps below 860 px.
 
 - `ChromeStrings` typed each value as `string`; with `as const` the English literals made the Spanish table
   unassignable and `tsc` 5.9 failed, which also failed the build that `npm ci` runs.

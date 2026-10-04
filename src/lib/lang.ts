@@ -1,7 +1,8 @@
 import { create } from 'zustand';
+import { LANG_STORAGE_KEY } from './keys';
 
 export type Lang = 'en' | 'es';
-const KEY = 'caos.lang';
+const KEY = LANG_STORAGE_KEY;
 
 function readLang(): Lang {
   // ADR-0011: English is the DEFAULT, always. We do NOT auto-detect navigator.language (that made

@@ -1,4 +1,7 @@
-import { useId, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { PanelBoundary } from '../lib/PanelBoundary';
+import { useOverflowFade } from '../lib/overflow';
+import { MAX_PEER_TABS } from './Tabs';
 
 export interface SubTabDef {
   id: string;
@@ -6,22 +9,37 @@ export interface SubTabDef {
   content: ReactNode;
 }
 
-/** Second-level tabs nested inside a Tabs panel. Lighter chips; optional vertical left rail. */
-export function SubTabs({
-  tabs,
-  initial,
-  ariaLabel,
-  orientation = 'horizontal',
-}: {
+export interface SubTabsProps {
   tabs: SubTabDef[];
   initial?: string;
+  /** Controlled selection (known shell defect 6). */
+  value?: string;
+  onChange?: (id: string) => void;
   ariaLabel?: string;
   orientation?: 'horizontal' | 'vertical';
-}) {
+}
+
+/**
+ * Second-level tabs nested inside a Tabs panel: lighter chips, or a vertical left rail for deep content. Only the
+ * active panel is rendered, inside an error boundary; controlled when `value` is given; more than six peers is
+ * reported (ADR-0071 rule 5).
+ */
+export function SubTabs({ tabs, initial, value, onChange, ariaLabel, orientation = 'horizontal' }: SubTabsProps) {
   const baseId = useId();
   const first = tabs[0]?.id ?? '';
-  const [active, setActive] = useState<string>(initial ?? first);
+  const [own, setOwn] = useState<string>(initial ?? first);
+  const active = value ?? own;
   const vertical = orientation === 'vertical';
+  const rowRef = useRef<HTMLDivElement | null>(null);
+  useOverflowFade(rowRef, '.subtab.active', [active, tabs.length, vertical]);
+  if (tabs.length > MAX_PEER_TABS) {
+    console.error(`[caos-app-shell] ${tabs.length} peer sub-tabs (${ariaLabel ?? 'unnamed'}); at most ${MAX_PEER_TABS}, then group (ADR-0071 rule 5)`);
+  }
+
+  function select(id: string) {
+    if (value === undefined) setOwn(id);
+    onChange?.(id);
+  }
 
   function onKeyDown(e: KeyboardEvent<HTMLButtonElement>, idx: number) {
     const fwd = vertical ? 'ArrowDown' : 'ArrowRight';
@@ -35,16 +53,23 @@ export function SubTabs({
     else if (e.key === 'End') next = tabs.length - 1;
     const target = tabs[next];
     if (target) {
-      setActive(target.id);
+      select(target.id);
       document.getElementById(`${baseId}-subtab-${target.id}`)?.focus();
     }
   }
 
+  const current = tabs.find((t) => t.id === active) ?? tabs[0];
   return (
     <div className={vertical ? 'subtabs subtabs-vertical' : 'subtabs'}>
-      <div className="subtablist" role="tablist" aria-label={ariaLabel} aria-orientation={vertical ? 'vertical' : 'horizontal'}>
+      <div
+        className="subtablist"
+        role="tablist"
+        aria-label={ariaLabel}
+        aria-orientation={vertical ? 'vertical' : 'horizontal'}
+        ref={rowRef}
+      >
         {tabs.map((tab, idx) => {
-          const selected = tab.id === active;
+          const selected = tab.id === current?.id;
           return (
             <button
               key={tab.id}
@@ -55,7 +80,8 @@ export function SubTabs({
               aria-controls={`${baseId}-subpanel-${tab.id}`}
               tabIndex={selected ? 0 : -1}
               className={selected ? 'subtab active' : 'subtab'}
-              onClick={() => setActive(tab.id)}
+              data-tab={tab.id}
+              onClick={() => select(tab.id)}
               onKeyDown={(e) => onKeyDown(e, idx)}
             >
               {tab.label}
@@ -64,19 +90,19 @@ export function SubTabs({
         })}
       </div>
       <div className="subtabpanels">
-        {tabs.map((tab) => (
+        {current && (
           <div
-            key={tab.id}
-            id={`${baseId}-subpanel-${tab.id}`}
+            key={current.id}
+            id={`${baseId}-subpanel-${current.id}`}
             role="tabpanel"
-            aria-labelledby={`${baseId}-subtab-${tab.id}`}
-            hidden={tab.id !== active}
+            aria-labelledby={`${baseId}-subtab-${current.id}`}
             tabIndex={0}
             className="subtabpanel"
+            data-panel={current.id}
           >
-            {tab.id === active ? tab.content : null}
+            <PanelBoundary panel={current.id}>{current.content}</PanelBoundary>
           </div>
-        ))}
+        )}
       </div>
     </div>
   );

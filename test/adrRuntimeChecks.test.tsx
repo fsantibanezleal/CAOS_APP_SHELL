@@ -58,23 +58,21 @@ test('a bibliography dump is reported as banned (ADR-0017 s4)', () => {
   assert.match(seen.join('\n'), /ReferenceList is banned/);
 });
 
-test('an architecture modal with fewer than five tabs is reported (ADR-0058)', () => {
-  const tab = (id: string) => ({ id, en: id, es: id, body_en: 'x', body_es: 'x', svg: '<svg/>' });
-  const seen = capture(() =>
-    renderToStaticMarkup(
-      <MemoryRouter>
-        <AppShell
-          config={{
-            product: { name: 'P' },
-            links: { github: 'https://github.com/x/y' },
-            version: '0.07.000',
-            architecture: { tabs: [tab('a'), tab('b'), tab('c')] },
-          }}
-        >
-          <div />
-        </AppShell>
-      </MemoryRouter>,
-    ),
-  );
-  assert.match(seen.join('\n'), /has 3 tabs; ADR-0058 requires at least 5/);
+test('the architecture configuration is validated: tab count, inline SVG, tokens, hex colours, languages (ADR-0058, S11)', async () => {
+  const { validateArchitectureConfig } = await import('../src/shell/ArchitectureModal.tsx');
+  const tab = (id: string, svg = '<svg><rect fill="var(--color-surface)"/></svg>') => ({ id, en: id, es: id, body_en: 'x', body_es: 'x', svg });
+  assert.deepEqual(validateArchitectureConfig({ tabs: ['a', 'b', 'c', 'd', 'e'].map((id) => tab(id)) }), []);
+  const problems = validateArchitectureConfig({
+    tabs: [
+      tab('a', 'svg/tech/01.svg'),
+      tab('b', '<svg><rect fill="var(--color-nope)"/></svg>'),
+      tab('c', '<svg><rect fill="#ff0000"/></svg>'),
+      { ...tab('d'), body_es: '' },
+    ],
+  }).join(' | ');
+  assert.match(problems, /has 4 tabs; ADR-0058 requires at least 5/);
+  assert.match(problems, /must be an inline SVG string/);
+  assert.match(problems, /uses --color-nope, which the shell does not define/);
+  assert.match(problems, /uses hex colours/);
+  assert.match(problems, /lacks a label or a body in one language/);
 });

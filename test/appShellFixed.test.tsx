@@ -23,6 +23,8 @@ const base: ShellConfig = {
   ],
   links: { github: 'https://github.com/fsantibanezleal/probe' },
   version: '0.00.001',
+  license: { en: 'MIT licence', es: 'Licencia MIT' },
+  visibility: 'public',
 };
 
 function render(config: ShellConfig, path: string): string {
@@ -75,14 +77,25 @@ test('the repository action retains an accessible destination with a renderable 
   assert.match(link, /<svg\b[^>]*aria-hidden="true"/);
 });
 
-test('product license and attribution are configurable without changing legacy defaults', () => {
-  const legacy = render(base, '/');
-  assert.match(legacy, /Developed by/);
-  assert.match(legacy, /MIT licensed/);
-  const anonymous = render({ ...base, footer: { attribution: false, license: { en: 'Apache-2.0', es: 'Apache-2.0' } } }, '/');
+test('the footer shows the product licence it is given, with no default (S5), and attribution is configurable', () => {
+  const html = render(base, '/');
+  assert.match(html, /Developed by/);
+  assert.match(html, /MIT licence/);
+  assert.doesNotMatch(html, /MIT licensed · open source/);
+  const anonymous = render({ ...base, license: { en: 'Apache-2.0', es: 'Apache-2.0' }, footer: { attribution: false } }, '/');
   assert.doesNotMatch(anonymous, /Developed by/);
-  assert.doesNotMatch(anonymous, /MIT licensed/);
   assert.match(anonymous, /Apache-2.0/);
   const team = render({ ...base, footer: { attribution: { en: 'Maintained by the project team', es: 'Mantenido por el equipo' } } }, '/');
   assert.match(team, /Maintained by the project team/);
+});
+
+test('a private product shows no source link (S5)', () => {
+  const html = render({ ...base, visibility: 'private' }, '/');
+  assert.doesNotMatch(html, /github\.com\/fsantibanezleal\/probe/);
+});
+
+test('the footer carries the display version and the build id (S6)', () => {
+  const html = render({ ...base, version: '0.07.000', build: 'abc1234' }, '/');
+  assert.match(html, /v0\.07\.000 · abc1234/);
+  assert.match(html, /data-version="0.07.000"/);
 });

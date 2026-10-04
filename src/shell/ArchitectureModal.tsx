@@ -1,10 +1,11 @@
 // In-app "Architecture / How it works" modal (ADR-0058, the ⓘ standard, generalised from Veta + Circuita).
 // A header ⓘ button opens this modal; each tab pairs ONE hand-authored THEMED SVG (CSS-variable tokens of the shell
-// palette, so it repaints with the active theme) with a bilingual explanation. The SVG is fetched + INLINED (an <img>
-// would NOT inherit the CSS variables). Apps pass their tabs via ShellConfig.architecture; the depth must be COMPLETE
+// palette, so it repaints with the active theme) with a bilingual explanation. The SVG is an INLINE string (an <img>
+// or a fetched file would not inherit the CSS variables, and cannot be validated before it is shown). Apps pass their tabs via ShellConfig.architecture; the depth must be COMPLETE
 // (what the app is, what runs web/offline/compute, the web-app flow, the science flow, the data contracts/design).
 import { useEffect, useId, useRef, useState } from 'react';
 import { useShellLang } from '../lib/lang';
+import { SHELL_TOKENS } from '../lib/tokens';
 
 export interface ArchTab {
   id: string;
@@ -33,7 +34,35 @@ export interface ArchitectureConfig {
   tabs: ArchTab[];
 }
 
-const cache: Record<string, string> = {};
+/**
+ * Problems with an architecture configuration, one string each (ADR-0058, ADR-0078). The diagram must be an INLINE
+ * SVG string (a fetched or `<img>` file cannot be checked against the theme tokens before it is shown, failure class
+ * 14); every `var(--x)` it names must be a shell token (an undefined token renders as nothing, silently, failure
+ * class 25); a hex colour does not follow the theme; both languages are required; at least five tabs.
+ */
+export function validateArchitectureConfig(config: ArchitectureConfig): string[] {
+  const out: string[] = [];
+  if (config.tabs.length < 5) out.push(`the architecture modal has ${config.tabs.length} tabs; ADR-0058 requires at least 5`);
+  const known = new Set<string>(SHELL_TOKENS);
+  for (const t of config.tabs) {
+    if (!t.en?.trim() || !t.es?.trim() || !t.body_en?.trim() || !t.body_es?.trim()) {
+      out.push(`architecture tab "${t.id}" lacks a label or a body in one language`);
+    }
+    const svg = t.svg.trim();
+    if (!svg.startsWith('<svg')) {
+      out.push(`architecture tab "${t.id}": the diagram must be an inline SVG string (import it with ?raw), not a URL`);
+      continue;
+    }
+    for (const name of new Set([...svg.matchAll(/var\((--[a-z0-9-]+)/gi)].map((x) => x[1]))) {
+      if (!known.has(name)) out.push(`architecture tab "${t.id}" uses ${name}, which the shell does not define`);
+    }
+    const hex = svg.match(/#[0-9a-f]{3,8}\b/gi);
+    if (hex) {
+      out.push(`architecture tab "${t.id}" uses hex colours (${[...new Set(hex)].slice(0, 3).join(', ')}); use shell tokens so it follows the theme`);
+    }
+  }
+  return out;
+}
 
 export function ArchitectureModal({ config, onClose }: { config: ArchitectureConfig; onClose: () => void }) {
   const lang = useShellLang();
@@ -85,18 +114,11 @@ export function ArchitectureModal({ config, onClose }: { config: ArchitectureCon
     setFullSize(false);
     const raw = tab.svg.trim();
     if (raw.startsWith('<svg')) { setSvg(raw); return; }
-    if (cache[raw]) { setSvg(cache[raw]); return; }
+    // A URL is refused (ADR-0078): a fetched file cannot be checked against the theme tokens before it is shown.
+    console.error(`[caos-app-shell] architecture tab "${tab.id}": the diagram must be an inline SVG string, not "${raw.slice(0, 40)}"`);
     setSvg(null);
-    let cancelled = false;
-    // the consuming app is a Vite SPA; read its BASE_URL defensively (the shell itself is a plain library).
-    const baseUrl = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL || '/';
-    const url = baseUrl + raw.replace(/^\//, '');
-    fetch(url)
-      .then(async (r) => { if (!r.ok) throw new Error(`${r.status}`); return r.text(); })
-      .then((text) => { cache[raw] = text; if (!cancelled) setSvg(text); })
-      .catch((e) => { if (!cancelled) setErr(String((e as Error)?.message ?? e)); });
-    return () => { cancelled = true; };
-  }, [tab]);
+    setErr(es ? 'diagrama no disponible' : 'diagram unavailable');
+  }, [tab, es]);
 
   useEffect(() => {
     const element = diagramRef.current?.querySelector('svg');
@@ -144,7 +166,7 @@ export function ArchitectureModal({ config, onClose }: { config: ArchitectureCon
 
         {/* data-arch-lang lives on the panel, not on the diagram wrapper: the wrapper only exists
             once the SVG has loaded, and the stylesheet needs a stable ancestor to key on. */}
-        <div id={`${id}-panel`} role="tabpanel" aria-labelledby={`${id}-${tab.id}`} data-arch-lang={es ? 'es' : 'en'} style={{ overflowY: 'auto', minHeight: 0, padding: '14px 16px 18px' }}>
+        <div id={`${id}-panel`} role="tabpanel" aria-labelledby={`${id}-${tab.id}`} data-arch-lang={es ? 'es' : 'en'} data-tab={tab.id} data-state={err ? 'missing' : svg === null ? 'loading' : 'ready'} style={{ overflowY: 'auto', minHeight: 0, padding: '14px 16px 18px' }}>
           {body.map((p, i) => (
             <p key={i} style={{ color: 'var(--color-fg)', fontSize: 13, lineHeight: 1.65, margin: i === 0 ? '0 0 10px' : '10px 0' }}>{p}</p>
           ))}
@@ -152,7 +174,7 @@ export function ArchitectureModal({ config, onClose }: { config: ArchitectureCon
           {!err && svg === null && <div style={{ color: 'var(--color-fg-faint)', fontSize: 12 }}>…</div>}
           {svg !== null && (
             <>
-              <button type="button" aria-pressed={fullSize} aria-controls={`${id}-diagram`} onClick={() => setFullSize(value => !value)} style={{ margin: '0 0 8px', fontSize: 12, padding: '5px 10px' }}>
+              <button type="button" aria-pressed={fullSize} aria-controls={`${id}-diagram`} onClick={() => setFullSize(value => !value)} className="caos-arch-toggle">
                 {fullSize ? (es ? 'Ajustar diagrama' : 'Fit diagram') : (es ? 'Leer a tamaño completo' : 'Read at full size')}
               </button>
               <div id={`${id}-diagram`} role="region" aria-label={es ? 'Diagrama de arquitectura' : 'Architecture diagram'} tabIndex={0} style={{ border: '1px solid var(--color-border)', borderRadius: 8, padding: 8, background: 'var(--color-bg, var(--color-surface))', overflow: 'auto', maxWidth: '100%' }}>
