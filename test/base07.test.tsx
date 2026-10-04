@@ -177,3 +177,11 @@ test('the App route: the rail carries the case picker, the variants and the live
   assert.match(out, /class="caos-plot fill"/);
   assert.match(out, /data-case="c2"/);
 });
+
+test('S8: a count shows every integer digit; significant digits round only the fraction', () => {
+  assert.equal(formatNumber(27345, 'en'), '27,345');
+  assert.equal(formatNumber(27345, 'es'), '27.345');
+  assert.equal(formatNumber(1234.5678, 'en'), '1,235');
+  assert.equal(formatNumber(12.3456, 'en'), '12.35');
+  assert.equal(formatNumber(0.012345, 'es'), '0,01235');
+});

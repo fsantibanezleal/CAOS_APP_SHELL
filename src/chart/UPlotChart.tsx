@@ -21,7 +21,7 @@ export interface ChartSeries {
 
 export interface ChartAxis {
   label: BiText;
-  unit?: string;
+  unit?: BiText;
   format?: FormatOptions;
 }
 
@@ -74,11 +74,13 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlo
 
   const xLabel = pick(x.label, lang);
   const yLabel = pick(y.label, lang);
+  const xUnit = x.unit ? pick(x.unit, lang) : '';
+  const yUnit = y.unit ? pick(y.unit, lang) : '';
   // Everything that changes the plot's structure, by value.
   const structure = JSON.stringify({
     s: series.map((s, i) => [pick(s.label, lang), s.color ?? ROTATION[i % ROTATION.length], s.width ?? 2, s.dash ?? null, s.mode ?? 'line']),
-    x: [xLabel, x.unit ?? '', Boolean(x.time), x.format ?? null],
-    y: [yLabel, y.unit ?? '', Boolean(y.log), y.range ?? null, y.format ?? null],
+    x: [xLabel, xUnit, Boolean(x.time), x.format ?? null],
+    y: [yLabel, yUnit, Boolean(y.log), y.range ?? null, y.format ?? null],
     m: (marks ?? []).map((m) => [m.x, pick(m.label, lang)]),
     theme,
     lang,
@@ -106,7 +108,7 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlo
           grid: { stroke: grid, width: 1 },
           ticks: { stroke: grid },
           font,
-          label: x.unit ? `${xLabel} (${x.unit})` : xLabel,
+          label: xUnit ? `${xLabel} (${xUnit})` : xLabel,
           labelFont: font,
           values: x.time ? undefined : tick(x.format),
         },
@@ -115,7 +117,7 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlo
           grid: { stroke: grid, width: 1 },
           ticks: { stroke: grid },
           font,
-          label: y.unit ? `${yLabel} (${y.unit})` : yLabel,
+          label: yUnit ? `${yLabel} (${yUnit})` : yLabel,
           labelFont: font,
           values: tick(y.format),
           size: (u: uPlot, values: string[] | null) => {
@@ -182,9 +184,9 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlo
   const read =
     cursor !== null
       ? [
-          `${xLabel} ${formatNumber(x.values[cursor], lang, x.format ?? { digits: 4 })}${x.unit ? ` ${x.unit}` : ''}`,
+          `${xLabel} ${formatNumber(x.values[cursor], lang, x.format ?? { digits: 4 })}${xUnit ? ` ${xUnit}` : ''}`,
           ...series.map(
-            (s) => `${pick(s.label, lang)} ${formatNumber(s.values[cursor] ?? null, lang, y.format ?? { digits: 4 })}${y.unit ? ` ${y.unit}` : ''}`,
+            (s) => `${pick(s.label, lang)} ${formatNumber(s.values[cursor] ?? null, lang, y.format ?? { digits: 4 })}${yUnit ? ` ${yUnit}` : ''}`,
           ),
         ].join(' · ')
       : lang === 'es'

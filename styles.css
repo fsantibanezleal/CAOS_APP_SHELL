@@ -468,6 +468,8 @@ html, body { overflow-x: hidden; }
 /* Verdict: the current diagnosis, coloured by its tone. */
 .caos-verdict { border: 1px solid var(--color-border); border-left: 4px solid var(--tone); border-radius: 8px; padding: 0.7rem 0.85rem; background: var(--color-surface-2); }
 .caos-verdict-text { margin: 0.2rem 0 0; font-weight: 650; color: var(--color-fg); }
+.caos-verdict.compact { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.15rem 0.6rem; padding: 0.4rem 0.7rem; }
+.caos-verdict.compact .caos-verdict-text { margin: 0; }
 
 /* PlotCard: the frame every chart or table sits in. */
 .caos-plot { margin: 0; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 10px; padding: 0.45rem 0.6rem 0.4rem; min-width: 0; }

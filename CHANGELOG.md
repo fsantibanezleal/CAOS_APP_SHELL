@@ -110,6 +110,10 @@
   view; the routed nav re-centres its active link on every route change. The contained phone footer stays one row
   with a faded end instead of wrapping into three lines over the instrument.
 - Badges never wrap mid-label; stacked views in a panel keep a gap.
+- Units are bilingual where they are words (`unit: { en: 'people', es: 'personas' }`) in `Readout`, `Gauge`, `Knob` and the
+  chart axes; a Spanish reader no longer meets an English unit. `formatNumber` shows every integer digit of a count
+  (27,345, not 27,350); significant digits round only the fraction. `Verdict compact` puts the title and the verdict
+  on one row, for a verdict above a drawing.
 - Found by the gate on the product template: `CaseSelector` resolves a `?case=` deep link once an asynchronous case
   list arrives (it adopted on mount only, and wrote the default case into the URL first), and its modified badge
   names the case instead of its id and wraps in the rail; the architecture validation no longer reads a marker

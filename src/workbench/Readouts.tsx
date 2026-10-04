@@ -14,8 +14,9 @@ export interface ReadoutItem {
   value?: number | null;
   /** A categorical value shown as text instead of a number. */
   text?: BiText;
-  /** The unit. Required unless `unitless` is set (failure class 23: readouts without units). */
-  unit?: string;
+  /** The unit, bilingual when it is a word (people / personas), a plain string when it is a symbol (d, %). Required
+   * unless `unitless` is set (failure class 23: readouts without units). */
+  unit?: BiText;
   unitless?: boolean;
   /** What the quantity is, in one line (ADR-0017 s3.8: every variable is self-explanatory). */
   hint?: BiText;
@@ -87,7 +88,7 @@ export function Readout({ items, title, lane, provenance, dataKey }: ReadoutProp
               <dt>{label}</dt>
               <dd>
                 <span className="caos-readout-value">{shown}</span>
-                {it.unit && it.text === undefined && <span className="caos-readout-unit"> {it.unit}</span>}
+                {it.unit && it.text === undefined && <span className="caos-readout-unit"> {pick(it.unit, lang)}</span>}
               </dd>
             </div>
           );
@@ -111,7 +112,7 @@ export interface GaugeProps {
   min: number;
   max: number;
   zones: GaugeZone[];
-  unit?: string;
+  unit?: BiText;
   unitless?: boolean;
   format?: FormatOptions;
 }
@@ -144,7 +145,7 @@ export function Gauge({ title, value, min, max, zones, unit, unitless, format }:
         <span>{fmt(min)}</span>
         <span className="caos-gauge-value">
           {fmt(value)}
-          {finite && unit ? ` ${unit}` : ''}
+          {finite && unit ? ` ${pick(unit, lang)}` : ''}
         </span>
         <span>{fmt(max)}</span>
       </div>
@@ -160,7 +161,12 @@ export function Gauge({ title, value, min, max, zones, unit, unitless, format }:
   );
 }
 
-export type VerdictProps = { title: BiText; children?: ReactNode } & (
+export type VerdictProps = {
+  title: BiText;
+  /** Title and verdict on one row, for a verdict that sits above a drawing and must not take its height. */
+  compact?: boolean;
+  children?: ReactNode;
+} & (
   | { code: string; messages: Record<string, { tone: Tone; text: BiText }> }
   | { tone: Tone; verdict: BiText }
 );
@@ -181,7 +187,7 @@ export function Verdict(props: VerdictProps) {
     text = pick(props.verdict, lang);
   }
   return (
-    <div className={`caos-verdict tone-${tone}`} data-verdict={tone}>
+    <div className={`caos-verdict tone-${tone}${props.compact ? ' compact' : ''}`} data-verdict={tone}>
       <p className="caos-verdict-title">{pick(props.title, lang)}</p>
       <p className="caos-verdict-text">{text}</p>
       {props.children}
