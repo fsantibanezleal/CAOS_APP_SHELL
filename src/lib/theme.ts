@@ -49,3 +49,13 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     set({ theme: t });
   },
 }));
+
+/**
+ * The pre-paint script for index.html (inline, before the bundle): applies the stored or preferred theme and the
+ * stored language before the first frame, so a light-theme user never sees a dark flash and the document language
+ * is right from the start (ADR-0011, ADR-0012). Keys match the shell stores.
+ */
+export const THEME_BOOT_SCRIPT =
+  "(function(){try{var t=localStorage.getItem('caos.theme');if(t!=='light'&&t!=='dark'){t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'}" +
+  "document.documentElement.dataset.theme=t;var l=localStorage.getItem('caos.lang');document.documentElement.lang=l==='es'?'es':'en'}" +
+  "catch(e){document.documentElement.dataset.theme='dark'}})();";

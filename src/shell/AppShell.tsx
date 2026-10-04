@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router';
 import { Boxes, Briefcase, CodeXml, Globe, Info } from 'lucide-react';
 import { useShellLang } from '../lib/lang';
@@ -70,6 +70,13 @@ export function AppShell({ config, children }: { config: ShellConfig; children: 
   const personal = config.links.personal ?? PERSONAL;
   const portfolio = config.links.portfolio ?? PORTFOLIO;
   const [archOpen, setArchOpen] = useState(false);
+  // ADR-0011: the document language follows the language toggle (screen readers, hyphenation, spell-check).
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+  if (config.architecture && config.architecture.tabs.length < 5) {
+    console.error(`[caos-app-shell] the architecture modal has ${config.architecture.tabs.length} tabs; ADR-0058 requires at least 5`);
+  }
   const archLabel = lang === 'es' ? 'Arquitectura / Cómo funciona' : 'Architecture / How it works';
   const { pathname } = useLocation();
   const fixed =

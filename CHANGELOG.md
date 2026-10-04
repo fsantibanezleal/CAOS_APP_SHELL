@@ -25,6 +25,14 @@
   no bibliography dump, captioned equations, sections with references, the theme applied, no console error) and
   reaches every header route by a real pointer click. `playwright` is an optional peer dependency.
 
+- ADR rules enforced at runtime (ADR-0078, "rules live in the base"): an `Equation` without a caption, a citation
+  without a DOI or URL, a duplicate citation id, a `Cite` of an unknown id, a `ReferenceList` (banned by
+  ADR-0017 s4, now deprecated) and an architecture modal with fewer than five tabs are each reported with
+  `console.error`; `caos-shell-gate` fails a page on any console error.
+- `STANDARD_ROUTES`: the six product routes with EN/ES labels, one definition for header, router and gate.
+- `THEME_BOOT_SCRIPT`: the inline pre-paint script that applies the stored theme and language before the first
+  frame; `AppShell` keeps `<html lang>` in step with the language toggle (ADR-0011).
+
 ### Fixed
 
 - `ChromeStrings` typed each value as `string`; with `as const` the English literals made the Spanish table
