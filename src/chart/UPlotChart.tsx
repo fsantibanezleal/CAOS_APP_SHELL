@@ -134,7 +134,7 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlo
           const stroke = resolveToken(s.color ?? ROTATION[i % ROTATION.length], '#4a8');
           return s.mode === 'points'
             ? { label: pick(s.label, lang), stroke, width: 1.5, paths: () => null, points: { show: true, space: 0, size: 9, fill: stroke } }
-            : { label: pick(s.label, lang), stroke, width: s.width ?? 2, dash: s.dash, spanGaps: false };
+            : { label: pick(s.label, lang), stroke, width: s.width ?? 2, dash: s.dash, spanGaps: false, points: { show: false } };
         }),
       ],
       hooks: {
