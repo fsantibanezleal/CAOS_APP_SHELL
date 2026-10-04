@@ -128,3 +128,18 @@ test('ShellConfig.contain makes every route the viewport', () => {
   );
   assert.match(out, /class="app-shell fixed contain"/);
 });
+
+test('STANDARD_ROUTES are the six product routes in order', async () => {
+  const { STANDARD_ROUTES } = await import('../src/shell/routes.ts');
+  assert.deepEqual(
+    STANDARD_ROUTES.map((r) => r.path),
+    ['/', '/introduction', '/methodology', '/implementation', '/experiments', '/benchmark'],
+  );
+});
+
+test('THEME_BOOT_SCRIPT is a self-contained expression that sets the theme and the language', async () => {
+  const { THEME_BOOT_SCRIPT } = await import('../src/lib/theme.ts');
+  assert.match(THEME_BOOT_SCRIPT, /dataset\.theme/);
+  assert.match(THEME_BOOT_SCRIPT, /documentElement\.lang/);
+  assert.doesNotThrow(() => new Function(THEME_BOOT_SCRIPT));
+});

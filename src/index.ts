@@ -4,6 +4,7 @@
 
 export { AppShell } from './shell/AppShell';
 export type { ShellConfig, ShellRoute } from './shell/AppShell';
+export { STANDARD_ROUTES } from './shell/routes';
 export { WorkbenchShell } from './shell/WorkbenchShell';
 export { FocusShell } from './shell/FocusShell';
 export type { FocusShellProps } from './shell/FocusShell';
@@ -13,7 +14,7 @@ export type { ArchitectureConfig, ArchTab } from './shell/ArchitectureModal';
 export { ThemeToggle } from './shell/ThemeToggle';
 export { LanguageToggle } from './shell/LanguageToggle';
 
-export { useThemeStore, applyTheme, readTheme } from './lib/theme';
+export { useThemeStore, applyTheme, readTheme, THEME_BOOT_SCRIPT } from './lib/theme';
 export type { Theme } from './lib/theme';
 export { useLangStore, useShellLang } from './lib/lang';
 export type { Lang } from './lib/lang';
