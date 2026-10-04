@@ -13,6 +13,8 @@ export interface RailSection {
 export interface WorkbenchLayoutProps {
   /** The control rail: case and variant pickers, parameters, the live readout. Either one node or sections. */
   rail: ReactNode | RailSection[];
+  /** Shown above the rail (and above its sections): the case and variant pickers, which every section shares. */
+  railHead?: ReactNode;
   /** The instrument: the views of the selected case. It takes the rest of the viewport (ADR-0071 rules 2, 8). */
   children: ReactNode;
   /** Accessible name of the rail. */
@@ -32,7 +34,7 @@ function isSections(rail: ReactNode | RailSection[]): rail is RailSection[] {
  * explicit width that never scrolls (rule 6), and an instrument marked `data-instrument` so the measured gate
  * can check that it covers at least half of the viewport (rule 8). Pair with `ShellConfig.contain`.
  */
-export function WorkbenchLayout({ rail, children, railLabel, className }: WorkbenchLayoutProps) {
+export function WorkbenchLayout({ rail, railHead, children, railLabel, className }: WorkbenchLayoutProps) {
   const lang = useShellLang();
   const sections = isSections(rail) ? rail : null;
   const [active, setActive] = useState(sections?.[0]?.id ?? '');
@@ -43,6 +45,7 @@ export function WorkbenchLayout({ rail, children, railLabel, className }: Workbe
   return (
     <div className={['page-body', 'wide', 'caos-wb', className].filter(Boolean).join(' ')} data-workbench="">
       <aside className="caos-wb-rail" aria-label={label} data-rail="">
+        {railHead && <div className="caos-wb-rail-head">{railHead}</div>}
         {sections ? (
           <>
             <div className="caos-wb-rail-sections" role="tablist" aria-label={label}>

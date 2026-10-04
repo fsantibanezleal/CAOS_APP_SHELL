@@ -4,5 +4,8 @@
    the plot, never in uPlot's legend, which a sized host clips (known shell defect 3). */
 .caos-chart { position: relative; min-width: 0; width: 100%; }
 .caos-chart .u-legend { display: none; }
-.caos-chart-readout { margin: 0.3rem 0 0; font-family: var(--font-mono); font-size: 0.78rem; color: var(--color-fg-subtle); min-height: 1.2em; }
+/* height="fill": the chart takes its container's height; the plot box is sized by the layout, never by its content. */
+.caos-chart.fill { height: 100%; display: flex; flex-direction: column; min-height: 0; }
+.caos-chart.fill > .caos-chart-plot { flex: 1 1 0; min-height: 0; overflow: hidden; }
+.caos-chart-readout { margin: 0.15rem 0 0; font-family: var(--font-mono); font-size: 0.74rem; line-height: 1.3; color: var(--color-fg-subtle); min-height: 1.3em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .caos-chart .u-cursor-x, .caos-chart .u-cursor-y { border-color: var(--color-fg-faint) !important; }

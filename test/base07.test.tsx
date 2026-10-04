@@ -149,3 +149,31 @@ test('S1 and S2: the stylesheet lets the document scroll, always hides [hidden],
   assert.match(css, /color-scheme: light;/);
   assert.match(css, /\.main-nav \{[^}]*min-width: 0;[^}]*overflow-x: auto;/);
 });
+
+test('the App route: the rail carries the case picker, the variants and the live values, under the same state key', async () => {
+  const { Readout } = await import('../src/workbench/Readouts.tsx');
+  const { useWorkbenchState } = await import('../src/workbench/state.ts');
+  function RailValue() {
+    const { stateKey } = useWorkbenchState();
+    return <Readout lane="live" provenance="synthetic" dataKey={stateKey} items={[{ label: 'Peak', value: 3, unit: 'people' }]} />;
+  }
+  const out = html(
+    <CaseWorkbench
+      caseId="c2"
+      cases={{ cases: [{ id: 'c1', name: 'First' }, { id: 'c2', name: 'Second' }], selectedId: 'c2', onSelect: () => undefined, layout: 'select' }}
+      variants={{ variants: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }], activeId: 'a', onSelect: () => undefined }}
+      controls={{ k: 1 }}
+      rail={<RailValue />}
+      groups={[{ id: 'g', label: 'G', content: <PlotCard fill title="P" lane="live" provenance="real">x</PlotCard> }]}
+      context={{ content: 'ctx' }}
+    />,
+  );
+  const rail = out.slice(out.indexOf('data-rail'), out.indexOf('data-instrument'));
+  assert.match(rail, /data-control="case"/);
+  assert.match(rail, /data-control="variant"/);
+  assert.match(rail, /data-readout=""/);
+  assert.match(rail, /data-stale="0"/, 'the rail readout reads the workbench state key');
+  assert.doesNotMatch(out.slice(out.indexOf('data-instrument')), /data-control="case"/);
+  assert.match(out, /class="caos-plot fill"/);
+  assert.match(out, /data-case="c2"/);
+});

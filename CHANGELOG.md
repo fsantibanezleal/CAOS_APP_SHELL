@@ -62,8 +62,31 @@
   - `@fasl-work/caos-app-shell/keys`: the storage keys (`caos.theme`, `caos.lang`) for the gate and the boot
     script.
 
+- The instrument's height chain (failure class 4): `PlotCard fill` takes the height its panel leaves, `.caos-views-row`
+  sets filling views side by side, sub-tabs inside a panel pass the height down, and `UPlotChart height="fill"`
+  takes its container's height; below 900 px a filling view gets a fixed readable height. Before this, a `Stage`
+  inside a `PlotCard` resolved to zero height and never drew.
+- `.caos-table`: tables in views and documents (tabular figures, a header that stays in view).
+- `caos-shell-gate` rebuilt as `gate/` (G1 to G9 of the 2026-10-04 history): subject and mode identity with the
+  exported storage keys; console, page and HTTP errors; deep links with and without a trailing slash, artifacts
+  answered as JSON and a missing asset answered 404, through a built-in server that answers as GitHub Pages does
+  (`--serve dist`); boxes inside the viewport and the rail, containers that cut or scroll sideways, truncated text
+  without its full text, every control reached by the pointer the way a reader can scroll to it; painted pixels per
+  drawing stage and the drawn views covering half the viewport, measured on the screenshot; every route, tab,
+  sub-tab and case at 390x844, 768x1024, 1280x800, 1600x900 and 2560x1440, both themes and both languages, waiting
+  for declared state; animation frames and mutations at rest; every registered control changing the selection key,
+  and the rendered case being the case asked for, by selection and by deep link.
+- G15: the gate's self-test (`npm run test:gate`, a CI job): a fixture product built on this shell passes the full
+  matrix clean, and each of 26 planted defects fails the check that owns it.
+
 ### Changed
 
+- `CaseWorkbench` is the whole App route: it renders the layout, puts the case picker (`cases`), the variants and
+  the product's `rail` in the rail, and provides the selection key to the rail and the instrument. The per-group
+  badge row is gone (each view shows its own lane and provenance); `WorkbenchLayout` takes a `railHead`. The
+  workbench spacing is tightened (rail `clamp(248px, 19vw, 340px)`, compact group and sub-tab rows), so the drawn
+  views cover half of a 1280x800 viewport.
+- The variant row is a registered control (`data-control="variant"`).
 - `ShellConfig.license` and `ShellConfig.visibility` are required (S5): the footer shows the product's own
   licence with no default, and a private product shows no source link. `ShellConfig.build` adds the build id to
   the footer beside the version, which must be `X.XX.XXX` (S6); both are written as `data-version` and
@@ -80,7 +103,11 @@
 - `[hidden]` lost to component `display` rules and showed hidden panels; it now always hides (S2). Each theme
   declares `color-scheme`, so native scrollbars and form controls follow it.
 - The header navigation pushed the actions off a narrow screen; it shrinks and scrolls at every width.
-  Native selects and inputs follow the theme, sub-tab rows stay on one row, and the footer wraps below 860 px.
+  Native selects and inputs follow the theme, and sub-tab rows stay on one row.
+- A partly hidden item focused by keyboard in a scrolling row (nav, tab rows, phone footer) is scrolled fully into
+  view; the routed nav re-centres its active link on every route change. The contained phone footer stays one row
+  with a faded end instead of wrapping into three lines over the instrument.
+- Badges never wrap mid-label; stacked views in a panel keep a gap.
 
 - `ChromeStrings` typed each value as `string`; with `as const` the English literals made the Spanish table
   unassignable and `tsc` 5.9 failed, which also failed the build that `npm ci` runs.

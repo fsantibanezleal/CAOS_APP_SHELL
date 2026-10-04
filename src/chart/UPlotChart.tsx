@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import uPlot from 'uplot';
 import { type FormatOptions, formatNumber } from '../lib/format';
 import { useShellLang } from '../lib/lang';
@@ -31,8 +31,9 @@ export interface UPlotChartProps {
   series: ChartSeries[];
   /** Vertical markers at x positions, drawn on the plot and labelled (mark what the engine detected). */
   marks?: { x: number; label: BiText }[];
-  /** Height in pixels; the chart takes its container's width. */
-  height?: number;
+  /** Height in pixels, or `fill` to take the container's height (inside `PlotCard fill`); the width is always the
+   * container's. */
+  height?: number | 'fill';
   /** Called with the index under the cursor (or null), for linked views. */
   onCursor?: (index: number | null) => void;
 }
@@ -51,8 +52,19 @@ const ROTATION: ShellToken[] = ['--color-accent', '--color-magenta', '--color-ac
 export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlotChartProps) {
   const lang = useShellLang();
   const theme = useThemeStore((s) => s.theme);
-  const [hostRef, size] = useStageSize();
+  const fill = height === 'fill';
+  // The plot box is measured: its width always, its height too when the chart fills its container.
+  const [measureRef, box] = useStageSize();
   const plotRef = useRef<HTMLDivElement | null>(null);
+  const setPlot = useCallback(
+    (el: HTMLDivElement | null) => {
+      plotRef.current = el;
+      measureRef(el);
+    },
+    [measureRef],
+  );
+  const width = box.width;
+  const h = fill ? box.height : height;
   const uRef = useRef<uPlot | null>(null);
   const [cursor, setCursor] = useState<number | null>(null);
   const onCursorRef = useRef(onCursor);
@@ -68,22 +80,22 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlo
     m: (marks ?? []).map((m) => [m.x, pick(m.label, lang)]),
     theme,
     lang,
-    height,
-    w: size.width,
+    h,
+    w: width,
   });
   const data = useMemo(() => [x.values, ...series.map((s) => s.values)] as uPlot.AlignedData, [x.values, series]);
 
   useEffect(() => {
     const el = plotRef.current;
-    if (!el || size.width <= 0) return;
+    if (!el || width <= 0 || h <= 0) return;
     const fg = resolveToken('--color-fg-subtle', '#888');
     const grid = resolveToken('--color-border', '#ccc');
     const font = `11px ${resolveToken('--font-sans', 'sans-serif')}`;
     const tick = (fmt: FormatOptions | undefined) => (_u: uPlot, vals: (number | null)[]) =>
       vals.map((v) => (v === null || v === undefined ? '' : formatNumber(v, lang, fmt ?? { digits: 4 })));
     const opts: uPlot.Options = {
-      width: size.width,
-      height,
+      width,
+      height: h,
       legend: { show: false },
       scales: { x: { time: Boolean(x.time) }, y: { distr: y.log ? 3 : 1, ...(y.range ? { range: y.range } : {}) } },
       axes: [
@@ -180,15 +192,14 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlo
 
   return (
     <div
-      ref={hostRef}
-      className="caos-chart"
+      className={fill ? 'caos-chart fill' : 'caos-chart'}
       data-series={series.length}
       data-axis-titles={`${xLabel}|${yLabel}`}
       data-ticks-cut="0"
-      data-drawn={size.width > 0 ? '1' : '0'}
+      data-drawn={width > 0 && h > 0 ? '1' : '0'}
     >
-      <div ref={plotRef} />
-      <p className="caos-chart-readout" aria-live="polite">
+      <div ref={setPlot} className="caos-chart-plot" />
+      <p className="caos-chart-readout" aria-live="polite" title={read}>
         {read}
       </p>
     </div>

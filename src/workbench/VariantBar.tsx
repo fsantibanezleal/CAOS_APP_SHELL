@@ -35,7 +35,7 @@ export function VariantBar({ variants, activeId, onSelect, title, lane }: Varian
         </span>
         {shownLane && <LaneBadge lane={shownLane} />}
       </div>
-      <div className="caos-chip-row" role="radiogroup" aria-label={pick(title ?? { en: 'Variants', es: 'Variantes' }, lang)}>
+      <div className="caos-chip-row" role="radiogroup" aria-label={pick(title ?? { en: 'Variants', es: 'Variantes' }, lang)} data-control="variant">
         {variants.map((v) => (
           <button
             key={v.id}

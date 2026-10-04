@@ -56,12 +56,17 @@ const config: ShellConfig = {
 - **Product metadata:** `license` and `visibility` are required: the footer shows the product's licence and a
   private product shows no source link. `footer.attribution` accepts bilingual text or `false`.
 - **Hub case (Faena):** pass `routes: []` (or one) and the nav is hidden; header and footer stay identical.
-- **The App route:** compose `WorkbenchLayout` (rail and instrument on the full viewport) with `CaseSelector`
-  and `CaseWorkbench` (`caseId`, `controls`, the variant bar, at most six question groups, then the variant
-  comparison and the context). Controls are `Knob` and `ChipGroup` (each writes `data-control`). Values go in
-  `Readout` / `Gauge` / `Verdict`, every view in a `PlotCard`; both take `lane` and `provenance` and a
-  `dataKey`: pass `useWorkbenchState().stateKey` as captured when the computation started, and a view still
-  showing an earlier selection is overlaid as stale.
+- **The App route:** one `CaseWorkbench` is the whole route: the rail holds the case picker (`cases`, the
+  `CaseSelector` props), the variants (`variants`) and your `rail` (parameters as `Knob` and `ChipGroup`, live
+  values as `Readout` / `Gauge` / `Verdict`); the instrument holds at most six question `groups`, then the
+  variant comparison and the context. Pickers and numbers live in the rail so the drawing keeps the instrument.
+  Every control writes `data-control`. `PlotCard` and `Readout` take `lane`, `provenance` and a `dataKey`:
+  pass `useWorkbenchState().stateKey` as captured when the computation started (rail and instrument share it), and
+  a view still showing an earlier selection is overlaid as stale. Anything that loads declares
+  `data-state="loading"` until it is ready; the gate waits for that, never for the network.
+- **Fill the instrument:** `<PlotCard fill>` takes the height its panel leaves (several `fill` cards share it, a
+  `.caos-views-row` puts them side by side), and a `Stage` or `<UPlotChart height="fill">` inside it gets a real
+  size. A table (`.caos-table`) is sized to its rows: put it above the drawing of the same numbers, never alone.
 - **Drawing:** put canvas, WebGL and SVG instruments in a `Stage` (or `useStageSize`): nothing draws at zero
   size, and colours come from `useThemeTokens()` (a canvas cannot read CSS variables).
 - **Charts:** `import { UPlotChart } from "@fasl-work/caos-app-shell/chart"`: x and y titles with units, series
@@ -72,9 +77,13 @@ const config: ShellConfig = {
   `Tabs`, `SubTabs` and `TabGroups` are controllable and render only the open panel inside a `PanelBoundary`.
 - **Architecture modal:** five or more tabs, each an inline SVG string (`import svg from "./x.svg?raw"`) that uses
   only `SHELL_TOKENS`; `validateArchitectureConfig` reports anything else on mount.
-- **Measure it:** `npx caos-shell-gate --url http://127.0.0.1:4173 --expect-brand "RotorVitals"` against the
-  built app (needs `playwright`); it exits non-zero on any ADR-0071 or ADR-0017 failure and writes screenshots
-  and a JSON report.
+- **Measure it:** `npx caos-shell-gate --serve dist --expect-brand "RotorVitals"` serves the build as GitHub
+  Pages does (no SPA fallback), or `--url https://...` measures the deployed origin (needs `playwright`). It walks
+  every route, tab, sub-tab and case at five sizes, both themes and both languages, and fails on: a wrong subject
+  (G1) or mode (G2), console errors and 4xx/5xx (G3), broken deep links or HTML for an artifact (G4), anything a
+  reader cannot scroll to, see whole or click (G5), blank or underfilled drawings and an instrument under half the
+  viewport (G6), a view that never settles (G7), loops at rest (G8), and controls that change nothing (G9). The
+  report (`gate-output/gate-report.json`) lists every failure and the smallest margins against each floor.
 - **Your own CSS:** never redefine a class in `reserved-classes.json`; the product guard reads that list.
 - **Animated views:** drive every canvas or 3D loop through `usePausedViz` (default paused, run once, halt on a
   hidden tab), never call `requestAnimationFrame` directly.
