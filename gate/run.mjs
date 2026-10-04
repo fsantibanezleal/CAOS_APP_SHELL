@@ -174,9 +174,13 @@ export async function runGate(o) {
     for (const e of sink.splice(0)) fail('G3', where, e);
   };
 
-  const saveShot = async (page, name) => {
-    if (shots >= opt.maxShots) return;
-    shots += 1;
+  // Every route in every mode keeps its capture, for the person who reads them (the gate measures, it does not judge
+  // content); only failure captures are capped, so a run with many failures does not fill the disk.
+  const saveShot = async (page, name, failure = false) => {
+    if (failure) {
+      if (shots >= opt.maxShots) return;
+      shots += 1;
+    }
     await page.screenshot({ path: join(shotsDir, name) }).catch(() => undefined);
   };
 
@@ -368,7 +372,7 @@ export async function runGate(o) {
     if (s.primary && s.isWorkbench && s.walkState) await reactivity(page, sink, where, s);
     drain(sink, where);
     const failedHere = failures.some((x) => x.route === where.route && x.mode === where.mode && x.trail === where.trail && x.check !== 'G3');
-    if (failedHere) await saveShot(page, `fail_${slug(s.route)}_${s.w}x${s.h}_${s.theme}_${s.lang}_${shots}.png`);
+    if (failedHere) await saveShot(page, `fail_${slug(s.route)}_${s.w}x${s.h}_${s.theme}_${s.lang}_${shots + 1}.png`, true);
   }
 
   async function paintedChecks(page, f, where, big) {
