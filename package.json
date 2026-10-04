@@ -37,6 +37,7 @@
     "styles.css",
     "chart.css",
     "bin",
+    "gate",
     "reserved-classes.json"
   ],
   "scripts": {
@@ -45,7 +46,8 @@
     "test:browser": "node --import tsx --test \"e2e/**/*.test.ts\"",
     "prepare": "npm run build",
     "prepublishOnly": "npm run build",
-    "prebuild": "node scripts/reserved-classes.mjs"
+    "prebuild": "node scripts/reserved-classes.mjs",
+    "test:gate": "node --test test/gate-selftest.mjs"
   },
   "peerDependencies": {
     "katex": "^0.16.0",

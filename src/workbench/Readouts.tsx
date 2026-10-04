@@ -198,12 +198,16 @@ export interface PlotCardProps {
   dataKey?: string;
   actions?: ReactNode;
   note?: BiText;
+  /** The view takes the height its panel leaves (a chart or stage that should fill the instrument, ADR-0071 rule 8);
+   * views marked `fill` in one panel share that height. A `Stage` or `UPlotChart height="fill"` inside it gets a
+   * real size from it instead of a guessed one (failure class 4). */
+  fill?: boolean;
   children: ReactNode;
 }
 
 /** A framed view with a title row, its lane and provenance, the unit every chart or table sits in. Its body is
  * protected by an error boundary, so one failing chart never blanks the page (failure class 20). */
-export function PlotCard({ title, lane, provenance, dataKey, actions, note, children }: PlotCardProps) {
+export function PlotCard({ title, lane, provenance, dataKey, actions, note, fill, children }: PlotCardProps) {
   const lang = useShellLang();
   const ws = useWorkbenchState();
   const stale = isStale(dataKey, ws);
@@ -211,7 +215,7 @@ export function PlotCard({ title, lane, provenance, dataKey, actions, note, chil
   if (!lane || !provenance) console.error(`[caos-app-shell] PlotCard "${name}" needs lane and provenance`);
   return (
     <figure
-      className={stale ? 'caos-plot caos-stale' : 'caos-plot'}
+      className={['caos-plot', fill ? 'fill' : '', stale ? 'caos-stale' : ''].filter(Boolean).join(' ')}
       data-plot={name}
       data-lane={lane}
       data-provenance={provenance}
