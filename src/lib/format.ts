@@ -1,7 +1,8 @@
 import { type Lang, useShellLang } from './lang';
 
 export interface FormatOptions {
-  /** Significant digits (default 4). Ignored when `decimals` is set. */
+  /** Significant digits for a value below 10^(digits-1) (default 4); a larger value shows every integer digit, so a
+   * count is never rounded (27345 people, not 27,350). Ignored when `decimals` is set. */
   digits?: number;
   /** Fixed number of decimals. */
   decimals?: number;
@@ -25,7 +26,9 @@ export function formatNumber(value: number | null | undefined, lang: Lang, opts:
   const nf =
     opts.decimals !== undefined
       ? new Intl.NumberFormat(LOCALE[lang], { minimumFractionDigits: opts.decimals, maximumFractionDigits: opts.decimals })
-      : new Intl.NumberFormat(LOCALE[lang], { maximumSignificantDigits: opts.digits ?? 4 });
+      : Math.abs(v) >= 10 ** ((opts.digits ?? 4) - 1)
+        ? new Intl.NumberFormat(LOCALE[lang], { maximumFractionDigits: 0 })
+        : new Intl.NumberFormat(LOCALE[lang], { maximumSignificantDigits: opts.digits ?? 4 });
   return opts.percent ? `${nf.format(v)} %` : nf.format(v);
 }
 

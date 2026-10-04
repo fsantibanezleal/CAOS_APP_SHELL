@@ -11,7 +11,7 @@ export interface KnobProps {
   min: number;
   max: number;
   step: number;
-  unit?: string;
+  unit?: BiText;
   /** What the parameter is (ADR-0017 s3.8). */
   hint?: BiText;
   format?: FormatOptions;
@@ -33,7 +33,7 @@ export function Knob({ id, label, value, min, max, step, unit, hint, format, dis
         <span>{pick(label, lang)}</span>
         <span className="caos-knob-value">
           {formatNumber(value, lang, format ?? {})}
-          {unit ? ` ${unit}` : ''}
+          {unit ? ` ${pick(unit, lang)}` : ''}
         </span>
       </label>
       <input
