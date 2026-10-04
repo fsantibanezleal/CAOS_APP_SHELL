@@ -381,3 +381,100 @@ html, body { overflow-x: hidden; }
   .caos-focus-hud span { font-size: 0.48rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .caos-focus-actions { top: 7px; right: 7px; }
 }
+
+/* == Workbench primitives (0.7.0) ==============================================================================
+   The App route of every product: WorkbenchLayout, CaseWorkbench, VariantBar, LaneBadge, Readout, Gauge, Verdict,
+   PlotCard; and DocPage/DocSection for documentation routes. Owned here so products compose them and never
+   redefine them (ADR-0016 s9, ADR-0017, ADR-0071, as amended 2026-10-04). */
+
+/* Chips: a one-of-N choice rendered as pills; `.on` is the selected state. */
+.chip { display: inline-flex; align-items: center; gap: 0.35rem; background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-fg-subtle); border-radius: 999px; padding: 0.3rem 0.72rem; font-size: 0.82rem; font-weight: 500; white-space: nowrap; transition: color 0.15s, background-color 0.15s, border-color 0.15s; }
+.chip:hover:not(:disabled) { color: var(--color-fg); border-color: var(--color-fg-faint); }
+.chip.on { background: var(--color-accent); color: var(--color-accent-fg); border-color: transparent; font-weight: 600; }
+.chip:disabled { opacity: 0.45; cursor: default; }
+/* ONE row of chips (ADR-0071 rule 4): it scrolls horizontally instead of wrapping into more rows. */
+.caos-chip-row { display: flex; flex-wrap: nowrap; gap: 0.35rem; overflow-x: auto; overflow-y: hidden; min-width: 0; scrollbar-width: none; padding-bottom: 2px; }
+.caos-chip-row::-webkit-scrollbar { display: none; }
+.caos-chip-row > * { flex: 0 0 auto; }
+
+/* WorkbenchLayout: a sized rail beside the instrument, on the full viewport. */
+.caos-wb { display: grid; grid-template-columns: clamp(264px, 21vw, 340px) minmax(0, 1fr); gap: 1rem; align-items: stretch; min-width: 0; padding-top: 1rem; padding-bottom: 1rem; }
+.caos-wb > * { min-width: 0; }
+.caos-wb-rail { display: flex; flex-direction: column; gap: 0.75rem; min-height: 0; overflow-y: auto; overflow-x: hidden; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 10px; padding: 0.85rem; }
+.caos-wb-rail-sections { display: flex; flex-wrap: nowrap; gap: 0.3rem; overflow-x: auto; scrollbar-width: none; flex: 0 0 auto; }
+.caos-wb-rail-sections::-webkit-scrollbar { display: none; }
+.caos-wb-rail-panel { display: flex; flex-direction: column; gap: 0.8rem; min-height: 0; }
+.caos-wb-rail label, .caos-field { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.8rem; color: var(--color-fg-subtle); }
+.caos-wb-rail .select, .caos-wb-rail .range { width: 100%; }
+.caos-wb-main { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+
+/* CaseWorkbench: the variant bar, then ONE row of at most six question groups; the panel owns its scroll. */
+.caos-cw { display: flex; flex-direction: column; min-height: 0; min-width: 0; flex: 1 1 auto; }
+.caos-cw > .tabs { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
+.caos-cw > .tabs > .tabpanel:not([hidden]) { flex: 1 1 auto; min-height: 0; overflow: auto; }
+.caos-cw-panel { display: flex; flex-direction: column; gap: 0.9rem; min-width: 0; }
+.caos-cw-panel-head { display: flex; justify-content: flex-end; }
+.caos-cw-context { max-width: 92ch; }
+.caos-variant-bar { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.7rem; min-width: 0; }
+.caos-variant-head { display: flex; align-items: center; gap: 0.6rem; }
+.caos-variant-title { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-fg-faint); font-weight: 600; }
+.caos-variant-note { margin: 0; font-size: 0.88rem; color: var(--color-fg-subtle); font-style: italic; }
+
+/* LaneBadge: which lane produced the values on screen. */
+.caos-lane-live { color: var(--color-good); border-color: color-mix(in oklab, var(--color-good) 45%, transparent); }
+.caos-lane-replay { color: var(--color-accent); border-color: color-mix(in oklab, var(--color-accent) 45%, transparent); }
+.caos-lane-offline { color: var(--color-warn); border-color: color-mix(in oklab, var(--color-warn) 45%, transparent); }
+
+/* Tones shared by readouts, gauges and verdicts. */
+.tone-good { --tone: var(--color-good); }
+.tone-warn { --tone: var(--color-warn); }
+.tone-bad { --tone: var(--color-bad); }
+.tone-accent { --tone: var(--color-accent); }
+.tone-neutral { --tone: var(--color-fg-faint); }
+
+/* Readout: labelled live values with units. */
+.caos-readout { display: flex; flex-direction: column; gap: 0.35rem; }
+.caos-readout-title, .caos-gauge-title, .caos-verdict-title { margin: 0; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-fg-faint); font-weight: 600; }
+.caos-readout dl { margin: 0; display: grid; gap: 0.25rem; }
+.caos-readout-row { display: flex; justify-content: space-between; gap: 0.75rem; font-size: 0.84rem; border-left: 3px solid var(--tone); padding-left: 0.5rem; }
+.caos-readout-row dt { color: var(--color-fg-subtle); }
+.caos-readout-row dd { margin: 0; text-align: right; }
+.caos-readout-value { font-family: var(--font-mono); font-weight: 650; color: var(--color-fg); }
+.caos-readout-unit { color: var(--color-fg-faint); font-size: 0.78rem; }
+
+/* Gauge: a value against labelled zones. */
+.caos-gauge-track { position: relative; height: 14px; border-radius: 7px; background: var(--color-surface-2); overflow: hidden; margin-top: 0.35rem; }
+.caos-gauge-zone { position: absolute; top: 0; height: 100%; background: var(--tone); opacity: 0.45; }
+.caos-gauge-needle { position: absolute; top: 0; width: 3px; height: 100%; background: var(--color-fg); transform: translateX(-1px); }
+.caos-gauge-scale { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--color-fg-faint); margin-top: 0.2rem; }
+.caos-gauge-value { color: var(--color-fg); font-weight: 700; font-family: var(--font-mono); }
+.caos-gauge-legend { display: flex; flex-wrap: wrap; gap: 0.5rem; font-size: 0.72rem; color: var(--color-fg-subtle); margin-top: 0.25rem; }
+.caos-gauge-legend .dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 0.25rem; background: var(--tone); }
+
+/* Verdict: the current diagnosis, coloured by its tone. */
+.caos-verdict { border: 1px solid var(--color-border); border-left: 4px solid var(--tone); border-radius: 8px; padding: 0.7rem 0.85rem; background: var(--color-surface-2); }
+.caos-verdict-text { margin: 0.2rem 0 0; font-weight: 650; color: var(--color-fg); }
+
+/* PlotCard: the frame every chart or table sits in. */
+.caos-plot { margin: 0; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 10px; padding: 0.6rem 0.75rem; min-width: 0; }
+.caos-plot-head { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; font-style: normal; text-align: left; }
+.caos-plot-title { font-size: 0.84rem; color: var(--color-fg-subtle); font-weight: 600; }
+.caos-plot-actions { display: inline-flex; gap: 0.3rem; }
+.caos-plot-body { position: relative; min-width: 0; overflow-x: auto; }
+.caos-plot-note { margin: 0.4rem 0 0; font-size: 0.78rem; color: var(--color-fg-faint); }
+
+/* DocPage / DocSection. */
+.caos-doc-section { margin-block: 1.75rem; }
+
+/* contain: every route is the viewport. The workbench fills the main container; a documentation route scrolls
+   inside it, so the header and footer stay in view and the document never scrolls (ADR-0071 rule 1). */
+.app-shell.fixed.contain > .page { display: flex; flex-direction: column; overflow: hidden; }
+.app-shell.fixed.contain > .page > .caos-wb { flex: 1 1 auto; min-height: 0; }
+.app-shell.fixed.contain > .page:has(> .page-body:not(.caos-wb)) { display: block; overflow-y: auto; overscroll-behavior: contain; }
+@media (max-width: 900px) {
+  /* A phone stacks the rail over the instrument and lets the document scroll: the viewport rule is measured at
+     1280x800 and above (ADR-0071 Verification). */
+  .caos-wb { grid-template-columns: minmax(0, 1fr); }
+  .app-shell.fixed.contain { height: auto; min-height: 100dvh; overflow: visible; }
+  .app-shell.fixed.contain > .page { display: block; overflow: visible; }
+}

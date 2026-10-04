@@ -1,3 +1,35 @@
+## [0.07.000] - 2026-10-04
+
+### Added
+
+- The workbench primitives, so a product composes its App route instead of re-deriving it (ADR-0016 s9,
+  ADR-0017 and ADR-0071 as amended 2026-10-04):
+  - `WorkbenchLayout`: a sized control rail beside the instrument on the full viewport (`.page-body.wide`),
+    `min-width: 0` down the tree, the instrument marked `data-instrument`; a rail given as sections shows one
+    section at a time instead of scrolling (ADR-0071 rule 6).
+  - `CaseWorkbench`: the variant bar, then ONE row of at most six question groups in a fixed order (the
+    instrument groups, the variant comparison, the context write-up); more than six throws. The live lane is a
+    property of each view, shown by its badge.
+  - `VariantBar` (one scrollable row of regimes, the active regime's note and lane) and `LaneBadge` (live,
+    replay, offline only).
+  - `Readout`, `Gauge`, `Verdict` and `PlotCard`, with shared tones.
+  - `DocPage` and `DocSection`: the documentation route skeleton; a section ends in its own `Refs`, and a
+    section that cites nothing must state why (`noRefsReason`).
+  - `pick` and `BiText` for bilingual strings.
+- `ShellConfig.contain`: every route is the viewport; the workbench fills it and a documentation route scrolls
+  inside the main container, so the document never scrolls (ADR-0071 rule 1).
+- The design-system CSS for chips (`.chip`, `.chip.on`), the one-row chip strip, the workbench grid, the
+  variant bar, lane badges, readouts, gauges, verdicts and plot cards. Products no longer copy it.
+- `caos-shell-gate` (bin): measures a running build at three sizes, both themes and both languages (viewport
+  fit, one-row tab bars, a rail without scroll, the instrument at least half of a workbench route, centred prose,
+  no bibliography dump, captioned equations, sections with references, the theme applied, no console error) and
+  reaches every header route by a real pointer click. `playwright` is an optional peer dependency.
+
+### Fixed
+
+- `ChromeStrings` typed each value as `string`; with `as const` the English literals made the Spanish table
+  unassignable and `tsc` 5.9 failed, which also failed the build that `npm ci` runs.
+
 ## [0.06.013] - 2026-09-26
 
 ### Added

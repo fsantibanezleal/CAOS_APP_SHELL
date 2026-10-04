@@ -31,5 +31,7 @@ const CHROME = {
   },
 } as const;
 
-export type ChromeStrings = (typeof CHROME)['en'];
+/** Each chrome string as plain text: `as const` keeps the keys exact, and the values must not be the English
+ * literals, or the Spanish object is not assignable (tsc 5.9 rejects it). */
+export type ChromeStrings = { readonly [K in keyof (typeof CHROME)['en']]: string };
 export const chrome = (lang: Lang): ChromeStrings => CHROME[lang];

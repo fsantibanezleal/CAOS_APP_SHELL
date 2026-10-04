@@ -45,3 +45,19 @@ export { Equation, InlineMath } from './content/Equation';
 export { Figure } from './content/Figure';
 export { CitationsProvider, Cite, Refs, ReferenceList } from './content/Cite';
 export type { Citation } from './content/Cite';
+export { DocPage, DocSection } from './content/DocPage';
+export type { DocSectionProps } from './content/DocPage';
+
+// The App route of a product (ADR-0016 §9 and ADR-0071 as amended 2026-10-04): the shell owns the workbench.
+export { WorkbenchLayout } from './workbench/WorkbenchLayout';
+export type { RailSection, WorkbenchLayoutProps } from './workbench/WorkbenchLayout';
+export { CaseWorkbench, MAX_WORKBENCH_GROUPS } from './workbench/CaseWorkbench';
+export type { CaseWorkbenchProps, WorkbenchGroup } from './workbench/CaseWorkbench';
+export { VariantBar } from './workbench/VariantBar';
+export type { VariantBarProps, VariantDef } from './workbench/VariantBar';
+export { LaneBadge } from './workbench/LaneBadge';
+export type { Lane } from './workbench/LaneBadge';
+export { Gauge, PlotCard, Readout, Verdict } from './workbench/Readouts';
+export type { GaugeProps, GaugeZone, ReadoutItem, Tone } from './workbench/Readouts';
+export { pick } from './lib/text';
+export type { BiText } from './lib/text';
