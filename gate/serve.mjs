@@ -36,9 +36,10 @@ const MIME = {
 /**
  * @param {string} dir the built site
  * @param {string} basePath the site's base path ('/' for a custom domain, '/Repo/' for a project page)
+ * @param {number} port 0 for any free port (the gate), or a fixed one (a product's preview)
  * @returns {Promise<{ url: string, close: () => Promise<void> }>}
  */
-export function servePages(dir, basePath = '/') {
+export function servePages(dir, basePath = '/', port = 0) {
   const root = resolve(dir);
   const base = basePath.endsWith('/') ? basePath : `${basePath}/`;
   const notFound = join(root, '404.html');
@@ -85,7 +86,7 @@ export function servePages(dir, basePath = '/') {
     return missing();
   });
   return new Promise((ok) => {
-    server.listen(0, '127.0.0.1', () => {
+    server.listen(port, '127.0.0.1', () => {
       const { port } = server.address();
       ok({
         url: `http://127.0.0.1:${port}${base}`,
