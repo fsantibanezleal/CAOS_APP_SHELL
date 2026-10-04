@@ -19,7 +19,7 @@
 // plus the ADR-0071 and ADR-0017 measures (viewport, one-row tabs, rail without scroll, centred prose, captions,
 // references).
 
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { decodePng, paintedBox, unionArea } from './png.mjs';
 import { servePages } from './serve.mjs';
@@ -72,6 +72,8 @@ export async function runGate(o) {
   const workbenchRoutes = new Set(String(opt.workbench).split(',').map((s) => s.trim()).filter(Boolean));
   const primarySize = sizes.find(([w]) => w >= opt.viewportMinWidth) ?? sizes[0];
   const shotsDir = join(opt.out, 'shots');
+  // Every run starts from an empty capture folder: a capture left by an earlier run is stale evidence.
+  rmSync(shotsDir, { recursive: true, force: true });
   mkdirSync(shotsDir, { recursive: true });
 
   let server = null;
