@@ -502,11 +502,11 @@ html, body { overflow-x: hidden; }
 .subtablist:not([aria-orientation="vertical"]) { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
 .subtablist::-webkit-scrollbar { display: none; }
 .subtablist .subtab { flex: none; white-space: nowrap; }
-@media (max-width: 860px) {
-  .app-shell.fixed .footer-meta { flex-wrap: wrap; overflow-x: visible; white-space: normal; row-gap: 0.15rem; }
-  .app-shell.fixed .footer-meta > * { flex: 0 1 auto; }
-  .app-shell.fixed .footer-build { margin-left: 0; }
-}
+/* The phone footer of a contained surface stays one row (the instrument keeps the viewport) and says that it
+   scrolls: its hidden end fades, and a focused link is scrolled into view (useOverflowFade). */
+.app-shell.fixed .footer-meta[data-fade-end="1"] { mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+.app-shell.fixed .footer-meta[data-fade-start="1"] { mask-image: linear-gradient(to left, #000 calc(100% - 28px), transparent); }
+.app-shell.fixed .footer-meta[data-fade-start="1"][data-fade-end="1"] { mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent); }
 
 /* A failed view (PanelBoundary): an inline message in its own frame, never a blank page. */
 .caos-panel-error { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: baseline; padding: 0.7rem 0.9rem; border: 1px solid color-mix(in oklab, var(--color-bad) 45%, transparent); border-left: 4px solid var(--color-bad); border-radius: 8px; background: var(--color-surface-2); color: var(--color-fg); font-size: 0.86rem; }
