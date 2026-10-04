@@ -294,6 +294,12 @@ function Workbench() {
   const [scale, setScale] = useState(1);
   const [horizon, setHorizon] = useState('120');
   const [tick, setTick] = useState(0);
+  // The case list arrives asynchronously, as a product's index does: the deep link must survive that (G9).
+  const [caseList, setCaseList] = useState<typeof CASES>([]);
+  useEffect(() => {
+    const t = setTimeout(() => setCaseList(CASES), 60);
+    return () => clearTimeout(t);
+  }, []);
   const idx = Math.max(0, CASES.findIndex((c) => c.id === caseId));
   const beta = CASES[idx].beta * scale * (variant === 'stress' ? 1.3 : 1);
   const sim = useMemo(() => simulate(beta, Number(horizon)), [beta, horizon]);
@@ -361,7 +367,7 @@ function Workbench() {
   return (
       <CaseWorkbench
         caseId={shownCase}
-        cases={{ cases: CASES, selectedId: caseId, onSelect: setCaseId, layout: 'select', deepLink: true }}
+        cases={{ cases: caseList, selectedId: caseId, onSelect: setCaseId, layout: 'select', deepLink: true }}
         controls={controls}
         variants={PLANT === 'no-controls' ? undefined : { variants: VARIANTS, activeId: variant, onSelect: setVariant, lane: 'live' }}
         rail={rail}
@@ -430,6 +436,11 @@ function Doc({ id }: { id: string }) {
   ));
   return (
     <DocPage title={title} lede={pick({ en: 'How the fixture product is built and checked.', es: 'Cómo se construye y verifica el producto de prueba.' }, lang)}>
+      {id === 'introduction' && (
+        <p style={{ maxWidth: 220 }}>
+          {pick({ en: 'See', es: 'Vea' }, lang)} <a href="#wrapped">{pick({ en: 'a deliberately long link that wraps onto a second line', es: 'un enlace deliberadamente largo que pasa a una segunda línea' }, lang)}</a>.
+        </p>
+      )}
       {PLANT === 'hoverflow' && id === 'introduction' && <div style={{ width: 3000, height: 12 }}>planted wide block</div>}
       {PLANT === 'mobile-only' && id === 'introduction' && <div className="fixture-mobile-only">planted narrow-screen block</div>}
       {id === 'methodology' ? (

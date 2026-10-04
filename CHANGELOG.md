@@ -110,6 +110,11 @@
   view; the routed nav re-centres its active link on every route change. The contained phone footer stays one row
   with a faded end instead of wrapping into three lines over the instrument.
 - Badges never wrap mid-label; stacked views in a panel keep a gap.
+- Found by the gate on the product template: `CaseSelector` resolves a `?case=` deep link once an asynchronous case
+  list arrives (it adopted on mount only, and wrote the default case into the URL first), and its modified badge
+  names the case instead of its id and wraps in the rail; the architecture validation no longer reads a marker
+  reference (`url(#dc5-arrow)`) as a hex colour; the gate's reach check tests a fragment of a wrapped inline link,
+  not the empty centre of its box. The fixture now loads its cases asynchronously and carries a wrapped link.
 
 - `ChromeStrings` typed each value as `string`; with `as const` the English literals made the Spanish table
   unassignable and `tsc` 5.9 failed, which also failed the build that `npm ci` runs.

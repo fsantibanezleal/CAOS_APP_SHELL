@@ -62,6 +62,9 @@ test('the architecture configuration is validated: tab count, inline SVG, tokens
   const { validateArchitectureConfig } = await import('../src/shell/ArchitectureModal.tsx');
   const tab = (id: string, svg = '<svg><rect fill="var(--color-surface)"/></svg>') => ({ id, en: id, es: id, body_en: 'x', body_es: 'x', svg });
   assert.deepEqual(validateArchitectureConfig({ tabs: ['a', 'b', 'c', 'd', 'e'].map((id) => tab(id)) }), []);
+  // a marker reference is not a colour (the hex check once read url(#dc5-arrow) as #dc5)
+  const marker = '<svg><defs><marker id="dc5-arrow"/></defs><path d="M0 0" marker-end="url(#dc5-arrow)"/><use href="#abc"/></svg>';
+  assert.deepEqual(validateArchitectureConfig({ tabs: ['a', 'b', 'c', 'd', 'e'].map((id) => tab(id, marker)) }), []);
   const problems = validateArchitectureConfig({
     tabs: [
       tab('a', 'svg/tech/01.svg'),

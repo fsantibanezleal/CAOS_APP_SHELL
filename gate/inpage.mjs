@@ -346,7 +346,10 @@ export function installLib() {
     const els = [...document.querySelectorAll(sel)].filter((el) => !el.disabled && !el.closest('[aria-hidden="true"]') && visible(el));
     for (const el of els) {
       bring(el);
-      const r = el.getBoundingClientRect();
+      // A wrapped inline element (a citation link over two lines) has its box centre between its line fragments; the
+      // pointer lands on a fragment, so the largest one is tested.
+      const frags = [...el.getClientRects()].filter((q) => q.width >= 1 && q.height >= 1);
+      const r = frags.length ? frags.reduce((a, b) => (b.width * b.height > a.width * a.height ? b : a)) : el.getBoundingClientRect();
       if (r.width < 1 || r.height < 1) continue;
       checked += 1;
       const fits = r.width <= window.innerWidth && r.height <= window.innerHeight;
