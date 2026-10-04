@@ -76,11 +76,11 @@ function validate(config: ShellConfig): void {
 }
 
 /** The route links: `NavLink` inside a router, plain anchors (and a reported error) outside one. */
-function Nav({ routes, name, routed }: { routes: ShellRoute[]; name: string; routed: boolean }) {
+function Nav({ routes, name, routed, pathname }: { routes: ShellRoute[]; name: string; routed: boolean; pathname: string }) {
   const lang = useShellLang();
   const ref = useRef<HTMLElement | null>(null);
-  const path = routed ? '' : typeof window !== 'undefined' ? window.location.pathname : '/';
-  useOverflowFade(ref, '.nav-link.active', [lang, path]);
+  // Re-run on every route and language change, so the active link is brought into view (known shell defect 11).
+  useOverflowFade(ref, '.nav-link.active', [lang, pathname]);
   return (
     <nav className="main-nav" aria-label={name} ref={ref}>
       {routes.map((r) =>
@@ -94,7 +94,7 @@ function Nav({ routes, name, routed }: { routes: ShellRoute[]; name: string; rou
             {lang === 'es' ? r.es : r.en}
           </NavLink>
         ) : (
-          <a key={r.path} href={r.path} className={path === r.path ? 'nav-link active' : 'nav-link'}>
+          <a key={r.path} href={r.path} className={pathname === r.path ? 'nav-link active' : 'nav-link'}>
             {lang === 'es' ? r.es : r.en}
           </a>
         ),
@@ -142,6 +142,10 @@ function Frame({ config, pathname, routed, children }: { config: ShellConfig; pa
   const portfolio = config.links.portfolio ?? PORTFOLIO;
   const isPublic = config.visibility !== 'private';
   const [archOpen, setArchOpen] = useState(false);
+  // On a phone the contained footer is one row that scrolls; its hidden end fades and a focused link is revealed,
+  // as in the route nav (known shell defect 11), so the instrument keeps the viewport.
+  const footRef = useRef<HTMLDivElement | null>(null);
+  useOverflowFade(footRef, null, [lang, pathname]);
   // ADR-0011: the document language follows the language toggle (screen readers, hyphenation, spell-check).
   useEffect(() => {
     document.documentElement.lang = lang;
@@ -173,7 +177,7 @@ function Frame({ config, pathname, routed, children }: { config: ShellConfig; pa
             </a>
           )}
 
-          {routes.length > 1 && <Nav routes={routes} name={config.product.name} routed={routed} />}
+          {routes.length > 1 && <Nav routes={routes} name={config.product.name} routed={routed} pathname={pathname} />}
 
           <div className="header-actions">
             {isPublic && (
@@ -209,7 +213,7 @@ function Frame({ config, pathname, routed, children }: { config: ShellConfig; pa
           the personal/portfolio links; NEVER repeat them here. */}
       <footer className="site-footer">
         <div className="footer-inner">
-          <div className="footer-meta">
+          <div className="footer-meta" ref={footRef}>
             <span>{config.product.name}</span>
             <span aria-hidden="true">·</span>
             <span>{c.complement}</span>
