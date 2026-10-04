@@ -487,6 +487,9 @@ html, body { overflow-x: hidden; }
    inside it, so the header and footer stay in view and the document never scrolls (ADR-0071 rule 1). */
 .app-shell.fixed.contain > .page { display: flex; flex-direction: column; overflow: hidden; }
 .app-shell.fixed.contain > .page > .caos-wb { flex: 1 1 auto; min-height: 0; }
+/* The chrome of a contained app spans the instrument's width with its inset, so at 2560 px the header and footer
+   do not float in a 1200 px column above a full-width workbench (found by the template capture review). */
+.app-shell.fixed.contain .header-inner, .app-shell.fixed.contain .site-footer .footer-inner { max-width: var(--maxw-wide); padding-inline: 1rem; }
 .app-shell.fixed.contain > .page:has(> .page-body:not(.caos-wb)) { display: block; overflow-y: auto; overscroll-behavior: contain; }
 @media (max-width: 900px) {
   /* A phone stacks the rail over the instrument and lets the document scroll: the viewport rule is measured at
