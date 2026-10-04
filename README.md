@@ -36,6 +36,7 @@ const config: ShellConfig = {
     { path: "/methodology", en: "Methodology", es: "Metodología" },
     { path: "/implementation", en: "Implementation", es: "Implementación" },
     { path: "/experiments", en: "Experiments", es: "Experimentos" },
+    { path: "/benchmark", en: "Benchmark", es: "Benchmark" },
   ],
   links: { github: "https://github.com/fsantibanezleal/CAOS_RotorVitals" }, // personal/portfolio default in
   version: "0.01.000",
@@ -56,6 +57,13 @@ const config: ShellConfig = {
 - **Case + source picking:** use `CaseSelector` for the interactive tool's source/case selection
   (labelled groups, `Synthetic | Real | Uploaded` source control, locked-knobs explanation, divergence
   badge, `?case=` deep-linking).
+- **The App route (0.7.0):** compose `WorkbenchLayout` (rail + instrument on the full viewport) with
+  `CaseSelector` and `CaseWorkbench` (variant bar + at most six question groups, then the variant comparison
+  and the context). Put live values in `Readout`/`Gauge`/`Verdict` and every chart in a `PlotCard`. Set
+  `contain: true` in `ShellConfig` so every route is the viewport.
+- **Documentation routes (0.7.0):** `DocPage` + `DocSection` (each section ends in its own `Refs`).
+- **Measure it (0.7.0):** `npx caos-shell-gate --url http://127.0.0.1:4173` against the built app (needs
+  `playwright`); it exits non-zero on any ADR-0071 or ADR-0017 failure and writes screenshots and a JSON report.
 - **Animated views:** drive every canvas/3D loop through `usePausedViz` (default paused, run-once,
   halt on a hidden tab), never call `requestAnimationFrame` directly.
 
@@ -63,8 +71,9 @@ const config: ShellConfig = {
 
 `AppShell`, `WorkbenchShell`, `ThemeToggle`, `LanguageToggle`, `useThemeStore`, `applyTheme`, `readTheme`, `useLangStore`,
 `useShellLang`, `usePausedViz`, `createVizLoop`, `CaseSelector` (+ `caseModel` helpers), `Tabs`, `SubTabs`,
-`Callout`, `Equation`, `InlineMath`, `Figure`, `CitationsProvider`, `Cite`, `Refs`, `ReferenceList`, plus
-the `@fasl-work/caos-app-shell/styles.css` design system.
+`Callout`, `Equation`, `InlineMath`, `Figure`, `CitationsProvider`, `Cite`, `Refs`, `ReferenceList`, `DocPage`,
+`DocSection`, `WorkbenchLayout`, `CaseWorkbench`, `VariantBar`, `LaneBadge`, `Readout`, `Gauge`, `Verdict`,
+`PlotCard`, `pick`, plus the `@fasl-work/caos-app-shell/styles.css` design system and the `caos-shell-gate` bin.
 
 ### Authenticated workbenches
 

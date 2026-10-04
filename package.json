@@ -1,7 +1,7 @@
 {
   "name": "@fasl-work/caos-app-shell",
-  "version": "0.6.13",
-  "description": "Shared web-app shell + content primitives + design system for the CAOS / Faena public apps (ADR-0016).",
+  "version": "0.7.0",
+  "description": "Shared web-app shell, workbench primitives, content primitives, design system and measured gate for the CAOS / Faena public apps (ADR-0016, ADR-0017, ADR-0071).",
   "license": "MIT",
   "author": "Felipe Santibáñez-Leal",
   "repository": {
@@ -24,7 +24,8 @@
   },
   "files": [
     "dist",
-    "styles.css"
+    "styles.css",
+    "bin"
   ],
   "scripts": {
     "build": "tsup",
@@ -39,7 +40,8 @@
     "react": "^18 || ^19",
     "react-dom": "^18 || ^19",
     "react-router": "^6 || ^7 || ^8",
-    "zustand": "^4 || ^5"
+    "zustand": "^4 || ^5",
+    "playwright": ">=1.40"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
@@ -59,5 +61,13 @@
   },
   "overrides": {
     "esbuild": "0.28.1"
+  },
+  "bin": {
+    "caos-shell-gate": "bin/caos-shell-gate.mjs"
+  },
+  "peerDependenciesMeta": {
+    "playwright": {
+      "optional": true
+    }
   }
 }

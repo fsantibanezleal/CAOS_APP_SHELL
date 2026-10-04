@@ -50,6 +50,12 @@ export interface ShellConfig {
   fixedRoutes?: string[];
   /** Every route fixed: a single-surface app (a hub, a one-page tool). */
   fixed?: boolean;
+  /**
+   * Every route is the viewport (ADR-0071 rule 1, as amended 2026-10-04): the workbench (`WorkbenchLayout`) fills
+   * it, and a documentation route scrolls INSIDE the main container, so the header and footer stay in view and the
+   * document itself never scrolls. The configuration the product template uses.
+   */
+  contain?: boolean;
 }
 
 const PERSONAL = 'https://fsantibanezleal.github.io';
@@ -67,11 +73,12 @@ export function AppShell({ config, children }: { config: ShellConfig; children: 
   const archLabel = lang === 'es' ? 'Arquitectura / Cómo funciona' : 'Architecture / How it works';
   const { pathname } = useLocation();
   const fixed =
+    config.contain === true ||
     config.fixed === true ||
     (config.fixedRoutes ?? []).some((p) => p === pathname || (p !== '/' && pathname.startsWith(p.replace(/\/$/, '') + '/')));
 
   return (
-    <div className={fixed ? 'app-shell fixed' : 'app-shell'}>
+    <div className={config.contain ? 'app-shell fixed contain' : fixed ? 'app-shell fixed' : 'app-shell'}>
       <header className="site-header">
         <div className="header-inner">
           <NavLink to="/" className="brand" aria-label={config.product.name}>
