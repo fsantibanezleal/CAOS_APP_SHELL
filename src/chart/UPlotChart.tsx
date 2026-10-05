@@ -42,6 +42,29 @@ export interface UPlotChartProps {
 
 const ROTATION: ShellToken[] = ['--color-accent', '--color-magenta', '--color-accent-2', '--color-good', '--color-warn', '--color-bad'];
 
+/** uPlot's numeric tick steps: 1, 2, 2.5 and 5 times every power of ten. */
+const STEPS: number[] = [];
+for (let e = -16; e <= 16; e++) for (const m of [1, 2, 2.5, 5]) STEPS.push(Number((m * 10 ** e).toPrecision(3)));
+
+/**
+ * The tick steps an axis may use. With fixed `decimals` (scaled by 100 for a percent) only multiples of the smallest
+ * difference its labels can show, so no two ticks read the same: an integer axis ticks at integers, never at 1.5,
+ * which reads "2" beside the 2 (CAOS_Contraste, 2026-10-05). `undefined` leaves uPlot its own steps: an axis formatted
+ * by significant digits has no fixed resolution, and `data-ticks-repeat` reports what it does.
+ */
+export function tickSteps(fmt: FormatOptions | undefined): number[] | undefined {
+  if (!fmt || fmt.decimals === undefined) return undefined;
+  const res = 10 ** -fmt.decimals / (fmt.percent ? 100 : 1);
+  return STEPS.filter((s) => s >= res * (1 - 1e-9) && Math.abs(s / res - Math.round(s / res)) < 1e-6);
+}
+
+/** How many tick labels repeat the label before them (empty labels apart); the gate fails a chart with any (G6). */
+export function repeatedLabels(labels: readonly (string | null | undefined)[]): number {
+  let n = 0;
+  for (let i = 1; i < labels.length; i++) if (labels[i] && labels[i] === labels[i - 1]) n++;
+  return n;
+}
+
 /**
  * The house chart (S12 of the 2026-10-04 requirements; uPlot, ADR on interactive charts). It is built only once its
  * box has a size; it resolves the theme's colours to concrete values and rebuilds when the theme or language changes
@@ -50,8 +73,8 @@ const ROTATION: ShellToken[] = ['--color-accent', '--color-magenta', '--color-ac
  * its longest tick label, so no tick is cut; the cursor value is written into a readout row under the plot instead of
  * uPlot's legend, which a sized host clips (known shell defect 3). A chart of two or more series keys every series
  * under the plot, always (its colour, a dashed or a dotted swatch, its label): at rest the readout names none of them
- * (known shell defect 17). The host declares `data-series`, `data-axis-titles`, `data-ticks-cut` and `data-drawn` for
- * the gate.
+ * (known shell defect 17). An axis with fixed decimals ticks only where its labels differ (`tickSteps`). The host
+ * declares `data-series`, `data-axis-titles`, `data-ticks-cut`, `data-ticks-repeat` and `data-drawn` for the gate.
  */
 export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlotChartProps) {
   const lang = useShellLang();
@@ -70,6 +93,9 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlo
   const width = box.width;
   const h = fill ? box.height : height;
   const uRef = useRef<uPlot | null>(null);
+  // the host, whose data-ticks-repeat the tick formatters keep current (set on the element: a formatter runs inside
+  // uPlot's draw, where a state update would loop)
+  const hostRef = useRef<HTMLDivElement | null>(null);
   const [cursor, setCursor] = useState<number | null>(null);
   const onCursorRef = useRef(onCursor);
   onCursorRef.current = onCursor;
@@ -97,8 +123,15 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlo
     const fg = resolveToken('--color-fg-subtle', '#888');
     const grid = resolveToken('--color-border', '#ccc');
     const font = `11px ${resolveToken('--font-sans', 'sans-serif')}`;
-    const tick = (fmt: FormatOptions | undefined) => (_u: uPlot, vals: (number | null)[]) =>
-      vals.map((v) => (v === null || v === undefined ? '' : formatNumber(v, lang, fmt ?? { digits: 4 })));
+    const repeats = { x: 0, y: 0 };
+    const tick = (fmt: FormatOptions | undefined, axis: 'x' | 'y') => (_u: uPlot, vals: (number | null)[]) => {
+      const labels = vals.map((v) => (v === null || v === undefined ? '' : formatNumber(v, lang, fmt ?? { digits: 4 })));
+      repeats[axis] = repeatedLabels(labels);
+      hostRef.current?.setAttribute('data-ticks-repeat', String(repeats.x + repeats.y));
+      return labels;
+    };
+    const xSteps = x.time ? undefined : tickSteps(x.format);
+    const ySteps = y.log ? undefined : tickSteps(y.format);
     const opts: uPlot.Options = {
       width,
       height: h,
@@ -112,7 +145,8 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlo
           font,
           label: xUnit ? `${xLabel} (${xUnit})` : xLabel,
           labelFont: font,
-          values: x.time ? undefined : tick(x.format),
+          values: x.time ? undefined : tick(x.format, 'x'),
+          ...(xSteps ? { incrs: xSteps } : {}),
         },
         {
           stroke: fg,
@@ -121,7 +155,8 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlo
           font,
           label: yUnit ? `${yLabel} (${yUnit})` : yLabel,
           labelFont: font,
-          values: tick(y.format),
+          values: tick(y.format, 'y'),
+          ...(ySteps ? { incrs: ySteps } : {}),
           size: (u: uPlot, values: string[] | null) => {
             if (!values || values.length === 0) return 48;
             u.ctx.font = font;
@@ -197,10 +232,12 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlo
 
   return (
     <div
+      ref={hostRef}
       className={fill ? 'caos-chart fill' : 'caos-chart'}
       data-series={series.length}
       data-axis-titles={`${xLabel}|${yLabel}`}
       data-ticks-cut="0"
+      data-ticks-repeat="0"
       data-drawn={width > 0 && h > 0 ? '1' : '0'}
     >
       <div ref={setPlot} className="caos-chart-plot" />
