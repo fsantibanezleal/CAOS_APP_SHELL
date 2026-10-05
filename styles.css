@@ -132,10 +132,11 @@ code, kbd { font-family: var(--font-mono); }
   .main-nav::-webkit-scrollbar { display: none; }
   .main-nav .nav-link { flex: none; padding: 0.3rem 0.3rem; font-size: 0.7rem; }
 }
-@media (max-width: 380px) {
+@media (max-width: 480px) {
   .brand span:last-child { display: none; }
-  /* The route row needs the room: on Linux fonts "Implementation" is about 100 px and the row was about 90 px at 320 px,
-     so a focused route could never be shown whole (shell CI, 2026-10-05). The toggle keeps its icon and its label. */
+  /* The route row needs the room on every phone: on Linux fonts "Implementation" is about 100 px, and the row was about
+     90 px at 320 px and narrower than the link at 390 px, so a route could not be shown whole (shell CI and its gate
+     self-test, 2026-10-05). The brand keeps its mark and its accessible name; the toggle keeps its icon and its label. */
   .header-sep, .lang-code { display: none; }
   .header-actions .icon-btn { padding: 0.2rem; }
 }
