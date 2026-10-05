@@ -40,6 +40,7 @@ const PLANTS = [
   { id: 'shrunk-tabs', check: 'G5', re: /cuts its tabs by \d+px/, trail: /validation > daily/, opts: { routes: '/' } },
   { id: 'blank', check: 'G6', re: /is blank/, opts: { routes: '/' } },
   { id: 'small', check: 'G6', re: /draws on \d+% of its stage/, opts: { routes: '/' } },
+  { id: 'repeat-ticks', check: 'G6', re: /axis tick label\(s\) repeat the label before them/, opts: { routes: '/' } },
   { id: 'never-ready', check: 'G7', re: /data-state="loading"/, opts: { routes: '/,/benchmark', settleMs: 3000 } },
   { id: 'raf-loop', check: 'G8', re: /animation frames/, opts: { routes: '/' } },
   { id: 'mutation-loop', check: 'G8', re: /DOM mutations/, opts: { routes: '/' } },
