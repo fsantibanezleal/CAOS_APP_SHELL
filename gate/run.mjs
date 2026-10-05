@@ -335,6 +335,7 @@ export async function runGate(o) {
     if (f.beyondCount) fail('G5', where, `${f.beyondCount} element(s) outside the viewport: ${f.beyond.join('; ')}`);
     if (big && f.docH > f.vh + 1) fail('ADR-0071.1', where, `the document scrolls: ${f.docH}px in a ${f.vh}px viewport (the page is the viewport)`);
     for (const r of f.rows) if (r.rows > 1) fail('ADR-0071.4', where, `tab row "${r.name}" wraps onto ${r.rows} rows`);
+    for (const r of f.rows) if (r.cut > 1) fail('G5', where, `tab row "${r.name}" cuts its tabs by ${r.cut}px (a row shrunk under its panel)`);
     if (f.rail) {
       if (big && f.rail.scroll > f.rail.client + 1) fail('ADR-0071.6', where, `the rail scrolls: ${f.rail.scroll}px of content in ${f.rail.client}px`);
       if (f.rail.outsideCount) fail('G5', where, `${f.rail.outsideCount} rail element(s) outside the rail: ${f.rail.outside.join('; ')}`);

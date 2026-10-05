@@ -130,6 +130,26 @@ test('S12: the chart host declares its series, axis titles and drawing state', (
   assert.match(out, /Hover the chart to read the values/);
 });
 
+test('known defect 17: a chart of two or more series keys every series, always; one series needs no key', () => {
+  const two = html(
+    <UPlotChart
+      x={{ values: [0, 1, 2], label: 'Day' }}
+      y={{ label: 'People' }}
+      series={[
+        { label: 'Infected', values: [1, 4, 2], color: '--color-bad' },
+        { label: { en: 'Recovered', es: 'Recuperados' }, values: [0, 1, 3], dash: [4, 4] },
+        { label: 'Cases', values: [1, null, 2], mode: 'points' },
+      ]}
+    />,
+  );
+  assert.match(two, /<ul class="caos-chart-legend"/);
+  assert.match(two, /--swatch:var\(--color-bad\)"[^>]*><\/span>Infected<\/li>/);
+  assert.match(two, /data-dash="1"><span[^>]*><\/span>Recovered<\/li>/);
+  assert.match(two, /data-mode="points"><span[^>]*><\/span>Cases<\/li>/);
+  const one = html(<UPlotChart x={{ values: [0, 1], label: 'Day' }} y={{ label: 'People' }} series={[{ label: 'I', values: [1, 2] }]} />);
+  assert.doesNotMatch(one, /caos-chart-legend/);
+});
+
 test('S11 and S17: the token list and the reserved-class list match the stylesheets', () => {
   const css = readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
   const defined = new Set([...css.matchAll(/^\s*(--[a-z0-9-]+)\s*:/gim)].map((m) => m[1]));
@@ -176,6 +196,24 @@ test('the App route: the rail carries the case picker, the variants and the live
   assert.doesNotMatch(out.slice(out.indexOf('data-instrument')), /data-control="case"/);
   assert.match(out, /class="caos-plot fill"/);
   assert.match(out, /data-case="c2"/);
+});
+
+test('S8: a magnitude below 1e-4 is written in scientific notation, never as a row of zeros (known defect 15)', () => {
+  assert.equal(formatNumber(6.53e-13, 'en'), '6.53E-13');
+  assert.equal(formatNumber(7.04563e-5, 'es', { digits: 3 }), '7,05E-5');
+  assert.equal(formatNumber(3.9e-205, 'en', { digits: 3 }), '3.9E-205');
+  assert.equal(formatNumber(-2.5e-6, 'en'), '-2.5E-6');
+  assert.equal(formatNumber(1e-7, 'en', { percent: true }), '1E-5 %');
+  assert.equal(formatNumber(0, 'en'), '0');
+  assert.equal(formatNumber(0.00012, 'en'), '0.00012');
+  assert.ok(formatNumber(1e-300, 'en').length < 12);
+  // a fixed number of decimals is the caller's explicit choice
+  assert.equal(formatNumber(6.53e-13, 'en', { decimals: 4 }), '0.0000');
+});
+
+test('known defect 16: the workbench tab rows never shrink under a tall panel', () => {
+  const css = readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
+  assert.match(css, /\.caos-cw > \.tabs > \.tablist, \.caos-cw-panel > \.subtabs > \.subtablist \{ flex: none; \}/);
 });
 
 test('S8: a count shows every integer digit; significant digits round only the fraction', () => {
