@@ -111,6 +111,14 @@ function ModelView({ sim }: { sim: Sim }) {
           <SmallCanvas />
         ) : PLANT === 'blank' ? (
           <Stage label="Curves">{(sz) => <canvas width={sz.width} height={sz.height} style={{ display: 'block' }} />}</Stage>
+        ) : PLANT === 'repeat-ticks' ? (
+          // a short integer axis formatted by one significant digit: uPlot ticks every quarter, and 1.5 reads "2"
+          <UPlotChart
+            height="fill"
+            x={{ values: [1, 2, 3, 4], label: { en: 'Grade', es: 'Grado' }, format: { digits: 1 } }}
+            y={{ label: { en: 'Share', es: 'Fracción' } }}
+            series={[{ label: { en: 'Planted', es: 'Plantada' }, values: [0.1, 0.2, 0.4, 0.8], color: '--color-accent' }]}
+          />
         ) : (
           <UPlotChart
             height="fill"
