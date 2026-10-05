@@ -101,17 +101,23 @@ export function installLib() {
     };
     walk(body, false);
 
-    // Tab rows: one row each (ADR-0071 rule 4); tops clustered so a 1px active-tab offset is not a second row.
+    // Tab rows: one row each (ADR-0071 rule 4); tops clustered so a 1px active-tab offset is not a second row. A row
+    // also shows its tabs whole: a row that shrank under a tall panel cut its tabs' height (known shell defect 16).
     const rows = [...document.querySelectorAll('[role="tablist"]')]
       .filter((tl) => visible(tl) && tl.getAttribute('aria-orientation') !== 'vertical')
       .map((tl) => {
-        const tops = [...tl.querySelectorAll('[role="tab"]')]
-          .filter((t) => t.closest('[role="tablist"]') === tl && visible(t))
-          .map((t) => t.getBoundingClientRect().top)
-          .sort((a, b) => a - b);
+        const tabs = [...tl.querySelectorAll('[role="tab"]')].filter((t) => t.closest('[role="tablist"]') === tl && visible(t));
+        const tops = tabs.map((t) => t.getBoundingClientRect().top).sort((a, b) => a - b);
         let n = tops.length ? 1 : 0;
         for (let i = 1; i < tops.length; i += 1) if (tops[i] - tops[i - 1] > 8) n += 1;
-        return { name: tl.getAttribute('aria-label') || describe(tl), rows: n };
+        // a shrunk row either lets its tabs overflow it or stretches them shorter than their own content
+        const lr = tl.getBoundingClientRect();
+        let cut = Math.max(0, tl.scrollHeight - tl.clientHeight);
+        for (const t of tabs) {
+          const r = t.getBoundingClientRect();
+          cut = Math.max(cut, t.scrollHeight - t.clientHeight, Math.round(Math.max(0, lr.top - r.top) + Math.max(0, r.bottom - lr.bottom)));
+        }
+        return { name: tl.getAttribute('aria-label') || describe(tl), rows: n, cut };
       });
 
     // The rail: no scroll (rule 6) and every descendant inside its box (G5).
@@ -312,13 +318,15 @@ export function installLib() {
       const s = getComputedStyle(a);
       const ar = a.getBoundingClientRect();
       let r = el.getBoundingClientRect();
+      // An element larger than the container is aligned by its start: aligning its end pushed its start out of
+      // view, and the probe then landed on whatever covers the container (known shell defect 18).
       if ((s.overflowX === 'auto' || s.overflowX === 'scroll') && a.scrollWidth > a.clientWidth) {
-        if (r.left < ar.left) setScroll(a, a.scrollLeft - (ar.left - r.left + 8), a.scrollTop);
+        if (r.left < ar.left || r.width > ar.width) setScroll(a, a.scrollLeft - (ar.left - r.left), a.scrollTop);
         else if (r.right > ar.right) setScroll(a, a.scrollLeft + (r.right - ar.right + 8), a.scrollTop);
       }
       r = el.getBoundingClientRect();
       if ((s.overflowY === 'auto' || s.overflowY === 'scroll') && a.scrollHeight > a.clientHeight) {
-        if (r.top < ar.top) setScroll(a, a.scrollLeft, a.scrollTop - (ar.top - r.top + 8));
+        if (r.top < ar.top || r.height > ar.height) setScroll(a, a.scrollLeft, a.scrollTop - (ar.top - r.top));
         else if (r.bottom > ar.bottom) setScroll(a, a.scrollLeft, a.scrollTop + (r.bottom - ar.bottom + 8));
       }
     }
@@ -334,7 +342,27 @@ export function installLib() {
     return Boolean(el);
   };
 
-  /** Every visible control can be brought into the viewport and receives the pointer at its centre (G5). */
+  /** The viewport cut by every ancestor that clips its content (overflow other than visible). */
+  const visibleArea = (el) => {
+    const area = { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight };
+    for (let a = el.parentElement; a && a !== document.body && a !== document.documentElement; a = a.parentElement) {
+      const s = getComputedStyle(a);
+      if (s.overflowX === 'visible' && s.overflowY === 'visible') continue;
+      const ar = a.getBoundingClientRect();
+      if (s.overflowX !== 'visible') {
+        area.left = Math.max(area.left, ar.left);
+        area.right = Math.min(area.right, ar.right);
+      }
+      if (s.overflowY !== 'visible') {
+        area.top = Math.max(area.top, ar.top);
+        area.bottom = Math.min(area.bottom, ar.bottom);
+      }
+    }
+    return area;
+  };
+
+  /** Every visible control can be brought into the viewport and receives the pointer at the centre of its visible
+   * part (G5). */
   G.reach = () => {
     const sel = 'a[href], button, select, input:not([type="hidden"]), textarea, [role="tab"], [role="button"], [tabindex]:not([tabindex="-1"])';
     const saved = new Map();
@@ -352,13 +380,25 @@ export function installLib() {
       const r = frags.length ? frags.reduce((a, b) => (b.width * b.height > a.width * a.height ? b : a)) : el.getBoundingClientRect();
       if (r.width < 1 || r.height < 1) continue;
       checked += 1;
-      const fits = r.width <= window.innerWidth && r.height <= window.innerHeight;
-      if (fits && (r.left < -1 || r.right > window.innerWidth + 1 || r.top < -1 || r.bottom > window.innerHeight + 1)) {
+      // The area the element can show in: the viewport cut by every ancestor that clips (known shell defect 18; an
+      // element that fits the window but not its scroll container was reported as never brought into view).
+      const area = visibleArea(el);
+      const fits = r.width <= area.right - area.left + 1 && r.height <= area.bottom - area.top + 1;
+      if (fits && (r.left < area.left - 1 || r.right > area.right + 1 || r.top < area.top - 1 || r.bottom > area.bottom + 1)) {
         out.push(`${describe(el)} cannot be brought into the viewport (at ${Math.round(r.left)},${Math.round(r.top)})`);
         continue;
       }
-      const px = Math.min(Math.max(r.left + Math.min(r.width, window.innerWidth) / 2, 0), window.innerWidth - 1);
-      const py = Math.min(Math.max(r.top + Math.min(r.height, window.innerHeight) / 2, 0), window.innerHeight - 1);
+      // the pointer goes to the centre of the part that shows
+      const vx0 = Math.max(r.left, area.left);
+      const vx1 = Math.min(r.right, area.right);
+      const vy0 = Math.max(r.top, area.top);
+      const vy1 = Math.min(r.bottom, area.bottom);
+      if (vx1 - vx0 < 1 || vy1 - vy0 < 1) {
+        out.push(`${describe(el)} cannot be brought into the viewport (at ${Math.round(r.left)},${Math.round(r.top)})`);
+        continue;
+      }
+      const px = Math.min(Math.max((vx0 + vx1) / 2, 0), window.innerWidth - 1);
+      const py = Math.min(Math.max((vy0 + vy1) / 2, 0), window.innerHeight - 1);
       const hit = document.elementFromPoint(px, py);
       const ok =
         hit && (hit === el || el.contains(hit) || (el.labels && [...el.labels].some((l) => l.contains(hit))) || (hit.tagName === 'LABEL' && hit.control === el));

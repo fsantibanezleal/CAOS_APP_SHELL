@@ -241,6 +241,37 @@ function ValidationView({ sim }: { sim: Sim }) {
             </>
           ),
         },
+        {
+          // a panel taller than the instrument scrolls; the tab rows above it keep their height (known shell defect 16)
+          id: 'daily',
+          label: pick({ en: 'Every day', es: 'Cada día' }, lang),
+          content: (
+            <PlotCard title={{ en: 'State on every fifth day', es: 'Estado cada cinco días' }} lane="live" provenance="synthetic" dataKey={stateKey}>
+              <table className="caos-table">
+                <thead>
+                  <tr>
+                    <th>{pick({ en: 'Day', es: 'Día' }, lang)}</th>
+                    <th>S</th>
+                    <th>I</th>
+                    <th>R</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sim.t
+                    .filter((d) => d % 5 === 0)
+                    .map((d) => (
+                      <tr key={d}>
+                        <td>{d}</td>
+                        <td>{sim.S[d].toFixed(0)}</td>
+                        <td>{sim.I[d].toFixed(0)}</td>
+                        <td>{sim.R[d].toFixed(0)}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </PlotCard>
+          ),
+        },
       ]}
     />
   );
@@ -449,6 +480,16 @@ function Doc({ id }: { id: string }) {
           tabs={[
             { id: 'theory', label: pick({ en: 'Theory', es: 'Teoría' }, lang), content: sections },
             { id: 'numerics', label: pick({ en: 'Numerics', es: 'Numérica' }, lang), content: sections.slice(0, 2) },
+            {
+              // taller than the page's scroll box and shorter than the window: reachable (known shell defect 18)
+              id: 'notes',
+              label: pick({ en: 'Notes', es: 'Notas' }, lang),
+              content: (
+                <div style={{ height: 'calc(100vh - 40px)' }}>
+                  <p>{pick(PARAGRAPH, lang)}</p>
+                </div>
+              ),
+            },
           ]}
         />
       ) : (
@@ -510,6 +551,11 @@ function App() {
 if (PLANT === 'clip') {
   const style = document.createElement('style');
   style.textContent = '.app-shell.fixed.contain > .page { overflow: hidden !important; }';
+  document.head.appendChild(style);
+}
+if (PLANT === 'shrunk-tabs') {
+  const style = document.createElement('style');
+  style.textContent = '.caos-cw-panel > .subtabs > .subtablist, .caos-cw > .tabs > .tablist { flex: 0 1 auto !important; }';
   document.head.appendChild(style);
 }
 if (PLANT === 'mobile-only') {
