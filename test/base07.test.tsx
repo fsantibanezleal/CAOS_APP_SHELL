@@ -13,7 +13,7 @@ import { Stage } from '../src/workbench/Stage.tsx';
 import { isStale, makeStateKey } from '../src/workbench/state.ts';
 import { CaseWorkbench } from '../src/workbench/CaseWorkbench.tsx';
 import { PlotCard } from '../src/workbench/Readouts.tsx';
-import { UPlotChart } from '../src/chart/UPlotChart.tsx';
+import { UPlotChart, repeatedLabels, tickSteps } from '../src/chart/UPlotChart.tsx';
 
 /** The 0.7.0 base requirements (S1 to S13, S17, S18 of the 2026-10-04 failure history), one test each. */
 
@@ -148,6 +148,26 @@ test('known defect 17: a chart of two or more series keys every series, always; 
   assert.match(two, /data-mode="points"><span[^>]*><\/span>Cases<\/li>/);
   const one = html(<UPlotChart x={{ values: [0, 1], label: 'Day' }} y={{ label: 'People' }} series={[{ label: 'I', values: [1, 2] }]} />);
   assert.doesNotMatch(one, /caos-chart-legend/);
+});
+
+test('known defect 21: an axis with fixed decimals ticks only where its labels differ, and the host declares repeats', () => {
+  // uPlot's own steps include 0.5 and 2.5: on an integer axis 1.5 reads "2" beside the 2
+  const half = [1, 1.5, 2, 2.5, 3].map((v) => formatNumber(v, 'en', { decimals: 0 }));
+  assert.deepEqual(half, ['1', '2', '2', '3', '3']);
+  assert.equal(repeatedLabels(half), 2);
+  assert.equal(repeatedLabels(['1', '2', '3']), 0);
+  assert.equal(repeatedLabels(['', '', '1']), 0);
+  const ints = tickSteps({ decimals: 0 }) ?? [];
+  assert.ok(ints.length > 0 && ints.every((s) => Number.isInteger(s)), 'an integer axis steps by integers only');
+  assert.ok(ints.includes(1) && ints.includes(2) && ints.includes(5) && !ints.includes(2.5) && Math.min(...ints) === 1);
+  const tenths = tickSteps({ decimals: 1 }) ?? [];
+  assert.equal(Math.min(...tenths), 0.1);
+  assert.ok(tenths.every((s) => Math.abs(s * 10 - Math.round(s * 10)) < 1e-9), 'one decimal steps by tenths');
+  assert.equal(Math.min(...(tickSteps({ percent: true, decimals: 0 }) ?? [])), 0.01, 'a whole-percent axis steps by points');
+  assert.equal(tickSteps({ digits: 2 }), undefined, 'significant digits keep uPlot steps (the gate reads the repeats)');
+  assert.equal(tickSteps(undefined), undefined);
+  const host = html(<UPlotChart x={{ values: [1, 2, 3], label: 'Grade', format: { decimals: 0 } }} y={{ label: 'PD' }} series={[{ label: 'p', values: [0.1, 0.2, 0.3] }]} />);
+  assert.match(host, /data-ticks-repeat="0"/);
 });
 
 test('S11 and S17: the token list and the reserved-class list match the stylesheets', () => {
