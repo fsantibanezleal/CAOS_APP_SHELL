@@ -110,6 +110,9 @@
   view; the routed nav re-centres its active link on every route change. The contained phone footer stays one row
   with a faded end instead of wrapping into three lines over the instrument.
 - Badges never wrap mid-label; stacked views in a panel keep a gap.
+- A scrolling row reveals the reader's focused item even when a route change re-runs its effect afterwards (the
+  late effect had scrolled a focused link back out of view; the navigation e2e caught it as a flaky failure), and
+  the reveal is instant.
 - Units are bilingual where they are words (`unit: { en: 'people', es: 'personas' }`) in `Readout`, `Gauge`, `Knob` and the
   chart axes; a Spanish reader no longer meets an English unit. `formatNumber` shows every integer digit of a count
   (27,345, not 27,350); significant digits round only the fraction. `Verdict compact` puts the title and the verdict
