@@ -134,6 +134,10 @@ code, kbd { font-family: var(--font-mono); }
 }
 @media (max-width: 380px) {
   .brand span:last-child { display: none; }
+  /* The route row needs the room: on Linux fonts "Implementation" is about 100 px and the row was about 90 px at 320 px,
+     so a focused route could never be shown whole (shell CI, 2026-10-05). The toggle keeps its icon and its label. */
+  .header-sep, .lang-code { display: none; }
+  .header-actions .icon-btn { padding: 0.2rem; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
 
