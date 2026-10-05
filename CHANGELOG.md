@@ -1,3 +1,131 @@
+## [0.07.000] - 2026-10-04
+
+### Added
+
+- The workbench primitives, so a product composes its App route instead of re-deriving it (ADR-0016 s9,
+  ADR-0017 and ADR-0071 as amended 2026-10-04):
+  - `WorkbenchLayout`: a sized control rail beside the instrument on the full viewport (`.page-body.wide`),
+    `min-width: 0` down the tree, the instrument marked `data-instrument`; a rail given as sections shows one
+    section at a time instead of scrolling (ADR-0071 rule 6).
+  - `CaseWorkbench`: the variant bar, then ONE row of at most six question groups in a fixed order (the
+    instrument groups, the variant comparison, the context write-up); more than six throws. The live lane is a
+    property of each view, shown by its badge.
+  - `VariantBar` (one scrollable row of regimes, the active regime's note and lane) and `LaneBadge` (live,
+    replay, offline only).
+  - `Readout`, `Gauge`, `Verdict` and `PlotCard`, with shared tones.
+  - `DocPage` and `DocSection`: the documentation route skeleton; a section ends in its own `Refs`, and a
+    section that cites nothing must state why (`noRefsReason`).
+  - `pick` and `BiText` for bilingual strings.
+- `ShellConfig.contain`: every route is the viewport; the workbench fills it and a documentation route scrolls
+  inside the main container, so the document never scrolls (ADR-0071 rule 1).
+- The design-system CSS for chips (`.chip`, `.chip.on`), the one-row chip strip, the workbench grid, the
+  variant bar, lane badges, readouts, gauges, verdicts and plot cards. Products no longer copy it.
+- `caos-shell-gate` (bin): measures a running build at three sizes, both themes and both languages (viewport
+  fit, one-row tab bars, a rail without scroll, the instrument at least half of a workbench route, centred prose,
+  no bibliography dump, captioned equations, sections with references, the theme applied, no console error) and
+  reaches every header route by a real pointer click. `playwright` is an optional peer dependency.
+
+- ADR rules enforced at runtime (ADR-0078, "rules live in the base"): an `Equation` without a caption, a citation
+  without a DOI or URL, a duplicate citation id, a `Cite` of an unknown id, a `ReferenceList` (banned by
+  ADR-0017 s4, now deprecated) and an architecture modal with fewer than five tabs are each reported with
+  `console.error`; `caos-shell-gate` fails a page on any console error.
+- `STANDARD_ROUTES`: the six product routes with EN/ES labels, one definition for header, router and gate.
+- `THEME_BOOT_SCRIPT`: the inline pre-paint script that applies the stored theme and language before the first
+  frame; `AppShell` keeps `<html lang>` in step with the language toggle (ADR-0011).
+- The base requirements of the 2026-10-04 failure history (S1 to S13, S17, S18), each with a test in
+  `test/base07.test.tsx`:
+  - S3 `PanelBoundary`: a failing view is contained, named (`data-panel-error`) and reported; every tab panel,
+    every `PlotCard` and the shell root sit inside one.
+  - S4 `Tabs` and `SubTabs` are controllable (`value`, `onChange`), render only the open panel inside a boundary,
+    carry `data-tab` and `data-panel`, report more than six peers, and fade their overflowing edge;
+    `TabGroups` puts views under question groups when one row cannot hold them.
+  - S7 to S10 the workbench state: `Provenance` (`real`, `synthetic`, `published`) beside the lane on every
+    `Readout`, `PlotCard` and workbench group; `makeStateKey` and `useWorkbenchState`, so a view showing data
+    for an earlier selection is overlaid as stale; `CaseWorkbench` writes `data-case`, `data-variant`,
+    `data-source`, `data-state-key` and `data-replay-only` for the gate.
+  - S8 `formatNumber` and `useFormat`: numbers follow the interface language (es-CL decimal comma), and an
+    absent or non-finite value reads "not available" instead of `NaN`.
+  - S10 `Knob` and `ChipGroup`: the instrument's controls, registered with `data-control` so the gate can check
+    that each one changes the state key.
+  - S11 `SHELL_TOKENS`, `resolveToken` and `useThemeTokens`: the colour tokens the shell defines, resolved to
+    concrete values for canvas and WebGL; `validateArchitectureConfig` checks the modal on mount (at least five
+    tabs, inline SVG strings only, only defined tokens, no hex colours, both languages).
+  - S12 `UPlotChart` from the separate entry `@fasl-work/caos-app-shell/chart` (with `chart.css`): sized by its
+    container, colours resolved from the theme and rebuilt on theme or language change, options compared by
+    value, null-safe localised ticks, a y axis sized to its widest label, a cursor readout row instead of the
+    clipped legend, and labelled marks. `uplot` is an optional peer dependency.
+  - S13 `Stage` and `useStageSize`: an instrument draws only once its box has a size, declares
+    `data-drawn`, `data-width` and `data-height`, and reports a stage still at zero size after 1.5 s.
+  - S17 `reserved-classes.json`: every class the stylesheet styles, generated at build, for the product guard
+    that forbids redefining them.
+  - S18 `AppShell` reports a missing router context and names the duplicated-React cause.
+  - `@fasl-work/caos-app-shell/keys`: the storage keys (`caos.theme`, `caos.lang`) for the gate and the boot
+    script.
+
+- The instrument's height chain (failure class 4): `PlotCard fill` takes the height its panel leaves, `.caos-views-row`
+  sets filling views side by side, sub-tabs inside a panel pass the height down, and `UPlotChart height="fill"`
+  takes its container's height; below 900 px a filling view gets a fixed readable height. Before this, a `Stage`
+  inside a `PlotCard` resolved to zero height and never drew.
+- `.caos-table`: tables in views and documents (tabular figures, a header that stays in view).
+- `UPlotChart` series `mode: 'points'` (a scatter of cases over a curve); `.caos-pending` for a view whose data is not
+  there yet (it declares `data-state="loading"`); the `BiText` type is exported.
+- `caos-shell-gate` rebuilt as `gate/` (G1 to G9 of the 2026-10-04 history): subject and mode identity with the
+  exported storage keys; console, page and HTTP errors; deep links with and without a trailing slash, artifacts
+  answered as JSON and a missing asset answered 404, through a built-in server that answers as GitHub Pages does
+  (`--serve dist`); boxes inside the viewport and the rail, containers that cut or scroll sideways, truncated text
+  without its full text, every control reached by the pointer the way a reader can scroll to it; painted pixels per
+  drawing stage and the drawn views covering half the viewport, measured on the screenshot; every route, tab,
+  sub-tab and case at 390x844, 768x1024, 1280x800, 1600x900 and 2560x1440, both themes and both languages, waiting
+  for declared state; animation frames and mutations at rest; every registered control changing the selection key,
+  and the rendered case being the case asked for, by selection and by deep link.
+- G15: the gate's self-test (`npm run test:gate`, a CI job): a fixture product built on this shell passes the full
+  matrix clean, and each of 26 planted defects fails the check that owns it.
+
+### Changed
+
+- `CaseWorkbench` is the whole App route: it renders the layout, puts the case picker (`cases`), the variants and
+  the product's `rail` in the rail, and provides the selection key to the rail and the instrument. The per-group
+  badge row is gone (each view shows its own lane and provenance); `WorkbenchLayout` takes a `railHead`. The
+  workbench spacing is tightened (rail `clamp(248px, 19vw, 340px)`, compact group and sub-tab rows), so the drawn
+  views cover half of a 1280x800 viewport.
+- The variant row is a registered control (`data-control="variant"`).
+- `ShellConfig.license` and `ShellConfig.visibility` are required (S5): the footer shows the product's own
+  licence with no default, and a private product shows no source link. `ShellConfig.build` adds the build id to
+  the footer beside the version, which must be `X.XX.XXX` (S6); both are written as `data-version` and
+  `data-build`.
+- `Readout` items take a numeric `value` (or `null`) with a unit or `unitless: true` and are formatted by the
+  shell; `lane` and `provenance` are required on `Readout` and `PlotCard`.
+- `CaseSelector` shows each case by name only (the id is written as `data-case`).
+- The architecture modal takes inline SVG strings only; the URL fetch and cache are removed.
+
+### Fixed
+
+- The document could not scroll on a page taller than the viewport (`html, body, #root { height: 100% }`); it is
+  now `height: auto; min-height: 100%` (S1).
+- `[hidden]` lost to component `display` rules and showed hidden panels; it now always hides (S2). Each theme
+  declares `color-scheme`, so native scrollbars and form controls follow it.
+- The header navigation pushed the actions off a narrow screen; it shrinks and scrolls at every width.
+  Native selects and inputs follow the theme, and sub-tab rows stay on one row.
+- A partly hidden item focused by keyboard in a scrolling row (nav, tab rows, phone footer) is scrolled fully into
+  view; the routed nav re-centres its active link on every route change. The contained phone footer stays one row
+  with a faded end instead of wrapping into three lines over the instrument.
+- Badges never wrap mid-label; stacked views in a panel keep a gap.
+- A scrolling row reveals the reader's focused item even when a route change re-runs its effect afterwards (the
+  late effect had scrolled a focused link back out of view; the navigation e2e caught it as a flaky failure), and
+  the reveal is instant.
+- Units are bilingual where they are words (`unit: { en: 'people', es: 'personas' }`) in `Readout`, `Gauge`, `Knob` and the
+  chart axes; a Spanish reader no longer meets an English unit. `formatNumber` shows every integer digit of a count
+  (27,345, not 27,350); significant digits round only the fraction. `Verdict compact` puts the title and the verdict
+  on one row, for a verdict above a drawing.
+- Found by the gate on the product template: `CaseSelector` resolves a `?case=` deep link once an asynchronous case
+  list arrives (it adopted on mount only, and wrote the default case into the URL first), and its modified badge
+  names the case instead of its id and wraps in the rail; the architecture validation no longer reads a marker
+  reference (`url(#dc5-arrow)`) as a hex colour; the gate's reach check tests a fragment of a wrapped inline link,
+  not the empty centre of its box. The fixture now loads its cases asynchronously and carries a wrapped link.
+
+- `ChromeStrings` typed each value as `string`; with `as const` the English literals made the Spanish table
+  unassignable and `tsc` 5.9 failed, which also failed the build that `npm ci` runs.
+
 ## [0.06.013] - 2026-09-26
 
 ### Added

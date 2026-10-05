@@ -27,9 +27,11 @@
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   --maxw: 1200px;          /* reading width, for PROSE pages */
   --maxw-wide: 100%;       /* instrument width, for workbench pages */
+  color-scheme: dark;
 }
 
 [data-theme="light"] {
+  color-scheme: light;
   --color-bg: #f6f8fa;
   --color-surface: #ffffff;
   --color-surface-2: #f0f3f6;
@@ -49,7 +51,11 @@
 }
 
 * { box-sizing: border-box; }
-html, body, #root { height: 100%; }
+/* Known shell defect 1 (fixed 0.7.0): `height: 100%` with `overflow-x: hidden` made html and body scroll containers
+   pinned to the viewport, so a tall page could not scroll by script or anchor. Content-height documents. */
+html, body, #root { height: auto; min-height: 100%; }
+/* Known shell defect 2 (fixed 0.7.0): any author `display` un-hid a `[hidden]` panel. */
+[hidden] { display: none !important; }
 body {
   margin: 0;
   font-family: var(--font-sans);
@@ -79,7 +85,7 @@ code, kbd { font-family: var(--font-mono); }
 .mono { font-family: var(--font-mono); font-size: 0.9em; }
 .small { font-size: 0.84rem; }
 .card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 10px; padding: 1.25rem 1.5rem; box-shadow: var(--color-shadow); }
-.badge { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; padding: 0.15rem 0.55rem; border-radius: 999px; border: 1px solid var(--color-border); background: var(--color-surface-2); color: var(--color-fg-subtle); }
+.badge { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; padding: 0.15rem 0.55rem; border-radius: 999px; border: 1px solid var(--color-border); background: var(--color-surface-2); color: var(--color-fg-subtle); white-space: nowrap; }
 .badge.live { color: var(--color-good); border-color: color-mix(in oklab, var(--color-good) 45%, transparent); }
 .badge.precomputed, .badge.accent { color: var(--color-accent); border-color: color-mix(in oklab, var(--color-accent) 45%, transparent); }
 .badge.warn { color: var(--color-warn); border-color: color-mix(in oklab, var(--color-warn) 45%, transparent); }
@@ -90,7 +96,10 @@ code, kbd { font-family: var(--font-mono); }
 .brand { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 700; letter-spacing: -0.02em; color: var(--color-fg); }
 .brand:hover { text-decoration: none; }
 .brand .brand-mark { color: var(--color-accent); display: inline-flex; flex: none; }
-.main-nav { display: flex; align-items: center; gap: 0.15rem; }
+.main-nav { display: flex; align-items: center; gap: 0.15rem; flex: 1 1 auto; min-width: 0; overflow-x: auto; overflow-y: hidden; white-space: nowrap; scrollbar-width: none; }
+.main-nav::-webkit-scrollbar { display: none; }
+.main-nav .nav-link { flex: none; }
+.brand, .header-actions { flex: none; }
 .nav-link { padding: 0.4rem 0.7rem; border-radius: 6px; font-size: 0.9rem; color: var(--color-fg-subtle); transition: color 0.15s, background-color 0.15s; }
 .nav-link:hover { text-decoration: none; color: var(--color-fg); }
 .nav-link.active { color: var(--color-accent); background: var(--color-accent-soft); font-weight: 600; }
@@ -208,6 +217,10 @@ code, kbd { font-family: var(--font-mono); }
 
 /* ── Equations / figures ── */
 .equation { margin: 1rem 0; padding: 0.9rem 1rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; overflow-x: auto; }
+/* Wide content in a document scrolls inside its own box; the contained page never cuts it (G5). */
+.prose table { display: block; max-width: 100%; overflow-x: auto; }
+.prose pre { max-width: 100%; overflow-x: auto; }
+.prose img, .prose svg, .prose video { max-width: 100%; height: auto; }
 .equation-caption { margin-top: 0.5rem; font-size: 0.82rem; color: var(--color-fg-faint); text-align: center; }
 .katex { color: var(--color-fg); }
 .figure { margin: 1.5rem 0; }
@@ -218,7 +231,7 @@ code, kbd { font-family: var(--font-mono); }
 .fig-svg.wide { max-width: 760px; }
 .dg-axis { stroke: var(--color-fg-faint); stroke-width: 1.3; }
 .dg-axis-label { fill: var(--color-fg-subtle); font: 12px var(--font-sans); }
-.dg-tick { fill: var(--color-fg-faint); font: 11px var(--font-mono); }
+.dg-tick { fill: var(--color-fg-subtle); font: 11px var(--font-mono); }
 .dg-grid { stroke: var(--color-border); stroke-width: 0.5; opacity: 0.6; }
 .dg-curve { fill: none; stroke: var(--color-accent); stroke-width: 2.2; stroke-linejoin: round; }
 .dg-curve-2 { fill: none; stroke: var(--color-magenta); stroke-width: 2; }
@@ -226,7 +239,7 @@ code, kbd { font-family: var(--font-mono); }
 .dg-asymptote { stroke: var(--color-bad); stroke-width: 1.4; stroke-dasharray: 4 4; }
 .dg-marker { stroke: var(--color-warn); stroke-width: 1.2; stroke-dasharray: 3 3; }
 .dg-marker-label { fill: var(--color-warn); font: 600 11px var(--font-mono); }
-.dg-note { fill: var(--color-fg-faint); font: italic 11px var(--font-sans); }
+.dg-note { fill: var(--color-fg-subtle); font: italic 11px var(--font-sans); }
 .dg-fill-accent { fill: color-mix(in oklab, var(--color-accent) 16%, transparent); stroke: var(--color-accent); stroke-width: 1; }
 .dg-fill-warn { fill: color-mix(in oklab, var(--color-warn) 16%, transparent); stroke: var(--color-warn); stroke-width: 1; }
 .dg-box { fill: var(--color-surface); stroke: var(--color-border); stroke-width: 1.3; }
@@ -274,7 +287,8 @@ code, kbd { font-family: var(--font-mono); }
 .cs-kind { font-size: 0.62rem; font-weight: 700; line-height: 1; padding: 0.12rem 0.28rem; border-radius: 4px; border: 1px solid var(--color-border); color: var(--color-fg-faint); background: var(--color-surface-2); align-self: center; }
 .cs-kind-real { color: var(--color-accent-2); border-color: color-mix(in oklab, var(--color-accent-2) 40%, transparent); }
 .cs-kind-uploaded { color: var(--color-warn); border-color: color-mix(in oklab, var(--color-warn) 40%, transparent); }
-.cs-modified { display: flex; align-items: center; gap: 0.5rem; }
+.cs-modified { display: flex; align-items: center; gap: 0.35rem 0.5rem; flex-wrap: wrap; min-width: 0; }
+.cs-modified .badge { white-space: normal; max-width: 100%; }
 .cs-reset { border: none; background: transparent; color: var(--color-accent); font-size: 0.8rem; font-weight: 600; padding: 0.1rem 0.2rem; text-decoration: underline; text-underline-offset: 2px; }
 
 /* Authenticated workbench frame. Product styles may refine tokens and controls, but the package owns
@@ -323,7 +337,7 @@ html, body { overflow-x: hidden; }
    `.app-shell.fixed` and let flex distribute the height. */
 .app-shell.fixed { height: 100dvh; min-height: 100dvh; overflow: hidden; }
 .app-shell.fixed > .page { flex: 1 1 auto; min-height: 0; display: flex; }
-.app-shell.fixed .page-body.wide { flex: 1 1 auto; min-height: 0; padding-top: 1rem; padding-bottom: 1rem; }
+.app-shell.fixed .page-body.wide { flex: 1 1 auto; min-height: 0; padding-top: 0.75rem; padding-bottom: 0.75rem; }
 
 /* A viewport-filling app must not carry the prose footer margin: it becomes dead space between the
    content and the chrome. Measured on ChargeCascade as exactly 48px (3rem). */
@@ -357,7 +371,7 @@ html, body { overflow-x: hidden; }
 .cs-select { width: 100%; max-width: 460px; }
 
 /* ADR-0070: additive, shell-owned, full-viewport scenario focus frame. */
-.caos-focus-shell { position: fixed; inset: 0; z-index: 100; display: grid; grid-template-columns: minmax(0,1fr) clamp(300px,20vw,340px); min-width: 0; height: 100dvh; background: var(--color-bg); color: var(--color-fg); }
+.caos-focus-shell { position: fixed; inset: 0; z-index: 100; display: grid; grid-template-columns: minmax(0,1fr) clamp(248px,19vw,340px); min-width: 0; height: 100dvh; background: var(--color-bg); color: var(--color-fg); }
 .caos-focus-stage { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: var(--color-bg); }
 .caos-focus-instrument { position: absolute; inset: 0; min-width: 0; min-height: 0; }
 .caos-focus-label, .caos-focus-hud > div { background: color-mix(in oklab,var(--color-surface) 82%,transparent); backdrop-filter: blur(6px); border: 1px solid var(--color-border); border-radius: 6px; }
@@ -381,3 +395,195 @@ html, body { overflow-x: hidden; }
   .caos-focus-hud span { font-size: 0.48rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .caos-focus-actions { top: 7px; right: 7px; }
 }
+
+/* == Workbench primitives (0.7.0) ==============================================================================
+   The App route of every product: WorkbenchLayout, CaseWorkbench, VariantBar, LaneBadge, Readout, Gauge, Verdict,
+   PlotCard; and DocPage/DocSection for documentation routes. Owned here so products compose them and never
+   redefine them (ADR-0016 s9, ADR-0017, ADR-0071, as amended 2026-10-04). */
+
+/* Chips: a one-of-N choice rendered as pills; `.on` is the selected state. */
+.chip { display: inline-flex; align-items: center; gap: 0.35rem; background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-fg-subtle); border-radius: 999px; padding: 0.3rem 0.72rem; font-size: 0.82rem; font-weight: 500; white-space: nowrap; transition: color 0.15s, background-color 0.15s, border-color 0.15s; }
+.chip:hover:not(:disabled) { color: var(--color-fg); border-color: var(--color-fg-faint); }
+.chip.on { background: var(--color-accent); color: var(--color-accent-fg); border-color: transparent; font-weight: 600; }
+.chip:disabled { opacity: 0.45; cursor: default; }
+/* ONE row of chips (ADR-0071 rule 4): it scrolls horizontally instead of wrapping into more rows. */
+.caos-chip-row { display: flex; flex-wrap: nowrap; gap: 0.35rem; overflow-x: auto; overflow-y: hidden; min-width: 0; scrollbar-width: none; padding-bottom: 2px; }
+.caos-chip-row::-webkit-scrollbar { display: none; }
+.caos-chip-row > * { flex: 0 0 auto; }
+
+/* WorkbenchLayout: a sized rail beside the instrument, on the full viewport. */
+.caos-wb { display: grid; grid-template-columns: clamp(248px, 19vw, 340px) minmax(0, 1fr); gap: 0.9rem; align-items: stretch; min-width: 0; padding-top: 0.75rem; padding-bottom: 0.75rem; }
+.caos-wb > * { min-width: 0; }
+.caos-wb-rail { display: flex; flex-direction: column; gap: 0.75rem; min-height: 0; overflow-y: auto; overflow-x: hidden; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 10px; padding: 0.85rem; }
+.caos-wb-rail-sections { display: flex; flex-wrap: nowrap; gap: 0.3rem; overflow-x: auto; scrollbar-width: none; flex: 0 0 auto; }
+.caos-wb-rail-sections::-webkit-scrollbar { display: none; }
+.caos-wb-rail-panel { display: flex; flex-direction: column; gap: 0.8rem; min-height: 0; }
+.caos-wb-rail label, .caos-field { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.8rem; color: var(--color-fg-subtle); }
+.caos-wb-rail .select, .caos-wb-rail .range { width: 100%; }
+.caos-wb-main { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+
+/* CaseWorkbench: the variant bar, then ONE row of at most six question groups; the panel owns its scroll. */
+.caos-cw { display: flex; flex-direction: column; min-height: 0; min-width: 0; flex: 1 1 auto; }
+.caos-cw > .tabs { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
+.caos-cw > .tabs > .tabpanel:not([hidden]) { flex: 1 1 auto; min-height: 0; overflow: auto; }
+.caos-cw-panel { display: flex; flex-direction: column; gap: 0.6rem; min-width: 0; }
+.caos-cw-panel-head { display: flex; justify-content: flex-end; }
+.caos-cw-context { max-width: 92ch; }
+.caos-variant-bar { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.7rem; min-width: 0; }
+.caos-variant-head { display: flex; align-items: center; gap: 0.4rem 0.6rem; flex-wrap: wrap; }
+.caos-variant-title { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-fg-faint); font-weight: 600; }
+.caos-variant-note { margin: 0; font-size: 0.88rem; color: var(--color-fg-subtle); font-style: italic; }
+
+/* LaneBadge: which lane produced the values on screen. */
+.caos-lane-live { color: var(--color-good); border-color: color-mix(in oklab, var(--color-good) 45%, transparent); }
+.caos-lane-replay { color: var(--color-accent); border-color: color-mix(in oklab, var(--color-accent) 45%, transparent); }
+.caos-lane-offline { color: var(--color-warn); border-color: color-mix(in oklab, var(--color-warn) 45%, transparent); }
+
+/* Tones shared by readouts, gauges and verdicts. */
+.tone-good { --tone: var(--color-good); }
+.tone-warn { --tone: var(--color-warn); }
+.tone-bad { --tone: var(--color-bad); }
+.tone-accent { --tone: var(--color-accent); }
+.tone-neutral { --tone: var(--color-fg-faint); }
+
+/* Readout: labelled live values with units. */
+.caos-readout { display: flex; flex-direction: column; gap: 0.35rem; }
+.caos-readout-title, .caos-gauge-title, .caos-verdict-title { margin: 0; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-fg-faint); font-weight: 600; }
+.caos-readout dl { margin: 0; display: grid; gap: 0.25rem; }
+.caos-readout-row { display: flex; justify-content: space-between; gap: 0.75rem; font-size: 0.84rem; border-left: 3px solid var(--tone); padding-left: 0.5rem; }
+.caos-readout-row dt { color: var(--color-fg-subtle); }
+.caos-readout-row dd { margin: 0; text-align: right; }
+.caos-readout-value { font-family: var(--font-mono); font-weight: 650; color: var(--color-fg); }
+.caos-readout-unit { color: var(--color-fg-faint); font-size: 0.78rem; }
+
+/* Gauge: a value against labelled zones. */
+.caos-gauge-track { position: relative; height: 14px; border-radius: 7px; background: var(--color-surface-2); overflow: hidden; margin-top: 0.35rem; }
+.caos-gauge-zone { position: absolute; top: 0; height: 100%; background: var(--tone); opacity: 0.45; }
+.caos-gauge-needle { position: absolute; top: 0; width: 3px; height: 100%; background: var(--color-fg); transform: translateX(-1px); }
+.caos-gauge-scale { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--color-fg-faint); margin-top: 0.2rem; }
+.caos-gauge-value { color: var(--color-fg); font-weight: 700; font-family: var(--font-mono); }
+.caos-gauge-legend { display: flex; flex-wrap: wrap; gap: 0.5rem; font-size: 0.72rem; color: var(--color-fg-subtle); margin-top: 0.25rem; }
+.caos-gauge-legend .dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 0.25rem; background: var(--tone); }
+
+/* Verdict: the current diagnosis, coloured by its tone. */
+.caos-verdict { border: 1px solid var(--color-border); border-left: 4px solid var(--tone); border-radius: 8px; padding: 0.7rem 0.85rem; background: var(--color-surface-2); }
+.caos-verdict-text { margin: 0.2rem 0 0; font-weight: 650; color: var(--color-fg); }
+.caos-verdict.compact { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.15rem 0.6rem; padding: 0.4rem 0.7rem; }
+.caos-verdict.compact .caos-verdict-text { margin: 0; }
+
+/* PlotCard: the frame every chart or table sits in. */
+.caos-plot { margin: 0; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 10px; padding: 0.45rem 0.6rem 0.4rem; min-width: 0; }
+.caos-plot-head { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 0.2rem; font-style: normal; text-align: left; min-height: 1.5rem; }
+.caos-plot-head .badge { font-size: 0.68rem; padding: 0.05rem 0.45rem; }
+.caos-plot-title { font-size: 0.84rem; color: var(--color-fg-subtle); font-weight: 600; }
+.caos-plot-actions { display: inline-flex; gap: 0.3rem; }
+.caos-plot-body { position: relative; min-width: 0; overflow-x: auto; }
+.caos-plot-note { margin: 0.4rem 0 0; font-size: 0.78rem; color: var(--color-fg-faint); }
+
+/* DocPage / DocSection. */
+.caos-doc-section { margin-block: 1.75rem; }
+
+/* contain: every route is the viewport. The workbench fills the main container; a documentation route scrolls
+   inside it, so the header and footer stay in view and the document never scrolls (ADR-0071 rule 1). */
+.app-shell.fixed.contain > .page { display: flex; flex-direction: column; overflow: hidden; }
+.app-shell.fixed.contain > .page > .caos-wb { flex: 1 1 auto; min-height: 0; }
+/* The chrome of a contained app spans the instrument's width with its inset, so at 2560 px the header and footer
+   do not float in a 1200 px column above a full-width workbench (found by the template capture review). */
+.app-shell.fixed.contain .header-inner, .app-shell.fixed.contain .site-footer .footer-inner { max-width: var(--maxw-wide); padding-inline: 1rem; }
+.app-shell.fixed.contain > .page:has(> .page-body:not(.caos-wb)) { display: block; overflow-y: auto; overscroll-behavior: contain; }
+@media (max-width: 900px) {
+  /* A phone stacks the rail over the instrument and lets the document scroll: the viewport rule is measured at
+     1280x800 and above (ADR-0071 Verification). */
+  .caos-wb { grid-template-columns: minmax(0, 1fr); }
+  .app-shell.fixed.contain { height: auto; min-height: 100dvh; overflow: visible; }
+  .app-shell.fixed.contain > .page { display: block; overflow: visible; }
+}
+
+/* == 0.7.0: closed known defects and the new primitives ======================================================== */
+
+/* Native controls follow the theme (S2; known shell defect 13). */
+.app-shell select, .app-shell textarea, .app-shell input:not([type="range"]):not([type="checkbox"]):not([type="radio"]) { background: var(--color-surface-2); color: var(--color-fg); border: 1px solid var(--color-border); border-radius: 6px; }
+.app-shell button { color: inherit; }
+.caos-arch-toggle { margin: 0 0 8px; font-size: 12px; padding: 5px 10px; color: var(--color-fg); background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: 6px; cursor: pointer; }
+
+/* A scrolling row says that it scrolls (known shell defect 11): the hidden end fades. */
+.main-nav[data-fade-end="1"], .tablist[data-fade-end="1"], .subtablist[data-fade-end="1"] { mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+.main-nav[data-fade-start="1"], .tablist[data-fade-start="1"], .subtablist[data-fade-start="1"] { mask-image: linear-gradient(to left, #000 calc(100% - 28px), transparent); }
+.main-nav[data-fade-start="1"][data-fade-end="1"], .tablist[data-fade-start="1"][data-fade-end="1"], .subtablist[data-fade-start="1"][data-fade-end="1"] { mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent); }
+.subtablist:not([aria-orientation="vertical"]) { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.subtablist::-webkit-scrollbar { display: none; }
+.subtablist .subtab { flex: none; white-space: nowrap; }
+/* The phone footer of a contained surface stays one row (the instrument keeps the viewport) and says that it
+   scrolls: its hidden end fades, and a focused link is scrolled into view (useOverflowFade). */
+.app-shell.fixed .footer-meta[data-fade-end="1"] { mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+.app-shell.fixed .footer-meta[data-fade-start="1"] { mask-image: linear-gradient(to left, #000 calc(100% - 28px), transparent); }
+.app-shell.fixed .footer-meta[data-fade-start="1"][data-fade-end="1"] { mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent); }
+
+/* A failed view (PanelBoundary): an inline message in its own frame, never a blank page. */
+.caos-panel-error { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: baseline; padding: 0.7rem 0.9rem; border: 1px solid color-mix(in oklab, var(--color-bad) 45%, transparent); border-left: 4px solid var(--color-bad); border-radius: 8px; background: var(--color-surface-2); color: var(--color-fg); font-size: 0.86rem; }
+.caos-panel-error code { flex-basis: 100%; font-size: 0.78rem; color: var(--color-fg-subtle); }
+
+/* Lane and provenance badges. */
+.caos-badges { display: inline-flex; gap: 0.3rem; flex-wrap: wrap; }
+.caos-prov-real { color: var(--color-accent-2); border-color: color-mix(in oklab, var(--color-accent-2) 45%, transparent); }
+.caos-prov-synthetic { color: var(--color-magenta); border-color: color-mix(in oklab, var(--color-magenta) 45%, transparent); }
+.caos-prov-published { color: var(--color-fg-subtle); }
+
+/* Staleness: a view showing data for an earlier selection says so. */
+.caos-stale .caos-plot-body > :not(.caos-stale-overlay), .caos-readout.caos-stale dl { opacity: 0.45; }
+.caos-stale-overlay { position: absolute; inset: auto 0.5rem 0.5rem auto; padding: 0.25rem 0.55rem; border-radius: 6px; background: var(--color-surface-2); border: 1px solid var(--color-border); font-size: 0.76rem; color: var(--color-warn); }
+.caos-stale-note { margin: 0.2rem 0 0; font-size: 0.76rem; color: var(--color-warn); }
+.caos-readout-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
+
+/* Registered controls. */
+.caos-knob { display: flex; flex-direction: column; gap: 0.25rem; }
+.caos-knob-head { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.8rem; color: var(--color-fg-subtle); }
+.caos-knob-value { font-family: var(--font-mono); color: var(--color-fg); font-weight: 600; }
+.caos-chipgroup { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
+.caos-chipgroup-label { font-size: 0.8rem; color: var(--color-fg-subtle); }
+
+/* The height chain of the instrument (failure class 4: drawings at zero or at a guessed size). The open group's panel
+   fills the workbench; a filling view (PlotCard fill, or a .caos-views-row of them) takes the height the panel leaves,
+   so a Stage or a filling chart inside it has a real size. Sub-tabs inside a panel pass the height down. Below 900 px
+   the document scrolls, and a filling view gets a fixed readable height instead. */
+.caos-cw > .tabs > .tabpanel:not([hidden]) { display: flex; flex-direction: column; }
+.caos-cw-panel { flex: 1 1 auto; min-height: 0; }
+/* In the workbench the group row is a compact header of the instrument, not a page section break. */
+.caos-cw > .tabs > .tablist { margin-bottom: 0.5rem; padding-bottom: 0.25rem; }
+.caos-cw > .tabs > .tablist .tab { padding: 0.38rem 0.85rem; }
+/* The rail head: the case and variant pickers; the variants wrap in the rail instead of scrolling. */
+.caos-wb-rail-head { display: flex; flex-direction: column; gap: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--color-border); }
+.caos-wb-rail .caos-variant-bar { margin-bottom: 0; }
+.caos-wb-rail .caos-chip-row { flex-wrap: wrap; overflow: visible; }
+.caos-wb-rail .caos-variant-note { font-size: 0.8rem; }
+.caos-cw-panel > .subtabs { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; margin-block: 0; }
+.caos-cw-panel > .subtabs > .subtablist { margin-bottom: 0.45rem; }
+.page-body.wide.caos-wb { padding-inline: 1rem; }
+.caos-cw-panel > .subtabs > .subtabpanels, .caos-cw-panel > .subtabs > .subtabpanels > .subtabpanel { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+.caos-cw-panel > .subtabs > .subtabpanels > .subtabpanel { gap: 0.6rem; }
+.caos-views-row { display: flex; gap: 0.9rem; flex: 1 1 auto; min-height: 0; min-width: 0; }
+.caos-views-row > * { flex: 1 1 0; min-width: 0; }
+.caos-plot.fill { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+.caos-plot.fill > .caos-plot-body { flex: 1 1 0; min-height: 0; overflow: hidden; }
+@media (max-width: 900px) {
+  .caos-views-row { flex-direction: column; }
+  .caos-plot.fill > .caos-plot-body { flex: none; height: clamp(260px, 48vh, 440px); }
+}
+
+/* Tables in views and documents: tabular figures, compact rows, a header that stays in view while the body scrolls.
+   Products use .caos-table instead of styling their own (S17: shell classes are reserved). */
+.caos-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; font-variant-numeric: tabular-nums; color: var(--color-fg); }
+.caos-table th, .caos-table td { padding: 0.35rem 0.6rem; border-bottom: 1px solid var(--color-border); text-align: right; white-space: nowrap; }
+.caos-table th:first-child, .caos-table td:first-child { text-align: left; }
+/* A column of words (a description, an expected band) reads left-aligned and wraps; numbers stay right-aligned. */
+.caos-table th.caos-col-text, .caos-table td.caos-col-text { text-align: left; white-space: normal; min-width: 16ch; }
+.caos-table thead th { position: sticky; top: 0; background: var(--color-surface); color: var(--color-fg-subtle); font-weight: 600; border-bottom-color: var(--color-fg-faint); }
+.caos-table tbody tr:hover { background: var(--color-surface-2); }
+/* A phone wraps the cells instead of pushing the table past the page (found by the gate on the template, 390 px). */
+@media (max-width: 600px) { .caos-table th, .caos-table td { white-space: normal; padding: 0.3rem 0.4rem; } }
+
+/* A view whose data is not there yet: it says so (and declares data-state="loading" for the gate). */
+.caos-pending { margin: auto; padding: 1.5rem; color: var(--color-fg-faint); font-size: 0.86rem; text-align: center; }
+
+/* Stage: the drawing surface of an instrument, sized by its container. */
+.caos-stage { position: relative; width: 100%; height: 100%; min-width: 0; min-height: 0; }

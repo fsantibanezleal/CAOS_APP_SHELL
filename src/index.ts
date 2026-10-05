@@ -4,16 +4,24 @@
 
 export { AppShell } from './shell/AppShell';
 export type { ShellConfig, ShellRoute } from './shell/AppShell';
+export { STANDARD_ROUTES } from './shell/routes';
 export { WorkbenchShell } from './shell/WorkbenchShell';
 export { FocusShell } from './shell/FocusShell';
 export type { FocusShellProps } from './shell/FocusShell';
 export type { WorkbenchRoute, WorkbenchShellProps } from './shell/WorkbenchShell';
 export { ArchitectureModal } from './shell/ArchitectureModal';
+export { validateArchitectureConfig } from './shell/ArchitectureModal';
 export type { ArchitectureConfig, ArchTab } from './shell/ArchitectureModal';
 export { ThemeToggle } from './shell/ThemeToggle';
 export { LanguageToggle } from './shell/LanguageToggle';
 
-export { useThemeStore, applyTheme, readTheme } from './lib/theme';
+export { useThemeStore, applyTheme, readTheme, THEME_BOOT_SCRIPT } from './lib/theme';
+export { THEME_STORAGE_KEY, LANG_STORAGE_KEY } from './lib/keys';
+export { formatNumber, useFormat, NOT_AVAILABLE } from './lib/format';
+export type { FormatOptions } from './lib/format';
+export { SHELL_TOKENS, resolveToken, useThemeTokens } from './lib/tokens';
+export type { ShellToken } from './lib/tokens';
+export { PanelBoundary } from './lib/PanelBoundary';
 export type { Theme } from './lib/theme';
 export { useLangStore, useShellLang } from './lib/lang';
 export type { Lang } from './lib/lang';
@@ -37,11 +45,39 @@ export {
 export type { CaseDef, CaseGroup, CaseKind } from './case/caseModel';
 
 export { Tabs } from './content/Tabs';
+export { MAX_PEER_TABS } from './content/Tabs';
+export type { TabsProps } from './content/Tabs';
+export { TabGroups } from './content/TabGroups';
+export type { TabGroupDef, TabGroupsProps } from './content/TabGroups';
 export type { TabDef } from './content/Tabs';
 export { SubTabs } from './content/SubTabs';
 export type { SubTabDef } from './content/SubTabs';
+export type { SubTabsProps } from './content/SubTabs';
 export { Callout } from './content/Callout';
 export { Equation, InlineMath } from './content/Equation';
 export { Figure } from './content/Figure';
 export { CitationsProvider, Cite, Refs, ReferenceList } from './content/Cite';
 export type { Citation } from './content/Cite';
+export { DocPage, DocSection } from './content/DocPage';
+export type { DocSectionProps } from './content/DocPage';
+
+// The App route of a product (ADR-0016 §9 and ADR-0071 as amended 2026-10-04): the shell owns the workbench.
+export { WorkbenchLayout } from './workbench/WorkbenchLayout';
+export type { RailSection, WorkbenchLayoutProps } from './workbench/WorkbenchLayout';
+export { CaseWorkbench, MAX_WORKBENCH_GROUPS } from './workbench/CaseWorkbench';
+export type { CaseWorkbenchProps, WorkbenchGroup } from './workbench/CaseWorkbench';
+export { VariantBar } from './workbench/VariantBar';
+export type { VariantBarProps, VariantDef } from './workbench/VariantBar';
+export { LaneBadge } from './workbench/LaneBadge';
+export type { Lane } from './workbench/LaneBadge';
+export { Gauge, PlotCard, Readout, Verdict } from './workbench/Readouts';
+export type { PlotCardProps, ReadoutProps, VerdictProps } from './workbench/Readouts';
+export { ChipGroup, Knob } from './workbench/Controls';
+export type { ChipGroupProps, ChipOption, KnobProps } from './workbench/Controls';
+export { Stage, useStageSize } from './workbench/Stage';
+export type { StageSize } from './workbench/Stage';
+export { isStale, makeStateKey, useWorkbenchState, WorkbenchStateContext } from './workbench/state';
+export type { Provenance, WorkbenchState } from './workbench/state';
+export type { GaugeProps, GaugeZone, ReadoutItem, Tone } from './workbench/Readouts';
+export { pick } from './lib/text';
+export type { BiText } from './lib/text';
