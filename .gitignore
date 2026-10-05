@@ -10,3 +10,7 @@ Thumbs.db
 **/.venv*
 venv/
 **/venv/
+
+# gate self-test builds
+.gate-selftest/
+gate-output/
