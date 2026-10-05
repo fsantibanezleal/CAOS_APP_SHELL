@@ -70,8 +70,11 @@ const config: ShellConfig = {
 - **Drawing:** put canvas, WebGL and SVG instruments in a `Stage` (or `useStageSize`): nothing draws at zero
   size, and colours come from `useThemeTokens()` (a canvas cannot read CSS variables).
 - **Charts:** `import { UPlotChart } from "@fasl-work/caos-app-shell/chart"`: x and y titles with units, series
-  by token colour, `marks` for what the engine detected, a cursor readout row, theme and language rebuilds.
-- **Numbers:** `formatNumber(value, lang, opts)` or `useFormat()`; never `toFixed` in a view.
+  by token colour, `marks` for what the engine detected, a key of every series when there are two or more, a cursor
+  readout row, theme and language rebuilds. Keep series labels short: the key wraps under the plot.
+- **Numbers:** `formatNumber(value, lang, opts)` or `useFormat()`; never `toFixed` in a view. A magnitude below 1e-4
+  is written in scientific notation (a p-value of 1e-200 is `1E-200`, not two hundred zeros); give `digits`, not
+  `decimals`, for p-values.
 - **Documentation routes:** `DocPage` and `DocSection` (each section ends in its own `Refs`, or states why it
   cites nothing), `Equation` with a caption, `CitationsProvider` and `Cite` (every citation has a DOI or URL).
   `Tabs`, `SubTabs` and `TabGroups` are controllable and render only the open panel inside a `PanelBoundary`.

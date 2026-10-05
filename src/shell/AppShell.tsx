@@ -217,7 +217,8 @@ function Frame({ config, pathname, routed, children }: { config: ShellConfig; pa
             <span>{config.product.name}</span>
             <span aria-hidden="true">·</span>
             <span>{c.complement}</span>
-            <span aria-hidden="true">·</span>
+            {/* No separator before the build group (known shell defect 14): its auto margin moves it to the right
+                edge, so a "·" here dangled at the end of the left group. The margin is the separation. */}
             <span className="footer-build" data-version={config.version} data-build={config.build ?? ''}>
               <span>
                 {c.version}
