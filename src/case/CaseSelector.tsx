@@ -1,4 +1,4 @@
-import { useEffect, useId } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import type { Lang } from '../lib/lang';
 import {
   type CaseDef,
@@ -119,23 +119,27 @@ export function CaseSelector(props: CaseSelectorProps) {
   const baseId = useId();
   const param = typeof deepLink === 'string' ? deepLink : 'case';
 
-  // deep-link: adopt ?case= on mount when it names a known case.
+  // deep-link: adopt ?case= once the case list is there (a product that loads its index has no cases on mount, and
+  // adopting on mount only lost the link: the gate's G9 deep-link check on the template, 2026-10-04).
+  const linkPending = useRef(Boolean(deepLink));
   useEffect(() => {
-    if (!deepLink || typeof window === 'undefined') return;
+    if (!linkPending.current || typeof window === 'undefined' || cases.length === 0) return;
+    linkPending.current = false;
     const fromUrl = readCaseParam(window.location.search, param);
     if (fromUrl && fromUrl !== selectedId && cases.some((c) => c.id === fromUrl)) onSelect(fromUrl);
-    // adopt once on mount only.
+    // resolved once, against the first non-empty list
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [cases]);
 
-  // deep-link: reflect the current selection back into the URL without a history entry.
+  // deep-link: reflect the current selection back into the URL without a history entry, but never before the link in
+  // the URL has been resolved (writing the default case first would erase it).
   useEffect(() => {
-    if (!deepLink || typeof window === 'undefined') return;
+    if (!deepLink || linkPending.current || !selectedId || typeof window === 'undefined') return;
     const next = withCaseParam(window.location.search, selectedId, param);
     if (next !== window.location.search) {
       window.history.replaceState(null, '', `${window.location.pathname}${next}${window.location.hash}`);
     }
-  }, [deepLink, param, selectedId]);
+  }, [deepLink, param, selectedId, cases]);
 
   const lanes = source ? sourcesPresent(cases) : [];
   const visible = casesInSource(cases, source);
@@ -170,6 +174,7 @@ export function CaseSelector(props: CaseSelectorProps) {
 
       {layout === 'select' && (
         <select
+          data-control="case"
           className="select cs-select"
           aria-label={ariaLabel ?? 'Case selector'}
           value={selectedId}
@@ -179,7 +184,7 @@ export function CaseSelector(props: CaseSelectorProps) {
             <optgroup key={g.category || '_'} label={g.category || ' '}>
               {g.cases.map((c) => (
                 <option key={c.id} value={c.id} disabled={c.disabled} title={caseTooltip(c) || undefined}>
-                  {`${c.id} · ${c.name}`}
+                  {c.name}
                 </option>
               ))}
             </optgroup>
@@ -188,7 +193,7 @@ export function CaseSelector(props: CaseSelectorProps) {
       )}
 
       {layout === 'chips' && groups.map((g) => (
-        <div key={g.category || '_'} className="cs-group" role="group" aria-label={g.category || undefined}>
+        <div key={g.category || '_'} className="cs-group" role="group" aria-label={g.category || undefined} data-control="case">
           {g.category && <span className="cs-group-label">{g.category}</span>}
           <div className="cs-chips">
             {g.cases.map((c) => {
@@ -204,8 +209,8 @@ export function CaseSelector(props: CaseSelectorProps) {
                   disabled={c.disabled}
                   title={tip || undefined}
                   onClick={() => onSelect(c.id)}
+                  data-case={c.id}
                 >
-                  <span className="cs-chip-id">{c.id}</span>
                   <span className="cs-chip-name">{c.name}</span>
                   <span className={`cs-kind cs-kind-${caseKindOf(c)}`} aria-hidden="true">
                     {KIND_TAG[caseKindOf(c)]}
@@ -220,7 +225,7 @@ export function CaseSelector(props: CaseSelectorProps) {
       {modified && (
         <div className="cs-modified">
           <span className="badge accent">
-            {t.modifiedPrefix} <strong>{modified.id}</strong>
+            {t.modifiedPrefix} <strong>{modified.name}</strong>
           </span>
           {onResetToCanonical && (
             <button type="button" className="cs-reset" onClick={onResetToCanonical}>

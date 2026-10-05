@@ -29,6 +29,28 @@ jobs:
       - name: Unit and contract tests (node test runner, seconds, no browser)
         run: npm test
 
+  browser:
+    # The browser suites: the shell's components in a real browser (e2e/), and the gate's self-test (G15): the clean
+    # fixture passes the full matrix and every planted defect fails the check that owns it. A gate that cannot fail on
+    # its plant agrees with a broken app, so the gate is released only when this job is green.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Build the distributable (tsup)
+        run: npm run build
+      - name: Components in a real browser
+        run: npm run test:browser
+      - name: The gate proves itself (G15)
+        run: npm run test:gate
+
   guards:
     runs-on: ubuntu-latest
     timeout-minutes: 5
