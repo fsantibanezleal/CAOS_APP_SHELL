@@ -563,6 +563,11 @@ html, body { overflow-x: hidden; }
 .caos-wb-rail .caos-variant-note { font-size: 0.8rem; }
 .caos-cw-panel > .subtabs { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; margin-block: 0; }
 .caos-cw-panel > .subtabs > .subtablist { margin-bottom: 0.45rem; }
+/* Known shell defect 16: the group row and the sub-tab row are scroll containers (overflow-x auto), so their
+   automatic minimum height is zero, and in this column flex chain they shrank with a panel taller than the
+   instrument: the rows were clipped and the panel's top covered the sub-tabs (CAOS_Contraste, 2026-10-05). A tab
+   row keeps its height; the panel below it scrolls. */
+.caos-cw > .tabs > .tablist, .caos-cw-panel > .subtabs > .subtablist { flex: none; }
 .page-body.wide.caos-wb { padding-inline: 1rem; }
 .caos-cw-panel > .subtabs > .subtabpanels, .caos-cw-panel > .subtabs > .subtabpanels > .subtabpanel { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
 .caos-cw-panel > .subtabs > .subtabpanels > .subtabpanel { gap: 0.6rem; }

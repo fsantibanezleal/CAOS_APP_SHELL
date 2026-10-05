@@ -94,6 +94,14 @@ test('a private product shows no source link (S5)', () => {
   assert.doesNotMatch(html, /github\.com\/fsantibanezleal\/probe/);
 });
 
+test('known defect 14: no separator dangles before the build group, which moves to the right edge', () => {
+  const html = render({ ...base, version: '0.07.001', build: 'abc1234' }, '/');
+  assert.doesNotMatch(html, /<span aria-hidden="true">·<\/span><span class="footer-build"/);
+  // every separator sits between two items
+  const meta = html.slice(html.indexOf('class="footer-meta"'), html.indexOf('</footer>'));
+  assert.doesNotMatch(meta, /<span aria-hidden="true">·<\/span>\s*<\/div>/);
+});
+
 test('the footer carries the display version and the build id (S6)', () => {
   const html = render({ ...base, version: '0.07.000', build: 'abc1234' }, '/');
   assert.match(html, /v0\.07\.000 · abc1234/);

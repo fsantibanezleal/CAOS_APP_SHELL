@@ -1,3 +1,32 @@
+## [0.07.001] - 2026-10-05
+
+### Fixed
+
+Five base defects, four of them found by the first measured gate run of a product built on 0.7.0 (CAOS_Contraste,
+583 failures in 655 states); each has a test that fails without its fix.
+
+- Known shell defect 14: the footer wrote a separator before the build group, whose auto margin moves it to the
+  right edge, so a "·" dangled at the end of the left group on every wide screen (found on Fragmenta). The
+  separator is gone; the margin separates the two groups. `test/appShellFixed.test.tsx`.
+- Known shell defect 15: `formatNumber` wrote any magnitude in fixed notation, so a p-value of 1e-200 rendered as
+  two hundred zeros and one table cell measured 12,790 px. A non-zero magnitude below 1e-4 is now written in
+  scientific notation with the requested significant digits (`6.53E-13`, `7,05E-5` in Spanish); a fixed number of
+  `decimals` stays the caller's explicit choice. `test/base07.test.tsx` (S8).
+- Known shell defect 16: in the workbench the group row and the sub-tab row are scroll containers, so their automatic
+  minimum height is zero, and under a panel taller than the instrument they shrank: the rows were clipped and the
+  panel covered the sub-tabs. Both rows keep their height (`flex: none`) and the panel scrolls, and the gate fails a
+  tab row that cuts its tabs (G5). `test/base07.test.tsx`; the gate fixture's "Every day" sub-tab and the
+  `shrunk-tabs` plant (G15).
+- Known shell defect 17: a chart of several series named them only in the cursor readout, so at rest a reader could
+  not tell one line from another. `UPlotChart` now keys every series under the plot when there are two or more: its
+  colour, a dashed swatch for a dashed series, a dot for points, and its label; the key wraps.
+  `test/base07.test.tsx`.
+- Known shell defect 18 (the gate): the pointer probe judged whether an element fits against the window instead of
+  the scroll container it lives in, and aligned a tall element by its end, so a documentation tab panel taller than
+  the page's scroll box was reported as "cannot be brought into the viewport" or "covered by" the header. The probe
+  now brings a large element in by its start and points at the centre of the part that shows, inside every ancestor
+  that clips. The gate fixture's "Notes" tab (taller than the scroll box, shorter than the window) passes clean.
+
 ## [0.07.000] - 2026-10-04
 
 ### Added
