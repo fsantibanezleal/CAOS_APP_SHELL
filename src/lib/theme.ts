@@ -1,7 +1,8 @@
 import { create } from 'zustand';
+import { THEME_STORAGE_KEY } from './keys';
 
 export type Theme = 'light' | 'dark';
-const KEY = 'caos.theme';
+const KEY = THEME_STORAGE_KEY;
 
 export function readTheme(): Theme {
   try {
@@ -49,3 +50,6 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     set({ theme: t });
   },
 }));
+
+// The pre-paint script lives with the storage keys it reads (React-free entry `/keys`).
+export { THEME_BOOT_SCRIPT } from './keys';
