@@ -8,4 +8,12 @@
 .caos-chart.fill { height: 100%; display: flex; flex-direction: column; min-height: 0; }
 .caos-chart.fill > .caos-chart-plot { flex: 1 1 0; min-height: 0; overflow: hidden; }
 .caos-chart-readout { margin: 0.15rem 0 0; font-family: var(--font-mono); font-size: 0.74rem; line-height: 1.3; color: var(--color-fg-subtle); min-height: 1.3em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* The series key (known shell defect 17): every series of a chart with two or more, always in view; it wraps. A line
+   swatch in the series' colour, dashed for a dashed series, a dot for a series drawn as points. */
+.caos-chart-legend { list-style: none; margin: 0.25rem 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.1rem 0.8rem; font-size: 0.74rem; line-height: 1.35; color: var(--color-fg-subtle); }
+.caos-chart.fill > .caos-chart-legend { flex: none; }
+.caos-chart-key { display: inline-flex; align-items: center; gap: 0.3rem; min-width: 0; }
+.caos-chart-swatch { flex: none; width: 16px; height: 0; border-top: 2px solid var(--swatch); }
+.caos-chart-key[data-dash] .caos-chart-swatch { border-top-style: dashed; }
+.caos-chart-key[data-mode="points"] .caos-chart-swatch { width: 7px; height: 7px; border: 0; border-radius: 50%; background: var(--swatch); }
 .caos-chart .u-cursor-x, .caos-chart .u-cursor-y { border-color: var(--color-fg-faint) !important; }
