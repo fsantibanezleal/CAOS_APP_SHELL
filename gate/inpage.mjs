@@ -276,6 +276,10 @@ export function installLib() {
       pageText: pageBody ? (pageBody.innerText || '').trim().length : 0,
       referenceLists: [...document.querySelectorAll('.reference-list')].filter(visible).length,
       uncaptioned: [...document.querySelectorAll('.equation')].filter((e) => visible(e) && !e.querySelector('.equation-caption')).length,
+      // charts whose axis gives a tick the label of the tick before it (UPlotChart declares data-ticks-repeat)
+      repeatedTicks: [...document.querySelectorAll('[data-ticks-repeat]')]
+        .filter((el) => visible(el) && Number(el.getAttribute('data-ticks-repeat')) > 0)
+        .map((el) => ({ label: describe(el.closest('[data-plot]') || el), n: Number(el.getAttribute('data-ticks-repeat')) })),
       sectionsWithoutRefs: [...document.querySelectorAll('[data-no-refs-reason="missing"]')].filter(visible).length,
     };
   };

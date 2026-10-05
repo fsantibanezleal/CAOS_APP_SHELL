@@ -1,3 +1,18 @@
+## [0.07.002] - 2026-10-05
+
+### Fixed
+
+- Known shell defect 21: an axis of integer values (variant numbers, grades, years) formatted with `decimals: 0` got
+  uPlot's default tick steps, which include 0.5, 0.25 and 2.5, and the formatter rounded them: CAOS_Contraste's AUC
+  chart of seven variants read 1, 2, 2, 3, 3, ..., 7, 7, so every point shared its label with the tick beside it, and
+  a grade axis of three points read 1, 1, 1, 2, 2, 2, 2, 3, 3, 3. An axis whose format fixes its decimals now ticks
+  only at multiples of the smallest difference its labels can show (scaled by 100 for a percent); a time or log axis
+  keeps uPlot's own steps. `test/base07.test.tsx`.
+- The gate could not see a repeated tick (the labels are drawn on a canvas). The chart host now declares
+  `data-ticks-repeat`, the ticks whose label repeats the one before, and the gate fails a chart that declares any
+  (G6), so an axis formatted by significant digits that still repeats is caught; the self-test plants one
+  (`repeat-ticks`, G15).
+
 ## [0.07.001] - 2026-10-05
 
 ### Fixed

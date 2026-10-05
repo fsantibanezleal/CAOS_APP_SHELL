@@ -345,6 +345,9 @@ export async function runGate(o) {
     if (f.offCentre !== null && f.offCentre > 2) fail('ADR-0017.1', where, `the prose page is off-centre by ${f.offCentre.toFixed(1)}px`);
     if (f.referenceLists) fail('ADR-0017.4', where, `${f.referenceLists} bibliography dump(s); references belong at the end of each section`);
     if (f.uncaptioned) fail('ADR-0017.2', where, `${f.uncaptioned} equation(s) without a caption`);
+    for (const r of f.repeatedTicks ?? []) {
+      fail('G6', where, `${r.label}: ${r.n} axis tick label(s) repeat the label before them (give the axis fixed decimals)`);
+    }
     if (f.sectionsWithoutRefs) fail('ADR-0017.4', where, `${f.sectionsWithoutRefs} section(s) end without references or a stated reason`);
     if (s.first && !s.isWorkbench && f.pageText < opt.textFloor) fail('G4', where, `the page body holds ${f.pageText} characters of text (floor ${opt.textFloor}); the route rendered without its content`);
 
