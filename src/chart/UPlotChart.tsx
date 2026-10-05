@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import uPlot from 'uplot';
 import { type FormatOptions, formatNumber } from '../lib/format';
 import { useShellLang } from '../lib/lang';
@@ -48,8 +48,10 @@ const ROTATION: ShellToken[] = ['--color-accent', '--color-magenta', '--color-ac
  * (a canvas cannot read CSS variables); it compares its options by value, never by identity, so a parent re-render
  * does not tear it down; its tick formatters are null-safe and follow the interface language; the y axis is sized to
  * its longest tick label, so no tick is cut; the cursor value is written into a readout row under the plot instead of
- * uPlot's legend, which a sized host clips (known shell defect 3). The host declares `data-series`, `data-axis-titles`,
- * `data-ticks-cut` and `data-drawn` for the gate.
+ * uPlot's legend, which a sized host clips (known shell defect 3). A chart of two or more series keys every series
+ * under the plot, always (its colour, a dashed or a dotted swatch, its label): at rest the readout names none of them
+ * (known shell defect 17). The host declares `data-series`, `data-axis-titles`, `data-ticks-cut` and `data-drawn` for
+ * the gate.
  */
 export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlotChartProps) {
   const lang = useShellLang();
@@ -202,6 +204,16 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlo
       data-drawn={width > 0 && h > 0 ? '1' : '0'}
     >
       <div ref={setPlot} className="caos-chart-plot" />
+      {series.length > 1 && (
+        <ul className="caos-chart-legend" aria-label={lang === 'es' ? 'Series del gráfico' : 'Series of the chart'}>
+          {series.map((s, i) => (
+            <li key={i} className="caos-chart-key" data-mode={s.mode ?? 'line'} data-dash={s.dash ? '1' : undefined}>
+              <span className="caos-chart-swatch" style={{ '--swatch': `var(${s.color ?? ROTATION[i % ROTATION.length]})` } as CSSProperties} aria-hidden="true" />
+              {pick(s.label, lang)}
+            </li>
+          ))}
+        </ul>
+      )}
       <p className="caos-chart-readout" aria-live="polite" title={read}>
         {read}
       </p>

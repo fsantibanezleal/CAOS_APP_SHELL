@@ -37,6 +37,7 @@ const PLANTS = [
   { id: 'rail-overflow', check: 'G5', re: /outside the rail/, opts: { routes: '/' } },
   { id: 'truncated', check: 'G5', re: /truncated text/, opts: { routes: '/' } },
   { id: 'deep-defect', check: 'G5', re: /scrolls sideways/, trail: /validation > table/, opts: { routes: '/' } },
+  { id: 'shrunk-tabs', check: 'G5', re: /cuts its tabs by \d+px/, trail: /validation > daily/, opts: { routes: '/' } },
   { id: 'blank', check: 'G6', re: /is blank/, opts: { routes: '/' } },
   { id: 'small', check: 'G6', re: /draws on \d+% of its stage/, opts: { routes: '/' } },
   { id: 'never-ready', check: 'G7', re: /data-state="loading"/, opts: { routes: '/,/benchmark', settleMs: 3000 } },
