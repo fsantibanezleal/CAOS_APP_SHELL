@@ -498,6 +498,22 @@ function Doc({ id }: { id: string }) {
                 </div>
               ),
             },
+            {
+              // a focusable block below the fold, a few pixels shorter than the page's scroll box (712px at 1280x800):
+              // bringing its end into view with a margin must not push its start out (known shell defect 25)
+              id: 'margins',
+              label: pick({ en: 'Margins', es: 'Márgenes' }, lang),
+              content: (
+                <div>
+                  <div style={{ height: 400 }}>
+                    <p>{pick(PARAGRAPH, lang)}</p>
+                  </div>
+                  <div role="region" aria-label={pick({ en: 'Nearly as tall as the page', es: 'Casi tan alto como la página' }, lang)} tabIndex={0} style={{ height: 'calc(100vh - 91px)' }}>
+                    <p>{pick(PARAGRAPH, lang)}</p>
+                  </div>
+                </div>
+              ),
+            },
           ]}
         />
       ) : (
