@@ -323,15 +323,17 @@ export function installLib() {
       const ar = a.getBoundingClientRect();
       let r = el.getBoundingClientRect();
       // An element larger than the container is aligned by its start: aligning its end pushed its start out of
-      // view, and the probe then landed on whatever covers the container (known shell defect 18).
+      // view, and the probe then landed on whatever covers the container (known shell defect 18). An element that
+      // fits is scrolled until its end shows with a margin, never past its start: with less slack than the margin,
+      // the margin pushed its start out and the probe reported the element it had moved (known shell defect 25).
       if ((s.overflowX === 'auto' || s.overflowX === 'scroll') && a.scrollWidth > a.clientWidth) {
         if (r.left < ar.left || r.width > ar.width) setScroll(a, a.scrollLeft - (ar.left - r.left), a.scrollTop);
-        else if (r.right > ar.right) setScroll(a, a.scrollLeft + (r.right - ar.right + 8), a.scrollTop);
+        else if (r.right > ar.right) setScroll(a, a.scrollLeft + Math.min(r.right - ar.right + 8, r.left - ar.left), a.scrollTop);
       }
       r = el.getBoundingClientRect();
       if ((s.overflowY === 'auto' || s.overflowY === 'scroll') && a.scrollHeight > a.clientHeight) {
         if (r.top < ar.top || r.height > ar.height) setScroll(a, a.scrollLeft, a.scrollTop - (ar.top - r.top));
-        else if (r.bottom > ar.bottom) setScroll(a, a.scrollLeft, a.scrollTop + (r.bottom - ar.bottom + 8));
+        else if (r.bottom > ar.bottom) setScroll(a, a.scrollLeft, a.scrollTop + Math.min(r.bottom - ar.bottom + 8, r.top - ar.top));
       }
     }
     const r = el.getBoundingClientRect();

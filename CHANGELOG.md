@@ -1,3 +1,15 @@
+## [0.07.003] - 2026-10-06
+
+### Fixed
+
+- Known shell defect 25: the gate's pointer probe (G5) scrolled an element that fits its scroll container until its
+  end showed plus an 8px margin, so an element with less slack than the margin had its start pushed out of the
+  container and was reported as never brought into view, by the probe that had moved it (CAOS_Contraste's
+  Methodology "Stability" sub-panel: 706.7px in a 712.2px page box at 1280x800, four false failures). The probe now
+  scrolls by the smaller of the end's overflow plus the margin and the start's distance from the container's start,
+  on both axes (#56). The gate fixture's Methodology gains a "Margins" tab, a focusable region a few pixels shorter
+  than the page box below the fold, which the clean run (G15) passes only with the fix.
+
 ## [0.07.002] - 2026-10-05
 
 ### Fixed
