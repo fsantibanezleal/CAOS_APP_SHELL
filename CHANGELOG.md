@@ -1,3 +1,16 @@
+## [0.08.002] - 2026-10-07
+
+### Fixed
+
+- Known shell defect 30 (#62): `formatNumber` grouped every number, so a calendar year on an axis, in a readout or in a
+  table read 2,021 (2.021 in Spanish), for every option the type allowed; `time: true` was no way out, since the
+  chart's cursor readout still formatted the epoch seconds. `FormatOptions.grouping: false` drops the group separator
+  on every path (fixed decimals, significant digits, the integer path), and `formatTicks` and `UPlotChart` pass the
+  axis format through, so `x: { format: { decimals: 0, grouping: false } }` writes 2021 on the ticks and in the
+  readout, in both languages. The default still groups. Found by CAOS_Contraste's case C04 (rating cohorts 2000 to
+  2025). On adoption: a product that counted its years from a base year, or wrote them as text to avoid the
+  separator, gives its year axis `grouping: false`.
+
 ## [0.08.001] - 2026-10-07
 
 ### Fixed
