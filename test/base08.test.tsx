@@ -112,6 +112,12 @@ test('BL-005 (defect 24, #55): the vertical sub-tab list is sticky', () => {
   assert.equal(declared('.app-shell.fixed.contain .subtabs-vertical > .subtablist', 'top'), 'var(--space-3)');
 });
 
+test('defect 26: the document clips sideways without making body a scroll container (sticky works)', () => {
+  assert.match(CSS, /html, body \{ overflow-x: hidden; overflow-x: clip; \}/);
+  // the release below 900 px names both forms of the contained page rule, or the :has() form keeps .page scrolling
+  assert.match(CSS, /\.app-shell\.fixed\.contain > \.page, \.app-shell\.fixed\.contain > \.page:has\(> \.page-body:not\(\.caos-wb\):not\(\.caos-surface\)\) \{ display: block; overflow: visible; \}/);
+});
+
 test('BL-006 (defect 23, #54): a filling card in a views row takes an equal share', () => {
   assert.equal(declared('.caos-views-row > .caos-plot.fill', 'flex'), '1 1 0');
   assert.equal(declared('.caos-views-row > *', 'flex'), '1 1 0');

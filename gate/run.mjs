@@ -539,6 +539,8 @@ export async function runGate(o) {
         if (i !== tl.active) {
           const tab = page.locator(tl.key).locator('[role="tab"]').filter({ visible: true }).nth(i);
           try {
+            // a reader scrolls the tab clear of the sticky header first; so does the gate, then clicks it
+            await tab.evaluate((el) => window.__caosGate.bringEl(el)).catch(() => undefined);
             await tab.click({ timeout: 5000 });
           } catch (e) {
             fail('G7', at, `the tab could not be clicked: ${e.message.split('\n')[0]}`);
