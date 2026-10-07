@@ -17,6 +17,12 @@ these a product draws its size distributions, its parity plots and a weighted vi
 - The gate fixture's Validation has a "Fit" sub-tab: a `ViewsRow` of three fifths and two fifths holding a parity plot
   over an unsorted x (picking on) and a log-x curve; the clean run (G15) measures both.
 
+### Fixed
+
+- G11 let a number in scientific notation through: "2.7e-08" on a Spanish page writes its decimal with a point, and the
+  exponent hid it from the pattern (found on CAOS_Fragmenta's Implementation page). The exponent is now part of the
+  number; the `decimal-point` plant carries one.
+
 ## [0.08.002] - 2026-10-07
 
 ### Fixed
