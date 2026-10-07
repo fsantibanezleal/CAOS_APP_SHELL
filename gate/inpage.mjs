@@ -336,8 +336,11 @@ export function installLib() {
         else if (r.bottom > ar.bottom) setScroll(a, a.scrollLeft, a.scrollTop + Math.min(r.bottom - ar.bottom + 8, r.top - ar.top));
       }
     }
+    // the document is scrolled so the element shows below a header stuck at the top of the viewport (0.8.0: the
+    // sticky header sticks in a scrolling document since known shell defect 26 was fixed)
+    const cover = el.closest('header, [role="banner"]') ? 0 : stuckTop();
     const r = el.getBoundingClientRect();
-    if (r.top < 0 || r.bottom > window.innerHeight) winScroll(window.scrollX, window.scrollY + r.top + r.height / 2 - window.innerHeight / 2);
+    if (r.top < cover || r.bottom > window.innerHeight) winScroll(window.scrollX, window.scrollY + r.top + r.height / 2 - (cover + (window.innerHeight - cover) / 2));
     const r2 = el.getBoundingClientRect();
     if (r2.left < 0 || r2.right > window.innerWidth) winScroll(window.scrollX + r2.left + r2.width / 2 - window.innerWidth / 2, window.scrollY);
   };
@@ -349,8 +352,22 @@ export function installLib() {
   };
 
   /** The viewport cut by every ancestor that clips its content (overflow other than visible). */
+  /** The bottom of a page header stuck to the top of the viewport (sticky or fixed), or 0: what it covers is not in
+   * view for a reader. */
+  function stuckTop() {
+    let bottom = 0;
+    for (const h of document.querySelectorAll('header, [role="banner"]')) {
+      if (h.parentElement && h.parentElement.closest('header, [role="banner"], [role="dialog"]')) continue;
+      const s = getComputedStyle(h);
+      if (s.position !== 'sticky' && s.position !== 'fixed') continue;
+      const r = h.getBoundingClientRect();
+      if (r.top <= 1 && r.bottom > 0 && r.width >= window.innerWidth * 0.5) bottom = Math.max(bottom, r.bottom);
+    }
+    return bottom;
+  }
+
   const visibleArea = (el) => {
-    const area = { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight };
+    const area = { left: 0, top: el.closest('header, [role="banner"]') ? 0 : stuckTop(), right: window.innerWidth, bottom: window.innerHeight };
     for (let a = el.parentElement; a && a !== document.body && a !== document.documentElement; a = a.parentElement) {
       const s = getComputedStyle(a);
       if (s.overflowX === 'visible' && s.overflowY === 'visible') continue;
@@ -689,6 +706,14 @@ export function installLib() {
   G.contrast = () => {
     const out = [];
     const seen = new Set();
+    // a colour transition still running reads as a colour between two states (a chip just selected read 3.89:1 at
+    // 87% of its way to white): finish every finite transition first; looping animations are left alone
+    if (document.getAnimations) {
+      for (const a of document.getAnimations()) {
+        const end = a.effect && a.effect.getComputedTiming ? a.effect.getComputedTiming().endTime : Infinity;
+        if (typeof CSSTransition !== 'undefined' && a instanceof CSSTransition && Number.isFinite(Number(end))) a.finish();
+      }
+    }
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     for (let n = walker.nextNode(); n; n = walker.nextNode()) {
       if (!(n.nodeValue || '').trim()) continue;

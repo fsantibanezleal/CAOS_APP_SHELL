@@ -112,8 +112,12 @@
    pinned to the viewport, so a tall page could not scroll by script or anchor. Content-height documents. */
 html, body, #root { height: auto; min-height: 100%; }
 /* The contained layout: a `nowrap` row sizes its container to its intrinsic width unless every ancestor may shrink;
-   the document never scrolls sideways (measured on ChargeCascade: scrollWidth 1817 on a 1600 viewport). */
-html, body { overflow-x: hidden; }
+   the document never scrolls sideways (measured on ChargeCascade: scrollWidth 1817 on a 1600 viewport).
+   `clip`, not `hidden` (known shell defect 26, 0.8.0): `overflow-x: hidden` on body computes its overflow-y to auto,
+   so body became a scroll container that never scrolls, and nothing in a scrolling document could stick to the
+   viewport: not the site header, not the vertical sub-tab list (found by G12 at 768 px). `hidden` stays as the
+   fallback for a browser without `clip`. */
+html, body { overflow-x: hidden; overflow-x: clip; }
 /* Known shell defect 2 (fixed 0.7.0): any author `display` un-hid a `[hidden]` panel. */
 [hidden] { display: none !important; }
 body {
@@ -197,7 +201,9 @@ code, kbd { font-family: var(--font-mono); }
   /* A phone or a tablet stacks the rail over the instrument and lets the document scroll: the viewport rule is
      measured at 1280x800 and above (ADR-0071 Verification). */
   .app-shell.fixed.contain { height: auto; min-height: 100dvh; overflow: visible; }
-  .app-shell.fixed.contain > .page { display: block; overflow: visible; }
+  /* Both forms of the rule above are released: the `:has()` form outranked a plain `> .page` and kept a document's
+     `.page` a scroll container that never scrolls, so nothing in it could be sticky (G12, 0.8.0). */
+  .app-shell.fixed.contain > .page, .app-shell.fixed.contain > .page:has(> .page-body:not(.caos-wb):not(.caos-surface)) { display: block; overflow: visible; }
 }
 @media (max-width: 760px) {
   /* ADR-0071: the route row shares the header row and owns the horizontal scroll; no second row above the
@@ -296,6 +302,11 @@ code, kbd { font-family: var(--font-mono); }
 .subtabs-vertical > .subtablist { flex-direction: column; overflow: visible; margin-bottom: 0; position: sticky; top: calc(var(--header-h) + var(--space-3)); align-self: start; }
 .app-shell.fixed.contain .subtabs-vertical > .subtablist { top: var(--space-3); }
 .subtabs-vertical .subtab { text-align: left; border-radius: var(--radius-md); white-space: normal; }
+@media (max-width: 900px) {
+  /* Here the contained document scrolls as a whole under the sticky header: the list clears the header (G12 found
+     it hidden under the header at 768 px). */
+  .app-shell.fixed.contain .subtabs-vertical > .subtablist { top: calc(var(--header-h) + var(--space-3)); }
+}
 @media (max-width: 760px) {
   .subtabs-vertical { grid-template-columns: minmax(0, 1fr); }
   .subtabs-vertical > .subtablist { flex-direction: row; overflow-x: auto; position: static; }
