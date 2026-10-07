@@ -797,7 +797,7 @@ export function installLib() {
       const px = parseFloat(s.fontSize) || 16;
       const bold = Number(s.fontWeight) >= 700;
       const need = px >= 24 || (bold && px >= 18.66) ? 3 : 4.5;
-      if (ratio + 1e-6 < need) out.push(`${describe(el)}: contrast ${ratio.toFixed(2)}:1, below ${need}:1 (${s.color || s.fill} on rgb(${Math.round(bg.r)}, ${Math.round(bg.g)}, ${Math.round(bg.b)}))`);
+      if (ratio + 1e-6 < need) out.push(`${describe(el)}: contrast ${ratio.toFixed(2)}:1, below ${need}:1 (${isSvg ? s.fill : s.color} on rgb(${Math.round(bg.r)}, ${Math.round(bg.g)}, ${Math.round(bg.b)}))`);
     }
     return out.slice(0, 10);
   };

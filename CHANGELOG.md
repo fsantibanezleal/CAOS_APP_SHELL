@@ -13,6 +13,8 @@ Found by the 0.9.0 gate on CAOS_Fragmenta (2,860 failures in 889 states, most of
 - The light `good` (`#197c36`) and `magenta` (`#b93785`) cleared 4.5:1 on every surface but not on the `accent-soft`
   highlight (4.46 and 4.44): a selected row of a table carries its tone text there (Fragmenta's comparison table). The
   test of the palette now counts the highlight as a ground.
+- G13's message named an SVG text's CSS colour instead of the fill it is painted with, so a light label on a red bar
+  was reported as dark text; the measure was right, the message misled.
 
 The gate fixture carries each case in its clean run: a figure after five documentation sections, values in the page
 colour on the checkpoint bars, a highlighted row with good-tone text. The 0.9.0 gate fails that fixture (G10 2, G13 8);
