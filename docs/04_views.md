@@ -55,7 +55,7 @@ list items, callouts, captions) keep a `--measure-text` line; figures, tables, g
 | Component | What it is | Sizing |
 |---|---|---|
 | `PlotCard` | the frame of every chart or table: title, lane and provenance badges, note, stale overlay | `fill` takes the height its panel leaves; several share it |
-| `.caos-views-row` | views side by side | each takes an equal share, a filling card included (known shell defect 23); stacked below 900 px |
+| `ViewsRow` (`.caos-views-row`) | views side by side | `<ViewsRow shares={[3, 2]}>` gives each view a column the shell owns and splits the row by `shares` (equal without); a filling card keeps its height chain; stacked below 900 px |
 | `Stage`, `useStageSize` | the drawing surface: renders its children only at a real size, declares `data-drawn` | its container's box |
 | `Readout`, `Gauge`, `Verdict` | values with units, a value against zones, the current diagnosis | the rail's width |
 | `Knob`, `ChipGroup`, `VariantBar` | registered controls (`data-control`): the gate moves each and requires a view to react | the rail's width; a chip row is one line |

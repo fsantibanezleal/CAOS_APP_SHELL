@@ -86,6 +86,8 @@ export type { PlotCardProps, ReadoutProps, VerdictProps } from './workbench/Read
 export { ChipGroup, Knob } from './workbench/Controls';
 export type { ChipGroupProps, ChipOption, KnobProps } from './workbench/Controls';
 export { Stage, useStageSize } from './workbench/Stage';
+export { ViewsRow } from './workbench/ViewsRow';
+export type { ViewsRowProps } from './workbench/ViewsRow';
 export type { StageSize } from './workbench/Stage';
 export { isStale, makeStateKey, useWorkbenchState, WorkbenchStateContext } from './workbench/state';
 export type { Provenance, WorkbenchState } from './workbench/state';

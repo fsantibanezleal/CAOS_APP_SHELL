@@ -121,8 +121,9 @@ const config: ShellConfig = {
 `ChipGroup`, `Stage`, `useStageSize`, `makeStateKey`, `isStale`, `useWorkbenchState`,
 `WorkbenchStateContext`, `pick`; since 0.8.0 `SurfacePage`, `useUrlView`, `viewParamOf`, `replaceQueryParam`,
 `BREAKPOINTS`, `BarChart`, `textWidth`, `widestLabel`, `fitLabel`, `niceTicks`, `niceStep`, `fontFamily`,
-`formatTicks`, `NBSP`, `SCIENTIFIC_BELOW`, the type `ShellColorToken`. Separate entries: `/chart` (`UPlotChart`,
-`drawMarks`, `tickSteps`, `repeatedLabels`), `/keys` (the storage keys, no React), `/styles.css`, `/chart.css`,
+`formatTicks`, `NBSP`, `SCIENTIFIC_BELOW`, the type `ShellColorToken`; since 0.9.0 `ViewsRow`. Separate entries:
+`/chart` (`UPlotChart` with `x.log`, `parity`, `onPick`; `drawMarks`, `tickSteps`, `repeatedLabels`, `seriesStyle`,
+`sortOrder`, `parityRange`), `/keys` (the storage keys, no React), `/styles.css`, `/chart.css`,
 `/reserved-classes.json`. Bin: `caos-shell-gate`.
 
 ### Authenticated workbenches
