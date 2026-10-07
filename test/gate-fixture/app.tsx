@@ -373,6 +373,8 @@ function Workbench() {
           unit="x"
           onChange={setScale}
         />
+        {PLANT === 'covered' && <div style={{ position: 'relative', marginTop: -64, height: 64, zIndex: 5 }} aria-hidden="true" />}
+        {/* after the covering plant, which must cover the contact scale, a control the probe reaches */}
         <Knob
           id="recovery"
           label={{ en: 'Recovery rate', es: 'Tasa de recuperación' }}
@@ -386,7 +388,6 @@ function Workbench() {
           disabled
           onChange={() => undefined}
         />
-        {PLANT === 'covered' && <div style={{ position: 'relative', marginTop: -64, height: 64, zIndex: 5 }} aria-hidden="true" />}
         <ChipGroup
           id="horizon"
           label={{ en: 'Horizon', es: 'Horizonte' }}
@@ -543,11 +544,12 @@ function Doc({ id }: { id: string }) {
   );
 }
 
-/** The wide-font plant (G10): a label in a box sized for a narrow font, as a fixed width per character sizes it. In
- * Segoe UI it fits; in Verdana or DejaVu Sans, the fonts of the wide-font pass and of a Linux reader, it is cut. */
+/** The wide-font plant (G10): a label in a box sized for a narrow font, as a fixed width per character sizes it. At
+ * 11px this label measures 168px in the Windows system font, 193px in Verdana and 191px in DejaVu Sans (Chromium,
+ * 2026-10-07): a 5px-per-character box (180px) holds the first and cuts the fonts of the wide-font pass. */
 function NarrowFontLabel() {
   const label = 'a label sized for a narrow font only';
-  const width = Math.ceil(label.length * 5.9);
+  const width = Math.ceil(label.length * 5);
   return (
     <svg width={width} height={24} data-chart="" role="img" aria-label={label}>
       <text x={0} y={16} fontSize={11} fill="var(--color-fg)" style={{ fontFamily: 'var(--font-sans)' }}>
