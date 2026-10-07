@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 440" width="960" height="440" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+  <title>The frame and the three route types of the CAOS shell</title>
+  <style>
+    .bg { fill: #f6f8fa; }
+    .card { fill: #ffffff; stroke: #d0d7de; }
+    .chrome { fill: #eaeef2; stroke: #d0d7de; }
+    .area { fill: #ddf4ff; stroke: #0969da; }
+    .alt { fill: #f0f3f6; stroke: #8c959f; }
+    .draw { fill: none; stroke: #0969da; stroke-width: 2; }
+    .t { fill: #1f2328; font-size: 12px; }
+    .s { fill: #57606a; font-size: 10.5px; }
+    .h { fill: #1f2328; font-size: 14px; font-weight: 650; }
+    .tab { fill: #ffffff; stroke: #d0d7de; }
+    .tabon { fill: #0969da; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d1117; }
+      .card { fill: #161b22; stroke: #30363d; }
+      .chrome { fill: #1c2230; stroke: #30363d; }
+      .area { fill: #132036; stroke: #58a6ff; }
+      .alt { fill: #1c2230; stroke: #828b97; }
+      .draw { stroke: #58a6ff; }
+      .t, .h { fill: #c9d1d9; }
+      .s { fill: #9aa6b2; }
+      .tab { fill: #161b22; stroke: #30363d; }
+      .tabon { fill: #58a6ff; }
+    }
+  </style>
+  <rect class="bg" x="0" y="0" width="960" height="440"/>
+
+  <!-- one frame per route type -->
+  <g transform="translate(16,16)">
+    <text class="h" x="0" y="14">Workbench (CaseWorkbench)</text>
+    <rect class="card" x="0" y="24" width="296" height="392" rx="8"/>
+    <rect class="chrome" x="0" y="24" width="296" height="30" rx="8"/>
+    <text class="s" x="10" y="43">header: brand, routes, links, language, theme</text>
+    <rect class="alt" x="8" y="62" width="82" height="316" rx="6"/>
+    <text class="t" x="16" y="80">rail</text>
+    <text class="s" x="16" y="96">case</text>
+    <text class="s" x="16" y="110">variants</text>
+    <text class="s" x="16" y="124">parameters</text>
+    <text class="s" x="16" y="138">live values</text>
+    <text class="s" x="16" y="366">--rail-w</text>
+    <rect class="area" x="98" y="62" width="190" height="316" rx="6"/>
+    <rect class="tabon" x="106" y="70" width="40" height="12" rx="3"/>
+    <rect class="tab" x="150" y="70" width="40" height="12" rx="3"/>
+    <rect class="tab" x="194" y="70" width="40" height="12" rx="3"/>
+    <text class="s" x="106" y="98">at most six question groups</text>
+    <path class="draw" d="M110 330 C140 250 170 140 200 190 S250 300 278 120"/>
+    <text class="t" x="106" y="360">instrument: at least half</text>
+    <text class="t" x="106" y="372">the viewport is drawn</text>
+    <rect class="chrome" x="0" y="386" width="296" height="30" rx="8"/>
+    <text class="s" x="10" y="405">footer: one line of provenance and honesty</text>
+  </g>
+
+  <g transform="translate(332,16)">
+    <text class="h" x="0" y="14">Surface (SurfacePage)</text>
+    <rect class="card" x="0" y="24" width="296" height="392" rx="8"/>
+    <rect class="chrome" x="0" y="24" width="296" height="30" rx="8"/>
+    <text class="s" x="10" y="43">header</text>
+    <text class="t" x="10" y="76">head: title, lede</text>
+    <rect class="tab" x="220" y="64" width="66" height="16" rx="4"/>
+    <text class="s" x="228" y="76">actions</text>
+    <rect class="tabon" x="10" y="88" width="48" height="12" rx="3"/>
+    <rect class="tab" x="62" y="88" width="48" height="12" rx="3"/>
+    <rect class="tab" x="114" y="88" width="48" height="12" rx="3"/>
+    <text class="s" x="170" y="98">one row, view in ?view=</text>
+    <rect class="area" x="10" y="108" width="276" height="270" rx="6"/>
+    <text class="t" x="20" y="130">the open view fills the rest</text>
+    <text class="s" x="20" y="146">and scrolls inside it</text>
+    <rect class="alt" x="20" y="160" width="120" height="90" rx="4"/>
+    <rect class="alt" x="150" y="160" width="126" height="90" rx="4"/>
+    <rect class="alt" x="20" y="260" width="256" height="100" rx="4"/>
+    <rect class="chrome" x="0" y="386" width="296" height="30" rx="8"/>
+    <text class="s" x="10" y="405">footer</text>
+  </g>
+
+  <g transform="translate(648,16)">
+    <text class="h" x="0" y="14">Document (DocPage)</text>
+    <rect class="card" x="0" y="24" width="296" height="392" rx="8"/>
+    <rect class="chrome" x="0" y="24" width="296" height="30" rx="8"/>
+    <text class="s" x="10" y="43">header</text>
+    <rect class="alt" x="10" y="66" width="70" height="60" rx="4"/>
+    <text class="s" x="16" y="82">sub-tabs</text>
+    <text class="s" x="16" y="96">sticky</text>
+    <text class="s" x="16" y="110">(vertical)</text>
+    <rect class="area" x="88" y="66" width="198" height="312" rx="6"/>
+    <text class="t" x="96" y="86">page head, lede</text>
+    <line x1="96" y1="104" x2="250" y2="104" stroke="#8c959f"/>
+    <line x1="96" y1="116" x2="250" y2="116" stroke="#8c959f"/>
+    <line x1="96" y1="128" x2="236" y2="128" stroke="#8c959f"/>
+    <text class="s" x="96" y="148">text keeps a 78ch line</text>
+    <rect class="alt" x="96" y="158" width="182" height="80" rx="4"/>
+    <text class="s" x="104" y="202">figures and tables take the width</text>
+    <line x1="96" y1="256" x2="250" y2="256" stroke="#8c959f"/>
+    <line x1="96" y1="268" x2="244" y2="268" stroke="#8c959f"/>
+    <text class="s" x="96" y="292">each section ends in its references</text>
+    <text class="s" x="96" y="360">scrolls inside main (contain)</text>
+    <rect class="chrome" x="0" y="386" width="296" height="30" rx="8"/>
+    <text class="s" x="10" y="405">footer</text>
+  </g>
+</svg>

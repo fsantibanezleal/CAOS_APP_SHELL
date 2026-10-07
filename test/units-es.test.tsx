@@ -28,6 +28,7 @@ test('a word unit follows the interface language, a symbol stays as written (fai
   assert.match(html, /27\.345/);
   assert.match(html, /personas/);
   assert.doesNotMatch(html, /people/);
-  assert.match(html, /> d</);
+  // the unit joined by a no-break space (known shell defect 22, 0.8.0)
+  assert.match(html, /> d</);
   assert.match(html, /Población/);
 });

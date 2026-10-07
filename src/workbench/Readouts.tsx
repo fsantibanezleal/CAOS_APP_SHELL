@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { type FormatOptions, formatNumber } from '../lib/format';
+import { type FormatOptions, formatNumber, NBSP } from '../lib/format';
 import { useShellLang } from '../lib/lang';
 import { PanelBoundary } from '../lib/PanelBoundary';
 import { type BiText, pick } from '../lib/text';
@@ -88,7 +88,7 @@ export function Readout({ items, title, lane, provenance, dataKey }: ReadoutProp
               <dt>{label}</dt>
               <dd>
                 <span className="caos-readout-value">{shown}</span>
-                {it.unit && it.text === undefined && <span className="caos-readout-unit"> {pick(it.unit, lang)}</span>}
+                {it.unit && it.text === undefined && <span className="caos-readout-unit">{`${NBSP}${pick(it.unit, lang)}`}</span>}
               </dd>
             </div>
           );
@@ -145,14 +145,14 @@ export function Gauge({ title, value, min, max, zones, unit, unitless, format }:
         <span>{fmt(min)}</span>
         <span className="caos-gauge-value">
           {fmt(value)}
-          {finite && unit ? ` ${pick(unit, lang)}` : ''}
+          {finite && unit ? `${NBSP}${pick(unit, lang)}` : ''}
         </span>
         <span>{fmt(max)}</span>
       </div>
       <div className="caos-gauge-legend">
         {zones.map((z, i) => (
           <span key={i}>
-            <i className={`dot tone-${z.tone}`} aria-hidden="true" />
+            <i className={`caos-gauge-dot tone-${z.tone}`} aria-hidden="true" />
             {pick(z.label, lang)}
           </span>
         ))}
