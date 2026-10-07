@@ -28,7 +28,7 @@ export interface ChartAxis {
 export interface UPlotChartProps {
   /** The x values and their axis. A time axis must be declared (`time: true`); uPlot otherwise reads numbers as
    * epoch seconds and labels ticks as dates (failure class 7). */
-  x: ChartAxis & { values: number[]; time?: boolean };
+  x: ChartAxis & { values: number[]; time?: boolean; log?: boolean };
   y: ChartAxis & { log?: boolean; range?: [number, number] };
   series: ChartSeries[];
   /** Vertical markers at x positions, drawn on the plot and labelled (mark what the engine detected). */
@@ -36,11 +36,50 @@ export interface UPlotChartProps {
   /** Height in pixels, or `fill` to take the container's height (inside `PlotCard fill`); the width is always the
    * container's. */
   height?: number | 'fill';
-  /** Called with the index under the cursor (or null), for linked views. */
+  /** Called with the index under the cursor (or null), for linked views; the index is the caller's, before any
+   * sorting by x. */
   onCursor?: (index: number | null) => void;
+  /** Called with the caller's index of the point under the cursor when the plot is clicked (select a case, a blast). */
+  onPick?: (index: number) => void;
+  /** A parity plot: predicted (the series) against observed (x) on one shared range, in a square box, with the
+   * identity line. Unsorted x is allowed (the chart sorts it and maps every index back). */
+  parity?: boolean;
 }
 
 const ROTATION: ShellColorToken[] = ['--color-accent', '--color-magenta', '--color-accent-2', '--color-good', '--color-warn', '--color-bad'];
+
+/** The colour and dash of a series: its own, or the rotation's; when the rotation comes round (a seventh series
+ * repeats the first colour) the repeat is dashed, so two series never look the same (CAOS_Fragmenta drew this for
+ * itself until 0.9.0). */
+export function seriesStyle(s: ChartSeries, i: number): { color: ShellColorToken; dash?: number[] } {
+  const color = s.color ?? ROTATION[i % ROTATION.length];
+  const dash = s.dash ?? (!s.color && i >= ROTATION.length ? [6, 4] : undefined);
+  return { color, dash };
+}
+
+/** The order that sorts x ascending (uPlot draws aligned data by increasing x), or null when x is already sorted. */
+export function sortOrder(xs: readonly number[]): number[] | null {
+  for (let i = 1; i < xs.length; i++) {
+    if (xs[i] < xs[i - 1]) return xs.map((_, j) => j).sort((a, b) => xs[a] - xs[b] || a - b);
+  }
+  return null;
+}
+
+/** One range for both axes of a parity plot, padded by 5% of the span on each side. */
+export function parityRange(...arrays: readonly (readonly (number | null)[])[]): [number, number] {
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (const a of arrays) {
+    for (const v of a) {
+      if (v === null || !Number.isFinite(v)) continue;
+      lo = Math.min(lo, v);
+      hi = Math.max(hi, v);
+    }
+  }
+  if (!Number.isFinite(lo)) return [0, 1];
+  const pad = (hi - lo || Math.abs(hi) || 1) * 0.05;
+  return [lo - pad, hi + pad];
+}
 
 /** uPlot's numeric tick steps: 1, 2, 2.5 and 5 times every power of ten. */
 const STEPS: number[] = [];
@@ -132,7 +171,7 @@ export function drawMarks(u: uPlot, marks: { x: number; label: string }[], style
  * (known shell defect 17). An axis with fixed decimals ticks only where its labels differ (`tickSteps`). The host
  * declares `data-series`, `data-axis-titles`, `data-ticks-cut`, `data-ticks-repeat` and `data-drawn` for the gate.
  */
-export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlotChartProps) {
+export function UPlotChart({ x, y, series, marks, height = 280, onCursor, onPick, parity }: UPlotChartProps) {
   const lang = useShellLang();
   const theme = useThemeStore((s) => s.theme);
   const fill = height === 'fill';
@@ -146,8 +185,9 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlo
     },
     [measureRef],
   );
-  const width = box.width;
-  const h = fill ? box.height : height;
+  // a parity plot is square: the side is the smaller of the box's width and the height asked for
+  const width = parity ? Math.min(box.width, fill ? box.height : height) : box.width;
+  const h = parity ? width : fill ? box.height : height;
   const uRef = useRef<uPlot | null>(null);
   // the host, whose data-ticks-repeat the tick formatters keep current (set on the element: a formatter runs inside
   // uPlot's draw, where a state update would loop)
@@ -155,6 +195,15 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlo
   const [cursor, setCursor] = useState<number | null>(null);
   const onCursorRef = useRef(onCursor);
   onCursorRef.current = onCursor;
+  const onPickRef = useRef(onPick);
+  onPickRef.current = onPick;
+  // uPlot draws by increasing x: unsorted x is sorted here and every index handed back is mapped to the caller's
+  const order = useMemo(() => sortOrder(x.values), [x.values]);
+  const orderRef = useRef(order);
+  orderRef.current = order;
+  const xs = useMemo(() => (order ? order.map((i) => x.values[i]) : x.values), [order, x.values]);
+  const ys = useMemo(() => series.map((s) => (order ? order.map((i) => s.values[i] ?? null) : s.values)), [order, series]);
+  const range = useMemo(() => (parity ? parityRange(xs, ...ys) : null), [parity, xs, ys]);
 
   const xLabel = pick(x.label, lang);
   const yLabel = pick(y.label, lang);
@@ -162,8 +211,10 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlo
   const yUnit = y.unit ? pick(y.unit, lang) : '';
   // Everything that changes the plot's structure, by value.
   const structure = JSON.stringify({
-    s: series.map((s, i) => [pick(s.label, lang), s.color ?? ROTATION[i % ROTATION.length], s.width ?? 2, s.dash ?? null, s.mode ?? 'line']),
-    x: [xLabel, xUnit, Boolean(x.time), x.format ?? null],
+    s: series.map((s, i) => [pick(s.label, lang), seriesStyle(s, i), s.width ?? 2, s.mode ?? 'line']),
+    x: [xLabel, xUnit, Boolean(x.time), Boolean(x.log), x.format ?? null],
+    p: range,
+    pick: Boolean(onPick),
     y: [yLabel, yUnit, Boolean(y.log), y.range ?? null, y.format ?? null],
     m: (marks ?? []).map((m) => [m.x, pick(m.label, lang)]),
     theme,
@@ -171,7 +222,7 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlo
     h,
     w: width,
   });
-  const data = useMemo(() => [x.values, ...series.map((s) => s.values)] as uPlot.AlignedData, [x.values, series]);
+  const data = useMemo(() => [xs, ...ys] as uPlot.AlignedData, [xs, ys]);
 
   useEffect(() => {
     const el = plotRef.current;
@@ -189,13 +240,23 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlo
       hostRef.current?.setAttribute('data-ticks-repeat', String(repeats.x + repeats.y));
       return labels;
     };
-    const xSteps = x.time ? undefined : tickSteps(x.format);
+    const xSteps = x.time || x.log ? undefined : tickSteps(x.format);
     const ySteps = y.log ? undefined : tickSteps(y.format);
     const opts: uPlot.Options = {
       width,
       height: h,
       legend: { show: false },
-      scales: { x: { time: Boolean(x.time) }, y: { distr: y.log ? 3 : 1, ...(y.range ? { range: y.range } : {}) } },
+      // a log axis labels the ticks uPlot keeps and passes null for the rest, which formatTicks leaves blank
+      scales: {
+        // a log x axis spans the data, not the decades around it (uPlot rounds out to the next decade, which left an
+        // axis to 1,000 for data that ends at 120)
+        x: {
+          time: Boolean(x.time),
+          distr: x.log ? 3 : 1,
+          ...(range ? { range } : x.log ? { range: (_u: uPlot, min: number, max: number): uPlot.Range.MinMax => [min, max] } : {}),
+        },
+        y: { distr: y.log ? 3 : 1, ...(range ? { range } : y.range ? { range: y.range } : {}) },
+      },
       axes: [
         {
           stroke: fg,
@@ -231,10 +292,11 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlo
       series: [
         {},
         ...series.map((s, i) => {
-          const stroke = resolveToken(s.color ?? ROTATION[i % ROTATION.length], '#4a8');
+          const style = seriesStyle(s, i);
+          const stroke = resolveToken(style.color, '#4a8');
           return s.mode === 'points'
             ? { label: pick(s.label, lang), stroke, width: 1.5, paths: () => null, points: { show: true, space: 0, size: 9, fill: stroke } }
-            : { label: pick(s.label, lang), stroke, width: s.width ?? 2, dash: s.dash, spanGaps: false, points: { show: false } };
+            : { label: pick(s.label, lang), stroke, width: s.width ?? 2, dash: style.dash, spanGaps: false, points: { show: false } };
         }),
       ],
       hooks: {
@@ -242,11 +304,34 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlo
           (u: uPlot) => {
             const idx = u.cursor.idx ?? null;
             setCursor(idx);
-            onCursorRef.current?.(idx);
+            onCursorRef.current?.(idx === null ? null : orderRef.current ? orderRef.current[idx] : idx);
+          },
+        ],
+        ready: [
+          (u: uPlot) => {
+            u.over.addEventListener('click', () => {
+              const idx = u.cursor.idx;
+              if (idx === null || idx === undefined || !onPickRef.current) return;
+              onPickRef.current(orderRef.current ? orderRef.current[idx] : idx);
+            });
           },
         ],
         draw: [
           (u: uPlot) => {
+            if (range) {
+              // the identity line of a parity plot: where a prediction equals the observation
+              const ctx = u.ctx;
+              const pr = uPlot.pxRatio || 1;
+              ctx.save();
+              ctx.strokeStyle = resolveToken('--color-fg-faint', '#888');
+              ctx.lineWidth = Math.max(1, pr);
+              ctx.setLineDash([5 * pr, 4 * pr]);
+              ctx.beginPath();
+              ctx.moveTo(u.valToPos(range[0], 'x', true), u.valToPos(range[0], 'y', true));
+              ctx.lineTo(u.valToPos(range[1], 'x', true), u.valToPos(range[1], 'y', true));
+              ctx.stroke();
+              ctx.restore();
+            }
             if (!marks?.length) return;
             drawMarks(u, marks.map((m) => ({ x: m.x, label: pick(m.label, lang) })), {
               color: resolveToken('--color-warn', '#c80'),
@@ -274,9 +359,9 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlo
   const read =
     cursor !== null
       ? [
-          `${xLabel} ${formatNumber(x.values[cursor], lang, x.format ?? { digits: 4 })}${xUnit ? `${NBSP}${xUnit}` : ''}`,
+          `${xLabel} ${formatNumber(xs[cursor], lang, x.format ?? { digits: 4 })}${xUnit ? `${NBSP}${xUnit}` : ''}`,
           ...series.map(
-            (s) => `${pick(s.label, lang)} ${formatNumber(s.values[cursor] ?? null, lang, y.format ?? { digits: 4 })}${yUnit ? `${NBSP}${yUnit}` : ''}`,
+            (s, k) => `${pick(s.label, lang)} ${formatNumber(ys[k][cursor] ?? null, lang, y.format ?? { digits: 4 })}${yUnit ? `${NBSP}${yUnit}` : ''}`,
           ),
         ].join(' · ')
       : lang === 'es'
@@ -292,13 +377,16 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlo
       data-ticks-cut="0"
       data-ticks-repeat="0"
       data-drawn={width > 0 && h > 0 ? '1' : '0'}
+      data-parity={parity ? '1' : undefined}
+      data-log-x={x.log ? '1' : undefined}
+      data-pick={onPick ? '1' : undefined}
     >
       <div ref={setPlot} className="caos-chart-plot" />
       {series.length > 1 && (
         <ul className="caos-chart-legend" aria-label={lang === 'es' ? 'Series del gráfico' : 'Series of the chart'}>
           {series.map((s, i) => (
-            <li key={i} className="caos-chart-key" data-mode={s.mode ?? 'line'} data-dash={s.dash ? '1' : undefined}>
-              <span className="caos-chart-swatch" style={{ '--swatch': `var(${s.color ?? ROTATION[i % ROTATION.length]})` } as CSSProperties} aria-hidden="true" />
+            <li key={i} className="caos-chart-key" data-mode={s.mode ?? 'line'} data-dash={seriesStyle(s, i).dash ? '1' : undefined}>
+              <span className="caos-chart-swatch" style={{ '--swatch': `var(${seriesStyle(s, i).color})` } as CSSProperties} aria-hidden="true" />
               {pick(s.label, lang)}
             </li>
           ))}
