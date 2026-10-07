@@ -137,7 +137,8 @@ export function CaseSelector(props: CaseSelectorProps) {
     if (!deepLink || linkPending.current || !selectedId || typeof window === 'undefined') return;
     const next = withCaseParam(window.location.search, selectedId, param);
     if (next !== window.location.search) {
-      window.history.replaceState(null, '', `${window.location.pathname}${next}${window.location.hash}`);
+      // keep the router's history state (its entry key and index), never null
+      window.history.replaceState(window.history.state, '', `${window.location.pathname}${next}${window.location.hash}`);
     }
   }, [deepLink, param, selectedId, cases]);
 
