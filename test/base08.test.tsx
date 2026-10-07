@@ -62,7 +62,8 @@ function palette(head: string): Record<string, string> {
 
 test('G13 at the source: every text colour of both themes reads at WCAG AA on every surface', () => {
   const texts = ['--color-fg', '--color-fg-subtle', '--color-fg-faint', '--color-accent', '--color-accent-2', '--color-magenta', '--color-good', '--color-warn', '--color-bad'];
-  const grounds = ['--color-bg', '--color-surface', '--color-surface-2'];
+  // the accent-soft highlight is a ground too: a selected row carries its tone text on it (0.9.1, Fragmenta's table)
+  const grounds = ['--color-bg', '--color-surface', '--color-surface-2', '--color-accent-soft'];
   const low: string[] = [];
   for (const [name, p] of [['dark', palette(':root,\n[data-theme="dark"] {')], ['light', palette('[data-theme="light"] {')]] as const) {
     assert.ok(Object.keys(p).length >= 15, `the ${name} palette was not read`);
