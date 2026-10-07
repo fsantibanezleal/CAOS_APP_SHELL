@@ -29,6 +29,8 @@ Every number on screen goes through `formatNumber(value, lang, options)` (or `us
   on a line (known shell defect 22); `Knob`, `Readout`, `Gauge` and the chart readout join units the same way (`NBSP`);
 - `null`, `undefined` and non-finite values read "not available" / "no disponible", never `NaN`;
 - `formatTicks(values, lang, options)` formats an axis's labels together, in one notation (known shell defect 19).
+- `grouping: false` writes the integer part without a group separator in both languages: a calendar year on an axis
+  (`x.format`), in a readout or in a table reads 2021, never 2,021 or 2.021 (known shell defect 30).
 
 A unit is required on every readout value (`unit`, or `unitless` stated); a unit that is a word is bilingual, a
 symbol is written as is.

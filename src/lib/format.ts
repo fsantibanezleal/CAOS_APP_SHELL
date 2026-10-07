@@ -12,6 +12,9 @@ export interface FormatOptions {
   /** `scientific` writes every non-zero value in scientific notation with `digits` significant digits; the default
    * chooses by magnitude. An axis uses it so all its ticks share one notation (`formatTicks`). */
   notation?: 'auto' | 'scientific';
+  /** `false` writes the integer part without a group separator, in both languages: a calendar year on an axis, in a
+   * readout or in a table reads 2021, never 2,021 or 2.021 (known shell defect 30). Default true. */
+  grouping?: boolean;
 }
 
 const LOCALE: Record<Lang, string> = { en: 'en-US', es: 'es-CL' };
@@ -37,14 +40,15 @@ export function formatNumber(value: number | null | undefined, lang: Lang, opts:
   const v = opts.percent ? value * 100 : value;
   const digits = opts.digits ?? 4;
   const scientific = v !== 0 && (opts.notation === 'scientific' || Math.abs(v) < SCIENTIFIC_BELOW);
+  const grouping = opts.grouping === false ? { useGrouping: false } : {};
   const nf =
     opts.decimals !== undefined
-      ? new Intl.NumberFormat(LOCALE[lang], { minimumFractionDigits: opts.decimals, maximumFractionDigits: opts.decimals })
+      ? new Intl.NumberFormat(LOCALE[lang], { minimumFractionDigits: opts.decimals, maximumFractionDigits: opts.decimals, ...grouping })
       : scientific
         ? new Intl.NumberFormat(LOCALE[lang], { notation: 'scientific', maximumSignificantDigits: digits })
         : Math.abs(v) >= 10 ** (digits - 1)
-          ? new Intl.NumberFormat(LOCALE[lang], { maximumFractionDigits: 0 })
-          : new Intl.NumberFormat(LOCALE[lang], { maximumSignificantDigits: digits });
+          ? new Intl.NumberFormat(LOCALE[lang], { maximumFractionDigits: 0, ...grouping })
+          : new Intl.NumberFormat(LOCALE[lang], { maximumSignificantDigits: digits, ...grouping });
   // A no-break space joins the number and its sign, so a label that wraps never leaves "%" alone on a line (known
   // shell defect 22).
   return opts.percent ? `${nf.format(v)}${NBSP}%` : nf.format(v);
