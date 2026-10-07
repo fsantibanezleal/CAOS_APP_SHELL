@@ -1,6 +1,7 @@
-import { useId } from 'react';
-import { type FormatOptions, formatNumber } from '../lib/format';
+import { useId, useRef } from 'react';
+import { type FormatOptions, formatNumber, NBSP } from '../lib/format';
 import { useShellLang } from '../lib/lang';
+import { useOverflowFade } from '../lib/overflow';
 import { type BiText, pick } from '../lib/text';
 
 export interface KnobProps {
@@ -33,7 +34,7 @@ export function Knob({ id, label, value, min, max, step, unit, hint, format, dis
         <span>{pick(label, lang)}</span>
         <span className="caos-knob-value">
           {formatNumber(value, lang, format ?? {})}
-          {unit ? ` ${pick(unit, lang)}` : ''}
+          {unit ? `${NBSP}${pick(unit, lang)}` : ''}
         </span>
       </label>
       <input
@@ -70,10 +71,12 @@ export interface ChipGroupProps {
  * `CaseSelector` select mode instead (ADR-0071 rule 7). */
 export function ChipGroup({ id, label, options, value, onChange }: ChipGroupProps) {
   const lang = useShellLang();
+  const rowRef = useRef<HTMLDivElement | null>(null);
+  useOverflowFade(rowRef, '.chip.on', [value, options.length, lang]);
   return (
     <div className="caos-chipgroup" data-control={id}>
       <span className="caos-chipgroup-label">{pick(label, lang)}</span>
-      <div className="caos-chip-row" role="radiogroup" aria-label={pick(label, lang)}>
+      <div className="caos-chip-row" role="radiogroup" aria-label={pick(label, lang)} ref={rowRef}>
         {options.map((o) => (
           <button
             key={o.id}

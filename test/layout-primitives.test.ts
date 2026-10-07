@@ -147,8 +147,9 @@ test('the wide workbench opt-in still overrides the measure', () => {
 });
 
 test('the narrow-column primitive is per-block, not a page width', () => {
-  assert.equal(lastValue('.measure', 'max-width'), '70ch');
-  assert.deepEqual(competitors('measure', 'max-width', ['70ch'], /$^/), []);
+  assert.equal(lastValue('.measure', 'max-width'), 'var(--measure)');
+  assert.match(CSS, /--measure:\s*70ch;/);
+  assert.deepEqual(competitors('measure', 'max-width', ['var(--measure)'], /$^/), []);
 });
 
 test('the reading and instrument budgets are both defined', () => {

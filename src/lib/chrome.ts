@@ -15,6 +15,7 @@ const CHROME = {
     complement: 'A CAOS research project',
     license: '',
     version: 'v',
+    skip: 'Skip to the content',
   },
   es: {
     github: 'Código en GitHub',
@@ -28,6 +29,7 @@ const CHROME = {
     complement: 'Un proyecto de investigación CAOS',
     license: '',
     version: 'v',
+    skip: 'Saltar al contenido',
   },
 } as const;
 

@@ -2,6 +2,7 @@ import { type ReactNode, useMemo } from 'react';
 import { CaseSelector, type CaseSelectorProps } from '../case/CaseSelector';
 import { MAX_PEER_TABS, Tabs } from '../content/Tabs';
 import { useShellLang } from '../lib/lang';
+import { useUrlView, viewParamOf } from '../lib/urlView';
 import { type BiText, pick } from '../lib/text';
 import type { Lane } from './LaneBadge';
 import { makeStateKey, type Provenance, WorkbenchStateContext } from './state';
@@ -44,9 +45,12 @@ export interface CaseWorkbenchProps {
   /** The deep write-up of the case: problem, variables, equations, assumptions, what each variant shows, how to read
    * the views (ADR-0016 s9.B). Always present. */
   context: { label?: BiText; content: ReactNode };
-  /** Controlled group selection (for example held in the URL). */
+  /** Controlled group selection, when the product holds it itself. */
   group?: string;
   onGroupChange?: (id: string) => void;
+  /** The query parameter that holds the open group, so a view can be shared and reloaded (default `view`); `false`
+   * keeps it out of the URL. Ignored when `group` is controlled. */
+  deepLinkView?: boolean | string;
   ariaLabel?: BiText;
 }
 
@@ -73,7 +77,7 @@ function panel(id: string, lane: Lane | undefined, provenance: Provenance | unde
  * `data-state-key` on the instrument so the gate can check that the instrument shows what was asked for.
  */
 export function CaseWorkbench(props: CaseWorkbenchProps) {
-  const { caseId, cases, source, controls, replayOnly, variants, rail, railLabel, groups, compare, context, group, onGroupChange, ariaLabel } = props;
+  const { caseId, cases, source, controls, replayOnly, variants, rail, railLabel, groups, compare, context, group, onGroupChange, deepLinkView = true, ariaLabel } = props;
   const lang = useShellLang();
   const variantId = variants?.activeId;
   const stateKey = useMemo(
@@ -98,6 +102,8 @@ export function CaseWorkbench(props: CaseWorkbenchProps) {
       `CaseWorkbench: ${tabs.length} groups; at most ${MAX_WORKBENCH_GROUPS} peers, then group by question (ADR-0071 rule 5)`,
     );
   }
+  // The open group: the product's when controlled, else the one the URL names (`?view=`), else the first.
+  const [openGroup, selectGroup] = useUrlView(tabs.map((t) => t.id), viewParamOf(deepLinkView), group, onGroupChange);
   const railHead =
     cases || variants ? (
       <>
@@ -120,8 +126,8 @@ export function CaseWorkbench(props: CaseWorkbenchProps) {
         >
           <Tabs
             tabs={tabs}
-            value={group}
-            onChange={onGroupChange}
+            value={openGroup}
+            onChange={selectGroup}
             ariaLabel={pick(ariaLabel ?? { en: 'Case views', es: 'Vistas del caso' }, lang)}
           />
         </div>

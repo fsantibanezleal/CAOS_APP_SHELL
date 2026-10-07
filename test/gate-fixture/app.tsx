@@ -9,6 +9,7 @@ import '../../styles.css';
 import '../../chart.css';
 import {
   AppShell,
+  BarChart,
   CaseWorkbench,
   ChipGroup,
   CitationsProvider,
@@ -229,6 +230,21 @@ function ValidationView({ sim }: { sim: Sim }) {
                     return (
                       <svg width={width} height={height} role="img" aria-label="checkpoints">
                         <line x1={32} y1={height - 22} x2={width - 8} y2={height - 22} stroke="var(--color-border)" />
+                        {PLANT === 'label-cut' && (
+                          <text x={width - 24} y={16} fontSize={11} fill="var(--color-fg-subtle)">
+                            planted label past the edge
+                          </text>
+                        )}
+                        {PLANT === 'label-overlap' && (
+                          <>
+                            <text x={60} y={16} fontSize={11} fill="var(--color-fg-subtle)">
+                              first planted label
+                            </text>
+                            <text x={70} y={18} fontSize={11} fill="var(--color-fg-subtle)">
+                              second planted label
+                            </text>
+                          </>
+                        )}
                         {rows.map((d, k) => {
                           const h = ((height - 44) * sim.I[d]) / max;
                           return (
@@ -286,41 +302,15 @@ function ValidationView({ sim }: { sim: Sim }) {
 }
 
 function CompareView({ peaks }: { peaks: { id: string; label: string; peak: number }[] }) {
-  const max = Math.max(...peaks.map((p) => p.peak)) || 1;
   return (
     <PlotCard fill title={{ en: 'Peak infected by variant', es: 'Pico de infectados por variante' }} lane="live" provenance="synthetic" dataKey={useWorkbenchState().stateKey}>
-      <Stage label={{ en: 'Variant comparison', es: 'Comparación de variantes' }}>
-        {({ width, height }) => {
-          const bw = (width - 80) / peaks.length;
-          const ticks = [0, 0.25, 0.5, 0.75, 1];
-          return (
-            <svg width={width} height={height} role="img" aria-label="bars">
-              {ticks.map((q) => {
-                const y = height - 24 - q * (height - 48);
-                return (
-                  <g key={q}>
-                    <line x1={40} y1={y} x2={width - 8} y2={y} stroke="var(--color-border)" />
-                    <text x={34} y={y + 4} textAnchor="end" fontSize={11} fill="var(--color-fg-subtle)">
-                      {Math.round(q * max)}
-                    </text>
-                  </g>
-                );
-              })}
-              {peaks.map((p, k) => {
-                const h = ((height - 48) * p.peak) / max;
-                return (
-                  <g key={p.id}>
-                    <rect x={48 + k * bw} y={height - 24 - h} width={bw - 24} height={h} fill="var(--color-accent)" />
-                    <text x={48 + k * bw + (bw - 24) / 2} y={height - 8} textAnchor="middle" fontSize={12} fill="var(--color-fg-subtle)">
-                      {p.label}
-                    </text>
-                  </g>
-                );
-              })}
-            </svg>
-          );
-        }}
-      </Stage>
+      <BarChart
+        title={{ en: 'Peak infected by variant', es: 'Pico de infectados por variante' }}
+        orientation="vertical"
+        height="fill"
+        axis={{ label: { en: 'Peak infected', es: 'Pico de infectados' }, unit: { en: 'people', es: 'personas' }, format: { decimals: 0 } }}
+        data={peaks.map((p, i) => ({ id: p.id, label: p.label, value: p.peak, highlight: i === 0 }))}
+      />
     </PlotCard>
   );
 }
@@ -384,6 +374,20 @@ function Workbench() {
           onChange={setScale}
         />
         {PLANT === 'covered' && <div style={{ position: 'relative', marginTop: -64, height: 64, zIndex: 5 }} aria-hidden="true" />}
+        {/* after the covering plant, which must cover the contact scale, a control the probe reaches */}
+        <Knob
+          id="recovery"
+          label={{ en: 'Recovery rate', es: 'Tasa de recuperación' }}
+          hint={{ en: 'Fixed in this fixture: the control cannot act.', es: 'Fija en este producto de prueba: el control no puede actuar.' }}
+          value={0.1}
+          min={0.05}
+          max={0.3}
+          step={0.01}
+          unit="1/d"
+          format={{ decimals: 2 }}
+          disabled
+          onChange={() => undefined}
+        />
         <ChipGroup
           id="horizon"
           label={{ en: 'Horizon', es: 'Horizonte' }}
@@ -474,15 +478,27 @@ function Doc({ id }: { id: string }) {
     </DocSection>
   ));
   return (
-    <DocPage title={title} lede={pick({ en: 'How the fixture product is built and checked.', es: 'Cómo se construye y verifica el producto de prueba.' }, lang)}>
+    <DocPage wide={id === 'implementation'} title={title} lede={pick({ en: 'How the fixture product is built and checked.', es: 'Cómo se construye y verifica el producto de prueba.' }, lang)}>
       {id === 'introduction' && (
         <p style={{ maxWidth: 220 }}>
           {pick({ en: 'See', es: 'Vea' }, lang)} <a href="#wrapped">{pick({ en: 'a deliberately long link that wraps onto a second line', es: 'un enlace deliberadamente largo que pasa a una segunda línea' }, lang)}</a>.
         </p>
       )}
       {PLANT === 'hoverflow' && id === 'introduction' && <div style={{ width: 3000, height: 12 }}>planted wide block</div>}
+      {PLANT === 'decimal-point' && id === 'introduction' && <p>{pick({ en: 'Integration step: 0.25 days.', es: 'Paso de integración: 0.25 días.' }, lang)}</p>}
+      {PLANT === 'low-contrast' && id === 'introduction' && <p style={{ color: '#9a9a9a' }}>{pick({ en: 'A planted pale line.', es: 'Una línea pálida plantada.' }, lang)}</p>}
+      {PLANT === 'label-wide' && id === 'introduction' && <NarrowFontLabel />}
       {PLANT === 'mobile-only' && id === 'introduction' && <div className="fixture-mobile-only">planted narrow-screen block</div>}
-      {id === 'methodology' ? (
+      {id === 'implementation' ? (
+        <SubTabs
+          orientation="vertical"
+          ariaLabel={pick({ en: 'Implementation parts', es: 'Partes de la implementación' }, lang)}
+          tabs={[
+            { id: 'all', label: pick({ en: 'Every part, a long section', es: 'Todas las partes, una sección larga' }, lang), content: sections },
+            { id: 'first', label: pick({ en: 'The first part', es: 'La primera parte' }, lang), content: sections.slice(0, 1) },
+          ]}
+        />
+      ) : id === 'methodology' ? (
         <Tabs
           ariaLabel={pick({ en: 'Methodology parts', es: 'Partes de la metodología' }, lang)}
           tabs={[
@@ -525,6 +541,21 @@ function Doc({ id }: { id: string }) {
         </p>
       )}
     </DocPage>
+  );
+}
+
+/** The wide-font plant (G10): a label in a box sized for a narrow font, as a fixed width per character sizes it. At
+ * 11px this label measures 168px in the Windows system font, 193px in Verdana and 191px in DejaVu Sans (Chromium,
+ * 2026-10-07): a 5px-per-character box (180px) holds the first and cuts the fonts of the wide-font pass. */
+function NarrowFontLabel() {
+  const label = 'a label sized for a narrow font only';
+  const width = Math.ceil(label.length * 5);
+  return (
+    <svg width={width} height={24} data-chart="" role="img" aria-label={label}>
+      <text x={0} y={16} fontSize={11} fill="var(--color-fg)" style={{ fontFamily: 'var(--font-sans)' }}>
+        {label}
+      </text>
+    </svg>
   );
 }
 
@@ -580,6 +611,11 @@ if (PLANT === 'clip') {
 if (PLANT === 'shrunk-tabs') {
   const style = document.createElement('style');
   style.textContent = '.caos-cw-panel > .subtabs > .subtablist, .caos-cw > .tabs > .tablist { flex: 0 1 auto !important; }';
+  document.head.appendChild(style);
+}
+if (PLANT === 'sticky-off') {
+  const style = document.createElement('style');
+  style.textContent = '.subtabs-vertical > .subtablist { position: static !important; }';
   document.head.appendChild(style);
 }
 if (PLANT === 'mobile-only') {

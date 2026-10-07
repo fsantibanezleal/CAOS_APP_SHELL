@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { after, before, describe, test } from 'node:test';
@@ -16,7 +16,7 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const work = join(root, '.gate-selftest');
 const clean = join(work, 'clean');
 const BRAND = 'GateFixture';
-const QUICK = { sizes: '1280x800', themes: 'light', langs: 'en', idleMs: 600 };
+const QUICK = { sizes: '1280x800', themes: 'light', langs: 'en', idleMs: 600, wideFont: false };
 
 /** One plant per check (and per distinct trap inside a check); `expect` must appear among the failures. */
 const PLANTS = [
@@ -48,6 +48,12 @@ const PLANTS = [
   { id: 'wrong-case', check: 'G9', re: /asked for case [\w-]+; the workbench shows/, opts: { routes: '/' } },
   { id: 'no-controls', check: 'G9', re: /no registered control/, opts: { routes: '/' } },
   { id: 'stuck-view', check: 'G9', re: /did not settle|keep an earlier selection key/, opts: { routes: '/', settleMs: 3000 } },
+  { id: 'label-cut', check: 'G10', re: /"planted label past the edge" is cut by \d+px/, trail: /validation > table/, opts: { routes: '/' } },
+  { id: 'label-overlap', check: 'G10', re: /"first planted label" and "second planted label" overlap/, trail: /validation > table/, opts: { routes: '/' } },
+  { id: 'label-wide', check: 'G10', re: /"a label sized for a narrow font only" is cut/, mode: /wide-font/, opts: { routes: '/,/introduction', wideFont: true, wideFontSizes: '1280x800' } },
+  { id: 'decimal-point', check: 'G11', re: /writes 0\.25 with a decimal point/, opts: { langs: 'es', routes: '/,/introduction' } },
+  { id: 'sticky-off', check: 'G12', re: /active sub-tab .* is out of view/, opts: { routes: '/,/implementation' } },
+  { id: 'low-contrast', check: 'G13', re: /contrast \d\.\d\d:1, below 4\.5:1/, opts: { routes: '/,/introduction' } },
 ];
 
 /** A static server with an SPA fallback: every unknown path answers index.html with 200 (the G4 plant). */
@@ -73,6 +79,11 @@ test('the clean fixture passes every check in the full matrix (five sizes, both 
   const r = await runGate({ serve: clean, expectBrand: BRAND, idleMs: 1000, out: join(work, 'out-clean') });
   assert.ok(r.states > 100, `the walk measured ${r.states} states; it should cover every route, tab and case`);
   assert.equal(r.failures.length, 0, `the clean fixture failed:\n${show(r)}`);
+  // G14: one page shows every capture, the wide-font pass's included
+  const index = readFileSync(join(work, 'out-clean', 'index.html'), 'utf8');
+  assert.ok(r.captures >= 30, `${r.captures} captures`);
+  for (const name of readdirSync(join(work, 'out-clean', 'shots'))) assert.ok(index.includes(`shots/${name}`), `index.html shows ${name}`);
+  assert.ok(readdirSync(join(work, 'out-clean', 'shots')).some((n) => n.endsWith('_wide.png')), 'the wide-font pass captured its states');
 });
 
 describe('every planted defect fails the check that owns it', { concurrency: 4 }, () => {

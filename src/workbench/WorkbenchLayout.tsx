@@ -1,5 +1,6 @@
-import { useId, useState, type ReactNode } from 'react';
+import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useShellLang } from '../lib/lang';
+import { useOverflowFade } from '../lib/overflow';
 import { type BiText, pick } from '../lib/text';
 
 /** One section of the control rail. A rail whose content does not fit is SPLIT into sections, one shown at a
@@ -41,6 +42,21 @@ export function WorkbenchLayout({ rail, railHead, children, railLabel, className
   const baseId = useId();
   const label = pick(railLabel ?? { en: 'Controls', es: 'Controles' }, lang);
   const current = sections?.find((s) => s.id === active) ?? sections?.[0];
+  // The section row is one line like every other row: its hidden end fades and the open section is revealed.
+  const rowRef = useRef<HTMLDivElement | null>(null);
+  useOverflowFade(rowRef, '.chip.on', [current?.id, sections?.length, lang]);
+
+  function onKeyDown(e: KeyboardEvent<HTMLButtonElement>, idx: number) {
+    if (!sections || (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft' && e.key !== 'Home' && e.key !== 'End')) return;
+    e.preventDefault();
+    const n = sections.length;
+    const next = e.key === 'Home' ? 0 : e.key === 'End' ? n - 1 : (idx + (e.key === 'ArrowRight' ? 1 : n - 1)) % n;
+    const target = sections[next];
+    if (target) {
+      setActive(target.id);
+      document.getElementById(`${baseId}-rs-${target.id}`)?.focus();
+    }
+  }
 
   return (
     <div className={['page-body', 'wide', 'caos-wb', className].filter(Boolean).join(' ')} data-workbench="">
@@ -48,8 +64,8 @@ export function WorkbenchLayout({ rail, railHead, children, railLabel, className
         {railHead && <div className="caos-wb-rail-head">{railHead}</div>}
         {sections ? (
           <>
-            <div className="caos-wb-rail-sections" role="tablist" aria-label={label}>
-              {sections.map((s) => (
+            <div className="caos-wb-rail-sections" role="tablist" aria-label={label} ref={rowRef}>
+              {sections.map((s, idx) => (
                 <button
                   key={s.id}
                   type="button"
@@ -57,8 +73,10 @@ export function WorkbenchLayout({ rail, railHead, children, railLabel, className
                   id={`${baseId}-rs-${s.id}`}
                   aria-selected={s.id === current?.id}
                   aria-controls={`${baseId}-rp-${s.id}`}
+                  tabIndex={s.id === current?.id ? 0 : -1}
                   className={s.id === current?.id ? 'chip on' : 'chip'}
                   onClick={() => setActive(s.id)}
+                  onKeyDown={(e) => onKeyDown(e, idx)}
                 >
                   {pick(s.label, lang)}
                 </button>
