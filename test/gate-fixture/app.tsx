@@ -23,6 +23,7 @@ import {
   Stage,
   SubTabs,
   Tabs,
+  ViewsRow,
   pick,
   useShellLang,
   useThemeTokens,
@@ -263,6 +264,33 @@ function ValidationView({ sim }: { sim: Sim }) {
               </PlotCard>
               {PLANT === 'deep-defect' && <div style={{ width: 3000, height: 12, flex: 'none' }}>planted wide block</div>}
             </>
+          ),
+        },
+        {
+          // a weighted row (ViewsRow, 0.9.0): a parity plot over x that is not sorted, beside a log-x curve
+          id: 'fit',
+          label: pick({ en: 'Fit', es: 'Ajuste' }, lang),
+          content: (
+            <ViewsRow shares={[3, 2]}>
+              <PlotCard fill title={{ en: 'Infected, model against simulation', es: 'Infectados, modelo contra simulación' }} lane="live" provenance="synthetic" dataKey={stateKey}>
+                <UPlotChart
+                  parity
+                  height="fill"
+                  x={{ values: rows.map((d) => sim.I[d]), label: { en: 'Simulated', es: 'Simulado' }, unit: { en: 'people', es: 'personas' }, format: { decimals: 0 } }}
+                  y={{ label: { en: 'Model', es: 'Modelo' }, unit: { en: 'people', es: 'personas' }, format: { decimals: 0 } }}
+                  series={[{ label: { en: 'Checkpoints', es: 'Puntos de control' }, values: rows.map((d) => sim.I[d] * 1.04 + 2), mode: 'points' }]}
+                  onPick={() => undefined}
+                />
+              </PlotCard>
+              <PlotCard fill title={{ en: 'Recovered on a log time axis', es: 'Recuperados en un eje de tiempo logarítmico' }} lane="live" provenance="synthetic" dataKey={stateKey}>
+                <UPlotChart
+                  height="fill"
+                  x={{ values: sim.t.slice(1), label: { en: 'Day', es: 'Día' }, unit: 'd', log: true }}
+                  y={{ label: { en: 'People', es: 'Personas' }, format: { decimals: 0 } }}
+                  series={[{ label: { en: 'Recovered', es: 'Recuperados' }, values: sim.R.slice(1) }]}
+                />
+              </PlotCard>
+            </ViewsRow>
           ),
         },
         {

@@ -94,6 +94,7 @@
     "caos-verdict",
     "caos-verdict-text",
     "caos-verdict-title",
+    "caos-views-col",
     "caos-views-row",
     "caos-wb",
     "caos-wb-main",
@@ -210,7 +211,8 @@
     "tone-good",
     "tone-neutral",
     "tone-warn",
-    "two-col"
+    "two-col",
+    "uplot"
   ],
   "modifiers": [
     "accent",
@@ -325,6 +327,7 @@
     "caos-verdict",
     "caos-verdict-text",
     "caos-verdict-title",
+    "caos-views-col",
     "caos-views-row",
     "caos-wb",
     "caos-wb-main",
@@ -454,6 +457,7 @@
     "tone-neutral",
     "tone-warn",
     "two-col",
+    "uplot",
     "warn",
     "wide"
   ]
