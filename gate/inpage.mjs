@@ -621,7 +621,8 @@ export function installLib() {
     const out = [];
     const skip = 'code, pre, kbd, samp, .katex, [data-version], [data-build], [translate="no"], script, style, [aria-hidden="true"]';
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-    const re = /(?<![\w.,/:@#])(\d+)\.(\d+)(?![\w/@]|\.\d)/g;
+    // an exponent belongs to the number: 2.7e-08 on a Spanish page writes its decimal with a point too
+    const re = /(?<![\w.,/:@#])(\d+)\.(\d+)(?:[eE][-+]?\d+)?(?![\w/@]|\.\d)/g;
     for (let n = walker.nextNode(); n; n = walker.nextNode()) {
       const text = n.nodeValue || '';
       if (!/\d\.\d/.test(text)) continue;

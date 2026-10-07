@@ -16,4 +16,7 @@
 .caos-chart-swatch { flex: none; width: 16px; height: 0; border-top: 2px solid var(--swatch); }
 .caos-chart-key[data-dash] .caos-chart-swatch { border-top-style: dashed; }
 .caos-chart-key[data-mode="points"] .caos-chart-swatch { width: 7px; height: 7px; border: 0; border-radius: 50%; background: var(--swatch); }
+/* A parity plot is square and centred in its box; a chart whose points can be picked shows a pointer. */
+.caos-chart[data-parity] .uplot { margin-inline: auto; }
+.caos-chart[data-pick] .u-over { cursor: pointer; }
 .caos-chart .u-cursor-x, .caos-chart .u-cursor-y { border-color: var(--color-fg-faint) !important; }
