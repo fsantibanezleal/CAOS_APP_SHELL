@@ -112,11 +112,13 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
       const t1 = ticks[ticks.length - 1];
       const tickLabels = formatTicks(ticks, lang, fmt);
       const sx = (v: number) => x0 + ((v - t0) / (t1 - t0 || 1)) * (x1 - x0);
-      const rowH = fill && box.height > 0 ? Math.max(need, Math.min(need * 2.2, (box.height - axisH - 4) / data.length)) : need;
+      // filling its card, the rows share the height (a capped row height left three bars on a quarter of the card,
+      // under the gate's stage-fill floor); a bar keeps a readable thickness and its label stays centred on it
+      const rowH = fill && box.height > 0 ? Math.max(need, (box.height - axisH - 4) / data.length) : need;
       const top = 4;
       const plotBottom = top + data.length * rowH;
       drawnHeight = fill && box.height > 0 ? Math.max(box.height, plotBottom + axisH) : plotBottom + axisH;
-      const barH = Math.min(rowH * 0.62, 28);
+      const barH = Math.min(rowH * 0.5, 40);
       drawing = (
         <svg width={width} height={drawnHeight} role="img" aria-label={name} data-chart="" data-chart-kind="bars">
           <title>{name}</title>
