@@ -51,7 +51,7 @@ const PLANTS = [
   { id: 'label-cut', check: 'G10', re: /"planted label past the edge" is cut by \d+px/, trail: /validation > table/, opts: { routes: '/' } },
   { id: 'label-overlap', check: 'G10', re: /"first planted label" and "second planted label" overlap/, trail: /validation > table/, opts: { routes: '/' } },
   { id: 'label-wide', check: 'G10', re: /"a label sized for a narrow font only" is cut/, mode: /wide-font/, opts: { routes: '/,/introduction', wideFont: true, wideFontSizes: '1280x800' } },
-  { id: 'decimal-point', check: 'G11', re: /writes 0\.25 with a decimal point/, opts: { langs: 'es', routes: '/,/introduction' } },
+  { id: 'decimal-point', check: 'G11', re: /writes 0\.25 with a decimal point/, also: /writes 2\.7e-08 with a decimal point/, opts: { langs: 'es', routes: '/,/introduction' } },
   { id: 'sticky-off', check: 'G12', re: /active sub-tab .* is out of view/, opts: { routes: '/,/implementation' } },
   { id: 'low-contrast', check: 'G13', re: /contrast \d\.\d\d:1, below 4\.5:1/, opts: { routes: '/,/introduction' } },
 ];
@@ -104,6 +104,7 @@ describe('every planted defect fails the check that owns it', { concurrency: 4 }
         ...(p.opts ?? {}),
       });
       const hit = r.failures.find((f) => f.check === p.check && p.re.test(f.message) && (!p.trail || p.trail.test(f.trail)) && (!p.mode || p.mode.test(f.mode)));
+      if (p.also) assert.ok(r.failures.some((f) => f.check === p.check && p.also.test(f.message)), `plant ${p.id} did not also fail ${p.check} with ${p.also}`);
       assert.ok(hit, `plant ${p.id} did not fail ${p.check} with ${p.re}${p.trail ? ` at ${p.trail}` : ''}; failures:\n${show(r) || '(none)'}`);
     });
   }
