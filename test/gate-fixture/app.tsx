@@ -213,7 +213,7 @@ function ValidationView({ sim }: { sim: Sim }) {
                   </thead>
                   <tbody>
                     {rows.map((d) => (
-                      <tr key={d}>
+                      <tr key={d} style={d === 60 ? { background: 'var(--color-accent-soft)', color: 'var(--color-good)' } : undefined}>
                         <td>{d}</td>
                         <td>{sim.S[d].toFixed(0)}</td>
                         <td>{sim.I[d].toFixed(0)}</td>
@@ -251,6 +251,11 @@ function ValidationView({ sim }: { sim: Sim }) {
                           return (
                             <g key={d}>
                               <rect x={40 + k * bw} y={height - 22 - h} width={bw - 16} height={h} fill="var(--color-bad)" />
+                              {h > 18 && (
+                                <text x={40 + k * bw + (bw - 16) / 2} y={height - 22 - h + 13} textAnchor="middle" fontSize={10} fill="var(--color-bg)">
+                                  {sim.I[d].toFixed(0)}
+                                </text>
+                              )}
                               <text x={40 + k * bw + (bw - 16) / 2} y={height - 6} textAnchor="middle" fontSize={11} fill="var(--color-fg-subtle)">
                                 {d}
                               </text>
@@ -567,6 +572,16 @@ function Doc({ id }: { id: string }) {
         />
       ) : (
         sections
+      )}
+      {id === 'experiments' && (
+        <figure className="figure">
+          <svg className="fig-svg" viewBox="0 0 320 120" role="img" aria-label="A figure below the fold">
+            <rect x="10" y="20" width="300" height="80" rx="6" fill="var(--color-surface-2)" stroke="var(--color-border)" />
+            <text x="24" y="52" fontSize="13" fill="var(--color-fg)">{pick({ en: 'A figure below the fold', es: 'Una figura bajo el pliegue' }, lang)}</text>
+            <text x="24" y="78" fontSize="11" fill="var(--color-fg-subtle)">{pick({ en: 'its labels stay inside it', es: 'sus rótulos quedan dentro' }, lang)}</text>
+          </svg>
+          <figcaption className="figure-caption">{pick({ en: 'A documentation figure after five sections.', es: 'Una figura de documentación tras cinco secciones.' }, lang)}</figcaption>
+        </figure>
       )}
       {id === 'benchmark' && (
         <p data-state={artifact && PLANT !== 'never-ready' ? 'ready' : 'loading'}>
