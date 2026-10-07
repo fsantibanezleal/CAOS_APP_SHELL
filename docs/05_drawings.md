@@ -20,6 +20,15 @@ rebuilt on a theme or language change; compared by value, so a parent re-render 
   alignment (uPlot leaves the canvas right-aligned after its last axis, which put the template's "peak" label on the
   wrong side of its line), on the side of the line where it fits inside the plot, on the next row when it would
   overlap the label before it, with a halo in the surface colour. A mark outside the x range is not drawn.
+- **A log x axis** (`x: { log: true }`, 0.9.0): the axis spans the data (uPlot alone rounds out to the next decade),
+  labels the ticks it keeps and leaves the rest blank; marks keep apart on it as on any axis.
+- **A parity plot** (`parity`, 0.9.0): predicted (the series, usually `mode: 'points'`) against observed (x) on one
+  shared range, in a square box centred in its card, with the dashed identity line. x need not be sorted.
+- **Picking** (`onPick(index)`, 0.9.0): a click on the plot hands back the index of the point under the cursor (select
+  a case, a blast); `onCursor` does the same while hovering. Indexes are always the caller's, also when the chart
+  sorted an unsorted x.
+- **More than six series:** the rotation has six colours; from the seventh, a repeated colour is drawn dashed, in the
+  plot and in the key, so no two series look the same (`seriesStyle`).
 
 ## `BarChart`
 

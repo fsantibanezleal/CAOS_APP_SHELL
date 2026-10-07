@@ -34,7 +34,7 @@ CAOS_Fragmenta's deploy gate).
 | G8 idle | sustained animation frames or DOM mutations at rest |
 | G9 reactivity | a registered control does not change the selection key, or a view keeps an old key; the case shown is not the case asked for; the deep link `?case=` fails. A control whose inputs are all disabled is not moved (known shell defect 20) |
 | G10 text in drawings | a label of a chart, an instrument SVG or a document figure is cut at the drawing's edge, lies outside it, or overlaps another label; in the native fonts and in the wide-font pass |
-| G11 Spanish numbers | a Spanish page shows a number with a decimal point |
+| G11 Spanish numbers | a Spanish page shows a number with a decimal point (`0.25`, `2.7e-08`); a Spanish thousands group (`27.345`) passes; code, formulas, versions and `translate="no"` are not read |
 | G12 sticky lists | at the end of a long section, the active vertical sub-tab is out of view |
 | G13 contrast | a visible text under WCAG AA (4.5:1; 3:1 for large text) against the colour behind it, at the primary size in both themes; disabled controls are exempt, colour transitions are finished first |
 | G14 captures | (always written) `index.html` in the output folder shows every capture, grouped by route, the failure list and the failure captures first |

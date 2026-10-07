@@ -23,6 +23,7 @@ import {
   Stage,
   SubTabs,
   Tabs,
+  ViewsRow,
   pick,
   useShellLang,
   useThemeTokens,
@@ -266,6 +267,33 @@ function ValidationView({ sim }: { sim: Sim }) {
           ),
         },
         {
+          // a weighted row (ViewsRow, 0.9.0): a parity plot over x that is not sorted, beside a log-x curve
+          id: 'fit',
+          label: pick({ en: 'Fit', es: 'Ajuste' }, lang),
+          content: (
+            <ViewsRow shares={[3, 2]}>
+              <PlotCard fill title={{ en: 'Infected, model against simulation', es: 'Infectados, modelo contra simulación' }} lane="live" provenance="synthetic" dataKey={stateKey}>
+                <UPlotChart
+                  parity
+                  height="fill"
+                  x={{ values: rows.map((d) => sim.I[d]), label: { en: 'Simulated', es: 'Simulado' }, unit: { en: 'people', es: 'personas' }, format: { decimals: 0 } }}
+                  y={{ label: { en: 'Model', es: 'Modelo' }, unit: { en: 'people', es: 'personas' }, format: { decimals: 0 } }}
+                  series={[{ label: { en: 'Checkpoints', es: 'Puntos de control' }, values: rows.map((d) => sim.I[d] * 1.04 + 2), mode: 'points' }]}
+                  onPick={() => undefined}
+                />
+              </PlotCard>
+              <PlotCard fill title={{ en: 'Recovered on a log time axis', es: 'Recuperados en un eje de tiempo logarítmico' }} lane="live" provenance="synthetic" dataKey={stateKey}>
+                <UPlotChart
+                  height="fill"
+                  x={{ values: sim.t.slice(1), label: { en: 'Day', es: 'Día' }, unit: 'd', log: true }}
+                  y={{ label: { en: 'People', es: 'Personas' }, format: { decimals: 0 } }}
+                  series={[{ label: { en: 'Recovered', es: 'Recuperados' }, values: sim.R.slice(1) }]}
+                />
+              </PlotCard>
+            </ViewsRow>
+          ),
+        },
+        {
           // a panel taller than the instrument scrolls; the tab rows above it keep their height (known shell defect 16)
           id: 'daily',
           label: pick({ en: 'Every day', es: 'Cada día' }, lang),
@@ -490,7 +518,7 @@ function Doc({ id }: { id: string }) {
         </p>
       )}
       {PLANT === 'hoverflow' && id === 'introduction' && <div style={{ width: 3000, height: 12 }}>planted wide block</div>}
-      {PLANT === 'decimal-point' && id === 'introduction' && <p>{pick({ en: 'Integration step: 0.25 days.', es: 'Paso de integración: 0.25 días.' }, lang)}</p>}
+      {PLANT === 'decimal-point' && id === 'introduction' && <p>{pick({ en: 'Integration step: 0.25 days; worst difference 2.7e-08.', es: 'Paso de integración: 0.25 días; peor diferencia 2.7e-08.' }, lang)}</p>}
       {PLANT === 'low-contrast' && id === 'introduction' && <p style={{ color: '#9a9a9a' }}>{pick({ en: 'A planted pale line.', es: 'Una línea pálida plantada.' }, lang)}</p>}
       {PLANT === 'label-wide' && id === 'introduction' && <NarrowFontLabel />}
       {PLANT === 'mobile-only' && id === 'introduction' && <div className="fixture-mobile-only">planted narrow-screen block</div>}

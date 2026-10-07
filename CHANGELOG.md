@@ -1,3 +1,31 @@
+## [0.09.000] - 2026-10-07
+
+### Added
+
+What CAOS_Fragmenta still carried after 0.8.1 (CAOS_APP_SHELL#65; CAOS_MANAGE `plans/app-shell` BL-027, BL-028): with
+these a product draws its size distributions, its parity plots and a weighted views row on the shell.
+
+- `ViewsRow`: views side by side, each in a column the shell owns (a filling card keeps its height chain), the row
+  split by `shares` (`[3, 2]`); stacked below 900 px. A product removes its own column wrapper (Fragmenta's
+  `.fr-viewcol`).
+- `UPlotChart`: `x.log`, a log x axis that spans the data (uPlot rounds out to the next decade) and leaves the ticks it
+  does not label blank; `parity`, predicted against observed on one shared range in a square box with the identity
+  line, x unsorted allowed; `onPick(index)`, the point under the cursor on a click. Every index handed back is the
+  caller's, also when the chart sorted an unsorted x (`sortOrder`).
+- From the seventh series a repeated colour is dashed, in the plot and in the key (`seriesStyle`).
+- `/chart` exports `seriesStyle`, `sortOrder` and `parityRange`.
+- The gate fixture's Validation has a "Fit" sub-tab: a `ViewsRow` of three fifths and two fifths holding a parity plot
+  over an unsorted x (picking on) and a log-x curve; the clean run (G15) measures both.
+
+### Fixed
+
+- G11 let a number in scientific notation through: "2.7e-08" on a Spanish page writes its decimal with a point, and the
+  exponent hid it from the pattern (found on CAOS_Fragmenta's Implementation page). The exponent is now part of the
+  number; the `decimal-point` plant carries one.
+- The gate's header-route step (every route reached by a pointer click) let a locator wait its default 30 s and
+  throw, which ended the whole run (the 0.9.0 self-test, under load); a link that does not answer in time is now a G5
+  failure of its route.
+
 ## [0.08.002] - 2026-10-07
 
 ### Fixed

@@ -579,6 +579,9 @@ svg.lucide { flex: none; }
    defect 23, #54: `.caos-plot.fill` outranked the row's zero basis and took the row). */
 .caos-views-row { display: flex; gap: 0.9rem; flex: 1 1 auto; min-height: 0; min-width: 0; }
 .caos-views-row > *, .caos-views-row > .caos-plot.fill { flex: 1 1 0; min-width: 0; }
+/* ViewsRow's column: a view inside it keeps its height chain (a filling card fills the column); its share of the row
+   is its flex-grow. */
+.caos-views-col { display: flex; flex-direction: column; min-width: 0; min-height: 0; gap: 0.6rem; }
 
 /* Staleness: a view showing data for an earlier selection says so. */
 .caos-stale .caos-plot-body > :not(.caos-stale-overlay), .caos-readout.caos-stale dl { opacity: 0.45; }
