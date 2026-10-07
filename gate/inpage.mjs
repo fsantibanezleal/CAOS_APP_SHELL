@@ -531,20 +531,27 @@ export function installLib() {
   // ---- 0.8.0 measures ----------------------------------------------------------------------------------------
 
   /** The part of the page the ancestors of an element let it show when they CUT their content (overflow hidden or
-   * clip). A scroll container does not cut (a reader scrolls it), and neither does the viewport. */
+   * clip). A scroll container does not cut (a reader scrolls it), and neither does the viewport; and what lies beyond
+   * the first scroll container on an axis is a matter of scroll position, so the walk stops there on that axis (0.9.1:
+   * the contained `.app-shell`, viewport-high with its overflow hidden, read every documentation figure below the fold
+   * as "outside the drawing"). */
   const cutArea = (el) => {
     const area = { left: -Infinity, top: -Infinity, right: Infinity, bottom: Infinity };
-    for (let a = el.parentElement; a && a !== document.body && a !== document.documentElement; a = a.parentElement) {
+    let x = true;
+    let y = true;
+    for (let a = el.parentElement; a && a !== document.body && a !== document.documentElement && (x || y); a = a.parentElement) {
       const s = getComputedStyle(a);
       const ar = a.getBoundingClientRect();
-      if (s.overflowX === 'hidden' || s.overflowX === 'clip') {
+      if (x && (s.overflowX === 'hidden' || s.overflowX === 'clip')) {
         area.left = Math.max(area.left, ar.left);
         area.right = Math.min(area.right, ar.right);
       }
-      if (s.overflowY === 'hidden' || s.overflowY === 'clip') {
+      if (y && (s.overflowY === 'hidden' || s.overflowY === 'clip')) {
         area.top = Math.max(area.top, ar.top);
         area.bottom = Math.min(area.bottom, ar.bottom);
       }
+      if (s.overflowX === 'auto' || s.overflowX === 'scroll') x = false;
+      if (s.overflowY === 'auto' || s.overflowY === 'scroll') y = false;
     }
     return area;
   };
@@ -719,6 +726,29 @@ export function installLib() {
     for (let i = layers.length - 1; i >= 0; i -= 1) base = over(layers[i], base);
     return base;
   };
+  /** The colour an SVG text element is painted on: the last filled shape painted before it whose box holds its centre. */
+  const svgBackdrop = (text, page) => {
+    const svg = text.closest('svg');
+    if (!svg) return page;
+    const r = text.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    let found = null;
+    for (const shape of svg.querySelectorAll('rect, circle, ellipse, polygon, path')) {
+      if (!(shape.compareDocumentPosition(text) & Node.DOCUMENT_POSITION_FOLLOWING)) continue;
+      const ss = getComputedStyle(shape);
+      if (ss.display === 'none' || ss.visibility === 'hidden') continue;
+      const fill = parseColor(ss.fill);
+      if (!fill || fill.a === 0) continue;
+      const b = shape.getBoundingClientRect();
+      if (cx < b.left || cx > b.right || cy < b.top || cy > b.bottom) continue;
+      const a = fill.a * Number(ss.fillOpacity || 1) * opacityOf(shape);
+      if (a <= 0.05) continue;
+      found = { ...fill, a };
+    }
+    return found ? over(found, page) : page;
+  };
+
   const opacityOf = (el) => {
     let o = 1;
     for (let a = el; a; a = a.parentElement) o *= Number(getComputedStyle(a).opacity || 1);
@@ -753,8 +783,12 @@ export function installLib() {
       const fg = parseColor(isSvg ? s.fill : s.color);
       if (!fg) continue;
       const host = isSvg ? el.closest('svg')?.parentElement ?? el : el;
-      const bg = backdrop(host);
-      if (!bg) continue;
+      const page = backdrop(host);
+      if (!page) continue;
+      // SVG text sits on what the drawing painted under it (a label on a bar): the last filled shape before it whose
+      // box holds the text's centre, composited over the page (0.9.1: a marker in the page colour on a red bar read
+      // 1.06:1 against the page)
+      const bg = isSvg ? svgBackdrop(el, page) : page;
       const alpha = fg.a * opacityOf(el);
       const shownColor = over({ ...fg, a: alpha }, bg);
       const l1 = lum(shownColor);
