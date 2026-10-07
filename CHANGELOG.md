@@ -1,3 +1,23 @@
+## [0.09.001] - 2026-10-07
+
+### Fixed
+
+Found by the 0.9.0 gate on CAOS_Fragmenta (2,860 failures in 889 states, most of them the gate's own):
+
+- G10 judged a drawing against every ancestor that hides its overflow, the contained `.app-shell` included, which is as
+  high as the viewport: every documentation figure below the fold read "lies outside the drawing" (2,470 of the
+  failures). A drawing is now judged against the containers between it and its scroll container; what lies beyond the
+  scroll container is a matter of scroll position, not a cut.
+- G13 read SVG text against the page behind the drawing, so a label in the page colour on a bar measured 1.06:1. It now
+  takes the background from the last filled shape painted under the text's centre, composited over the page.
+- The light `good` (`#197c36`) and `magenta` (`#b93785`) cleared 4.5:1 on every surface but not on the `accent-soft`
+  highlight (4.46 and 4.44): a selected row of a table carries its tone text there (Fragmenta's comparison table). The
+  test of the palette now counts the highlight as a ground.
+
+The gate fixture carries each case in its clean run: a figure after five documentation sections, values in the page
+colour on the checkpoint bars, a highlighted row with good-tone text. The 0.9.0 gate fails that fixture (G10 2, G13 8);
+0.9.1 passes it.
+
 ## [0.09.000] - 2026-10-07
 
 ### Added
