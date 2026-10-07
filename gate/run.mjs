@@ -318,7 +318,7 @@ export async function runGate(o) {
           if (primary) {
             // ADR-0071 rule 9 / G5: every header route reached by a real pointer click from the App route.
             for (const route of routes.filter((r) => r !== '/')) {
-              await page.goto(urlFor('/'), { waitUntil: 'load', timeout: 30000 });
+              await page.goto(urlFor('/'), { waitUntil: 'load', timeout: 30000 }).catch(() => undefined);
               await settle(page);
               const link = page.locator('header nav a[href]');
               const hrefs = await link.evaluateAll((as) => as.map((a) => a.href));
@@ -326,8 +326,10 @@ export async function runGate(o) {
               let ok = false;
               if (idx >= 0) {
                 // A reader scrolls a narrow nav row to the link first; so does the gate, then clicks with the pointer.
-                await link.nth(idx).evaluate((el) => window.__caosGate.bringEl(el));
-                const box = await link.nth(idx).boundingBox();
+                // A link that does not answer in time is a failure of this route, never an exception that ends the
+                // whole run (a locator waited its default 30 s under load and aborted the gate, 0.9.0 self-test).
+                await link.nth(idx).evaluate((el) => window.__caosGate.bringEl(el), undefined, { timeout: 10000 }).catch(() => undefined);
+                const box = await link.nth(idx).boundingBox({ timeout: 10000 }).catch(() => null);
                 if (box) {
                   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
                   await page.waitForURL((u) => routeOf(u.href) === route, { timeout: 3000 }).catch(() => undefined);
