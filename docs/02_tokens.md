@@ -23,16 +23,18 @@ Keyed on `data-theme` on `<html>`, set before the first frame by `THEME_BOOT_SCR
 | `--color-accent-fg` | `#0d1117` | `#ffffff` | text on the accent |
 | `--color-accent-soft` | `#132036` | `#ddf4ff` | the selected tab's background |
 | `--color-accent-2` | `#3fb1c8` | `#0a7886` | real-data badges, a second accent |
-| `--color-magenta` | `#f778ba` | `#bf3989` | synthetic-data badges, a series |
-| `--color-good` | `#3fb950` | `#1a7f37` | tones, the live lane |
+| `--color-magenta` | `#f778ba` | `#b93785` | synthetic-data badges, a series |
+| `--color-good` | `#3fb950` | `#197c36` | tones, the live lane |
 | `--color-warn` | `#d29922` | `#946300` | tones, caveats, marks |
 | `--color-bad` | `#f85149` | `#cf222e` | tones, errors |
 | `--color-shadow` | (a shadow) | (a shadow) | card shadow |
 
-**Every text colour reads at WCAG AA (4.5:1) on `bg`, `surface` and `surface-2` in both themes**, and the accent on
-the accent-soft and the accent-fg on the accent too (`test/base08.test.tsx` computes all of them). Until 0.8.0 the
-faint text read 3.49:1 on the dark raised surface and 4.08:1 on the light one; `fg-faint`, the light `accent-2` and the
-light `warn` were moved the least distance that clears 4.5:1 (G13 measures every rendered text the same way).
+**Every text colour reads at WCAG AA (4.5:1) on `bg`, `surface`, `surface-2` and the `accent-soft` highlight in both
+themes**, and the accent-fg on the accent too (`test/base08.test.tsx` computes all of them). Until 0.8.0 the faint text
+read 3.49:1 on the dark raised surface and 4.08:1 on the light one; `fg-faint`, the light `accent-2` and the light
+`warn` were moved the least distance that clears 4.5:1. In 0.9.1 the light `good` and `magenta` moved the same way, so
+a selected row can carry its tone text on the highlight (CAOS_Fragmenta's table read 4.46:1). G13 measures every
+rendered text the same way.
 
 ## Type, space, radii
 
