@@ -278,6 +278,9 @@ function ValidationView({ sim }: { sim: Sim }) {
                     <th>S</th>
                     <th>I</th>
                     <th>R</th>
+                    <th>{pick({ en: 'Susceptible people', es: 'Personas susceptibles' }, lang)}</th>
+                    <th>{pick({ en: 'Infected people', es: 'Personas contagiadas' }, lang)}</th>
+                    <th>{pick({ en: 'Recovered people', es: 'Personas recuperadas' }, lang)}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -286,6 +289,9 @@ function ValidationView({ sim }: { sim: Sim }) {
                     .map((d) => (
                       <tr key={d}>
                         <td>{d}</td>
+                        <td>{sim.S[d].toFixed(0)}</td>
+                        <td>{sim.I[d].toFixed(0)}</td>
+                        <td>{sim.R[d].toFixed(0)}</td>
                         <td>{sim.S[d].toFixed(0)}</td>
                         <td>{sim.I[d].toFixed(0)}</td>
                         <td>{sim.R[d].toFixed(0)}</td>
@@ -306,7 +312,6 @@ function CompareView({ peaks }: { peaks: { id: string; label: string; peak: numb
     <PlotCard fill title={{ en: 'Peak infected by variant', es: 'Pico de infectados por variante' }} lane="live" provenance="synthetic" dataKey={useWorkbenchState().stateKey}>
       <BarChart
         title={{ en: 'Peak infected by variant', es: 'Pico de infectados por variante' }}
-        orientation="vertical"
         height="fill"
         axis={{ label: { en: 'Peak infected', es: 'Pico de infectados' }, unit: { en: 'people', es: 'personas' }, format: { decimals: 0 } }}
         data={peaks.map((p, i) => ({ id: p.id, label: p.label, value: p.peak, highlight: i === 0 }))}

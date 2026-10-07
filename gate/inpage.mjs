@@ -17,6 +17,11 @@ export function installLib() {
       });
   }
 
+  /** The ancestors of an element up to (not including) `stop`. */
+  function* ancestorsUntil(el, stop) {
+    for (let a = el.parentElement; a && a !== stop && a !== document.body; a = a.parentElement) yield a;
+  }
+
   const visible = (el) => {
     if (!el || el.nodeType !== 1) return false;
     const r = el.getBoundingClientRect();
@@ -233,7 +238,9 @@ export function installLib() {
           y,
           w: x2 - x,
           h: y2 - y,
-          right: r.right,
+          // a table or drawing inside a box that SCROLLS sideways (a wide table on a phone, ADR-0071 rule 3) ends where
+          // its box ends: a reader scrolls it; one cut by a box that hides its overflow still extends past the page
+          right: Math.min(r.right, ...[...ancestorsUntil(el, inst)].filter((a) => ['auto', 'scroll'].includes(getComputedStyle(a).overflowX)).map((a) => a.getBoundingClientRect().right)),
           stageKey: path(stageEl),
           stage: clipRect(stageEl.getBoundingClientRect()),
           viewKey: path(viewEl),
@@ -523,6 +530,25 @@ export function installLib() {
 
   // ---- 0.8.0 measures ----------------------------------------------------------------------------------------
 
+  /** The part of the page the ancestors of an element let it show when they CUT their content (overflow hidden or
+   * clip). A scroll container does not cut (a reader scrolls it), and neither does the viewport. */
+  const cutArea = (el) => {
+    const area = { left: -Infinity, top: -Infinity, right: Infinity, bottom: Infinity };
+    for (let a = el.parentElement; a && a !== document.body && a !== document.documentElement; a = a.parentElement) {
+      const s = getComputedStyle(a);
+      const ar = a.getBoundingClientRect();
+      if (s.overflowX === 'hidden' || s.overflowX === 'clip') {
+        area.left = Math.max(area.left, ar.left);
+        area.right = Math.min(area.right, ar.right);
+      }
+      if (s.overflowY === 'hidden' || s.overflowY === 'clip') {
+        area.top = Math.max(area.top, ar.top);
+        area.bottom = Math.min(area.bottom, ar.bottom);
+      }
+    }
+    return area;
+  };
+
   /** The boxes a text element occupies on screen: one per line (tspan) when it has several. */
   const textBoxes = (t) => {
     const spans = [...t.querySelectorAll('tspan')].filter((s) => (s.textContent || '').trim());
@@ -550,7 +576,7 @@ export function installLib() {
       if (svg.classList.contains('lucide') || !visible(svg)) continue;
       const sr = svg.getBoundingClientRect();
       if (sr.width < 48 || sr.height < 24) continue;
-      const area = visibleArea(svg);
+      const area = cutArea(svg);
       const box = { left: Math.max(sr.left, area.left), top: Math.max(sr.top, area.top), right: Math.min(sr.right, area.right), bottom: Math.min(sr.bottom, area.bottom) };
       const name = describe(svg.closest('[data-plot]') || svg);
       const texts = [...svg.querySelectorAll('text')].filter((t) => (t.textContent || '').trim() && visible(t));
@@ -559,7 +585,7 @@ export function installLib() {
         for (const b of textBoxes(t)) {
           // a label outside the visible part of the drawing: cut, or drawn where no one sees it
           if (b.top >= box.bottom || b.bottom <= box.top) {
-            if (sr.bottom <= area.bottom + 1 && sr.top >= area.top - 1) out.push(`${name}: the label "${(t.textContent || '').trim().slice(0, 40)}" lies outside the drawing`);
+            out.push(`${name}: the label "${(t.textContent || '').trim().slice(0, 40)}" lies outside the drawing`);
             continue;
           }
           const cutX = Math.max(0, box.left - b.left) + Math.max(0, b.right - box.right);
