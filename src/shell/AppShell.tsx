@@ -165,6 +165,10 @@ function Frame({ config, pathname, routed, children }: { config: ShellConfig; pa
 
   return (
     <div className={config.contain ? 'app-shell fixed contain' : fixed ? 'app-shell fixed' : 'app-shell'}>
+      {/* The first stop of the keyboard: past the header to the content (WCAG 2.4.1). */}
+      <a className="skip-link" href="#main">
+        {c.skip}
+      </a>
       <header className="site-header">
         <div className="header-inner">
           {routed ? (
@@ -205,7 +209,7 @@ function Frame({ config, pathname, routed, children }: { config: ShellConfig; pa
 
       {config.architecture && archOpen && <ArchitectureModal config={config.architecture} onClose={() => setArchOpen(false)} />}
 
-      <main className="page">
+      <main className="page" id="main" tabIndex={-1}>
         <PanelBoundary panel="page">{children}</PanelBoundary>
       </main>
 

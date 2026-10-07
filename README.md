@@ -3,15 +3,18 @@
 [![License](https://img.shields.io/github/license/fsantibanezleal/CAOS_APP_SHELL)](LICENSE)
 [![Version](https://img.shields.io/github/v/tag/fsantibanezleal/CAOS_APP_SHELL?label=version&sort=semver)](https://github.com/fsantibanezleal/CAOS_APP_SHELL/tags)
 
-The shared **web-app shell + content primitives + design system** for the CAOS / Faena public apps
-(implements [ADR-0016](https://github.com/fsantibanezleal)). Define the header, footer, theme, language
-toggle and content primitives **once** here; every app consumes them so the chrome is identical and a
-fix lands in one place.
+The shared **web-app shell, route types, views, drawings, design system and measured gate** of the CAOS / Faena
+public apps, one of the three parts of the CAOS base with the product template
+([CAOS_PRODUCT_TEMPLATE](https://github.com/fsantibanezleal/CAOS_PRODUCT_TEMPLATE)) and the policy (ADR-0016,
+ADR-0017, ADR-0071, ADR-0078). The frame, the header, the icons, the tab structure, the viewport, the areas, the text in
+drawings and the numbers are defined **once** here; every product composes them, so a fix lands in one place and no
+product writes them again. **Documentation: [`docs/`](docs/README.md)** (structure, tokens, navigation, views,
+drawings, icons and numbers, the gate, releasing).
 
 ## Install
 
 ```bash
-npm i @fasl-work/caos-app-shell
+npm i -E @fasl-work/caos-app-shell        # an exact pin: the build you gated is the build you ship
 # peer deps (the app provides them):
 npm i react react-dom react-router lucide-react katex zustand
 # optional: the house chart and the measured gate
@@ -50,7 +53,11 @@ const config: ShellConfig = {
 </BrowserRouter>
 ```
 
-- **Land on the tool:** `/` is the workbench; the five documentation routes are separate pages.
+- **Three route types** ([docs/01](docs/01_structure.md)): the **workbench** (`CaseWorkbench`, a product about
+  cases), the **surface** (`SurfacePage`, a hub, an explorer or a console: a head, one row of views, the open view
+  filling the rest), the **document** (`DocPage`). Under `contain` each fills or scrolls inside the viewport; no product
+  writes containment CSS.
+- **Land on the tool:** `/` is the App route; the five documentation routes are separate pages.
 - **One React, one router:** set `resolve.dedupe: ['react', 'react-dom', 'react-router']` in Vite. A second copy
   leaves the shell outside the router context; `AppShell` reports it with `console.error` and names the cause.
 - **Product metadata:** `license` and `visibility` are required: the footer shows the product's licence and a
@@ -70,11 +77,16 @@ const config: ShellConfig = {
 - **Drawing:** put canvas, WebGL and SVG instruments in a `Stage` (or `useStageSize`): nothing draws at zero
   size, and colours come from `useThemeTokens()` (a canvas cannot read CSS variables).
 - **Charts:** `import { UPlotChart } from "@fasl-work/caos-app-shell/chart"`: x and y titles with units, series
-  by token colour, `marks` for what the engine detected, a key of every series when there are two or more, a cursor
-  readout row, theme and language rebuilds. Keep series labels short: the key wraps under the plot.
+  by token colour, `marks` for what the engine detected (placed inside the plot, haloed), a key of every series when
+  there are two or more, a cursor readout row, theme and language rebuilds, one tick notation per axis. Categories go
+  in `BarChart` (main entry, no uPlot). A drawing of your own measures its labels with the text kit (`textWidth`,
+  `fitLabel`, `niceTicks`) and declares `data-chart` ([docs/05](docs/05_drawings.md)).
+- **Views in the URL:** `CaseWorkbench` and `SurfacePage` hold the open view in `?view=` (and the case selector the
+  case in `?case=`), so a view can be shared and survives a reload.
+- **Icons:** lucide icons are sized by where they sit (`svg.lucide`); pass no `size` ([docs/06](docs/06_icons-and-numbers.md)).
 - **Numbers:** `formatNumber(value, lang, opts)` or `useFormat()`; never `toFixed` in a view. A magnitude below 1e-4
   is written in scientific notation (a p-value of 1e-200 is `1E-200`, not two hundred zeros); give `digits`, not
-  `decimals`, for p-values.
+  `decimals`, for p-values. A percent and a unit are joined by a no-break space.
 - **Documentation routes:** `DocPage` and `DocSection` (each section ends in its own `Refs`, or states why it
   cites nothing), `Equation` with a caption, `CitationsProvider` and `Cite` (every citation has a DOI or URL).
   `Tabs`, `SubTabs` and `TabGroups` are controllable and render only the open panel inside a `PanelBoundary`.
@@ -85,9 +97,14 @@ const config: ShellConfig = {
   every route, tab, sub-tab and case at five sizes, both themes and both languages, and fails on: a wrong subject
   (G1) or mode (G2), console errors and 4xx/5xx (G3), broken deep links or HTML for an artifact (G4), anything a
   reader cannot scroll to, see whole or click (G5), blank or underfilled drawings and an instrument under half the
-  viewport (G6), a view that never settles (G7), loops at rest (G8), and controls that change nothing (G9). The
-  report (`gate-output/gate-report.json`) lists every failure and the smallest margins against each floor.
-- **Your own CSS:** never redefine a class in `reserved-classes.json`; the product guard reads that list.
+  viewport (G6), a view that never settles (G7), loops at rest (G8), controls that change nothing (G9), labels cut or
+  overlapping in a drawing, also in a wider fallback font (G10), a decimal point on a Spanish page (G11), a vertical
+  sub-tab list that scrolls away (G12), text under WCAG AA contrast (G13). The report
+  (`gate-output/gate-report.json`) lists every failure and the smallest margins against each floor; `index.html`
+  beside it shows every capture (G14). Details: [docs/07](docs/07_gate.md).
+- **Your own CSS:** never restyle a class of `reserved-classes.json` `components`; a `modifiers` word (`on`,
+  `active`, `fill`, `wide`) may be joined to your own class (`.my-row.on`), never used alone. The template's guard reads
+  that list. Values come from the tokens (`var(--rail-w)`, `var(--space-3)`, [docs/02](docs/02_tokens.md)).
 - **Animated views:** drive every canvas or 3D loop through `usePausedViz` (default paused, run once, halt on a
   hidden tab), never call `requestAnimationFrame` directly.
 
@@ -102,8 +119,11 @@ const config: ShellConfig = {
 `ReferenceList` (deprecated), `DocPage`, `DocSection`, `WorkbenchLayout`, `CaseWorkbench`,
 `MAX_WORKBENCH_GROUPS`, `VariantBar`, `LaneBadge`, `Readout`, `Gauge`, `Verdict`, `PlotCard`, `Knob`,
 `ChipGroup`, `Stage`, `useStageSize`, `makeStateKey`, `isStale`, `useWorkbenchState`,
-`WorkbenchStateContext`, `pick`. Separate entries: `/chart` (`UPlotChart`), `/keys` (the storage keys, no
-React), `/styles.css`, `/chart.css`, `/reserved-classes.json`. Bin: `caos-shell-gate`.
+`WorkbenchStateContext`, `pick`; since 0.8.0 `SurfacePage`, `useUrlView`, `viewParamOf`, `replaceQueryParam`,
+`BREAKPOINTS`, `BarChart`, `textWidth`, `widestLabel`, `fitLabel`, `niceTicks`, `niceStep`, `fontFamily`,
+`formatTicks`, `NBSP`, `SCIENTIFIC_BELOW`, the type `ShellColorToken`. Separate entries: `/chart` (`UPlotChart`,
+`drawMarks`, `tickSteps`, `repeatedLabels`), `/keys` (the storage keys, no React), `/styles.css`, `/chart.css`,
+`/reserved-classes.json`. Bin: `caos-shell-gate`.
 
 ### Authenticated workbenches
 

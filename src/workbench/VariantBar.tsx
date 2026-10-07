@@ -1,4 +1,6 @@
+import { useRef } from 'react';
 import { useShellLang } from '../lib/lang';
+import { useOverflowFade } from '../lib/overflow';
 import { type BiText, pick } from '../lib/text';
 import { type Lane, LaneBadge } from './LaneBadge';
 
@@ -27,6 +29,8 @@ export function VariantBar({ variants, activeId, onSelect, title, lane }: Varian
   const lang = useShellLang();
   const active = variants.find((v) => v.id === activeId) ?? variants[0];
   const shownLane = active?.lane ?? lane;
+  const rowRef = useRef<HTMLDivElement | null>(null);
+  useOverflowFade(rowRef, '.chip.on', [active?.id, variants.length, lang]);
   return (
     <div className="caos-variant-bar" data-variant-bar="" data-variant-count={variants.length}>
       <div className="caos-variant-head">
@@ -35,7 +39,7 @@ export function VariantBar({ variants, activeId, onSelect, title, lane }: Varian
         </span>
         {shownLane && <LaneBadge lane={shownLane} />}
       </div>
-      <div className="caos-chip-row" role="radiogroup" aria-label={pick(title ?? { en: 'Variants', es: 'Variantes' }, lang)} data-control="variant">
+      <div className="caos-chip-row" role="radiogroup" aria-label={pick(title ?? { en: 'Variants', es: 'Variantes' }, lang)} data-control="variant" ref={rowRef}>
         {variants.map((v) => (
           <button
             key={v.id}

@@ -1,3 +1,85 @@
+## [0.08.000] - 2026-10-07
+
+The base defines the structure every product builds on (#59; CAOS_MANAGE `plans/app-shell`, research in
+`wip/template-archetype/base-unify-audit-2026-10-07.md`). A survey of the 89 React frontends of the line found 44 on the
+shell, 43 of them restyling its classes, 15 to 19 writing the same containment for a tab App, 16 to 24 holding their
+tab rows by hand, and 29 carrying their own uPlot wrapper; this release moves those into the shell. Documentation:
+`docs/` (structure, tokens, navigation, views, drawings, icons and numbers, the gate, releasing).
+
+### Added
+
+- `SurfacePage`, the third route type beside the workbench and the document: a head (title, lede, actions), one row of
+  at most six views, the open view filling the viewport under `contain` and scrolling inside it.
+- The open view in the URL: `CaseWorkbench` holds its open group and `SurfacePage` its open view in `?view=`
+  (`deepLinkView`); `useUrlView` for a tab row of a product's own.
+- Tokens for type (`--text-*`), space (`--space-*`), radii (`--radius-*`), layout (`--measure`, `--measure-text`,
+  `--header-h`, `--rail-w`, `--fade`), icons (`--icon-*`) and z-order (`--z-*`), all in `SHELL_TOKENS`; one breakpoint
+  set, 480, 760 and 900 px (and the gate's 1280), exported as `BREAKPOINTS`.
+- `BarChart`, a categorical chart without uPlot: margins measured from the labels, labels broken at a word and then
+  shortened with their title, round ticks in one notation, values in the interface language, `highlight`, `tone`,
+  `onSelect`.
+- The text kit for a product's own drawings: `textWidth`, `widestLabel`, `fitLabel`, `niceTicks`, `niceStep`,
+  `fontFamily` (from CAOS_Fragmenta 0.07.000).
+- `formatTicks` (one notation per axis), `NBSP`, `SCIENTIFIC_BELOW`, the `notation` option of `formatNumber`, the
+  type `ShellColorToken`; `/chart` exports `drawMarks`, `tickSteps` and `repeatedLabels`.
+- A skip link to `main#main`, the first keyboard stop of every page.
+- Icons sized by their context: lucide's `svg.lucide` in the header, tabs, sub-tabs, chips, buttons, route links,
+  badges, callout titles, plot heads and the console sidebar; a product passes no size.
+- Gate: G10 text in drawings (labels cut, outside the drawing or overlapping, in every declared chart, instrument SVG
+  and document figure), with a wide-font pass (Verdana, else DejaVu Sans) at 390 and 1280 px; G11 a decimal point on a
+  Spanish page; G12 a vertical sub-tab list that scrolls away; G13 text under WCAG AA contrast; G14 `index.html`
+  beside the report, every capture by route with the failures first; options `--wide-font-sizes` and
+  `--no-wide-font`. The self-test (G15) plants a defect for each: 34 plants.
+
+### Changed
+
+- `styles.css` is written in ordered layers (tokens, base, frame, routes, navigation, content, controls, case
+  selector, workbench, frames), each class defined in one place (`.tablist` and `.subtablist` were defined twice, the
+  second overriding the first); class names are unchanged.
+- Every tab row (`.tablist`, `.subtablist`, the rail's section row) holds its height in any flex column, not only in
+  the workbench: a product removes its own `.tablist { flex: 0 0 auto }` and `.tab { flex: 0 0 auto }`.
+- Text blocks inside a document (paragraphs, list items, callouts, captions) keep a 78ch line (`--measure-text`);
+  figures, tables and grids keep the width. A product removes its own `max-width: 78ch` on callouts and captions.
+- The faint text colour, and in the light theme `accent-2` and `warn`, were raised to WCAG AA on every surface: the
+  faint text read 3.49:1 on the dark raised surface and 4.08:1 on the light one (dark `--color-fg-faint` `#828b97`,
+  light `#656d77`; light `--color-accent-2` `#0a7886`, `--color-warn` `#946300`). A unit test computes every pair.
+- `reserved-classes.json` lists `components` (never restyled) and `modifiers` (`on`, `active`, `fill`, `wide`, ...,
+  which a product may join to its own class); `classes` keeps both for 0.7 readers. The words read from the
+  `@import` lines (`css`) are gone. The gauge legend dot is `.caos-gauge-dot`.
+- The rail's section row fades its hidden end, reveals the open section and takes the arrow keys, Home and End.
+
+### Fixed
+
+- Known shell defect 26: `html, body { overflow-x: hidden }` computed body's vertical overflow to auto, so body was a
+  scroll container that never scrolls and nothing in a scrolling document could stick to the viewport: the site header
+  scrolled away on every default-mode page and on a phone. `overflow-x: clip` (with `hidden` as the fallback). Below
+  900 px a contained document's page is released in both forms of its rule (the `:has()` form had kept it a scroll
+  container).
+- Known shell defect 24 (#55): the vertical sub-tab list is sticky; it stays in view at the end of a long section.
+- Known shell defect 23 (#54): a filling `PlotCard` in a `.caos-views-row` takes an equal share; a product removes its
+  wrapper column (CAOS_Fragmenta `.fr-viewcol`).
+- Known shell defect 22: a percent is joined to its sign, and a unit to its value (`Knob`, `Readout`, `Gauge`, the
+  chart readout), by a no-break space.
+- Known shell defect 19: an axis writes all its ticks in one notation.
+- Known shell defect 20 (the gate): a control whose inputs are all disabled is not moved by the reactivity check.
+- `UPlotChart` marks: drawn with an explicit left alignment (uPlot left the canvas right-aligned after its y axis, so
+  the template's "peak" label sat on the wrong side of its line and ran off the plot near the left edge), on the side
+  of the line where they fit inside the plot, on separate rows when they would overlap, with a halo; a mark outside
+  the x range is not drawn.
+- `UPlotChart` y axis: measured in the font uPlot draws with at the device pixel ratio; it was too narrow on every
+  high-density screen (the gate runs at ratio 1).
+- The gate's truncation check normalised the letter `s` instead of whitespace (`/s+/g`); its pointer probe takes a 1x1
+  hidden control (the skip link) for what it is, and scrolls a control clear of a header stuck at the top of the
+  viewport; the tab walk does the same before it clicks.
+- `CaseSelector` keeps the router's history state when it writes `?case=` (it replaced it with `null`).
+
+### Adoption (ADR-0078 section 5)
+
+Pin `0.8.0` exactly. Remove: containment CSS for a tab App (use `SurfacePage`), tab-row flex and wrap overrides, chip
+styling, `max-width: 78ch` on callouts and captions, product wrappers for a views row, label-fitting code that the
+text kit replaces, hand-drawn bar charts (use `BarChart`), icon `size` props. Run the gate: G10 to G13 may report what
+the product carried unseen.
+
 ## [0.07.003] - 2026-10-06
 
 ### Fixed

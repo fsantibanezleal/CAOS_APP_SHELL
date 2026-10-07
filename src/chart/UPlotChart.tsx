@@ -1,9 +1,9 @@
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import uPlot from 'uplot';
-import { type FormatOptions, formatNumber } from '../lib/format';
+import { type FormatOptions, formatNumber, formatTicks, NBSP } from '../lib/format';
 import { useShellLang } from '../lib/lang';
 import { type BiText, pick } from '../lib/text';
-import { resolveToken, type ShellToken } from '../lib/tokens';
+import { resolveToken, type ShellColorToken } from '../lib/tokens';
 import { useThemeStore } from '../lib/theme';
 import { useStageSize } from '../workbench/Stage';
 
@@ -12,7 +12,7 @@ export interface ChartSeries {
   /** One value per x; `null` leaves a gap. */
   values: (number | null)[];
   /** A shell colour token; defaults rotate through the accent palette. */
-  color?: ShellToken;
+  color?: ShellColorToken;
   width?: number;
   dash?: number[];
   /** `points` draws markers only (a scatter of cases over a curve); `null` values are simply absent. */
@@ -40,7 +40,7 @@ export interface UPlotChartProps {
   onCursor?: (index: number | null) => void;
 }
 
-const ROTATION: ShellToken[] = ['--color-accent', '--color-magenta', '--color-accent-2', '--color-good', '--color-warn', '--color-bad'];
+const ROTATION: ShellColorToken[] = ['--color-accent', '--color-magenta', '--color-accent-2', '--color-good', '--color-warn', '--color-bad'];
 
 /** uPlot's numeric tick steps: 1, 2, 2.5 and 5 times every power of ten. */
 const STEPS: number[] = [];
@@ -63,6 +63,62 @@ export function repeatedLabels(labels: readonly (string | null | undefined)[]): 
   let n = 0;
   for (let i = 1; i < labels.length; i++) if (labels[i] && labels[i] === labels[i - 1]) n++;
   return n;
+}
+
+/** A placed mark label, in device pixels. */
+interface Placed {
+  x0: number;
+  x1: number;
+  row: number;
+}
+
+/**
+ * The vertical marks of a chart and their labels. Every label is drawn with an explicit alignment (uPlot leaves the
+ * context right-aligned after its last axis, so a label meant to start at its line ended there and ran off the plot
+ * near the left edge, CAOS_Fragmenta 2026-10-06), on the side of its line where it fits inside the plot, on the next
+ * row down when it would overlap the label before it, with a halo in the surface colour so a curve under it does not
+ * cross its letters. A mark outside the x range is not drawn.
+ */
+export function drawMarks(u: uPlot, marks: { x: number; label: string }[], style: { color: string; halo: string; family: string }): void {
+  const ctx = u.ctx;
+  const pr = uPlot.pxRatio || 1;
+  const left = u.bbox.left;
+  const right = u.bbox.left + u.bbox.width;
+  const gap = 4 * pr;
+  const rowH = 14 * pr;
+  const placed: Placed[] = [];
+  ctx.save();
+  ctx.font = `${Math.round(11 * pr)}px ${style.family}`;
+  ctx.textBaseline = 'alphabetic';
+  ctx.lineJoin = 'round';
+  for (const m of [...marks].sort((a, b) => a.x - b.x)) {
+    const px = u.valToPos(m.x, 'x', true);
+    if (!Number.isFinite(px) || px < left - 0.5 || px > right + 0.5) continue;
+    ctx.strokeStyle = style.color;
+    ctx.lineWidth = Math.max(1, pr);
+    ctx.setLineDash([4 * pr, 4 * pr]);
+    ctx.beginPath();
+    ctx.moveTo(px, u.bbox.top);
+    ctx.lineTo(px, u.bbox.top + u.bbox.height);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    const w = ctx.measureText(m.label).width;
+    // right of the line when it fits, else left of it, else clamped inside the plot
+    let x0 = px + gap;
+    if (x0 + w > right) x0 = px - gap - w;
+    if (x0 < left) x0 = Math.max(left, Math.min(right - w, px - w / 2));
+    let row = 0;
+    while (placed.some((p) => p.row === row && x0 < p.x1 + gap && x0 + w + gap > p.x0)) row += 1;
+    placed.push({ x0, x1: x0 + w, row });
+    const y = u.bbox.top + 12 * pr + row * rowH;
+    ctx.textAlign = 'left';
+    ctx.lineWidth = 3 * pr;
+    ctx.strokeStyle = style.halo;
+    ctx.strokeText(m.label, x0, y);
+    ctx.fillStyle = style.color;
+    ctx.fillText(m.label, x0, y);
+  }
+  ctx.restore();
 }
 
 /**
@@ -122,10 +178,13 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlo
     if (!el || width <= 0 || h <= 0) return;
     const fg = resolveToken('--color-fg-subtle', '#888');
     const grid = resolveToken('--color-border', '#ccc');
-    const font = `11px ${resolveToken('--font-sans', 'sans-serif')}`;
+    const family = resolveToken('--font-sans', 'sans-serif');
+    const font = `11px ${family}`;
+    const surface = resolveToken('--color-surface', '#fff');
     const repeats = { x: 0, y: 0 };
+    // One notation per axis (known shell defect 19): the labels of an axis are formatted together.
     const tick = (fmt: FormatOptions | undefined, axis: 'x' | 'y') => (_u: uPlot, vals: (number | null)[]) => {
-      const labels = vals.map((v) => (v === null || v === undefined ? '' : formatNumber(v, lang, fmt ?? { digits: 4 })));
+      const labels = formatTicks(vals, lang, fmt ?? { digits: 4 });
       repeats[axis] = repeatedLabels(labels);
       hostRef.current?.setAttribute('data-ticks-repeat', String(repeats.x + repeats.y));
       return labels;
@@ -157,11 +216,15 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlo
           labelFont: font,
           values: tick(y.format, 'y'),
           ...(ySteps ? { incrs: ySteps } : {}),
+          // Sized to the longest tick label. uPlot draws in device pixels with a font scaled by its pixel ratio, so the
+          // label is measured in that font and divided back (measuring the unscaled font and dividing by the ratio
+          // made the axis too narrow on every high-density screen; the gate runs at ratio 1 and never saw it).
           size: (u: uPlot, values: string[] | null) => {
             if (!values || values.length === 0) return 48;
-            u.ctx.font = font;
+            const pr = uPlot.pxRatio || 1;
+            u.ctx.font = `${Math.round(11 * pr)}px ${family}`;
             const widest = Math.max(...values.map((v) => u.ctx.measureText(v ?? '').width));
-            return Math.ceil(widest / (window.devicePixelRatio || 1)) + 30;
+            return Math.ceil(widest / pr) + 30;
           },
         },
       ],
@@ -185,21 +248,11 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlo
         draw: [
           (u: uPlot) => {
             if (!marks?.length) return;
-            const ctx = u.ctx;
-            ctx.save();
-            ctx.strokeStyle = resolveToken('--color-warn', '#c80');
-            ctx.fillStyle = resolveToken('--color-warn', '#c80');
-            ctx.setLineDash([4, 4]);
-            ctx.font = font;
-            for (const m of marks) {
-              const px = u.valToPos(m.x, 'x', true);
-              ctx.beginPath();
-              ctx.moveTo(px, u.bbox.top);
-              ctx.lineTo(px, u.bbox.top + u.bbox.height);
-              ctx.stroke();
-              ctx.fillText(pick(m.label, lang), px + 4, u.bbox.top + 12);
-            }
-            ctx.restore();
+            drawMarks(u, marks.map((m) => ({ x: m.x, label: pick(m.label, lang) })), {
+              color: resolveToken('--color-warn', '#c80'),
+              halo: surface,
+              family,
+            });
           },
         ],
       },
@@ -221,9 +274,9 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor }: UPlo
   const read =
     cursor !== null
       ? [
-          `${xLabel} ${formatNumber(x.values[cursor], lang, x.format ?? { digits: 4 })}${xUnit ? ` ${xUnit}` : ''}`,
+          `${xLabel} ${formatNumber(x.values[cursor], lang, x.format ?? { digits: 4 })}${xUnit ? `${NBSP}${xUnit}` : ''}`,
           ...series.map(
-            (s) => `${pick(s.label, lang)} ${formatNumber(s.values[cursor] ?? null, lang, y.format ?? { digits: 4 })}${yUnit ? ` ${yUnit}` : ''}`,
+            (s) => `${pick(s.label, lang)} ${formatNumber(s.values[cursor] ?? null, lang, y.format ?? { digits: 4 })}${yUnit ? `${NBSP}${yUnit}` : ''}`,
           ),
         ].join(' · ')
       : lang === 'es'

@@ -15,11 +15,18 @@
 //                            waiting for declared state (data-state, data-stale, data-drawn), never networkidle
 //   G8 idle at rest          no sustained animation frames or DOM mutations after load and after a tab switch
 //   G9 reactivity            each registered control changes the selection key and no view keeps an old one; the
-//                            rendered case is the case asked for
+//                            rendered case is the case asked for; a disabled control is not moved
+//   G10 text in drawings     every label of a chart, an instrument SVG or a document figure inside the drawing and
+//                            clear of the others, also when every page is rendered in a wider fallback font (the
+//                            wide-font pass: Verdana, else DejaVu Sans, the Linux runner's font)
+//   G11 Spanish numbers      a page in Spanish writes no decimal point (canvas text excepted)
+//   G12 sticky lists         a vertical sub-tab list is still in view at the end of a long section
+//   G13 contrast             every visible text at WCAG AA against the colour behind it (primary size, both themes)
+//   G14 captures index       gate-output/index.html shows every capture by route and mode, the failures first
 // plus the ADR-0071 and ADR-0017 measures (viewport, one-row tabs, rail without scroll, centred prose, captions,
 // references).
 
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { decodePng, paintedBox, unionArea } from './png.mjs';
 import { servePages } from './serve.mjs';
@@ -38,7 +45,13 @@ export const DEFAULTS = {
   viewportMinWidth: 1280,
   out: 'gate-output',
   maxShots: 40,
+  wideFont: true,
+  wideFontSizes: '390x844,1280x800',
 };
+
+/** The wide fallback font of the G10 pass: wider than the Windows and macOS sans fonts; DejaVu Sans is what a Linux
+ * reader (and the CI runner) gets. Applied before the first frame, so a drawing that measures its text measures it. */
+const WIDE_FONT = ':root, :root[data-theme] { --font-sans: Verdana, "DejaVu Sans", sans-serif !important; }';
 
 const RATE_LIMIT = 5; // frames or mutations per second at rest above which a loop is reported (G8)
 
@@ -103,8 +116,26 @@ export async function runGate(o) {
   const artifacts = new Map();
 
   const browser = await chromium.launch();
-  const openContext = async ([w, h], theme, lang) => {
+  const openContext = async ([w, h], theme, lang, wide = false) => {
     const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1 });
+    if (wide) {
+      await ctx.addInitScript((css) => {
+        const add = () => {
+          const st = document.createElement('style');
+          st.setAttribute('data-caos-gate-font', '');
+          st.textContent = css;
+          document.documentElement.appendChild(st);
+        };
+        if (document.documentElement) add();
+        else
+          new MutationObserver((_, o) => {
+            if (document.documentElement) {
+              o.disconnect();
+              add();
+            }
+          }).observe(document, { childList: true });
+      }, WIDE_FONT);
+    }
     await ctx.addInitScript(
       ([tk, lk, t, l]) => {
         try {
@@ -223,6 +254,7 @@ export async function runGate(o) {
           const mode = `${w}x${h} ${theme} ${lang}`;
           const primary = size === primarySize && theme === themes[0] && lang === langs[0];
           const idleHere = theme === themes[0] && lang === langs[0];
+          const contrast = size === primarySize && lang === langs[0];
           const ctx = await openContext(size, theme, lang);
           const { page, sink } = await newPage(ctx);
           for (const route of routes) {
@@ -248,7 +280,7 @@ export async function runGate(o) {
             if (route !== '/' && id.activeHref && routeOf(id.activeHref) !== route) fail('G4', at, `loaded directly, the page shows route ${routeOf(id.activeHref)}`);
 
             const walkState = { tested: new Set(), keyedViews: 0, controls: 0, tablists: 0 };
-            await processState(page, sink, { ...at, trail: '' }, { route, isWorkbench, primary, idle: idleHere, first: true, size, w, h, theme, lang, walkState });
+            await processState(page, sink, { ...at, trail: '' }, { route, isWorkbench, primary, idle: idleHere, first: true, size, w, h, theme, lang, walkState, contrast });
 
             if (primary && route !== '/') {
               // G4: the trailing-slash form a static host serves for a materialised route.
@@ -268,9 +300,9 @@ export async function runGate(o) {
               sink.splice(0);
             }
 
-            await walkTabs(page, sink, { ...at }, [], new Set(), { route, isWorkbench, primary, idle: primary, size, w, h, theme, lang, walkState });
+            await walkTabs(page, sink, { ...at }, [], new Set(), { route, isWorkbench, primary, idle: primary, size, w, h, theme, lang, walkState, contrast });
 
-            if (isWorkbench) await walkCases(page, sink, at, { route, isWorkbench, primary, size, w, h, theme, lang, walkState });
+            if (isWorkbench) await walkCases(page, sink, at, { route, isWorkbench, primary, size, w, h, theme, lang, walkState, contrast });
 
             if (primary && isWorkbench) {
               const f = await page.evaluate(() => window.__caosGate.facts());
@@ -311,6 +343,39 @@ export async function runGate(o) {
       }
     }
 
+    // ---- G10: the wide-font pass. Every route, tab and sampled case again, in Spanish (the longer labels) when it is
+    // measured, rendered in the wide fallback font from the first frame: what a reader with wider fonts sees.
+    if (opt.wideFont !== false && opt.wideFontSizes) {
+      const wideSizes = String(opt.wideFontSizes).split(',').map((x) => x.trim()).filter(Boolean).map((x) => x.split('x').map(Number));
+      const wlang = langs.includes('es') ? 'es' : langs[0];
+      const theme = themes[0];
+      for (const size of wideSizes) {
+        const [w, h] = size;
+        const mode = `${w}x${h} ${theme} ${wlang} wide-font`;
+        const ctx = await openContext(size, theme, wlang, true);
+        const { page, sink } = await newPage(ctx);
+        for (const route of routes) {
+          const isWorkbench = workbenchRoutes.has(route);
+          const at = { route, mode };
+          const res = await page.goto(urlFor(route), { waitUntil: 'load', timeout: 30000 }).catch((e) => e);
+          const status = res && typeof res.status === 'function' ? res.status() : `error ${res?.message ?? res}`;
+          if (status !== 200) {
+            fail('G4', at, `loaded directly, ${urlFor(route)} answered ${status}`);
+            drain(sink, at);
+            continue;
+          }
+          const why = await settle(page);
+          if (why) fail('G7', at, `never settled: ${why}`);
+          const walkState = { tested: new Set(), keyedViews: 0, controls: 0, tablists: 0 };
+          const s = { route, isWorkbench, primary: false, idle: false, size, w, h, theme, lang: wlang, walkState, wide: true };
+          await processState(page, sink, { ...at, trail: '' }, { ...s, first: true });
+          await walkTabs(page, sink, { ...at }, [], new Set(), s);
+          if (isWorkbench) await walkCases(page, sink, at, s);
+        }
+        await ctx.close();
+      }
+    }
+
     // ---- G4: artifacts answered as JSON.
     for (const [pathname, first] of artifacts) {
       const c = await first;
@@ -348,6 +413,10 @@ export async function runGate(o) {
     for (const r of f.repeatedTicks ?? []) {
       fail('G6', where, `${r.label}: ${r.n} axis tick label(s) repeat the label before them (give the axis fixed decimals)`);
     }
+    for (const m of await page.evaluate(() => window.__caosGate.drawingText())) fail('G10', where, m);
+    if (s.lang === 'es') for (const m of await page.evaluate(() => window.__caosGate.decimals())) fail('G11', where, m);
+    if (s.w > 760) for (const m of await page.evaluate(() => window.__caosGate.sticky())) fail('G12', where, m);
+    if (s.contrast) for (const m of await page.evaluate(() => window.__caosGate.contrast())) fail('G13', where, m);
     if (f.sectionsWithoutRefs) fail('ADR-0017.4', where, `${f.sectionsWithoutRefs} section(s) end without references or a stated reason`);
     if (s.first && !s.isWorkbench && f.pageText < opt.textFloor) fail('G4', where, `the page body holds ${f.pageText} characters of text (floor ${opt.textFloor}); the route rendered without its content`);
 
@@ -360,7 +429,7 @@ export async function runGate(o) {
       }
     }
 
-    if (s.first) await saveShot(page, `${slug(s.route)}_${s.w}x${s.h}_${s.theme}_${s.lang}.png`);
+    if (s.first) await saveShot(page, `${slug(s.route)}_${s.w}x${s.h}_${s.theme}_${s.lang}${s.wide ? '_wide' : ''}.png`);
 
     if (s.idle) {
       const idle = await page.evaluate((ms) => window.__caosGate.idle(ms), opt.idleMs);
@@ -376,7 +445,7 @@ export async function runGate(o) {
     if (s.primary && s.isWorkbench && s.walkState) await reactivity(page, sink, where, s);
     drain(sink, where);
     const failedHere = failures.some((x) => x.route === where.route && x.mode === where.mode && x.trail === where.trail && x.check !== 'G3');
-    if (failedHere) await saveShot(page, `fail_${slug(s.route)}_${s.w}x${s.h}_${s.theme}_${s.lang}_${shots + 1}.png`, true);
+    if (failedHere) await saveShot(page, `fail_${slug(s.route)}_${s.w}x${s.h}_${s.theme}_${s.lang}${s.wide ? '_wide' : ''}_${shots + 1}.png`, true);
   }
 
   async function paintedChecks(page, f, where, big) {
@@ -470,6 +539,8 @@ export async function runGate(o) {
         if (i !== tl.active) {
           const tab = page.locator(tl.key).locator('[role="tab"]').filter({ visible: true }).nth(i);
           try {
+            // a reader scrolls the tab clear of the sticky header first; so does the gate, then clicks it
+            await tab.evaluate((el) => window.__caosGate.bringEl(el)).catch(() => undefined);
             await tab.click({ timeout: 5000 });
           } catch (e) {
             fail('G7', at, `the tab could not be clicked: ${e.message.split('\n')[0]}`);
@@ -586,11 +657,57 @@ export async function runGate(o) {
   function finish() {
     const checks = {};
     for (const f of failures) checks[f.check] = (checks[f.check] ?? 0) + 1;
-    const report = { ok: failures.length === 0, base, expectBrand: opt.expectBrand, sizes: opt.sizes, themes: opt.themes, langs: opt.langs, states, minima, checks, failures };
     mkdirSync(opt.out, { recursive: true });
+    const captures = existsSync(shotsDir) ? readdirSync(shotsDir).filter((n) => n.endsWith('.png')).sort() : [];
+    const report = {
+      ok: failures.length === 0,
+      base,
+      expectBrand: opt.expectBrand,
+      sizes: opt.sizes,
+      themes: opt.themes,
+      langs: opt.langs,
+      wideFontSizes: opt.wideFont === false ? '' : opt.wideFontSizes,
+      states,
+      minima,
+      checks,
+      captures: captures.length,
+      failures,
+    };
     writeFileSync(join(opt.out, 'gate-report.json'), JSON.stringify(report, null, 2));
+    // G14: the captures are for a person to read (the gate measures, it does not judge content); one page shows them.
+    writeFileSync(join(opt.out, 'index.html'), captureIndex(report, captures));
     return report;
   }
+}
+
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+/** G14: one page with every capture, grouped by route, the failure captures and the failure list first. */
+export function captureIndex(report, captures) {
+  const groups = new Map();
+  for (const name of captures) {
+    const key = name.startsWith('fail_') ? 'failures' : name.split('_')[0];
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(name);
+  }
+  const order = ['failures', ...[...groups.keys()].filter((k) => k !== 'failures')];
+  const rows = report.failures
+    .slice(0, 400)
+    .map((f) => `<tr><td>${esc(f.check)}</td><td>${esc(f.route)}</td><td>${esc(f.mode)}</td><td>${esc(f.trail)}</td><td>${esc(f.message)}</td></tr>`)
+    .join('');
+  const figure = (n) => `<figure><a href="shots/${esc(n)}"><img loading="lazy" src="shots/${esc(n)}" alt="${esc(n)}"></a><figcaption>${esc(n.replace(/\.png$/, ''))}</figcaption></figure>`;
+  const sections = order
+    .filter((k) => groups.has(k))
+    .map((k) => `<h2>${esc(k)} (${groups.get(k).length})</h2><div class="grid">${groups.get(k).map(figure).join('')}</div>`)
+    .join('');
+  const style =
+    'body{font:14px system-ui,sans-serif;margin:16px;background:#f6f8fa;color:#1f2328}h1{font-size:18px}h2{font-size:15px;margin-top:24px}' +
+    'table{border-collapse:collapse;font-size:12px}td{border-bottom:1px solid #d0d7de;padding:3px 6px;vertical-align:top}' +
+    '.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}figure{margin:0;background:#fff;border:1px solid #d0d7de;padding:6px}' +
+    'img{width:100%;height:auto;display:block}figcaption{font-size:11px;color:#57606a;margin-top:4px}';
+  const head = `caos-shell-gate: ${esc(report.expectBrand)} at ${esc(report.base)}: ${report.ok ? 'OK' : `${report.failures.length} failure(s)`} in ${report.states} states, ${captures.length} captures`;
+  const table = rows ? `<table><tr><td>check</td><td>route</td><td>mode</td><td>trail</td><td>message</td></tr>${rows}</table>` : '';
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${head}</title><style>${style}</style></head><body><h1>${head}</h1>${table}${sections}</body></html>\n`;
 }
 
 function slug(route) {

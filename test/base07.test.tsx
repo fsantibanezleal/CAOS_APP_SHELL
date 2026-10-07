@@ -32,7 +32,7 @@ function quiet<T>(fn: () => T): T {
 test('S8: numbers follow the interface language, and absent values read as not available', () => {
   assert.equal(formatNumber(1234.5678, 'en', { decimals: 2 }), '1,234.57');
   assert.equal(formatNumber(1234.5678, 'es', { decimals: 2 }), '1.234,57');
-  assert.equal(formatNumber(0.1234, 'es', { percent: true, decimals: 1 }), '12,3 %');
+  assert.equal(formatNumber(0.1234, 'es', { percent: true, decimals: 1 }), '12,3\u00a0%');
   assert.equal(formatNumber(Number.NaN, 'en'), 'not available');
   assert.equal(formatNumber(null, 'es'), 'no disponible');
 });
@@ -223,7 +223,7 @@ test('S8: a magnitude below 1e-4 is written in scientific notation, never as a r
   assert.equal(formatNumber(7.04563e-5, 'es', { digits: 3 }), '7,05E-5');
   assert.equal(formatNumber(3.9e-205, 'en', { digits: 3 }), '3.9E-205');
   assert.equal(formatNumber(-2.5e-6, 'en'), '-2.5E-6');
-  assert.equal(formatNumber(1e-7, 'en', { percent: true }), '1E-5 %');
+  assert.equal(formatNumber(1e-7, 'en', { percent: true }), '1E-5\u00a0%');
   assert.equal(formatNumber(0, 'en'), '0');
   assert.equal(formatNumber(0.00012, 'en'), '0.00012');
   assert.ok(formatNumber(1e-300, 'en').length < 12);
@@ -233,7 +233,9 @@ test('S8: a magnitude below 1e-4 is written in scientific notation, never as a r
 
 test('known defect 16: the workbench tab rows never shrink under a tall panel', () => {
   const css = readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
-  assert.match(css, /\.caos-cw > \.tabs > \.tablist, \.caos-cw-panel > \.subtabs > \.subtablist \{ flex: none; \}/);
+  // generalised in 0.8.0: every tab row holds its height in any flex column (base08 BL-004)
+  assert.match(css, /\.tablist \{[^}]*flex: none;/);
+  assert.match(css, /\.subtablist \{[^}]*flex: none;/);
 });
 
 test('S8: a count shows every integer digit; significant digits round only the fraction', () => {
