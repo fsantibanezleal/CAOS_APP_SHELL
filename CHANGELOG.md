@@ -22,6 +22,9 @@ these a product draws its size distributions, its parity plots and a weighted vi
 - G11 let a number in scientific notation through: "2.7e-08" on a Spanish page writes its decimal with a point, and the
   exponent hid it from the pattern (found on CAOS_Fragmenta's Implementation page). The exponent is now part of the
   number; the `decimal-point` plant carries one.
+- The gate's header-route step (every route reached by a pointer click) let a locator wait its default 30 s and
+  throw, which ended the whole run (the 0.9.0 self-test, under load); a link that does not answer in time is now a G5
+  failure of its route.
 
 ## [0.08.002] - 2026-10-07
 
