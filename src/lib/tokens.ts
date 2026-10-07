@@ -26,11 +26,42 @@ export const SHELL_TOKENS = [
   '--color-shadow',
   '--font-sans',
   '--font-mono',
+  '--text-xs',
+  '--text-sm',
+  '--text-md',
+  '--text-base',
+  '--text-lg',
+  '--text-xl',
+  '--text-2xl',
+  '--space-1',
+  '--space-2',
+  '--space-3',
+  '--space-4',
+  '--space-5',
+  '--space-6',
+  '--radius-sm',
+  '--radius-md',
+  '--radius-lg',
+  '--radius-pill',
   '--maxw',
   '--maxw-wide',
+  '--measure',
+  '--measure-text',
+  '--header-h',
+  '--rail-w',
+  '--fade',
+  '--icon-sm',
+  '--icon-md',
+  '--icon-lg',
+  '--z-header',
+  '--z-focus',
+  '--z-modal',
 ] as const;
 
 export type ShellToken = (typeof SHELL_TOKENS)[number];
+
+/** A colour token: what a chart series, a tone or a canvas colour may name. */
+export type ShellColorToken = Extract<ShellToken, `--color-${string}`>;
 
 /** The computed value of a token on the document, or `fallback` outside a browser. */
 export function resolveToken(token: string, fallback = ''): string {
