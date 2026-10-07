@@ -220,6 +220,19 @@ test('BL-013 (defect 19): one tick notation per axis', () => {
   assert.equal(formatNumber(0.5, 'en', { notation: 'scientific', digits: 2 }), '5E-1');
 });
 
+test('defect 30 (#62): a year is written without a group separator when grouping is false', () => {
+  for (const lang of ['en', 'es'] as const) {
+    assert.equal(formatNumber(2021, lang, { decimals: 0, grouping: false }), '2021');
+    assert.equal(formatNumber(2021, lang, { grouping: false }), '2021');
+    assert.equal(formatNumber(2021.5, lang, { digits: 6, grouping: false }), lang === 'en' ? '2021.5' : '2021,5');
+    assert.deepEqual(formatTicks([2000, 2010, 2020], lang, { decimals: 0, grouping: false }), ['2000', '2010', '2020']);
+    assert.equal(formatNumber(0.1234, lang, { percent: true, decimals: 1, grouping: false }), lang === 'en' ? `12.3${NBSP}%` : `12,3${NBSP}%`);
+  }
+  // the default still groups: a count of people, an amount
+  assert.equal(formatNumber(2021, 'en', { decimals: 0 }), '2,021');
+  assert.equal(formatNumber(27345, 'es'), '27.345');
+});
+
 /** A canvas context that records what is drawn; text is 6 px a character. */
 function fakePlot() {
   const calls: { op: string; text?: string; x?: number; y?: number; align?: string }[] = [];
