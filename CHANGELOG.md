@@ -1,3 +1,23 @@
+## [0.08.001] - 2026-10-07
+
+### Fixed
+
+Found by the 0.8.0 gate on the product template's example, the first product on 0.8.0:
+
+- `BarChart` filling its card capped its rows at 2.2 times their height, so three horizontal bars took a quarter of a
+  tall card and failed the gate's stage-fill floor (G6, 13 to 29 percent against 30). The rows now share the card's
+  height; a bar keeps a readable thickness (half its row, at most 40px) with its label centred on it.
+- G10 judged a label against the viewport and a header stuck at its top, so on a phone a chart's first row, scrolled
+  under the sticky header by the probe, read as "cut by 4px at the drawing's edge". A label is now judged against its
+  drawing and the containers that cut their content (overflow hidden or clip) only; a scroll container and the
+  viewport do not cut.
+- G6 reported a table wider than a phone, scrolling inside its card as ADR-0071 rule 3 asks, as "extends past the
+  page". A surface inside a box that scrolls sideways ends where that box ends; one cut by a box that hides its
+  overflow still fails.
+
+The gate fixture's comparison is a horizontal `BarChart` filling its card, and its "Every day" table is wider than a
+phone; the clean run (G15) passes both only with these fixes.
+
 ## [0.08.000] - 2026-10-07
 
 The base defines the structure every product builds on (#59; CAOS_MANAGE `plans/app-shell`, research in
