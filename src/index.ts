@@ -17,10 +17,10 @@ export { LanguageToggle } from './shell/LanguageToggle';
 
 export { useThemeStore, applyTheme, readTheme, THEME_BOOT_SCRIPT } from './lib/theme';
 export { THEME_STORAGE_KEY, LANG_STORAGE_KEY } from './lib/keys';
-export { formatNumber, useFormat, NOT_AVAILABLE } from './lib/format';
+export { formatNumber, formatTicks, useFormat, NBSP, NOT_AVAILABLE, SCIENTIFIC_BELOW } from './lib/format';
 export type { FormatOptions } from './lib/format';
 export { SHELL_TOKENS, resolveToken, useThemeTokens } from './lib/tokens';
-export type { ShellToken } from './lib/tokens';
+export type { ShellColorToken, ShellToken } from './lib/tokens';
 export { PanelBoundary } from './lib/PanelBoundary';
 export type { Theme } from './lib/theme';
 export { useLangStore, useShellLang } from './lib/lang';
@@ -60,6 +60,17 @@ export { CitationsProvider, Cite, Refs, ReferenceList } from './content/Cite';
 export type { Citation } from './content/Cite';
 export { DocPage, DocSection } from './content/DocPage';
 export type { DocSectionProps } from './content/DocPage';
+// The surface route type (0.8.0): a tab App that fills the viewport; its open view is held in the URL.
+export { SurfacePage } from './content/SurfacePage';
+export type { SurfacePageProps } from './content/SurfacePage';
+export { useUrlView, viewParamOf, replaceQueryParam } from './lib/urlView';
+export { BREAKPOINTS } from './lib/breakpoints';
+
+// Drawings without uPlot (0.8.0): the categorical chart and the text kit every drawing measures its labels with.
+export { BarChart } from './chart/BarChart';
+export type { BarChartProps, BarDatum } from './chart/BarChart';
+export { fitLabel, fontFamily, niceStep, niceTicks, textWidth, widestLabel } from './chart/text';
+export type { FittedLabel } from './chart/text';
 
 // The App route of a product (ADR-0016 §9 and ADR-0071 as amended 2026-10-04): the shell owns the workbench.
 export { WorkbenchLayout } from './workbench/WorkbenchLayout';
