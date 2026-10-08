@@ -97,6 +97,40 @@ export function tickSteps(fmt: FormatOptions | undefined): number[] | undefined 
   return STEPS.filter((s) => s >= res * (1 - 1e-9) && Math.abs(s / res - Math.round(s / res)) < 1e-6);
 }
 
+/**
+ * uPlot ticks a log axis at 1 to 9 times every power of ten, from a precision table that ends near 1e-22: a log axis
+ * that reaches below it throws "Invalid array length" after stalling the page, and the chart is never drawn (known
+ * shell defect 31, p-values of 1e-124 in CAOS_Contraste, 2026-10-07). Below this floor the axis ticks at powers of ten
+ * only (`logDecades`), each one labelled.
+ */
+export const LOG_TABLE_FLOOR = 1e-22;
+
+/** The powers of ten within [min, max], thinned to at most `most` (every k-th decade, the top one kept). */
+export function logDecades(min: number, max: number, most = 8): number[] {
+  if (!(min > 0) || !(max > 0) || !Number.isFinite(min) || !Number.isFinite(max) || max < min) return [];
+  const a = Math.ceil(Math.log10(min) - 1e-9);
+  const b = Math.floor(Math.log10(max) + 1e-9);
+  if (b < a) return [];
+  const step = Math.max(1, Math.ceil((b - a + 1) / most));
+  const out: number[] = [];
+  for (let k = b; k >= a; k -= step) out.unshift(Number(`1e${k}`));
+  return out;
+}
+
+/** The smallest positive value among columns of values and the lower end of a fixed range; Infinity if none. */
+export function smallestPositive(columns: readonly (readonly (number | null)[])[], range?: readonly [number, number] | null): number {
+  let lo = range && range[0] > 0 ? range[0] : Infinity;
+  for (const c of columns) for (const v of c) if (v !== null && Number.isFinite(v) && v > 0 && v < lo) lo = v;
+  return lo;
+}
+
+/** A log axis reaching below uPlot's tick table: decade ticks, every one labelled (uPlot's own log filter blanks the
+ * labels outside its table). */
+const DECADE_AXIS = {
+  splits: (_u: uPlot, _i: number, min: number, max: number) => logDecades(min, max),
+  filter: (_u: uPlot, splits: number[]) => splits,
+};
+
 /** How many tick labels repeat the label before them (empty labels apart); the gate fails a chart with any (G6). */
 export function repeatedLabels(labels: readonly (string | null | undefined)[]): number {
   let n = 0;
@@ -204,6 +238,14 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor, onPick
   const xs = useMemo(() => (order ? order.map((i) => x.values[i]) : x.values), [order, x.values]);
   const ys = useMemo(() => series.map((s) => (order ? order.map((i) => s.values[i] ?? null) : s.values)), [order, series]);
   const range = useMemo(() => (parity ? parityRange(xs, ...ys) : null), [parity, xs, ys]);
+  // a log axis reaching below uPlot's tick table ticks at powers of ten (known shell defect 31)
+  const tiny = useMemo(
+    () => ({
+      x: Boolean(x.log) && smallestPositive([xs], range) < LOG_TABLE_FLOOR,
+      y: Boolean(y.log) && smallestPositive(ys, range ?? y.range) < LOG_TABLE_FLOOR,
+    }),
+    [x.log, y.log, xs, ys, range, y.range],
+  );
 
   const xLabel = pick(x.label, lang);
   const yLabel = pick(y.label, lang);
@@ -212,10 +254,10 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor, onPick
   // Everything that changes the plot's structure, by value.
   const structure = JSON.stringify({
     s: series.map((s, i) => [pick(s.label, lang), seriesStyle(s, i), s.width ?? 2, s.mode ?? 'line']),
-    x: [xLabel, xUnit, Boolean(x.time), Boolean(x.log), x.format ?? null],
+    x: [xLabel, xUnit, Boolean(x.time), Boolean(x.log), x.format ?? null, tiny.x],
     p: range,
     pick: Boolean(onPick),
-    y: [yLabel, yUnit, Boolean(y.log), y.range ?? null, y.format ?? null],
+    y: [yLabel, yUnit, Boolean(y.log), y.range ?? null, y.format ?? null, tiny.y],
     m: (marks ?? []).map((m) => [m.x, pick(m.label, lang)]),
     theme,
     lang,
@@ -267,6 +309,7 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor, onPick
           labelFont: font,
           values: x.time ? undefined : tick(x.format, 'x'),
           ...(xSteps ? { incrs: xSteps } : {}),
+          ...(tiny.x ? DECADE_AXIS : {}),
         },
         {
           stroke: fg,
@@ -277,6 +320,7 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor, onPick
           labelFont: font,
           values: tick(y.format, 'y'),
           ...(ySteps ? { incrs: ySteps } : {}),
+          ...(tiny.y ? DECADE_AXIS : {}),
           // Sized to the longest tick label. uPlot draws in device pixels with a font scaled by its pixel ratio, so the
           // label is measured in that font and divided back (measuring the unscaled font and dividing by the ratio
           // made the axis too narrow on every high-density screen; the gate runs at ratio 1 and never saw it).
