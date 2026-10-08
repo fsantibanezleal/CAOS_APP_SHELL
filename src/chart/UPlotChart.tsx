@@ -17,6 +17,8 @@ export interface ChartSeries {
   dash?: number[];
   /** `points` draws markers only (a scatter of cases over a curve); `null` values are simply absent. */
   mode?: 'line' | 'points';
+  /** The marker diameter of a `points` series, in CSS pixels (9 by default): a larger one rings the selected case. */
+  size?: number;
 }
 
 export interface ChartAxis {
@@ -33,17 +35,28 @@ export interface UPlotChartProps {
   series: ChartSeries[];
   /** Vertical markers at x positions, drawn on the plot and labelled (mark what the engine detected). */
   marks?: { x: number; label: BiText }[];
+  /** Horizontal reference lines at y values, labelled at their right end (a null model's constant prediction, a
+   * target, a limit). */
+  yMarks?: { y: number; label: BiText }[];
   /** Height in pixels, or `fill` to take the container's height (inside `PlotCard fill`); the width is always the
    * container's. */
   height?: number | 'fill';
   /** Called with the index under the cursor (or null), for linked views; the index is the caller's, before any
    * sorting by x. */
   onCursor?: (index: number | null) => void;
-  /** Called with the caller's index of the point under the cursor when the plot is clicked (select a case, a blast). */
+  /** Called with the caller's index of the point under the cursor when the plot is clicked (select a case, a blast).
+   * On a chart whose series are all `points` (a scatter, a parity plot) the point under the cursor is the one nearest
+   * the pointer in the plane, not the one nearest in x. */
   onPick?: (index: number) => void;
   /** A parity plot: predicted (the series) against observed (x) on one shared range, in a square box, with the
-   * identity line. Unsorted x is allowed (the chart sorts it and maps every index back). */
+   * identity line. Unsorted x is allowed (the chart sorts it and maps every index back). The range takes in the
+   * reference lines (`yMarks`), so a null model's level is always in view. */
   parity?: boolean;
+  /** The readout under the plot for the point under the cursor (the caller's index), in place of the list of values:
+   * a scatter names its case ("Mg1, Murgul: measured 23.0 cm, predicted 25.1 cm"). */
+  readout?: (index: number) => string;
+  /** The readout at rest; by default "Hover the chart to read the values". */
+  hint?: BiText;
 }
 
 const ROTATION: ShellColorToken[] = ['--color-accent', '--color-magenta', '--color-accent-2', '--color-good', '--color-warn', '--color-bad'];
@@ -195,6 +208,77 @@ export function drawMarks(u: uPlot, marks: { x: number; label: string }[], style
 }
 
 /**
+ * The horizontal reference lines of a chart and their labels: a dashed line across the plot, its label at the right
+ * end above the line (below it when the line runs along the top), inside the plot, haloed; a label that would overlap
+ * the one placed before it moves left of it. A line outside the y range is not drawn.
+ */
+export function drawYMarks(u: uPlot, marks: { y: number; label: string }[], style: { color: string; halo: string; family: string }): void {
+  const ctx = u.ctx;
+  const pr = uPlot.pxRatio || 1;
+  const left = u.bbox.left;
+  const right = u.bbox.left + u.bbox.width;
+  const top = u.bbox.top;
+  const bottom = u.bbox.top + u.bbox.height;
+  const gap = 4 * pr;
+  const textH = 11 * pr;
+  const placed: { x0: number; x1: number; y0: number; y1: number }[] = [];
+  ctx.save();
+  ctx.font = `${Math.round(11 * pr)}px ${style.family}`;
+  ctx.textBaseline = 'alphabetic';
+  ctx.lineJoin = 'round';
+  for (const m of [...marks].sort((a, b) => b.y - a.y)) {
+    const py = u.valToPos(m.y, 'y', true);
+    if (!Number.isFinite(py) || py < top - 0.5 || py > bottom + 0.5) continue;
+    ctx.strokeStyle = style.color;
+    ctx.lineWidth = Math.max(1, pr);
+    ctx.setLineDash([2 * pr, 4 * pr]);
+    ctx.beginPath();
+    ctx.moveTo(left, py);
+    ctx.lineTo(right, py);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    const w = ctx.measureText(m.label).width;
+    // above the line, or below it when there is no room above
+    const base = py - gap - textH < top ? py + gap + textH : py - gap;
+    let x1 = right - gap;
+    while (placed.some((p) => x1 - w < p.x1 + gap && x1 > p.x0 - gap && base - textH < p.y1 && base > p.y0)) {
+      x1 = Math.min(...placed.filter((p) => base - textH < p.y1 && base > p.y0).map((p) => p.x0)) - 2 * gap;
+    }
+    const x0 = Math.max(left + gap, x1 - w);
+    placed.push({ x0, x1: x0 + w, y0: base - textH, y1: base });
+    ctx.textAlign = 'left';
+    ctx.lineWidth = 3 * pr;
+    ctx.strokeStyle = style.halo;
+    ctx.strokeText(m.label, x0, base);
+    ctx.fillStyle = style.color;
+    ctx.fillText(m.label, x0, base);
+  }
+  ctx.restore();
+}
+
+/**
+ * The index of the point nearest (left, top) in the plane, over every series, or null when no point has a value.
+ * `xs` and every column of `ys` are positions in the same pixels as (left, top); a null position is no point.
+ */
+export function nearestPoint(xs: readonly number[], ys: readonly (readonly (number | null)[])[], left: number, top: number): number | null {
+  let best: number | null = null;
+  let bestD = Infinity;
+  for (let i = 0; i < xs.length; i++) {
+    if (!Number.isFinite(xs[i])) continue;
+    for (const col of ys) {
+      const y = col[i];
+      if (y === null || y === undefined || !Number.isFinite(y)) continue;
+      const d = (xs[i] - left) ** 2 + (y - top) ** 2;
+      if (d < bestD) {
+        bestD = d;
+        best = i;
+      }
+    }
+  }
+  return best;
+}
+
+/**
  * The house chart (S12 of the 2026-10-04 requirements; uPlot, ADR on interactive charts). It is built only once its
  * box has a size; it resolves the theme's colours to concrete values and rebuilds when the theme or language changes
  * (a canvas cannot read CSS variables); it compares its options by value, never by identity, so a parent re-render
@@ -205,7 +289,7 @@ export function drawMarks(u: uPlot, marks: { x: number; label: string }[], style
  * (known shell defect 17). An axis with fixed decimals ticks only where its labels differ (`tickSteps`). The host
  * declares `data-series`, `data-axis-titles`, `data-ticks-cut`, `data-ticks-repeat` and `data-drawn` for the gate.
  */
-export function UPlotChart({ x, y, series, marks, height = 280, onCursor, onPick, parity }: UPlotChartProps) {
+export function UPlotChart({ x, y, series, marks, yMarks, height = 280, onCursor, onPick, parity, readout, hint }: UPlotChartProps) {
   const lang = useShellLang();
   const theme = useThemeStore((s) => s.theme);
   const fill = height === 'fill';
@@ -231,13 +315,16 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor, onPick
   onCursorRef.current = onCursor;
   const onPickRef = useRef(onPick);
   onPickRef.current = onPick;
+  // the index (in uPlot's order) a click picks: the cursor's, or on a scatter the point nearest the pointer
+  const pickedRef = useRef<number | null>(null);
   // uPlot draws by increasing x: unsorted x is sorted here and every index handed back is mapped to the caller's
   const order = useMemo(() => sortOrder(x.values), [x.values]);
   const orderRef = useRef(order);
   orderRef.current = order;
   const xs = useMemo(() => (order ? order.map((i) => x.values[i]) : x.values), [order, x.values]);
   const ys = useMemo(() => series.map((s) => (order ? order.map((i) => s.values[i] ?? null) : s.values)), [order, series]);
-  const range = useMemo(() => (parity ? parityRange(xs, ...ys) : null), [parity, xs, ys]);
+  const levels = useMemo(() => (yMarks ?? []).map((m) => m.y), [yMarks]);
+  const range = useMemo(() => (parity ? parityRange(xs, ...ys, levels) : null), [parity, xs, ys, levels]);
   // a log axis reaching below uPlot's tick table ticks at powers of ten (known shell defect 31)
   const tiny = useMemo(
     () => ({
@@ -253,18 +340,21 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor, onPick
   const yUnit = y.unit ? pick(y.unit, lang) : '';
   // Everything that changes the plot's structure, by value.
   const structure = JSON.stringify({
-    s: series.map((s, i) => [pick(s.label, lang), seriesStyle(s, i), s.width ?? 2, s.mode ?? 'line']),
+    s: series.map((s, i) => [pick(s.label, lang), seriesStyle(s, i), s.width ?? 2, s.mode ?? 'line', s.size ?? 9]),
     x: [xLabel, xUnit, Boolean(x.time), Boolean(x.log), x.format ?? null, tiny.x],
     p: range,
     pick: Boolean(onPick),
     y: [yLabel, yUnit, Boolean(y.log), y.range ?? null, y.format ?? null, tiny.y],
     m: (marks ?? []).map((m) => [m.x, pick(m.label, lang)]),
+    ym: (yMarks ?? []).map((m) => [m.y, pick(m.label, lang)]),
     theme,
     lang,
     h,
     w: width,
   });
   const data = useMemo(() => [xs, ...ys] as uPlot.AlignedData, [xs, ys]);
+  // a chart of points only (a scatter, a parity plot): the cursor takes the point nearest the pointer in the plane
+  const scatter = series.length > 0 && series.every((s) => s.mode === 'points');
 
   useEffect(() => {
     const el = plotRef.current;
@@ -282,12 +372,28 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor, onPick
       hostRef.current?.setAttribute('data-ticks-repeat', String(repeats.x + repeats.y));
       return labels;
     };
+    // the point nearest the pointer, computed once per cursor position and handed to every series (uPlot asks each)
+    const near = { left: NaN, top: NaN, idx: null as number | null };
+    const nearest = (u: uPlot): number | null => {
+      const { left, top } = u.cursor;
+      if (left === undefined || top === undefined || left < 0 || top < 0) return null;
+      if (left !== near.left || top !== near.top) {
+        const d = u.data as (number | null)[][];
+        const px = d[0].map((v) => (v === null ? NaN : u.valToPos(v, 'x')));
+        const py = d.slice(1).map((col) => col.map((v) => (v === null ? null : u.valToPos(v, 'y'))));
+        near.left = left;
+        near.top = top;
+        near.idx = nearestPoint(px, py, left, top);
+      }
+      return near.idx;
+    };
     const xSteps = x.time || x.log ? undefined : tickSteps(x.format);
     const ySteps = y.log ? undefined : tickSteps(y.format);
     const opts: uPlot.Options = {
       width,
       height: h,
       legend: { show: false },
+      ...(scatter ? { cursor: { dataIdx: (u: uPlot, sIdx: number, closest: number) => (sIdx === 0 ? closest : (nearest(u) ?? closest)) } } : {}),
       // a log axis labels the ticks uPlot keeps and passes null for the rest, which formatTicks leaves blank
       scales: {
         // a log x axis spans the data, not the decades around it (uPlot rounds out to the next decade, which left an
@@ -339,14 +445,15 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor, onPick
           const style = seriesStyle(s, i);
           const stroke = resolveToken(style.color, '#4a8');
           return s.mode === 'points'
-            ? { label: pick(s.label, lang), stroke, width: 1.5, paths: () => null, points: { show: true, space: 0, size: 9, fill: stroke } }
+            ? { label: pick(s.label, lang), stroke, width: 1.5, paths: () => null, points: { show: true, space: 0, size: s.size ?? 9, fill: stroke } }
             : { label: pick(s.label, lang), stroke, width: s.width ?? 2, dash: style.dash, spanGaps: false, points: { show: false } };
         }),
       ],
       hooks: {
         setCursor: [
           (u: uPlot) => {
-            const idx = u.cursor.idx ?? null;
+            const idx = scatter ? nearest(u) : (u.cursor.idx ?? null);
+            pickedRef.current = idx;
             setCursor(idx);
             onCursorRef.current?.(idx === null ? null : orderRef.current ? orderRef.current[idx] : idx);
           },
@@ -354,7 +461,7 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor, onPick
         ready: [
           (u: uPlot) => {
             u.over.addEventListener('click', () => {
-              const idx = u.cursor.idx;
+              const idx = pickedRef.current;
               if (idx === null || idx === undefined || !onPickRef.current) return;
               onPickRef.current(orderRef.current ? orderRef.current[idx] : idx);
             });
@@ -376,12 +483,9 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor, onPick
               ctx.stroke();
               ctx.restore();
             }
-            if (!marks?.length) return;
-            drawMarks(u, marks.map((m) => ({ x: m.x, label: pick(m.label, lang) })), {
-              color: resolveToken('--color-warn', '#c80'),
-              halo: surface,
-              family,
-            });
+            const markStyle = { color: resolveToken('--color-warn', '#c80'), halo: surface, family };
+            if (yMarks?.length) drawYMarks(u, yMarks.map((m) => ({ y: m.y, label: pick(m.label, lang) })), markStyle);
+            if (marks?.length) drawMarks(u, marks.map((m) => ({ x: m.x, label: pick(m.label, lang) })), markStyle);
           },
         ],
       },
@@ -401,16 +505,22 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor, onPick
   }, [data]);
 
   const read =
-    cursor !== null
+    cursor !== null && readout
+      ? readout(order ? order[cursor] : cursor)
+      : cursor !== null
       ? [
           `${xLabel} ${formatNumber(xs[cursor], lang, x.format ?? { digits: 4 })}${xUnit ? `${NBSP}${xUnit}` : ''}`,
-          ...series.map(
-            (s, k) => `${pick(s.label, lang)} ${formatNumber(ys[k][cursor] ?? null, lang, y.format ?? { digits: 4 })}${yUnit ? `${NBSP}${yUnit}` : ''}`,
-          ),
+          ...series
+            .map((s, k) => ({ s, v: ys[k][cursor] ?? null }))
+            // a scatter's series are sets of points: name only the ones that have this point
+            .filter(({ v }) => !scatter || v !== null)
+            .map(({ s, v }) => `${pick(s.label, lang)} ${formatNumber(v, lang, y.format ?? { digits: 4 })}${yUnit ? `${NBSP}${yUnit}` : ''}`),
         ].join(' · ')
-      : lang === 'es'
-        ? 'Pase el cursor sobre el gráfico para leer los valores'
-        : 'Hover the chart to read the values';
+      : hint
+        ? pick(hint, lang)
+        : lang === 'es'
+          ? 'Pase el cursor sobre el gráfico para leer los valores'
+          : 'Hover the chart to read the values';
 
   return (
     <div
@@ -424,6 +534,7 @@ export function UPlotChart({ x, y, series, marks, height = 280, onCursor, onPick
       data-parity={parity ? '1' : undefined}
       data-log-x={x.log ? '1' : undefined}
       data-pick={onPick ? '1' : undefined}
+      data-y-marks={yMarks?.length ? String(yMarks.length) : undefined}
     >
       <div ref={setPlot} className="caos-chart-plot" />
       {series.length > 1 && (
