@@ -144,6 +144,11 @@ const DECADE_AXIS = {
   filter: (_u: uPlot, splits: number[]) => splits,
 };
 
+/** The least distance between two ticks on either axis of a parity plot, in CSS pixels. uPlot spaces x ticks at 50
+ * and y ticks at 30 by default, so two axes over one range ticked at different steps (25, 30, 35 against 24, 26, 28
+ * on CAOS_Fragmenta's blasts); one spacing gives both the same step. */
+const PARITY_TICK_SPACE = 40;
+
 /** How many tick labels repeat the label before them (empty labels apart); the gate fails a chart with any (G6). */
 export function repeatedLabels(labels: readonly (string | null | undefined)[]): number {
   let n = 0;
@@ -370,6 +375,8 @@ export function UPlotChart({ x, y, series, marks, yMarks, height = 280, onCursor
       const labels = formatTicks(vals, lang, fmt ?? { digits: 4 });
       repeats[axis] = repeatedLabels(labels);
       hostRef.current?.setAttribute('data-ticks-repeat', String(repeats.x + repeats.y));
+      // how many ticks the axis labels: a parity plot's two axes must agree, and an axis with fewer than two says nothing
+      hostRef.current?.setAttribute(`data-ticks-${axis}`, String(labels.filter((l) => l).length));
       return labels;
     };
     // the point nearest the pointer, computed once per cursor position and handed to every series (uPlot asks each)
@@ -415,6 +422,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, height = 280, onCursor
           labelFont: font,
           values: x.time ? undefined : tick(x.format, 'x'),
           ...(xSteps ? { incrs: xSteps } : {}),
+          ...(range ? { space: PARITY_TICK_SPACE } : {}),
           ...(tiny.x ? DECADE_AXIS : {}),
         },
         {
@@ -426,6 +434,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, height = 280, onCursor
           labelFont: font,
           values: tick(y.format, 'y'),
           ...(ySteps ? { incrs: ySteps } : {}),
+          ...(range ? { space: PARITY_TICK_SPACE } : {}),
           ...(tiny.y ? DECADE_AXIS : {}),
           // Sized to the longest tick label. uPlot draws in device pixels with a font scaled by its pixel ratio, so the
           // label is measured in that font and divided back (measuring the unscaled font and dividing by the ratio
