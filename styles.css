@@ -446,6 +446,9 @@ code, kbd { font-family: var(--font-mono); }
 .chip { display: inline-flex; align-items: center; gap: 0.35rem; background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-fg-subtle); border-radius: var(--radius-pill); padding: 0.3rem 0.72rem; font-size: 0.82rem; font-weight: 500; white-space: nowrap; transition: color 0.15s, background-color 0.15s, border-color 0.15s; }
 .chip:hover:not(:disabled) { color: var(--color-fg); border-color: var(--color-fg-faint); }
 .chip.on { background: var(--color-accent); color: var(--color-accent-fg); border-color: transparent; font-weight: 600; }
+/* the active chip keeps its colours under the pointer: the hover rule above outranks `.chip.on` and, until 0.9.4, wrote
+   the text colour on the accent (3.04:1 in light, 1.64:1 in dark; known shell defect 33) */
+.chip.on:hover:not(:disabled) { color: var(--color-accent-fg); border-color: transparent; }
 .chip:disabled { opacity: 0.45; cursor: default; }
 
 /* Registered controls (Knob, ChipGroup). */
@@ -475,6 +478,8 @@ svg.lucide { flex: none; }
 .cs-chip { display: inline-flex; align-items: baseline; gap: 0.4rem; padding: 0.32rem 0.6rem; border: 1px solid var(--color-border); border-radius: var(--radius-pill); background: var(--color-surface); color: var(--color-fg-subtle); font-size: var(--text-sm); font-weight: 500; transition: color 0.15s, background-color 0.15s, border-color 0.15s; }
 .cs-chip:hover:not(:disabled) { color: var(--color-fg); background: var(--color-surface-2); }
 .cs-chip.on { color: var(--color-accent); background: var(--color-accent-soft); border-color: color-mix(in oklab, var(--color-accent) 40%, transparent); font-weight: 600; }
+/* as for `.chip`: the chosen case's chip keeps its accent under the pointer (known shell defect 33) */
+.cs-chip.on:hover:not(:disabled) { color: var(--color-accent); background: var(--color-accent-soft); }
 .cs-chip:disabled { opacity: 0.45; cursor: default; }
 .cs-chip-id { font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.76rem; font-weight: 600; opacity: 0.85; }
 .cs-kind { font-size: 0.62rem; font-weight: 700; line-height: 1; padding: 0.12rem 0.28rem; border-radius: 4px; border: 1px solid var(--color-border); color: var(--color-fg-faint); background: var(--color-surface-2); align-self: center; }
