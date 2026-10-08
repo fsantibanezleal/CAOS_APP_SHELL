@@ -1,3 +1,19 @@
+## [0.09.002] - 2026-10-07
+
+### Fixed
+
+Found by CAOS_Contraste's case C04 on 0.8.x to 0.9.1:
+
+- Known shell defect 31 (#71): a `UPlotChart` log axis whose values reached below about 1e-22 was never drawn. uPlot
+  ticks a log axis at 1 to 9 times every power of ten from a precision table that ends there, and below it threw
+  "Invalid array length" after stalling the page for several seconds (C04's time-homogeneity p-values of 1e-124 on
+  thousands of ratings). Below `LOG_TABLE_FLOOR` (1e-22) a log axis, x or y, now ticks at powers of ten, at most eight
+  (`logDecades`), and keeps every label; above it uPlot's own ticks are unchanged. `e2e/charts.test.ts` draws p-values
+  down to 1e-124 and 1e-300 on a log y axis and on a log x axis in Chromium with no page error (without the fix every
+  case below the floor fails), and reads a year without a group separator in the cursor readout (defect 30). On
+  adoption: a product that floored p-values only to keep a chart alive may draw them as they are; a floor for reading
+  stays the product's choice.
+
 ## [0.09.001] - 2026-10-07
 
 ### Fixed
