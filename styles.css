@@ -493,7 +493,9 @@ svg.lucide { flex: none; }
 .caos-wb-rail { display: flex; flex-direction: column; gap: var(--space-3); min-height: 0; overflow-y: auto; overflow-x: hidden; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 0.85rem; }
 .caos-wb-rail-head { display: flex; flex-direction: column; gap: var(--space-3); padding-bottom: var(--space-3); border-bottom: 1px solid var(--color-border); }
 .caos-wb-rail-panel { display: flex; flex-direction: column; gap: 0.8rem; min-height: 0; }
-.caos-wb-rail label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.8rem; color: var(--color-fg-subtle); }
+/* A labelled control in the rail stacks its text above it; a knob's head keeps its own row, the value at the right
+   (until 0.9.3 this rule outranked `.caos-knob-head` and stacked every knob, a line per knob; CAOS_APP_SHELL#77). */
+.caos-wb-rail label:not(.caos-knob-head) { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.8rem; color: var(--color-fg-subtle); }
 .caos-wb-rail .select, .caos-wb-rail .range { width: 100%; }
 /* The variants wrap in the rail instead of scrolling. */
 .caos-wb-rail .caos-variant-bar { margin-bottom: 0; }
