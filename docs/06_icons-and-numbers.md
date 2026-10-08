@@ -25,6 +25,8 @@ Every number on screen goes through `formatNumber(value, lang, options)` (or `us
   shows a decimal point (G11), outside code, formulas, versions and anything marked `translate="no"`;
 - significant digits by default (`digits: 4`), every integer digit of a count, fixed `decimals` when the caller says so;
 - scientific notation below 1e-4 (`6.53E-13`), so a p-value never renders as two hundred zeros (known shell defect 15);
+  1e-4 itself is fixed, also as a percent of 1e-6, which floating point leaves a hair under it (`0.0001 %`, known
+  shell defect 32);
 - `percent: true` writes `12,3 %` with a **no-break space** before the sign, so a wrapped label never leaves `%` alone
   on a line (known shell defect 22); `Knob`, `Readout`, `Gauge` and the chart readout join units the same way (`NBSP`);
 - `null`, `undefined` and non-finite values read "not available" / "no disponible", never `NaN`;
