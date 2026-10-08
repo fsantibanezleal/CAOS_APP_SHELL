@@ -26,13 +26,26 @@ rebuilt on a theme or language change; compared by value, so a parent re-render 
   alignment (uPlot leaves the canvas right-aligned after its last axis, which put the template's "peak" label on the
   wrong side of its line), on the side of the line where it fits inside the plot, on the next row when it would
   overlap the label before it, with a halo in the surface colour. A mark outside the x range is not drawn.
+- **Reference lines** (`yMarks: [{ y, label }]`, 0.10.0) are drawn by `drawYMarks`: a dotted line across the plot at
+  a y value (a null model's constant prediction, a target, a limit), its label at the right end above the line (below
+  it when the line runs along the top), inside the plot, haloed; a label that would overlap the one before it moves
+  left of it. A line outside the y range is not drawn. The host declares `data-y-marks`.
 - **A log x axis** (`x: { log: true }`, 0.9.0): the axis spans the data (uPlot alone rounds out to the next decade),
   labels the ticks it keeps and leaves the rest blank; marks keep apart on it as on any axis.
 - **A parity plot** (`parity`, 0.9.0): predicted (the series, usually `mode: 'points'`) against observed (x) on one
-  shared range, in a square box centred in its card, with the dashed identity line. x need not be sorted.
+  shared range, in a square box centred in its card, with the dashed identity line. x need not be sorted. The range
+  takes in the reference lines (`yMarks`, 0.10.0), so a null model's level is always in view.
+- **The readout** under the plot lists the values at the cursor; `readout(index)` replaces it with the caller's text
+  for the point (a scatter names its case: the blast, its site, its error), and `hint` sets the text at rest
+  (0.10.0).
 - **Picking** (`onPick(index)`, 0.9.0): a click on the plot hands back the index of the point under the cursor (select
   a case, a blast); `onCursor` does the same while hovering. Indexes are always the caller's, also when the chart
-  sorted an unsorted x.
+  sorted an unsorted x. On a chart whose series are all `points` (a scatter, a parity plot), the point under the
+  cursor is the one nearest the pointer in the plane (`nearestPoint`, 0.10.0): uPlot alone takes the nearest in x,
+  which on a scatter names a point far above or below the pointer. The readout then names only the series that
+  have that point.
+- **A selected point** (0.10.0): a `points` series takes a `size` (the marker diameter in CSS pixels, 9 by default);
+  the selected case goes in a series of its own, larger and in its own colour, so the key says which it is.
 - **More than six series:** the rotation has six colours; from the seventh, a repeated colour is drawn dashed, in the
   plot and in the key, so no two series look the same (`seriesStyle`).
 

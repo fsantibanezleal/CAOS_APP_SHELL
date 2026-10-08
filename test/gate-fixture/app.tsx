@@ -272,7 +272,8 @@ function ValidationView({ sim }: { sim: Sim }) {
           ),
         },
         {
-          // a weighted row (ViewsRow, 0.9.0): a parity plot over x that is not sorted, beside a log-x curve
+          // a weighted row (ViewsRow, 0.9.0): a parity plot over x that is not sorted, with a reference line and a selected
+          // point (0.10.0), beside a log-x curve
           id: 'fit',
           label: pick({ en: 'Fit', es: 'Ajuste' }, lang),
           content: (
@@ -283,7 +284,11 @@ function ValidationView({ sim }: { sim: Sim }) {
                   height="fill"
                   x={{ values: rows.map((d) => sim.I[d]), label: { en: 'Simulated', es: 'Simulado' }, unit: { en: 'people', es: 'personas' }, format: { decimals: 0 } }}
                   y={{ label: { en: 'Model', es: 'Modelo' }, unit: { en: 'people', es: 'personas' }, format: { decimals: 0 } }}
-                  series={[{ label: { en: 'Checkpoints', es: 'Puntos de control' }, values: rows.map((d) => sim.I[d] * 1.04 + 2), mode: 'points' }]}
+                  series={[
+                    { label: { en: 'Checkpoints', es: 'Puntos de control' }, values: rows.map((d, k) => (k === 0 ? null : sim.I[d] * 1.04 + 2)), mode: 'points' },
+                    { label: { en: 'The first checkpoint', es: 'El primer punto de control' }, values: rows.map((d, k) => (k === 0 ? sim.I[d] * 1.04 + 2 : null)), mode: 'points', size: 14, color: '--color-warn' },
+                  ]}
+                  yMarks={[{ y: rows.reduce((a, d) => a + sim.I[d], 0) / Math.max(1, rows.length), label: { en: 'mean', es: 'media' } }]}
                   onPick={() => undefined}
                 />
               </PlotCard>
