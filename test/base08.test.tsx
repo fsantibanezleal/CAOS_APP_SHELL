@@ -14,7 +14,7 @@ import { WorkbenchLayout } from '../src/workbench/WorkbenchLayout.tsx';
 import { SurfacePage } from '../src/content/SurfacePage.tsx';
 import { BarChart } from '../src/chart/BarChart.tsx';
 import { fitLabel, niceStep, niceTicks, textWidth } from '../src/chart/text.ts';
-import { drawMarks } from '../src/chart/UPlotChart.tsx';
+import { drawMarks, LOG_TABLE_FLOOR, logDecades, smallestPositive } from '../src/chart/UPlotChart.tsx';
 import { AppShell } from '../src/shell/AppShell.tsx';
 
 /** The 0.8.0 base (CAOS_APP_SHELL#59; CAOS_MANAGE plans/app-shell, BL-001 to BL-022), one test per promise. */
@@ -232,6 +232,21 @@ test('defect 30 (#62): a year is written without a group separator when grouping
   // the default still groups: a count of people, an amount
   assert.equal(formatNumber(2021, 'en', { decimals: 0 }), '2,021');
   assert.equal(formatNumber(27345, 'es'), '27.345');
+});
+
+test('defect 31: a log axis below the tick table of uPlot ticks at powers of ten, at most eight, every one labelled', () => {
+  // p-values of 1e-124 (a time-homogeneity test on thousands of ratings): 125 decades, every 16th, the top one kept
+  assert.deepEqual(logDecades(1e-124, 1), [1e-112, 1e-96, 1e-80, 1e-64, 1e-48, 1e-32, 1e-16, 1]);
+  const deep = logDecades(1e-300, 1);
+  assert.ok(deep.length <= 8 && deep[deep.length - 1] === 1, `${deep.length} ticks, top ${deep[deep.length - 1]}`);
+  assert.deepEqual(logDecades(1e-5, 1), [1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1]);
+  assert.deepEqual(logDecades(0, 1), []);
+  assert.deepEqual(logDecades(2, 1), []);
+  // the guard applies only below the table: an ordinary log axis keeps uPlot's own ticks
+  assert.equal(LOG_TABLE_FLOOR, 1e-22);
+  assert.equal(smallestPositive([[0.5, null, 1e-124, 0]]), 1e-124);
+  assert.equal(smallestPositive([[0.5, 0.01]], [1e-30, 1]), 1e-30);
+  assert.equal(smallestPositive([[0, null]]), Infinity);
 });
 
 /** A canvas context that records what is drawn; text is 6 px a character. */
