@@ -14,6 +14,12 @@ rebuilt on a theme or language change; compared by value, so a parent re-render 
 - **Ticks:** an axis with fixed `decimals` ticks only where its labels differ (no "1, 2, 2, 3"); every axis writes its
   labels in one notation, scientific for all when any non-zero tick is below 1e-4 (`formatTicks`, known shell
   defect 19). The host declares `data-ticks-repeat` and the gate fails any repeat (G6).
+- **A log axis** (`y: { log: true }`, and `x: { log: true }` from 0.9.0) keeps uPlot's ticks (1 to 9 times every power of ten) while its values stay above
+  1e-22 (`LOG_TABLE_FLOOR`); uPlot builds those ticks from a precision table that ends there, and an axis reaching
+  below it threw "Invalid array length" and was never drawn (known shell defect 31: p-values of 1e-124). Below the
+  floor the axis ticks at powers of ten, at most eight (`logDecades`), every one labelled. A product that draws
+  p-values may still floor them for reading: 1e-124 and 1e-60 lead to the same decision.
+- **A year axis** reads 2021 with `format: { decimals: 0, grouping: false }` (known shell defect 30).
 - **The y axis** is sized to its longest label measured in the font uPlot draws with, at the device pixel ratio; it
   was too narrow on every high-density screen before 0.8.0 (the gate runs at ratio 1 and never saw it).
 - **Marks** (`marks: [{ x, label }]`) are drawn by `drawMarks`: a dashed line and a label with an explicit left
