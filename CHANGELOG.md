@@ -1,6 +1,8 @@
-## [0.09.004] - 2026-10-07
+## [0.09.004] - 2026-10-08
 
 ### Fixed
+
+Found by CAOS_Contraste's case C04 and the 0.9.3 gate on its build:
 
 - Known shell defect 32: a value on the scientific boundary was written in scientific notation when it was a percent.
   `formatNumber` writes a magnitude below 1e-4 as `1E-5`, and a percent is the value times 100; 1e-6 times 100 is
@@ -9,8 +11,14 @@
   scientific for the same tick. The boundary is now compared with a relative tolerance of 1e-12: `0.0001 %`; a value
   truly below it (9.99e-5) stays `9.99E-5`. `test/base09.test.tsx` holds both, the percent, the plain value and the
   ticks, in English and Spanish.
+- Known shell defect 33 (#85): the hover rule `.chip:hover:not(:disabled)` outranked `.chip.on`, so the active chip
+  under the pointer, the one a reader has just clicked, wrote its label in the text colour on the accent: 3.04:1 in
+  the light theme and 1.64:1 in the dark, under G13's 4.5:1 (every rail section the gate clicks on Contraste). The
+  case selector's `.cs-chip` lost its accent the same way. The hover rules now leave the active chip alone;
+  `e2e/chips.test.ts` hovers the active chip, an inactive one and the chosen case's chip in Chromium in both themes.
 
-On adoption: nothing to change; a tick or a cell at exactly 0.0001 % reads in fixed notation.
+On adoption: nothing to change; a tick or a cell at exactly 0.0001 % reads in fixed notation, and an active chip keeps
+its colours under the pointer.
 
 ## [0.09.003] - 2026-10-08
 
