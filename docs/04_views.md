@@ -58,6 +58,6 @@ list items, callouts, captions) keep a `--measure-text` line; figures, tables, g
 | `ViewsRow` (`.caos-views-row`) | views side by side | `<ViewsRow shares={[3, 2]}>` gives each view a column the shell owns and splits the row by `shares` (equal without); a filling card keeps its height chain; stacked below 900 px |
 | `Stage`, `useStageSize` | the drawing surface: renders its children only at a real size, declares `data-drawn` | its container's box |
 | `Readout`, `Gauge`, `Verdict` | values with units, a value against zones, the current diagnosis | the rail's width |
-| `Knob`, `ChipGroup`, `VariantBar` | registered controls (`data-control`): the gate moves each and requires a view to react | the rail's width; a chip row is one line |
+| `Knob`, `ChipGroup`, `VariantBar` | registered controls (`data-control`): the gate moves each and requires a view to react | the rail's width; a knob is its label and value on one row over its slider (a long label wraps beside the value); a chip row is one line, and wraps in the rail |
 | `.caos-table` | tabular figures, a sticky header, numbers right-aligned, `.caos-col-text` for words | its rows; cells wrap at 760 px and below |
 | `Callout`, `Figure`, `Equation` | notes, figures with captions, equations with captions | the document's measure |
