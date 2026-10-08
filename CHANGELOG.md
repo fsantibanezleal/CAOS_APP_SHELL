@@ -1,3 +1,17 @@
+## [0.09.004] - 2026-10-07
+
+### Fixed
+
+- Known shell defect 32: a value on the scientific boundary was written in scientific notation when it was a percent.
+  `formatNumber` writes a magnitude below 1e-4 as `1E-5`, and a percent is the value times 100; 1e-6 times 100 is
+  9.999999999999999e-5 in binary floating point, so a log axis of PDs in percent labelled its 1e-6 tick `1E-4 %`
+  between `0.01 %` and `1 %` (CAOS_Contraste C04, Fitch's generators; #81), and `formatTicks` turned a whole axis
+  scientific for the same tick. The boundary is now compared with a relative tolerance of 1e-12: `0.0001 %`; a value
+  truly below it (9.99e-5) stays `9.99E-5`. `test/base09.test.tsx` holds both, the percent, the plain value and the
+  ticks, in English and Spanish.
+
+On adoption: nothing to change; a tick or a cell at exactly 0.0001 % reads in fixed notation.
+
 ## [0.09.003] - 2026-10-08
 
 ### Fixed
