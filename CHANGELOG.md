@@ -1,3 +1,30 @@
+## [0.10.000] - 2026-10-08
+
+### Added
+
+What CAOS_Fragmenta's parity plot still drew on a canvas of its own (CAOS_APP_SHELL#84; CAOS_MANAGE `plans/app-shell`
+BL-029): with these a product draws predicted against measured, its null model and the case the reader picked on
+`UPlotChart`.
+
+- `yMarks`: horizontal reference lines, each labelled at its right end above the line, inside the plot, haloed
+  (`drawYMarks`; the host declares `data-y-marks`).
+- `ChartSeries.size`: the marker diameter of a `points` series (9 px by default), so the selected case can sit in a
+  larger series of its own colour.
+- On a chart whose series are all `points`, the cursor, the readout, `onCursor` and `onPick` take the point nearest the
+  pointer in the plane (`nearestPoint`); uPlot alone takes the nearest in x, which on a scatter named a point far above
+  or below the pointer. The readout names only the series that have the point.
+- `readout(index)`: the caller's text for the point under the cursor, in place of the list of values (a scatter
+  names its case: the blast, its site, its error); `hint`: the readout at rest.
+- A parity plot's range takes in its reference lines, so a null model's level is always in view.
+- `/chart` exports `drawYMarks` and `nearestPoint`.
+- The gate fixture's parity plot carries a reference line and a selected point; `e2e/parity.test.ts` hovers and
+  clicks beside a point whose neighbour in x lies far below it, and reads the reference line off the canvas (it fails
+  with the nearest-in-x cursor).
+
+### Fixed
+
+- The lock file still said 0.9.3 after 0.9.4; it follows `package.json` again.
+
 ## [0.09.004] - 2026-10-08
 
 ### Fixed
