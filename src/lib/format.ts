@@ -26,6 +26,13 @@ export const NBSP = ' ';
  * hundred zeros: one table cell 12,790 px wide (known shell defect 15, CAOS_Contraste, 2026-10-05). */
 export const SCIENTIFIC_BELOW = 1e-4;
 
+/** Whether a magnitude lies below SCIENTIFIC_BELOW, the boundary itself excepted up to a relative 1e-12: a percent is
+ * the value times 100, and 1e-6 * 100 is 9.999999999999999e-5 in binary floating point, which wrote a log axis's
+ * 0.0001 % tick as 1E-4 % between 0.01 % and 1 % (known shell defect 32, CAOS_Contraste C04, 2026-10-07). */
+function belowScientific(magnitude: number): boolean {
+  return magnitude !== 0 && Math.abs(magnitude) < SCIENTIFIC_BELOW * (1 - 1e-12);
+}
+
 /** "Not available" in the interface language: what an absent or non-finite value renders as. */
 export const NOT_AVAILABLE: Record<Lang, string> = { en: 'not available', es: 'no disponible' };
 
@@ -39,7 +46,7 @@ export function formatNumber(value: number | null | undefined, lang: Lang, opts:
   if (value === null || value === undefined || !Number.isFinite(value)) return NOT_AVAILABLE[lang];
   const v = opts.percent ? value * 100 : value;
   const digits = opts.digits ?? 4;
-  const scientific = v !== 0 && (opts.notation === 'scientific' || Math.abs(v) < SCIENTIFIC_BELOW);
+  const scientific = v !== 0 && (opts.notation === 'scientific' || belowScientific(v));
   const grouping = opts.grouping === false ? { useGrouping: false } : {};
   const nf =
     opts.decimals !== undefined
@@ -63,7 +70,7 @@ export function formatTicks(values: readonly (number | null | undefined)[], lang
   let o = opts;
   if (opts.decimals === undefined && opts.notation === undefined) {
     const scale = opts.percent ? 100 : 1;
-    const small = values.some((v) => v !== null && v !== undefined && Number.isFinite(v) && v !== 0 && Math.abs(v * scale) < SCIENTIFIC_BELOW);
+    const small = values.some((v) => v !== null && v !== undefined && Number.isFinite(v) && belowScientific(v * scale));
     if (small) o = { ...opts, notation: 'scientific' };
   }
   return values.map((v) => (v === null || v === undefined ? '' : formatNumber(v, lang, o)));
