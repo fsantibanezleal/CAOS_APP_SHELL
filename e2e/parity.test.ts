@@ -18,12 +18,13 @@ before(async () => {
         import React from 'react';
         import { createRoot } from 'react-dom/client';
         import { UPlotChart } from './src/chart';
+        const tall = new URLSearchParams(location.search).get('box') === 'tall';
         function App() {
           return (
-            <div style={{ width: 420, height: 460 }}>
+            <div style={tall ? { width: 320, height: 620 } : { width: 420, height: 460 }}>
               <UPlotChart
                 parity
-                height={400}
+                height={tall ? 'fill' : 400}
                 x={{ values: [1, 1.02, 3], label: 'Measured', unit: 'cm', format: { decimals: 1 } }}
                 y={{ label: 'Predicted', unit: 'cm', format: { decimals: 1 } }}
                 series={[
@@ -123,6 +124,28 @@ test('a parity plot names and picks the point nearest the pointer in the plane, 
     );
     assert.ok(warnOnLine > 10, `the null-model line is drawn along y = 2 (${warnOnLine} warn pixels)`);
     assert.deepEqual(errors, []);
+  } finally {
+    await page.close();
+  }
+});
+
+test('a parity plot ticks both axes at one step, and fills a tall box centred in it', async () => {
+  const page = await browser.newPage({ viewport: { width: 800, height: 700 } });
+  try {
+    await page.goto(`${address}/?box=tall`);
+    await page.waitForSelector('.caos-chart[data-drawn="1"] .u-over', { timeout: 10000 });
+    const host = page.locator('.caos-chart');
+    const xTicks = Number(await host.getAttribute('data-ticks-x'));
+    const yTicks = Number(await host.getAttribute('data-ticks-y'));
+    assert.ok(xTicks >= 3, `the x axis labels at least three ticks (${xTicks})`);
+    assert.equal(xTicks, yTicks, 'both axes of one range label the same ticks');
+    const plot = (await page.locator('.caos-chart-plot').boundingBox())!;
+    const drawn = (await page.locator('.caos-chart-plot .uplot').boundingBox())!;
+    assert.ok(Math.abs(drawn.width - drawn.height) < 1, 'the plot is square');
+    assert.ok(plot.height > drawn.height + 100, 'the box is taller than the square');
+    const offX = Math.abs(plot.x + plot.width / 2 - (drawn.x + drawn.width / 2));
+    const offY = Math.abs(plot.y + plot.height / 2 - (drawn.y + drawn.height / 2));
+    assert.ok(offX < 1.5 && offY < 1.5, `the square is centred in its box (off by ${offX} across, ${offY} down)`);
   } finally {
     await page.close();
   }
