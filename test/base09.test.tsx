@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { parityRange, seriesStyle, sortOrder, UPlotChart } from '../src/chart/UPlotChart.tsx';
+import { formatNumber, formatTicks } from '../src/lib/format.ts';
 import { ViewsRow } from '../src/workbench/ViewsRow.tsx';
 
 /** The 0.9.0 base (CAOS_APP_SHELL#65; CAOS_MANAGE plans/app-shell BL-027 and BL-028): what CAOS_Fragmenta carried. */
@@ -72,4 +73,20 @@ test('UPlotChart declares a parity plot, a log x axis and picking for the gate a
   assert.match(out, /data-pick="1"/);
   const css = readFileSync(new URL('../chart.css', import.meta.url), 'utf8');
   assert.match(css, /\.caos-chart\[data-parity\] \.uplot \{ margin-inline: auto; \}/);
+});
+
+test('formatNumber: 1e-4 is fixed, also as the percent of 1e-6 that floating point leaves under it (known shell defect 32)', () => {
+  // 1e-6 * 100 is 9.999999999999999e-5: on the boundary, not below it
+  assert.equal(1e-6 * 100 < 1e-4, true);
+  assert.equal(formatNumber(1e-6, 'en', { percent: true, digits: 2 }), '0.0001\u00a0%');
+  assert.equal(formatNumber(1e-6, 'es', { percent: true, digits: 2 }), '0,0001\u00a0%');
+  assert.equal(formatNumber(1e-4, 'en'), '0.0001');
+  // truly below the boundary stays scientific
+  assert.equal(formatNumber(9.99e-5, 'en'), '9.99E-5');
+  assert.equal(formatNumber(9.99e-7, 'en', { percent: true, digits: 3 }), '9.99E-5\u00a0%');
+  // one axis of PDs in percent, 1e-6 to 1e-2: every tick fixed, none scientific
+  const ticks = formatTicks([1e-6, 1e-4, 1e-2], 'en', { percent: true, digits: 2 });
+  assert.deepEqual(ticks, ['0.0001\u00a0%', '0.01\u00a0%', '1\u00a0%']);
+  // an axis with a tick truly below the boundary is scientific throughout (known shell defect 19 holds)
+  assert.equal(formatTicks([1e-7, 1e-4], 'en', { percent: true, digits: 2 }).every((s) => s.includes('E')), true);
 });
