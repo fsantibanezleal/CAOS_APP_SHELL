@@ -15,7 +15,10 @@ BL-029): with these a product draws predicted against measured, its null model a
   or below the pointer. The readout names only the series that have the point.
 - `readout(index)`: the caller's text for the point under the cursor, in place of the list of values (a scatter
   names its case: the blast, its site, its error); `hint`: the readout at rest.
-- A parity plot's range takes in its reference lines, so a null model's level is always in view.
+- A parity plot's range takes in its reference lines, so a null model's level is always in view; its two axes tick
+  at one step (uPlot spaces x and y ticks differently, so one range read 25, 30, 35 across and 24, 26, 28 up); filling
+  a box taller than it is wide, it is centred down as well as across.
+- Every chart declares how many ticks each axis labels (`data-ticks-x`, `data-ticks-y`).
 - `/chart` exports `drawYMarks` and `nearestPoint`.
 - The gate fixture's parity plot carries a reference line and a selected point; `e2e/parity.test.ts` hovers and
   clicks beside a point whose neighbour in x lies far below it, and reads the reference line off the canvas (it fails
