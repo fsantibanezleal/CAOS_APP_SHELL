@@ -1,3 +1,16 @@
+## [0.09.003] - 2026-10-08
+
+### Fixed
+
+- A `Knob` in the rail drew its value under its label: the rail's rule for a labelled control
+  (`.caos-wb-rail label`, a column) outranked `.caos-knob-head` (a row, the value at the right), so every knob in
+  every rail took one more line than it is designed to, since 0.7.0 (CAOS_APP_SHELL#77). Found by the 0.9.1 gate on
+  CAOS_Fragmenta, its one failure left of 890 states: at 1280x800 in Spanish with the wide font, a rail of eight design
+  variants and three knobs held 710 px in 686 (ADR-0071 rule 6). The rail's rule now leaves the knob head alone; a
+  labelled select in the rail still stacks its text above it. `e2e/rail.test.ts` measures both in Chromium.
+
+On adoption: a product's rail gains about 25 px per knob; nothing to remove.
+
 ## [0.09.002] - 2026-10-07
 
 ### Fixed
