@@ -34,7 +34,9 @@ rebuilt on a theme or language change; compared by value, so a parent re-render 
   labels the ticks it keeps and leaves the rest blank; marks keep apart on it as on any axis.
 - **A parity plot** (`parity`, 0.9.0): predicted (the series, usually `mode: 'points'`) against observed (x) on one
   shared range, in a square box centred in its card, with the dashed identity line. x need not be sorted. The range
-  takes in the reference lines (`yMarks`, 0.10.0), so a null model's level is always in view.
+  takes in the reference lines (`yMarks`, 0.10.0), so a null model's level is always in view; both axes tick at one
+  step (one tick spacing for the two), and filling a box taller than it is wide the square is centred down as well as
+  across. The host declares how many ticks each axis labels (`data-ticks-x`, `data-ticks-y`, on every chart).
 - **The readout** under the plot lists the values at the cursor; `readout(index)` replaces it with the caller's text
   for the point (a scatter names its case: the blast, its site, its error), and `hint` sets the text at rest
   (0.10.0).
