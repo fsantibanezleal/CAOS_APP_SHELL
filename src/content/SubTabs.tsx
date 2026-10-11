@@ -1,6 +1,7 @@
 import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { PanelBoundary } from '../lib/PanelBoundary';
 import { useOverflowFade } from '../lib/overflow';
+import { DocRefsScope } from './Cite';
 import { MAX_PEER_TABS } from './Tabs';
 
 export interface SubTabDef {
@@ -100,7 +101,9 @@ export function SubTabs({ tabs, initial, value, onChange, ariaLabel, orientation
             className="subtabpanel"
             data-panel={current.id}
           >
-            <PanelBoundary panel={current.id}>{current.content}</PanelBoundary>
+            <PanelBoundary panel={current.id}>
+              <DocRefsScope>{current.content}</DocRefsScope>
+            </PanelBoundary>
           </div>
         )}
       </div>

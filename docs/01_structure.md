@@ -30,7 +30,7 @@ routes, version, build, licence, visibility, architecture and footer provenance 
 |---|---|---|---|
 | Workbench | `CaseWorkbench` (on `WorkbenchLayout`) | the App route of a product about cases: one case at a time, its variants, its parameters | a rail (`--rail-w`) beside the instrument; the instrument holds at most six question groups and takes at least half the viewport (ADR-0071 rule 8) |
 | Surface | `SurfacePage` | an App that is not one case's: a hub, an explorer, a console | a head (title, lede, actions), one row of at most six views, the open view filling the rest and scrolling inside |
-| Document | `DocPage` and `DocSection` | Introduction, Methodology, Implementation, Experiments, Benchmark | a centred column of `--maxw` (1200 px), or `wide` with a vertical sub-tab list; text blocks keep a `--measure-text` (78ch) line |
+| Document | `DocPage` and `DocSection` | Introduction, Methodology, Implementation, Experiments, Benchmark | a centred column of `--maxw` (1200 px), or `wide` with a vertical sub-tab list; text blocks take the full column, captions keep a `--measure-text` (78ch) line, and the references close the page or open tab |
 
 Two special frames sit beside these: `FocusShell` (a full-viewport scenario, ADR-0070) and `WorkbenchShell` (an
 authenticated console with a sidebar and a phone bottom bar).
