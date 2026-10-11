@@ -298,6 +298,13 @@ function ValidationView({ sim }: { sim: Sim }) {
                   x={{ values: sim.t.slice(1), label: { en: 'Day', es: 'Día' }, unit: 'd', log: true }}
                   y={{ label: { en: 'People', es: 'Personas' }, format: { decimals: 0 } }}
                   series={[{ label: { en: 'Recovered', es: 'Recuperados' }, values: sim.R.slice(1) }]}
+                  // reference lines in every tone (0.11.0), one above the data and one below it: the range takes them in
+                  yMarks={[
+                    { y: Math.max(...sim.R) * 1.2, label: { en: 'red level', es: 'nivel rojo' }, tone: 'bad' },
+                    { y: Math.max(...sim.R) * 0.6, label: { en: 'target', es: 'meta' }, tone: 'good' },
+                    { y: -Math.max(...sim.R) * 0.1, label: { en: 'no bias', es: 'sin sesgo' }, tone: 'neutral' },
+                    { y: Math.max(...sim.R) * 0.3, label: { en: 'amber level', es: 'nivel ámbar' } },
+                  ]}
                 />
               </PlotCard>
             </ViewsRow>

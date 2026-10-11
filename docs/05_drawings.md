@@ -29,7 +29,14 @@ rebuilt on a theme or language change; compared by value, so a parent re-render 
 - **Reference lines** (`yMarks: [{ y, label }]`, 0.10.0) are drawn by `drawYMarks`: a dotted line across the plot at
   a y value (a null model's constant prediction, a target, a limit), its label at the right end above the line (below
   it when the line runs along the top), inside the plot, haloed; a label that would overlap the one before it moves
-  left of it. A line outside the y range is not drawn. The host declares `data-y-marks`.
+  left of it. A line outside a given `y.range` is not drawn. The host declares `data-y-marks`. Since 0.11.0
+  (CAOS_APP_SHELL#94) a line has a `tone`, which colours the line and its label (the line stays dotted): `warn` (the
+  default, `--color-warn`, an amber threshold), `bad` (`--color-bad`, a red threshold), `good` (`--color-good`, a level
+  to reach) and `neutral` (`--color-fg-subtle`, a level that is no alarm: a test's nominal size, "no bias"). On any
+  chart, when `y.range` is not given, the y range takes in every line's level (`rangeWithLevels`: the data's extent
+  widened to the levels, 5% of the span beyond an end a level pushed out, then uPlot's own padding), so a line is
+  always drawn, as a constant series would have pulled the range to it; on a log axis only the levels above 0 count.
+  A given `y.range` is kept as it is and a line outside it is skipped.
 - **A log x axis** (`x: { log: true }`, 0.9.0): the axis spans the data (uPlot alone rounds out to the next decade),
   labels the ticks it keeps and leaves the rest blank; marks keep apart on it as on any axis.
 - **A parity plot** (`parity`, 0.9.0): predicted (the series, usually `mode: 'points'`) against observed (x) on one
