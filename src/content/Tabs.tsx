@@ -1,6 +1,7 @@
 import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { PanelBoundary } from '../lib/PanelBoundary';
 import { useOverflowFade } from '../lib/overflow';
+import { DocRefsScope } from './Cite';
 
 export interface TabDef {
   id: string;
@@ -93,7 +94,9 @@ export function Tabs({ tabs, initial, value, onChange, ariaLabel }: TabsProps) {
           className="tabpanel"
           data-panel={current.id}
         >
-          <PanelBoundary panel={current.id}>{current.content}</PanelBoundary>
+          <PanelBoundary panel={current.id}>
+            <DocRefsScope>{current.content}</DocRefsScope>
+          </PanelBoundary>
         </div>
       )}
     </div>

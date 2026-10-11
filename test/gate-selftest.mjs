@@ -53,6 +53,8 @@ const PLANTS = [
   { id: 'label-wide', check: 'G10', re: /"a label sized for a narrow font only" is cut/, mode: /wide-font/, opts: { routes: '/,/introduction', wideFont: true, wideFontSizes: '1280x800' } },
   { id: 'decimal-point', check: 'G11', re: /writes 0\.25 with a decimal point/, also: /writes 2\.7e-08 with a decimal point/, opts: { langs: 'es', routes: '/,/introduction' } },
   { id: 'sticky-off', check: 'G12', re: /active sub-tab .* is out of view/, opts: { routes: '/,/implementation' } },
+  { id: 'refs-mid', check: 'ADR-0017.4', re: /references must be the last block of the page or tab/, opts: { routes: '/,/introduction' } },
+  { id: 'refs-missing', check: 'ADR-0017.4', re: /cite references the page never lists/, opts: { routes: '/,/introduction' } },
   { id: 'low-contrast', check: 'G13', re: /contrast \d\.\d\d:1, below 4\.5:1/, opts: { routes: '/,/introduction' } },
 ];
 
