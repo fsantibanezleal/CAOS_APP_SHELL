@@ -42,6 +42,7 @@ export const DEFAULTS = {
   textFloor: 400,
   instrumentMin: 0.5,
   stageFillMin: 0.3,
+  stageFloor: 140,
   viewportMinWidth: 1280,
   out: 'gate-output',
   maxShots: 40,
@@ -417,6 +418,8 @@ export async function runGate(o) {
     for (const r of f.repeatedTicks ?? []) {
       fail('G6', where, `${r.label}: ${r.n} axis tick label(s) repeat the label before them (give the axis fixed decimals)`);
     }
+    // a filling card whose note leaves its drawing under the floor (CAOS_APP_SHELL#95); below 1280 px the document scrolls
+    if (big) for (const c of f.fillStages ?? []) if (c.h < opt.stageFloor) fail('G6', where, `the drawing of ${c.label} keeps ${Math.round(c.h)} px under its note (floor ${opt.stageFloor} px)`);
     for (const m of await page.evaluate(() => window.__caosGate.drawingText())) fail('G10', where, m);
     if (s.lang === 'es') for (const m of await page.evaluate(() => window.__caosGate.decimals())) fail('G11', where, m);
     if (s.w > 760) for (const m of await page.evaluate(() => window.__caosGate.sticky())) fail('G12', where, m);

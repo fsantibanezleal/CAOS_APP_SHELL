@@ -303,6 +303,10 @@ export function installLib() {
       repeatedTicks: [...document.querySelectorAll('[data-ticks-repeat]')]
         .filter((el) => visible(el) && Number(el.getAttribute('data-ticks-repeat')) > 0)
         .map((el) => ({ label: describe(el.closest('[data-plot]') || el), n: Number(el.getAttribute('data-ticks-repeat')) })),
+      // the drawing a filling card keeps under its note (G6 stage floor): the body of every visible `PlotCard fill`
+      fillStages: [...document.querySelectorAll('.caos-plot.fill')]
+        .filter(visible)
+        .map((card) => ({ label: describe(card), h: (card.querySelector(':scope > .caos-plot-body') || card).getBoundingClientRect().height })),
       sectionsWithoutRefs: [...document.querySelectorAll('[data-no-refs-reason="missing"]')].filter(visible).length,
     };
   };

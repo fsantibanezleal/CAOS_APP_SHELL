@@ -63,7 +63,7 @@ defines its symbols; `Cite` requires a DOI or URL.
 
 | Component | What it is | Sizing |
 |---|---|---|
-| `PlotCard` | the frame of every chart or table: title, lane and provenance badges, note, stale overlay | `fill` takes the height its panel leaves; several share it |
+| `PlotCard` | the frame of every chart or table: title, lane and provenance badges, note, stale overlay | `fill` takes the height its panel leaves; several share it. In a filling card the note keeps at most 35% of the card and scrolls beyond it, so the drawing keeps a floor (0.11.0); below 900 px, where the document scrolls and the body has a fixed height, the note is not capped. The gate fails a drawing under 140 px at 1280 px and above (G6) |
 | `ViewsRow` (`.caos-views-row`) | views side by side | `<ViewsRow shares={[3, 2]}>` gives each view a column the shell owns and splits the row by `shares` (equal without); a filling card keeps its height chain; stacked below 900 px |
 | `Stage`, `useStageSize` | the drawing surface: renders its children only at a real size, declares `data-drawn` | its container's box |
 | `Readout`, `Gauge`, `Verdict` | values with units, a value against zones, the current diagnosis | the rail's width |

@@ -13,7 +13,7 @@
 //   --sizes 390x844,...,2560x1440  --themes light,dark  --langs en,es
 //   --case-sample id1,id2        cases walked outside the primary mode; default the first and the last
 //   --single-case                the workbench has one case and no case control
-//   --idle-ms 3000  --settle-ms 15000  --text-floor 400  --instrument-min 0.5  --stage-fill-min 0.3
+//   --idle-ms 3000  --settle-ms 15000  --text-floor 400  --instrument-min 0.5  --stage-fill-min 0.3  --stage-floor 140
 //   --wide-font-sizes 390x844,1280x800   the sizes of the wide-font pass (G10); --no-wide-font skips it
 //   --out gate-output            report (gate-report.json), screenshots (shots/) and the capture index (index.html)
 // Needs `playwright` in the consuming project (optional peer dependency). Exit 1 on any failure, 2 on misuse.
@@ -49,6 +49,7 @@ const options = {
   textFloor: num('text-floor'),
   instrumentMin: num('instrument-min'),
   stageFillMin: num('stage-fill-min'),
+  stageFloor: num('stage-floor'),
   wideFontSizes: args['wide-font-sizes'],
   wideFont: args['no-wide-font'] === true ? false : undefined,
   out: args.out,
