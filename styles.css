@@ -457,6 +457,9 @@ code, kbd { font-family: var(--font-mono); }
 
 /* Registered controls (Knob, ChipGroup). */
 .caos-knob { display: flex; flex-direction: column; gap: var(--space-1); }
+/* Chromium keeps a 2 px user-agent side margin on a range input: at width 100% it reached 2 px past a clipping card
+   (a PlotCard body) and the gate's G5 failed at phone widths (CAOS_APP_SHELL#91). */
+.caos-knob input[type='range'] { margin-inline: 0; }
 .caos-knob-head { display: flex; justify-content: space-between; gap: var(--space-2); font-size: 0.8rem; color: var(--color-fg-subtle); }
 .caos-knob-value { font-family: var(--font-mono); color: var(--color-fg); font-weight: 600; white-space: nowrap; }
 .caos-chipgroup { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
@@ -585,6 +588,9 @@ svg.lucide { flex: none; }
 .caos-plot-note { margin: 0.4rem 0 0; font-size: 0.78rem; color: var(--color-fg-faint); }
 .caos-plot.fill { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
 .caos-plot.fill > .caos-plot-body { flex: 1 1 0; min-height: 0; overflow: hidden; }
+/* The note of a filling card keeps at most 35% of the card and scrolls beyond it, so the drawing keeps a floor
+   (CAOS_APP_SHELL#95: a long note left plots of 10 to 90 px at 1280 x 800). */
+.caos-plot.fill > .caos-plot-note { flex: 0 1 auto; max-height: 35%; overflow-y: auto; }
 
 /* A row of views side by side. Every view of the row takes an equal share, a filling card included (known shell
    defect 23, #54: `.caos-plot.fill` outranked the row's zero basis and took the row). */
@@ -625,6 +631,7 @@ svg.lucide { flex: none; }
   .caos-views-row { flex-direction: column; }
   .caos-views-row > *, .caos-views-row > .caos-plot.fill { flex: none; }
   .caos-plot.fill > .caos-plot-body { flex: none; height: clamp(260px, 48vh, 440px); }
+  .caos-plot.fill > .caos-plot-note { max-height: none; overflow-y: visible; }
 }
 @media (max-width: 760px) {
   /* A phone wraps the cells instead of pushing the table past the page (found by the gate on the template). */

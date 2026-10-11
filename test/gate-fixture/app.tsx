@@ -38,6 +38,11 @@ declare global {
   }
 }
 const PLANT = window.__PLANT__ ?? '';
+/** Twenty lines of note for the stage-floor plant. */
+const STAGE_FLOOR_NOTE = {
+  en: Array.from({ length: 20 }, (_, i) => `Line ${i + 1} of a long note the requirements ask for.`).join('\n'),
+  es: Array.from({ length: 20 }, (_, i) => `Línea ${i + 1} de una nota larga que piden los requisitos.`).join('\n'),
+};
 
 // ---------------------------------------------------------------------------------------------- the model (SIR)
 interface Sim {
@@ -108,7 +113,14 @@ function ModelView({ sim }: { sim: Sim }) {
   const key = PLANT === 'stuck-view' ? frozen.current : stateKey;
   return (
     <>
-      <PlotCard fill title={{ en: 'Epidemic curves', es: 'Curvas epidémicas' }} lane="live" provenance="synthetic" dataKey={key}>
+      <PlotCard
+        fill
+        title={{ en: 'Epidemic curves', es: 'Curvas epidémicas' }}
+        lane="live"
+        provenance="synthetic"
+        dataKey={key}
+        note={PLANT === 'stage-floor' ? STAGE_FLOOR_NOTE : undefined}
+      >
         {PLANT === 'small' ? (
           <SmallCanvas />
         ) : PLANT === 'blank' ? (
@@ -298,6 +310,13 @@ function ValidationView({ sim }: { sim: Sim }) {
                   x={{ values: sim.t.slice(1), label: { en: 'Day', es: 'Día' }, unit: 'd', log: true }}
                   y={{ label: { en: 'People', es: 'Personas' }, format: { decimals: 0 } }}
                   series={[{ label: { en: 'Recovered', es: 'Recuperados' }, values: sim.R.slice(1) }]}
+                  // reference lines in every tone (0.11.0), one above the data and one below it: the range takes them in
+                  yMarks={[
+                    { y: Math.max(...sim.R) * 1.2, label: { en: 'red level', es: 'nivel rojo' }, tone: 'bad' },
+                    { y: Math.max(...sim.R) * 0.6, label: { en: 'target', es: 'meta' }, tone: 'good' },
+                    { y: -Math.max(...sim.R) * 0.1, label: { en: 'no bias', es: 'sin sesgo' }, tone: 'neutral' },
+                    { y: Math.max(...sim.R) * 0.3, label: { en: 'amber level', es: 'nivel ámbar' } },
+                  ]}
                 />
               </PlotCard>
             </ViewsRow>
@@ -675,6 +694,12 @@ function App() {
   );
 }
 
+if (PLANT === 'stage-floor') {
+  // the shell's cap on a filling card's note (0.11.0) removed, as it was before: a twenty-line note takes the drawing's height
+  const style = document.createElement('style');
+  style.textContent = '.caos-plot.fill > .caos-plot-note { max-height: none !important; overflow: visible !important; white-space: pre-line; font-size: 1rem; }';
+  document.head.appendChild(style);
+}
 if (PLANT === 'clip') {
   const style = document.createElement('style');
   style.textContent = '.app-shell.fixed.contain > .page { overflow: hidden !important; }';

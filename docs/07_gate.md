@@ -29,7 +29,7 @@ CAOS_Fragmenta's deploy gate).
 | G3 errors | any `console.error`, page error, or GET answered 400 or above |
 | G4 deep links | a route loaded directly (and with a trailing slash) does not answer 200 with that route; an artifact answers HTML; a missing asset does not answer 404; a document holds less text than the floor |
 | G5 reach | horizontal overflow; an element outside the viewport or outside the rail; a container that cuts its content; a row that wraps or cuts its tabs; truncated text without its full text in a title; a control a pointer cannot reach (the probe scrolls as a reader does, clear of a header stuck at the top) |
-| G6 drawing | nothing drawn; a stage under 30% painted; drawn views under half the viewport on the App route at 1280 px and above; a repeated tick label |
+| G6 drawing | nothing drawn; a stage under 30% painted; drawn views under half the viewport on the App route at 1280 px and above; a repeated tick label; a visible `PlotCard fill` whose body (the drawing's stage) is under `--stage-floor` (140 px by default) at 1280 px and above, because its note took the height ("the drawing of <card> keeps <h> px under its note", 0.11.0) |
 | G7 settle | a state never declares itself ready; a tab cannot be clicked |
 | G8 idle | sustained animation frames or DOM mutations at rest |
 | G9 reactivity | a registered control does not change the selection key, or a view keeps an old key; the case shown is not the case asked for; the deep link `?case=` fails. A control whose inputs are all disabled is not moved (known shell defect 20) |
@@ -44,9 +44,11 @@ CAOS_Fragmenta's deploy gate).
 
 `--base-path`, `--routes`, `--workbench` (the routes with the case workbench, default `/`; pass `''` for a product whose
 App is a `SurfacePage`), `--sizes`, `--themes`, `--langs`, `--case-sample`, `--single-case`, `--idle-ms`, `--settle-ms`,
-`--text-floor`, `--instrument-min`, `--stage-fill-min`, `--wide-font-sizes`, `--no-wide-font`, `--out`. Exit 1 on any
+`--text-floor`, `--instrument-min`, `--stage-fill-min`, `--stage-floor` (the least height in pixels a filling card's drawing keeps, 140), `--wide-font-sizes`, `--no-wide-font`, `--out`. Exit 1 on any
 failure, 2 on misuse. The report (`gate-report.json`) lists every failure, the number of states and captures, and the
 smallest margins against the G6 floors.
+
+The self-test's plant `stage-floor` is a filling card with a twenty-line note whose cap (the shell's 35%, 0.11.0) is removed by the plant, as it was before; the gate must fail it under G6 with "the drawing of ... keeps N px under its note (floor 140 px)".
 
 ## The gate proves itself (G15)
 
