@@ -56,7 +56,7 @@ export type { SubTabsProps } from './content/SubTabs';
 export { Callout } from './content/Callout';
 export { Equation, InlineMath } from './content/Equation';
 export { Figure } from './content/Figure';
-export { CitationsProvider, Cite, Refs, ReferenceList } from './content/Cite';
+export { CitationsProvider, Cite, Refs, ReferenceList, DocReferences, DocRefsScope, firstAppearance } from './content/Cite';
 export type { Citation } from './content/Cite';
 export { DocPage, DocSection } from './content/DocPage';
 export type { DocSectionProps } from './content/DocPage';

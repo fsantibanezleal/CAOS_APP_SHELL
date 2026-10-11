@@ -112,7 +112,7 @@ test('readouts format numbers in the interface language and show absent values h
   assert.match(out, /class="caos-plot"[^>]*data-lane="replay"[^>]*data-provenance="synthetic"/);
 });
 
-test('DocSection ends in its own references, and a section without them must say why (ADR-0017 §4)', () => {
+test('DocSection declares its references (listed once at the end of the page) and a section without them must say why (ADR-0017 §4)', () => {
   const cites = [{ id: 'basel2005', label: 'BCBS 2005', citation: 'BCBS (2005)', url: 'https://www.bis.org/publ/bcbs_wp14.htm' }];
   const out = html(
     <CitationsProvider items={cites}>
@@ -125,7 +125,8 @@ test('DocSection ends in its own references, and a section without them must say
     </CitationsProvider>,
   );
   assert.match(out, /class="page-body prose caos-doc"/);
-  assert.match(out, /class="th-refs"/);
+  assert.match(out, /data-refs="1"/);
+  assert.doesNotMatch(out, /class="th-refs"/);
   assert.match(out, /data-no-refs-reason="missing"/);
 });
 

@@ -38,7 +38,7 @@ CAOS_Fragmenta's deploy gate).
 | G12 sticky lists | at the end of a long section, the active vertical sub-tab is out of view |
 | G13 contrast | a visible text under WCAG AA (4.5:1; 3:1 for large text) against the colour behind it, at the primary size in both themes; disabled controls are exempt, colour transitions are finished first |
 | G14 captures | (always written) `index.html` in the output folder shows every capture, grouped by route, the failure list and the failure captures first |
-| ADR-0071, ADR-0017 | the document scrolls at 1280 px and above when the route is the viewport; the rail scrolls; prose off-centre; a bibliography dump; an equation without a caption; a section without references or a reason |
+| ADR-0071, ADR-0017 | the document scrolls at 1280 px and above when the route is the viewport; the rail scrolls; prose off-centre; a bibliography outside the end-of-page references block (`.reference-list`); a references block with content after it (it must be the last block of the page or open tab); a section that declares `refs` while its page or tab shows no references block; an equation without a caption; a section without references or a reason |
 
 ## Options
 

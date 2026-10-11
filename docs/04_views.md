@@ -45,10 +45,19 @@ scrolling); a product on 0.8.0 deletes it. Without `tabs`, the children are the 
 
 ## The document (`DocPage`, `DocSection`)
 
-A documentation route: the page head (title, lede), then sections, each ending in its own references or a stated
-reason it cites none (ADR-0017 section 4). `wide` for a page with a vertical sub-tab list. Text blocks (paragraphs,
-list items, callouts, captions) keep a `--measure-text` line; figures, tables, grids (`.two-col`, `.fig-row`,
-`.def-grid`) take the width. `Equation` requires a caption that defines its symbols; `Cite` requires a DOI or URL.
+A documentation route: the page head (title, lede), then sections. Each `DocSection` declares `refs` (the citation
+ids it cites) or a `noRefsReason` (a stated reason it cites none); it no longer renders a references row. Since 0.11.0
+the references are ONE block at the end of the scope that shows them (ADR-0017 section 4): the open tab panel when the
+sections sit in a `Tabs` or `SubTabs` panel (the innermost panel), otherwise the end of the `DocPage`. The block is
+`<section class="caos-doc-references" data-doc-references>` with a "References" / "Referencias" heading and an ordered
+list of the full citations, each once, in the order of first appearance across the scope's sections in document order;
+inline `Cite` links stay in the text. `DocPage` and each rendered tab panel provide the scope (`DocRefsScope`, exported
+with `DocReferences` and `firstAppearance`); `ReferenceList` stays exported but is superseded and reports itself.
+`wide` for a page with a vertical sub-tab list. Text blocks (paragraphs, list items, callouts) take the full width of
+the document column (0.11.0; before it a 78-character cap left a wide page's text at the left); captions keep a
+`--measure-text` line, centred under their figure; the page body of a prose route keeps its max width and is centred.
+Figures, tables and grids (`.two-col`, `.fig-row`, `.def-grid`) take the width. `Equation` requires a caption that
+defines its symbols; `Cite` requires a DOI or URL.
 
 ## Views inside a route
 
@@ -60,4 +69,4 @@ list items, callouts, captions) keep a `--measure-text` line; figures, tables, g
 | `Readout`, `Gauge`, `Verdict` | values with units, a value against zones, the current diagnosis | the rail's width |
 | `Knob`, `ChipGroup`, `VariantBar` | registered controls (`data-control`): the gate moves each and requires a view to react | the rail's width; a knob is its label and value on one row over its slider (a long label wraps beside the value); a chip row is one line, and wraps in the rail |
 | `.caos-table` | tabular figures, a sticky header, numbers right-aligned, `.caos-col-text` for words | its rows; cells wrap at 760 px and below |
-| `Callout`, `Figure`, `Equation` | notes, figures with captions, equations with captions | the document's measure |
+| `Callout`, `Figure`, `Equation` | notes, figures with captions, equations with captions | the document's column; a caption keeps its measure |

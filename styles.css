@@ -331,8 +331,9 @@ code, kbd { font-family: var(--font-mono); }
 
 /* == 6 content ================================================================================================== */
 
-/* Fill a document's width with grids, figure rows, definition grids and sub-tab lists, never with stretched text:
-   every text block keeps a readable line (--measure-text), a figure or a table takes the width (ADR-0017 s1). */
+/* A document fills the width of its column (shell 0.11.0, CAOS_APP_SHELL#96): text blocks, grids, figure rows and
+   tables all take it. A page that reads as one prose column keeps its own max width and is centred (ADR-0017 s1);
+   only the captions keep a measure, centred under their figure. */
 .prose { font-size: var(--text-base); }
 .prose section { margin-block: 1.75rem; }
 .prose h2 { font-size: var(--text-xl); margin-block: 1.4rem 0.6rem; }
@@ -340,13 +341,16 @@ code, kbd { font-family: var(--font-mono); }
 .prose p { margin-block: 0.6rem; }
 .prose ul, .prose ol { margin-block: 0.5rem; padding-left: 1.3rem; }
 .prose li { margin-block: 0.35rem; }
-.prose :where(p, li, blockquote, dd, .callout) { max-width: var(--measure-text); }
 .prose :where(.equation-caption, .figure-caption, .fig-cap) { max-width: var(--measure-text); margin-inline: auto; }
 .measure { max-width: var(--measure); }
 .page-head { border-bottom: 1px solid var(--color-border); padding-bottom: 1rem; margin-bottom: 1.25rem; }
 .page-head h1 { font-size: var(--text-2xl); margin: 0 0 0.4rem; }
 .lede { color: var(--color-fg-subtle); font-size: var(--text-lg); margin: 0; max-width: var(--measure); }
 .caos-doc-section { margin-block: 1.75rem; }
+/* The references of a page or open tab: one block at its end (ADR-0017 s4). */
+.caos-doc-references { margin-top: 2rem; padding-top: 0.4rem; border-top: 1px solid var(--color-border); }
+.caos-doc-reference-list { font-size: 0.85rem; color: var(--color-fg-subtle); line-height: 1.5; padding-left: 1.4rem; }
+.caos-doc-reference-list li { margin-block: 0.5rem; }
 /* Wide content in a document scrolls inside its own box; the contained page never cuts it (G5). */
 .prose table { display: block; max-width: 100%; overflow-x: auto; }
 .prose pre { max-width: 100%; overflow-x: auto; }
