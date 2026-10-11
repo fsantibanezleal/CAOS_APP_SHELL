@@ -254,6 +254,18 @@ export function installLib() {
       ? { case: wb.getAttribute('data-case'), key: wb.getAttribute('data-state-key'), replayOnly: wb.getAttribute('data-replay-only') === '1' }
       : null;
 
+    // The references of a page or open tab (ADR-0017 s4): one block, the last thing in its scope (the document page
+    // or the tab panel that holds it).
+    const refScope = (el) => el.closest('[role="tabpanel"], [data-doc-page]');
+    const refBlocks = [...document.querySelectorAll('[data-doc-references]')].filter(visible);
+    const isLastInScope = (block) => {
+      const scope = refScope(block);
+      for (let el = block; el && el !== scope; el = el.parentElement) {
+        for (let n = el.nextElementSibling; n; n = n.nextElementSibling) if (visible(n)) return false;
+      }
+      return true;
+    };
+
     let offCentre = null;
     const proseBody = document.querySelector('.page-body:not(.wide)');
     if (proseBody && visible(proseBody)) {
@@ -282,6 +294,10 @@ export function installLib() {
       offCentre,
       pageText: pageBody ? (pageBody.innerText || '').trim().length : 0,
       referenceLists: [...document.querySelectorAll('.reference-list')].filter(visible).length,
+      // shell 0.11.0: the references of a page or open tab are one block at its end (ADR-0017 s4)
+      referenceBlocks: refBlocks.length,
+      referencesNotLast: refBlocks.filter((b) => !isLastInScope(b)).length,
+      refsDeclaredNoBlock: [...document.querySelectorAll('[data-refs]')].filter((sec) => visible(sec) && !refBlocks.some((b) => refScope(b) === refScope(sec))).length,
       uncaptioned: [...document.querySelectorAll('.equation')].filter((e) => visible(e) && !e.querySelector('.equation-caption')).length,
       // charts whose axis gives a tick the label of the tick before it (UPlotChart declares data-ticks-repeat)
       repeatedTicks: [...document.querySelectorAll('[data-ticks-repeat]')]

@@ -497,6 +497,25 @@ function Doc({ id }: { id: string }) {
   const lang = useShellLang();
   const [artifact, setArtifact] = useState<{ cases: number } | null>(null);
   useEffect(() => {
+    // ADR-0017 s4 plants: text after the references block, and a block that never shows (the sections still cite)
+    if (PLANT === 'refs-mid' && id === 'introduction') {
+      const p = document.createElement('p');
+      p.textContent = 'planted: text after the references block';
+      const t = window.setTimeout(() => document.querySelector('[data-doc-references]')?.after(p), 50);
+      return () => {
+        window.clearTimeout(t);
+        p.remove();
+      };
+    }
+    if (PLANT === 'refs-missing' && id === 'introduction') {
+      const style = document.createElement('style');
+      style.textContent = '[data-doc-references] { display: none; }';
+      document.head.append(style);
+      return () => style.remove();
+    }
+    return undefined;
+  }, [id, lang]);
+  useEffect(() => {
     if (PLANT === 'console' && id === 'methodology') console.error('planted: the methodology page fails');
     if (id !== 'benchmark') return;
     fetch('/data/artifact.json')

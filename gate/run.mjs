@@ -410,7 +410,9 @@ export async function runGate(o) {
     if (f.truncatedCount) fail('G5', where, `${f.truncatedCount} truncated text(s) without the full text in a title: ${f.truncated.join('; ')}`);
     for (const c of f.clipped) fail('G5', where, c);
     if (f.offCentre !== null && f.offCentre > 2) fail('ADR-0017.1', where, `the prose page is off-centre by ${f.offCentre.toFixed(1)}px`);
-    if (f.referenceLists) fail('ADR-0017.4', where, `${f.referenceLists} bibliography dump(s); references belong at the end of each section`);
+    if (f.referenceLists) fail('ADR-0017.4', where, `${f.referenceLists} bibliography outside the end-of-page references block (a .reference-list); give each DocSection its refs and let the page list them once`);
+    if (f.referencesNotLast) fail('ADR-0017.4', where, `${f.referencesNotLast} references block(s) with content after them; references must be the last block of the page or tab`);
+    if (f.refsDeclaredNoBlock) fail('ADR-0017.4', where, `${f.refsDeclaredNoBlock} section(s) cite references the page never lists (no references block in their page or tab)`);
     if (f.uncaptioned) fail('ADR-0017.2', where, `${f.uncaptioned} equation(s) without a caption`);
     for (const r of f.repeatedTicks ?? []) {
       fail('G6', where, `${r.label}: ${r.n} axis tick label(s) repeat the label before them (give the axis fixed decimals)`);
