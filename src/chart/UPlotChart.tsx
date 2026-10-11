@@ -27,6 +27,19 @@ export interface ChartAxis {
   format?: FormatOptions;
 }
 
+/** What a reference line says (CAOS_APP_SHELL#94): `warn` an amber threshold (the default), `bad` a red one, `good` a
+ * level to reach, `neutral` a level that is no alarm (a nominal size, "no bias"). The line and its label take the tone's
+ * colour. */
+export type YMarkTone = 'warn' | 'bad' | 'good' | 'neutral';
+
+/** The shell colour token of each tone of a reference line. */
+export const YMARK_TONE_TOKENS: Record<YMarkTone, ShellColorToken> = {
+  warn: '--color-warn',
+  bad: '--color-bad',
+  good: '--color-good',
+  neutral: '--color-fg-subtle',
+};
+
 export interface UPlotChartProps {
   /** The x values and their axis. A time axis must be declared (`time: true`); uPlot otherwise reads numbers as
    * epoch seconds and labels ticks as dates (failure class 7). */
@@ -37,7 +50,7 @@ export interface UPlotChartProps {
   marks?: { x: number; label: BiText }[];
   /** Horizontal reference lines at y values, labelled at their right end (a null model's constant prediction, a
    * target, a limit). */
-  yMarks?: { y: number; label: BiText }[];
+  yMarks?: { y: number; label: BiText; tone?: YMarkTone }[];
   /** Height in pixels, or `fill` to take the container's height (inside `PlotCard fill`); the width is always the
    * container's. */
   height?: number | 'fill';
@@ -92,6 +105,38 @@ export function parityRange(...arrays: readonly (readonly (number | null)[])[]):
   if (!Number.isFinite(lo)) return [0, 1];
   const pad = (hi - lo || Math.abs(hi) || 1) * 0.05;
   return [lo - pad, hi + pad];
+}
+
+/**
+ * The data's y extent widened to take in the levels of the reference lines, so a line is always drawn (CAOS_APP_SHELL#94;
+ * a constant series pulled the range to it, a mark did not). A log axis takes in only the levels above 0. Returns the
+ * extent unchanged when every level is inside it; `null` ends (no data) take the levels alone. An end a level pushed out
+ * moves a further `pad` of the span (of the span in decades on a log axis), so the line sits inside the frame, not on it;
+ * the caller applies uPlot's own padding after this.
+ */
+export function rangeWithLevels(min: number | null, max: number | null, levels: readonly number[], log = false, pad = 0): [number, number] | null {
+  const d0 = min !== null && Number.isFinite(min) ? min : Infinity;
+  const d1 = max !== null && Number.isFinite(max) ? max : -Infinity;
+  let lo = d0;
+  let hi = d1;
+  for (const v of levels) {
+    if (!Number.isFinite(v) || (log && !(v > 0))) continue;
+    lo = Math.min(lo, v);
+    hi = Math.max(hi, v);
+  }
+  if (!Number.isFinite(lo) || !Number.isFinite(hi)) return null;
+  if (pad > 0 && (lo < d0 || hi > d1)) {
+    if (log && lo > 0) {
+      const room = (Math.log10(hi) - Math.log10(lo) || 1) * pad;
+      if (lo < d0) lo = lo / 10 ** room;
+      if (hi > d1) hi = hi * 10 ** room;
+    } else {
+      const room = (hi - lo || Math.abs(hi) || 1) * pad;
+      if (lo < d0) lo -= room;
+      if (hi > d1) hi += room;
+    }
+  }
+  return [lo, hi];
 }
 
 /** uPlot's numeric tick steps: 1, 2, 2.5 and 5 times every power of ten. */
@@ -215,9 +260,10 @@ export function drawMarks(u: uPlot, marks: { x: number; label: string }[], style
 /**
  * The horizontal reference lines of a chart and their labels: a dashed line across the plot, its label at the right
  * end above the line (below it when the line runs along the top), inside the plot, haloed; a label that would overlap
- * the one placed before it moves left of it. A line outside the y range is not drawn.
+ * the one placed before it moves left of it. A line outside the y range is not drawn. A mark's `color` (the tone's) draws
+ * its line and its label; without one `style.color` does.
  */
-export function drawYMarks(u: uPlot, marks: { y: number; label: string }[], style: { color: string; halo: string; family: string }): void {
+export function drawYMarks(u: uPlot, marks: { y: number; label: string; color?: string }[], style: { color: string; halo: string; family: string }): void {
   const ctx = u.ctx;
   const pr = uPlot.pxRatio || 1;
   const left = u.bbox.left;
@@ -234,7 +280,8 @@ export function drawYMarks(u: uPlot, marks: { y: number; label: string }[], styl
   for (const m of [...marks].sort((a, b) => b.y - a.y)) {
     const py = u.valToPos(m.y, 'y', true);
     if (!Number.isFinite(py) || py < top - 0.5 || py > bottom + 0.5) continue;
-    ctx.strokeStyle = style.color;
+    const color = m.color ?? style.color;
+    ctx.strokeStyle = color;
     ctx.lineWidth = Math.max(1, pr);
     ctx.setLineDash([2 * pr, 4 * pr]);
     ctx.beginPath();
@@ -255,7 +302,7 @@ export function drawYMarks(u: uPlot, marks: { y: number; label: string }[], styl
     ctx.lineWidth = 3 * pr;
     ctx.strokeStyle = style.halo;
     ctx.strokeText(m.label, x0, base);
-    ctx.fillStyle = style.color;
+    ctx.fillStyle = color;
     ctx.fillText(m.label, x0, base);
   }
   ctx.restore();
@@ -330,13 +377,15 @@ export function UPlotChart({ x, y, series, marks, yMarks, height = 280, onCursor
   const ys = useMemo(() => series.map((s) => (order ? order.map((i) => s.values[i] ?? null) : s.values)), [order, series]);
   const levels = useMemo(() => (yMarks ?? []).map((m) => m.y), [yMarks]);
   const range = useMemo(() => (parity ? parityRange(xs, ...ys, levels) : null), [parity, xs, ys, levels]);
+  // any other chart without a given y range takes the reference lines into it, so a line is always drawn (#94)
+  const yLevels = !parity && !y.range && levels.length > 0 ? levels : null;
   // a log axis reaching below uPlot's tick table ticks at powers of ten (known shell defect 31)
   const tiny = useMemo(
     () => ({
       x: Boolean(x.log) && smallestPositive([xs], range) < LOG_TABLE_FLOOR,
-      y: Boolean(y.log) && smallestPositive(ys, range ?? y.range) < LOG_TABLE_FLOOR,
+      y: Boolean(y.log) && smallestPositive(yLevels ? [...ys, yLevels] : ys, range ?? y.range) < LOG_TABLE_FLOOR,
     }),
-    [x.log, y.log, xs, ys, range, y.range],
+    [x.log, y.log, xs, ys, range, y.range, yLevels],
   );
 
   const xLabel = pick(x.label, lang);
@@ -351,7 +400,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, height = 280, onCursor
     pick: Boolean(onPick),
     y: [yLabel, yUnit, Boolean(y.log), y.range ?? null, y.format ?? null, tiny.y],
     m: (marks ?? []).map((m) => [m.x, pick(m.label, lang)]),
-    ym: (yMarks ?? []).map((m) => [m.y, pick(m.label, lang)]),
+    ym: (yMarks ?? []).map((m) => [m.y, pick(m.label, lang), m.tone ?? 'warn']),
     theme,
     lang,
     h,
@@ -410,7 +459,23 @@ export function UPlotChart({ x, y, series, marks, yMarks, height = 280, onCursor
           distr: x.log ? 3 : 1,
           ...(range ? { range } : x.log ? { range: (_u: uPlot, min: number, max: number): uPlot.Range.MinMax => [min, max] } : {}),
         },
-        y: { distr: y.log ? 3 : 1, ...(range ? { range } : y.range ? { range: y.range } : {}) },
+        y: {
+          distr: y.log ? 3 : 1,
+          ...(range
+            ? { range }
+            : y.range
+              ? { range: y.range }
+              : yLevels
+                ? {
+                    // uPlot's own range of the data and the levels: its padding, its decade snap on a log axis
+                    range: (u: uPlot, dmin: number | null, dmax: number | null): uPlot.Range.MinMax => {
+                      const w = rangeWithLevels(dmin, dmax, yLevels, Boolean(y.log), 0.05);
+                      if (!w) return [dmin, dmax] as unknown as uPlot.Range.MinMax;
+                      return y.log ? uPlot.rangeLog(w[0], w[1], (u.scales.y.log ?? 10) as uPlot.Scale.LogBase, false) : uPlot.rangeNum(w[0], w[1], 0.1, true);
+                    },
+                  }
+                : {}),
+        },
       },
       axes: [
         {
@@ -493,7 +558,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, height = 280, onCursor
               ctx.restore();
             }
             const markStyle = { color: resolveToken('--color-warn', '#c80'), halo: surface, family };
-            if (yMarks?.length) drawYMarks(u, yMarks.map((m) => ({ y: m.y, label: pick(m.label, lang) })), markStyle);
+            if (yMarks?.length) drawYMarks(u, yMarks.map((m) => ({ y: m.y, label: pick(m.label, lang), color: resolveToken(YMARK_TONE_TOKENS[m.tone ?? 'warn'], '#c80') })), markStyle);
             if (marks?.length) drawMarks(u, marks.map((m) => ({ x: m.x, label: pick(m.label, lang) })), markStyle);
           },
         ],
