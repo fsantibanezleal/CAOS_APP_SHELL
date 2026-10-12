@@ -14,3 +14,4 @@ venv/
 # gate self-test builds
 .gate-selftest/
 gate-output/
+__pycache__/
