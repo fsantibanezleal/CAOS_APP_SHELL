@@ -17,7 +17,7 @@ export function Callout({
         ? 'callout callout-strong'
         : 'callout callout-note';
   return (
-    <div className={cls}>
+    <div className={cls} data-callout={variant}>
       {title && <p className="callout-title">{title}</p>}
       <div className="callout-body">{children}</div>
     </div>

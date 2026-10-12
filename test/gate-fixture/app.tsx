@@ -1,7 +1,7 @@
 // The gate's fixture (G15): a small real product built on this shell's sources, clean by default. The self-test
 // serves it as GitHub Pages would and runs the gate on it, once clean (every check must pass in the full matrix) and
 // once per planted defect (the check that owns the defect must fail). `window.__PLANT__` names the plant.
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from 'react-router';
 import 'katex/dist/katex.min.css';
@@ -14,15 +14,12 @@ import {
   ChipGroup,
   CitationsProvider,
   DocPage,
-  DocSection,
-  Equation,
   Knob,
   PlotCard,
   Readout,
   STANDARD_ROUTES,
   Stage,
   SubTabs,
-  Tabs,
   ViewsRow,
   pick,
   useShellLang,
@@ -31,6 +28,7 @@ import {
   type ShellConfig,
 } from '../../src/index';
 import { UPlotChart } from '../../src/chart';
+import { fixtureDoc } from './docs';
 
 declare global {
   interface Window {
@@ -364,6 +362,44 @@ function ValidationView({ sim }: { sim: Sim }) {
   );
 }
 
+/** A view whose document is absent says so and draws nothing (ADR-0080 decision 3); the unavailable-* plants break it. */
+function PendingView() {
+  const lang = useShellLang();
+  const reason = pick({ en: 'The trace for this case is not available yet: 1 of 5 artifacts are absent.', es: 'La traza de este caso aún no está disponible: falta 1 de 5 artefactos.' }, lang);
+  const text = PLANT === 'unavailable-unexplained' ? '' : PLANT === 'unavailable-short' ? 'n/a' : PLANT === 'unavailable-punct' ? ' - . - . - . - . - . - ' : reason;
+  // the note a reader cannot see, one way per plant (each used to pass the gate)
+  const hide: Record<string, CSSProperties> = {
+    'unavailable-hidden': { display: 'none' },
+    'unavailable-opacity': { opacity: 0 },
+    'unavailable-zero': { width: 0, height: 0, overflow: 'hidden', margin: 0, padding: 0 },
+    'unavailable-offscreen': { position: 'absolute', left: -10000, top: 0, width: 400 },
+    'unavailable-sronly': { position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 },
+    'unavailable-fontsize': { fontSize: 0 },
+    // the box is in place and a reader cannot read the glyphs: cut away, painted far outside the box, or a 1 px font on a tall line
+    'unavailable-clippath': { clipPath: 'inset(100%)' },
+    'unavailable-textindent': { textIndent: -10000, whiteSpace: 'nowrap' },
+    'unavailable-tinyfont': { fontSize: 1, lineHeight: '16px' },
+  };
+  return (
+    <>
+      <p className="caos-pending" data-state="unavailable" style={hide[PLANT]}>
+        {PLANT === 'unavailable-hidden-text' ? (
+          <>
+            <span style={{ display: 'none' }}>{reason}</span>.
+          </>
+        ) : (
+          text
+        )}
+      </p>
+      {PLANT === 'unavailable-beside-blank' && (
+        <Stage label="Pending curves">{(sz) => <canvas width={sz.width} height={sz.height} style={{ display: 'block' }} />}</Stage>
+      )}
+      {PLANT === 'unavailable-collapsed-chart' && <canvas width={600} height={300} style={{ display: 'block', width: '100%', height: 0 }} />}
+      {PLANT === 'unavailable-invisible-chart' && <canvas width={600} height={300} style={{ display: 'block', visibility: 'hidden' }} />}
+    </>
+  );
+}
+
 function CompareView({ peaks }: { peaks: { id: string; label: string; peak: number }[] }) {
   return (
     <PlotCard fill title={{ en: 'Peak infected by variant', es: 'Pico de infectados por variante' }} lane="live" provenance="synthetic" dataKey={useWorkbenchState().stateKey}>
@@ -479,6 +515,7 @@ function Workbench() {
         groups={[
           { id: 'model', label: { en: 'Model', es: 'Modelo' }, content: <ModelView sim={sim} /> },
           { id: 'validation', label: { en: 'Validation', es: 'Validación' }, content: <ValidationView sim={sim} /> },
+          { id: 'pending', label: { en: 'Pending', es: 'Pendiente' }, content: <PendingView /> },
         ]}
         compare={{ content: <CompareView peaks={peaks} /> }}
         context={{
@@ -506,11 +543,6 @@ const CITATIONS = [
   { id: 'km1927', label: { en: 'Kermack and McKendrick 1927', es: 'Kermack y McKendrick 1927' }, citation: 'Kermack, W. O., McKendrick, A. G. (1927). A contribution to the mathematical theory of epidemics. Proc. R. Soc. Lond. A 115, 700-721.', doi: '10.1098/rspa.1927.0118' },
   { id: 'hethcote2000', label: 'Hethcote 2000', citation: 'Hethcote, H. W. (2000). The mathematics of infectious diseases. SIAM Review 42(4), 599-653.', doi: '10.1137/S0036144500371907' },
 ];
-
-const PARAGRAPH = {
-  en: 'The model divides the population into those who can be infected, those who are infected, and those who have recovered. Each day, contacts between the first two groups produce new infections in proportion to the contact rate, and a fixed share of the infected recover. The epidemic grows while the effective reproduction number stays above one, peaks when the susceptible share falls to the inverse of the basic reproduction number, and ends with part of the population never infected.',
-  es: 'El modelo divide la población entre quienes pueden contagiarse, quienes están contagiados y quienes se recuperaron. Cada día, los contactos entre los dos primeros grupos producen contagios nuevos en proporción a la tasa de contacto, y una fracción fija de los contagiados se recupera. La epidemia crece mientras el número reproductivo efectivo es mayor que uno, alcanza su pico cuando la fracción susceptible cae al inverso del número reproductivo básico, y termina con parte de la población sin contagiarse.',
-};
 
 function Doc({ id }: { id: string }) {
   const lang = useShellLang();
@@ -552,14 +584,14 @@ function Doc({ id }: { id: string }) {
       </DocPage>
     );
   }
-  const sections = [1, 2, 3, 4, 5].map((k) => (
-    <DocSection key={k} title={{ en: `Part ${k}`, es: `Parte ${k}` }} refs={k === 5 ? undefined : ['km1927', 'hethcote2000']} noRefsReason={k === 5 ? { en: 'A summary of the parts above.', es: 'Un resumen de las partes anteriores.' } : undefined}>
-      <p>{pick(PARAGRAPH, lang)}</p>
-      {k === 1 && <Equation tex="\frac{dI}{dt} = \beta \frac{S I}{N} - \gamma I" caption={pick({ en: 'Rate of change of the infected.', es: 'Tasa de cambio de los contagiados.' }, lang)} />}
-    </DocSection>
-  ));
+  const status = (
+    <p data-state={artifact && PLANT !== 'never-ready' ? 'ready' : 'loading'}>
+      {artifact ? `${pick({ en: 'Cases in the artifact', es: 'Casos en el artefacto' }, lang)}: ${artifact.cases}` : '...'}
+    </p>
+  );
+  const doc = fixtureDoc(id, lang, PLANT, status);
   return (
-    <DocPage wide={id === 'implementation'} title={title} lede={pick({ en: 'How the fixture product is built and checked.', es: 'Cómo se construye y verifica el producto de prueba.' }, lang)}>
+    <DocPage wide={id === 'implementation'} title={title} lede={doc.lede} floorWaivers={doc.waivers}>
       {id === 'introduction' && (
         <p style={{ maxWidth: 220 }}>
           {pick({ en: 'See', es: 'Vea' }, lang)} <a href="#wrapped">{pick({ en: 'a deliberately long link that wraps onto a second line', es: 'un enlace deliberadamente largo que pasa a una segunda línea' }, lang)}</a>.
@@ -570,67 +602,7 @@ function Doc({ id }: { id: string }) {
       {PLANT === 'low-contrast' && id === 'introduction' && <p style={{ color: '#9a9a9a' }}>{pick({ en: 'A planted pale line.', es: 'Una línea pálida plantada.' }, lang)}</p>}
       {PLANT === 'label-wide' && id === 'introduction' && <NarrowFontLabel />}
       {PLANT === 'mobile-only' && id === 'introduction' && <div className="fixture-mobile-only">planted narrow-screen block</div>}
-      {id === 'implementation' ? (
-        <SubTabs
-          orientation="vertical"
-          ariaLabel={pick({ en: 'Implementation parts', es: 'Partes de la implementación' }, lang)}
-          tabs={[
-            { id: 'all', label: pick({ en: 'Every part, a long section', es: 'Todas las partes, una sección larga' }, lang), content: sections },
-            { id: 'first', label: pick({ en: 'The first part', es: 'La primera parte' }, lang), content: sections.slice(0, 1) },
-          ]}
-        />
-      ) : id === 'methodology' ? (
-        <Tabs
-          ariaLabel={pick({ en: 'Methodology parts', es: 'Partes de la metodología' }, lang)}
-          tabs={[
-            { id: 'theory', label: pick({ en: 'Theory', es: 'Teoría' }, lang), content: sections },
-            { id: 'numerics', label: pick({ en: 'Numerics', es: 'Numérica' }, lang), content: sections.slice(0, 2) },
-            {
-              // taller than the page's scroll box and shorter than the window: reachable (known shell defect 18)
-              id: 'notes',
-              label: pick({ en: 'Notes', es: 'Notas' }, lang),
-              content: (
-                <div style={{ height: 'calc(100vh - 40px)' }}>
-                  <p>{pick(PARAGRAPH, lang)}</p>
-                </div>
-              ),
-            },
-            {
-              // a focusable block below the fold, a few pixels shorter than the page's scroll box (712px at 1280x800):
-              // bringing its end into view with a margin must not push its start out (known shell defect 25)
-              id: 'margins',
-              label: pick({ en: 'Margins', es: 'Márgenes' }, lang),
-              content: (
-                <div>
-                  <div style={{ height: 400 }}>
-                    <p>{pick(PARAGRAPH, lang)}</p>
-                  </div>
-                  <div role="region" aria-label={pick({ en: 'Nearly as tall as the page', es: 'Casi tan alto como la página' }, lang)} tabIndex={0} style={{ height: 'calc(100vh - 91px)' }}>
-                    <p>{pick(PARAGRAPH, lang)}</p>
-                  </div>
-                </div>
-              ),
-            },
-          ]}
-        />
-      ) : (
-        sections
-      )}
-      {id === 'experiments' && (
-        <figure className="figure">
-          <svg className="fig-svg" viewBox="0 0 320 120" role="img" aria-label="A figure below the fold">
-            <rect x="10" y="20" width="300" height="80" rx="6" fill="var(--color-surface-2)" stroke="var(--color-border)" />
-            <text x="24" y="52" fontSize="13" fill="var(--color-fg)">{pick({ en: 'A figure below the fold', es: 'Una figura bajo el pliegue' }, lang)}</text>
-            <text x="24" y="78" fontSize="11" fill="var(--color-fg-subtle)">{pick({ en: 'its labels stay inside it', es: 'sus rótulos quedan dentro' }, lang)}</text>
-          </svg>
-          <figcaption className="figure-caption">{pick({ en: 'A documentation figure after five sections.', es: 'Una figura de documentación tras cinco secciones.' }, lang)}</figcaption>
-        </figure>
-      )}
-      {id === 'benchmark' && (
-        <p data-state={artifact && PLANT !== 'never-ready' ? 'ready' : 'loading'}>
-          {artifact ? `${pick({ en: 'Cases in the artifact', es: 'Casos en el artefacto' }, lang)}: ${artifact.cases}` : '...'}
-        </p>
-      )}
+      {doc.body}
     </DocPage>
   );
 }

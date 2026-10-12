@@ -1,3 +1,81 @@
+## [0.11.000] - 2026-10-12
+
+### Added
+
+The shell's first software design document (ADR-0075) and the gate that holds it to its tests (#100):
+
+- `docs/design/SDD.md`: the problem and non-goals, the dimensioning of `src/` measured by a script (45 modules,
+  4,251 lines), technology and versions, the public contracts (entries, stylesheets, reserved classes, the `data-*`
+  attributes the gate reads, the gate CLI), the components by area, how each component behaves without data, with
+  partial data, in error and while loading, verification, versions and adoption, risks, ADR fit.
+- `docs/design/features/<area>/requirements.md`: nine areas, 188 EARS requirements at release, each naming the test or gate
+  plant that verifies it; every test file and every plant is cited.
+- `scripts/check_sdd.py` (`npm run check:sdd`, a step of the `guards` job): the ten sections in order, unique
+  `SH[DFWCKNTAG]-NNN` ids, SHALL in every statement, and every gate reference resolved to a test defined in the named
+  file (comments stripped) or to a plant id in `test/gate-selftest.mjs`; its own tests run in CI too; after an adversarial review it rejects names inside strings, comments or another test's body, skipped and todo tests, `describe` blocks, plain paths, paths outside the repository, malformed rows and stray ids, planned or superseded areas without a reviewed `.status-allow` entry, and SDD headings inside fences or comments.
+- CONTRIBUTING.md and docs/08_releasing.md: a change starts with its requirement row, then a failing test that names
+  it, then the code.
+
+The required content of the documentation pages, declared by the page and measured by the gate (ADR-0017 section 2.1;
+the core of every product is its tailoring to a real problem, so the Introduction opens for a decision maker):
+
+- The Introduction has two views: `executive` first (areas `initiative`, `outcomes`, `positioning`, `credibility`,
+  in business language, no equation, every value claim a number with its unit and source) and `technical` (`problem`,
+  `principles`, `math` with a symbol glossary, `pipeline`, `honesty`). The executive view cannot be waived.
+- Methodology, Implementation, Experiments and Benchmark each have their named areas and floors (the tables in
+  `docs/04_views.md`, from one table, `gate/areas.mjs`).
+- A section declares what it covers: `<DocSection area="...">` (and `kind="classical" | "learned"` for a method).
+  New components: `Stat` (a value, its unit, its source), `Question` (a business question and its answer) and
+  `Glossary`. `DocPage` takes `floorWaivers`: a floor a page cannot meet is declared with its reason, listed in the
+  gate report, and reviewed with the pull request that adds it.
+- The gate fails (`ADR-0017.2`) a page that lacks a required area, or whose area lacks its required content, in either
+  language, counting only what a reader can see where the glyphs are painted. The executive view must be the view the
+  page opens on; no Introduction content sits outside the two views; a tab list inside a section belongs to that
+  section and is judged across every state; a Methodology method cites references; the Benchmark's live panel needs a
+  registered control. The language of a page stays a reviewer's duty.
+
+Adoption: a product on 0.11.0 fails the gate until its five documentation pages declare their areas and its
+Introduction carries the executive view. Write the executive brief first, in the product's design document
+(CAOS_MANAGE `conventions/problem-context-first.md`; the template's `docs/guides/06_executive-brief.md` and
+`07_documentation-pages.md`), then transcribe it to the page.
+
+Contract-first products declare missing data instead of drawing an empty chart (ADR-0080; #99):
+
+- The gate accepts an instrument that draws nothing and shows a `data-state="unavailable"` note a reader can see and
+  read (its glyphs painted inside the instrument at a legible size, not clipped, not transparent, at least 12 letters or digits in two words). An invisible, clipped or
+  empty note, a reason of punctuation, or any drawing element rendered beside the note fails G6, each with its own
+  message. The gate checks that a reason exists, not that it is true.
+
+The gate self-test grows from 37 to 98 plants, one per check and per trap, with legitimate pages that must pass (a method with its own view tabs, outcomes as a list). Two adversarial reviews tried to break these checks; every case they found is a plant.
+
+`yMarks` for reference levels (#94):
+
+- A tone per line (`warn`, `bad`, `good`, `neutral`), and a y range that takes every line in, so a level outside the
+  data stays in view.
+
+### Changed
+
+Documentation pages (#96, found on CAOS_Contraste's Methodology):
+
+- Text blocks of `.prose` take the full width of the document column; captions keep their measure and stay centred.
+- References are one block at the end of the scope that shows them: the open tab or sub-tab panel, otherwise the end
+  of the `DocPage` (`section.caos-doc-references`, each citation once, in the order of first appearance). `DocSection`
+  registers its `refs` with the nearest scope instead of rendering a `Refs` row; `ReferenceList` is superseded.
+- The gate's ADR-0017.4 fails a bibliography outside the end-of-page block, a references block that is not last, and
+  sections that cite references the page never lists (plants `refs-mid`, `refs-missing`).
+
+A filling card (#95):
+
+- A `PlotCard fill` note keeps at most 35% of the card and scrolls beyond it.
+- The gate fails a drawing under `--stage-floor` (140 px by default) at 1280 px and above (G6, plant `stage-floor`).
+
+### Fixed
+
+- Known shell defect 35: a knob's range input kept the user agent's side margins, so at phone widths it ran past a
+  clipping card (#91). Products drop their `margin-inline: 0` override.
+- The end-of-page references tests drive Chromium and now run with the browser suite (`e2e/`); develop CI had failed
+  since #97 because the unit job installs no browser.
+
 ## [0.10.000] - 2026-10-08
 
 ### Added
