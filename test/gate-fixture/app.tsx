@@ -687,9 +687,10 @@ function App() {
 }
 
 if (PLANT === 'stage-floor') {
-  // the shell's cap on a filling card's note (0.11.0) removed, as it was before: a twenty-line note takes the drawing's height
+  // the shell's cap on a filling card's note (0.11.0) and the stage's own floor (0.11.2) removed, as they were before: a
+  // twenty-line note takes the drawing's height
   const style = document.createElement('style');
-  style.textContent = '.caos-plot.fill > .caos-plot-note { max-height: none !important; overflow: visible !important; white-space: pre-line; font-size: 1rem; }';
+  style.textContent = '.caos-plot.fill > .caos-plot-note { max-height: none !important; overflow: visible !important; white-space: pre-line; font-size: 1rem; } .caos-plot.fill > .caos-plot-body { min-height: 0 !important; }';
   document.head.appendChild(style);
 }
 if (PLANT === 'clip') {
