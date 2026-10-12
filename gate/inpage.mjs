@@ -315,6 +315,139 @@ export function installLib() {
     };
   };
 
+  // ---- 0.11.0: the required areas of the documentation pages (ADR-0017 section 2.1) ------------------------------
+
+  const wordsOf = (el) => {
+    // the words a reader reads: visible text outside equations; `linkWords` of them inside links
+    let words = 0;
+    let linkWords = 0;
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      const parent = n.parentElement;
+      if (!parent || parent.closest('.katex, script, style') || !shown(parent)) continue;
+      const k = (n.nodeValue || '').split(/\s+/).filter(Boolean).length;
+      words += k;
+      if (parent.closest('a')) linkWords += k;
+    }
+    return { words, linkWords };
+  };
+  const tabLabel = (t) => (t.textContent || '').trim().replace(/\s+/g, ' ');
+  /** The tabs from the outermost one to the one that opens `panel`: their labels (for messages) and their ids (for rules). */
+  const chainOf = (panel) => {
+    const labels = [];
+    const ids = [];
+    let p = panel;
+    while (p) {
+      const id = p.getAttribute('aria-labelledby');
+      const tab = id ? document.getElementById(id) : null;
+      if (!tab) break;
+      labels.unshift(tabLabel(tab));
+      ids.unshift(tab.getAttribute('data-tab') || tabLabel(tab));
+      const tl = tab.closest('[role="tablist"]');
+      p = tl && tl.parentElement ? tl.parentElement.closest('[role="tabpanel"]') : null;
+    }
+    return { label: labels.join(' > '), key: ids.join('/'), head: ids[0] ?? null };
+  };
+  const textOf = (el) => (el.textContent || '').trim().replace(/\s+/g, ' ');
+  /** A quantified statement: visible, a digit in it, and its unit and source declared (the `Stat` component). */
+  const validStat = (el) => visible(el) && /\d/.test(el.textContent || '') && Boolean((el.getAttribute('data-stat-source') || '').trim()) && Boolean((el.getAttribute('data-stat-unit') || '').trim());
+
+  /**
+   * What a documentation page shows in this state: its lede, its waivers, the leaf topics open, the views (the outermost
+   * tabs), every visible section with what it holds, and the figures and captioned equations of the open view. The rules
+   * (gate/areas.mjs) are applied by the runner; this only measures. A hidden element is never counted, a paragraph is
+   * counted once per distinct text, and the words are those of the displayed language.
+   */
+  G.docPage = () => {
+    const page = document.querySelector('[data-doc-page]');
+    if (!page || !visible(page)) return null;
+    const lede = page.querySelector('.lede');
+    const panels = [...page.querySelectorAll('[role="tabpanel"]')].filter(visible);
+    const leaves = panels.filter((p) => ![...p.querySelectorAll('[role="tablist"]')].some(visible));
+    const topics = leaves.length ? leaves.map((p) => chainOf(p)) : [{ label: '', key: '', head: null }];
+    // the outermost tab list: the views of the page (the Introduction: executive, then technical)
+    const outer = [...page.querySelectorAll('[role="tablist"]')].filter(visible).find((tl) => !tl.closest('[role="tabpanel"]'));
+    const outerTabs = outer ? [...outer.querySelectorAll('[role="tab"]')] : [];
+    const outerPanel = outer && outer.parentElement ? [...outer.parentElement.children].find((c) => c.getAttribute('role') === 'tabpanel' && visible(c)) : null;
+    const captioned = (fig) => {
+      const cap = fig.querySelector('figcaption');
+      if (!cap || !textOf(cap)) return null;
+      const svg = fig.querySelector('svg');
+      const img = [...fig.querySelectorAll('img')].find((i) => /\.svg(\?|#|$)/i.test(i.getAttribute('src') || ''));
+      if (!(svg && visible(svg)) && !(img && visible(img))) return null;
+      return textOf(cap);
+    };
+    const equationCaption = (eq) => {
+      const cap = eq.querySelector('.equation-caption');
+      return cap && textOf(cap) ? textOf(cap) : null;
+    };
+    const sections = [...page.querySelectorAll('[data-doc-section]')].filter(visible).map((sec) => {
+      const mine = (el) => el.closest('[data-doc-section]') === sec && visible(el);
+      const dense = new Set();
+      for (const p of sec.querySelectorAll('p')) {
+        if (!mine(p) || p.closest('.callout, figure, .equation, table, [data-glossary], [data-stat]')) continue;
+        const { words, linkWords } = wordsOf(p);
+        if (words >= 40 && linkWords * 2 < words) dense.add(textOf(p).toLowerCase());
+      }
+      const callouts = [...sec.querySelectorAll('.callout')].filter(mine);
+      const variant = (c) => c.getAttribute('data-callout') || (c.classList.contains('callout-honest') ? 'honest' : c.classList.contains('callout-strong') ? 'strong' : 'note');
+      const glossary = [...sec.querySelectorAll('[data-glossary]')].filter(mine).reduce((a, g) => a + (g.querySelectorAll('dt').length || g.querySelectorAll(':scope > li').length), 0);
+      const plots = [...sec.querySelectorAll('[data-plot]')].filter(mine);
+      const bare = [...sec.querySelectorAll('canvas, svg[data-chart]')].filter((c) => mine(c) && !c.closest('[data-plot]'));
+      const panel = sec.closest('[role="tabpanel"]');
+      const topic = panel ? chainOf(panel) : { label: '', key: '', head: null };
+      // the first table of the section: its rows of three or more cells, each proved by a quantified statement
+      const table = [...sec.querySelectorAll('table')].find(mine);
+      const rowEls = table ? [...table.querySelectorAll('tbody tr')].filter((r) => visible(r) && r.querySelectorAll('td, th').length >= 3) : [];
+      const list = [...sec.querySelectorAll('ul, ol')].find((l) => mine(l) && !l.closest('[data-glossary]') && !l.parentElement.closest('ul, ol'));
+      const items = list ? [...list.querySelectorAll(':scope > li')].filter(visible) : [];
+      const nonEmpty = (q, sel) => {
+        const e = q.querySelector(sel);
+        return Boolean(e && textOf(e));
+      };
+      return {
+        title: ((sec.querySelector('h2') || {}).textContent || '').trim().slice(0, 60),
+        area: sec.getAttribute('data-area'),
+        kind: sec.getAttribute('data-method-kind'),
+        topic: topic.label,
+        topicKey: topic.key,
+        view: topic.head,
+        dense: dense.size,
+        equations: [...sec.querySelectorAll('.equation')].filter((e) => mine(e) && equationCaption(e)).length,
+        figures: [...sec.querySelectorAll('figure')].filter((f) => mine(f) && captioned(f)).length,
+        callouts: callouts.length,
+        honest: callouts.filter((c) => variant(c) === 'honest').length,
+        strong: callouts.filter((c) => variant(c) === 'strong').length,
+        glossary,
+        steps: Math.max(0, ...[...sec.querySelectorAll('ol')].filter(mine).map((o) => o.querySelectorAll(':scope > li').length)),
+        tables: [...sec.querySelectorAll('table')].filter((t) => mine(t) && !t.parentElement.closest('table')).length,
+        codes: [...sec.querySelectorAll('pre')].filter(mine).length,
+        charts: plots.length + bare.length,
+        controls: [...sec.querySelectorAll('input:not([type="hidden"]), select, textarea, button:not([role="tab"])')].filter(mine).length,
+        stats: [...sec.querySelectorAll('[data-stat]')].filter((e) => mine(e) && validStat(e)).length,
+        rows: rowEls.length,
+        rowsNoStat: rowEls.filter((r) => ![...r.querySelectorAll('[data-stat]')].some(validStat)).length,
+        items: items.length,
+        thinItems: items.filter((li) => wordsOf(li).words < 6).length,
+        qa: [...sec.querySelectorAll('[data-qa]')].filter((q) => mine(q) && nonEmpty(q, '[data-question]') && nonEmpty(q, '[data-answer]')).length,
+      };
+    });
+    const inView = (sel) => (outerPanel ? [...outerPanel.querySelectorAll(sel)] : [...page.querySelectorAll(sel)]).filter(visible);
+    const selected = outerTabs.find((t) => t.getAttribute('aria-selected') === 'true');
+    return {
+      ledeWords: lede && visible(lede) ? wordsOf(lede).words : 0,
+      waiver: page.getAttribute('data-floor-waiver'),
+      topics,
+      views: outerTabs.map((t) => t.getAttribute('data-tab') || tabLabel(t)),
+      view: selected ? selected.getAttribute('data-tab') || tabLabel(selected) : null,
+      viewEquations: inView('.equation').length,
+      viewGlossaries: inView('[data-glossary]').length,
+      sections,
+      figures: inView('figure').map(captioned).filter(Boolean),
+      equations: inView('.equation').map(equationCaption).filter(Boolean),
+    };
+  };
+
   /** A tall view must move when scrolled (S1, G5). Restores the positions it changed. */
   G.scrolls = () => {
     const out = [];

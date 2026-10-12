@@ -61,6 +61,35 @@ const PLANTS = [
   { id: 'unavailable-beside-blank', check: 'G6', re: /is blank/, trail: /pending/, opts: { routes: '/' } },
   { id: 'unavailable-hidden', check: 'G6', re: /nothing is drawn in the instrument/, trail: /pending/, opts: { routes: '/' } },
   { id: 'low-contrast', check: 'G13', re: /contrast \d\.\d\d:1, below 4\.5:1/, opts: { routes: '/,/introduction' } },
+  // ADR-0017 2.1: the required areas of the documentation pages; each fails with its own floor
+  { id: 'floor-no-executive', check: 'ADR-0017.2', re: /no executive view; the top-level topics are \[none\]/, opts: { routes: '/introduction' } },
+  { id: 'floor-exec-second', check: 'ADR-0017.2', re: /the executive view is not the first topic \(the first is "technical"\)/, opts: { routes: '/introduction' } },
+  { id: 'floor-initiative-nostat', check: 'ADR-0017.2', re: /initiative area.*0 quantified statements \(value, unit, source\), the floor is 1/, opts: { routes: '/introduction' } },
+  { id: 'floor-outcomes-two', check: 'ADR-0017.2', re: /outcomes area.*2 rows of capability, outcome and proof point, the floor is 3/, opts: { routes: '/introduction' } },
+  { id: 'floor-positioning-three', check: 'ADR-0017.2', re: /positioning area.*3 items, exactly 4 is required/, opts: { routes: '/introduction' } },
+  { id: 'floor-credibility-two', check: 'ADR-0017.2', re: /credibility area.*2 question and answer pairs, the floor is 3/, opts: { routes: '/introduction' } },
+  { id: 'floor-exec-equation', check: 'ADR-0017.2', re: /executive view \(EN\): 1 equation\(s\); the executive view holds no equation/, opts: { routes: '/introduction' } },
+  { id: 'floor-five-sections', check: 'ADR-0017.2', re: /no section declares the area "math"/, opts: { routes: '/introduction' } },
+  { id: 'floor-glossary-nine', check: 'ADR-0017.2', re: /math area.*9 glossary items, the floor is 10/, opts: { routes: '/introduction' } },
+  { id: 'floor-pipeline-unordered', check: 'ADR-0017.2', re: /pipeline area.*0 steps in an ordered list, the floor is 4/, opts: { routes: '/introduction' } },
+  { id: 'floor-honesty-none', check: 'ADR-0017.2', re: /honesty area.*0 honest callouts, exactly 1 is required/, opts: { routes: '/introduction' } },
+  { id: 'floor-area-unknown', check: 'ADR-0017.2', re: /declares the unknown area "extras"/, opts: { routes: '/introduction' } },
+  { id: 'floor-method-topics', check: 'ADR-0017.2', re: /Methodology \(EN\): 5 topics, the floor is 6/, opts: { routes: '/methodology' } },
+  { id: 'floor-method-dense', check: 'ADR-0017.2', re: /method area, topic "Theory" \(EN\): 3 dense paragraphs, the floor is 4/, opts: { routes: '/methodology' } },
+  { id: 'floor-method-equations', check: 'ADR-0017.2', re: /method area, topic "Numerics" \(EN\): 1 captioned equation, the floor is 2/, opts: { routes: '/methodology' } },
+  { id: 'floor-method-figure', check: 'ADR-0017.2', re: /method area, topic "Numerics" \(EN\): 0 figures with a caption, the floor is 1/, opts: { routes: '/methodology' } },
+  { id: 'floor-method-honest', check: 'ADR-0017.2', re: /method area, topic "Theory" \(EN\): 2 honest callouts, exactly 1 is required/, opts: { routes: '/methodology' } },
+  { id: 'floor-method-learned', check: 'ADR-0017.2', re: /Methodology \(EN\): 1 topic of kind learned, the floor is 2/, opts: { routes: '/methodology' } },
+  { id: 'floor-lede-short', check: 'ADR-0017.2', re: /Experiments \(EN\): the lede holds 3 word\(s\), the floor is 35/, opts: { routes: '/experiments' } },
+  { id: 'floor-impl-architecture', check: 'ADR-0017.2', re: /no section declares the area "architecture"/, opts: { routes: '/implementation' } },
+  { id: 'floor-exp-datasets', check: 'ADR-0017.2', re: /no section declares the area "datasets"/, opts: { routes: '/experiments' } },
+  { id: 'floor-bench-caveat', check: 'ADR-0017.2', re: /no section declares the area "caveat"/, opts: { routes: '/benchmark' } },
+  { id: 'floor-es-area', check: 'ADR-0017.2', re: /Implementation \(ES\): no section declares the area "lanes"/, opts: { routes: '/implementation', langs: 'es' } },
+  { id: 'floor-waiver-reason', check: 'ADR-0017.2', re: /the waiver for "comparison" has a reason of 5 character/, opts: { routes: '/benchmark' } },
+  { id: 'floor-waiver-unknown', check: 'ADR-0017.2', re: /the waiver for "nonsense" is refused/, opts: { routes: '/benchmark' } },
+  { id: 'floor-hidden', check: 'ADR-0017.2', re: /method area, topic "Theory" \(EN\): 2 dense paragraphs, the floor is 4/, opts: { routes: '/methodology' } },
+  { id: 'floor-duplicate', check: 'ADR-0017.2', re: /method area, topic "Theory" \(EN\): 1 dense paragraph, the floor is 4/, opts: { routes: '/methodology' } },
+  { id: 'floor-waiver-other', check: 'ADR-0017.2', re: /pipeline area.*0 steps in an ordered list, the floor is 4/, not: /(math area|area "math")/, opts: { routes: '/introduction' } },
 ];
 
 /** A static server with an SPA fallback: every unknown path answers index.html with 200 (the G4 plant). */
@@ -111,6 +140,8 @@ describe('every planted defect fails the check that owns it', { concurrency: 4 }
         ...(p.opts ?? {}),
       });
       const hit = r.failures.find((f) => f.check === p.check && p.re.test(f.message) && (!p.trail || p.trail.test(f.trail)) && (!p.mode || p.mode.test(f.mode)));
+      if (p.not) assert.ok(!r.failures.some((f) => f.check === p.check && p.not.test(f.message)), `plant ${p.id} failed ${p.check} with ${p.not}, a floor its waiver names; failures:
+${show(r)}`);
       if (p.also) assert.ok(r.failures.some((f) => f.check === p.check && p.also.test(f.message)), `plant ${p.id} did not also fail ${p.check} with ${p.also}`);
       assert.ok(hit, `plant ${p.id} did not fail ${p.check} with ${p.re}${p.trail ? ` at ${p.trail}` : ''}; failures:\n${show(r) || '(none)'}`);
     });

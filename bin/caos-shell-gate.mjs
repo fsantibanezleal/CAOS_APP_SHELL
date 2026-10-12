@@ -66,6 +66,7 @@ try {
 const shown = report.failures.slice(0, 80);
 for (const f of shown) console.log(`FAIL [${f.check}] ${f.route} ${f.mode}${f.trail ? ` (${f.trail})` : ''}: ${f.message}`);
 if (report.failures.length > shown.length) console.log(`... and ${report.failures.length - shown.length} more in ${options.out ?? 'gate-output'}/gate-report.json`);
+for (const w of report.waivers ?? []) console.log(`WAIVER ${w.route} (${w.lang}) ${w.floor}: ${w.reason}${w.valid ? '' : ' [refused]'}`);
 const counts = Object.entries(report.checks).map(([k, n]) => `${k} ${n}`).join(', ');
 console.log(report.ok ? `caos-shell-gate: OK, ${report.states} measured states` : `caos-shell-gate: ${report.failures.length} failure(s) in ${report.states} measured states (${counts})`);
 process.exit(report.ok ? 0 : 1);
