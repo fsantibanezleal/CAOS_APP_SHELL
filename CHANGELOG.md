@@ -1,3 +1,14 @@
+## [0.11.001] - 2026-10-12
+
+### Fixed
+
+Found by CAOS_Contraste 0.07.000, whose CI web baseline (correctly) refused the product rule it had needed:
+
+- A filling `PlotCard` keeps a minimum height of its own at 1280 px and wider, derived from its layout (the header, the padding and the note's 35% cap), so its drawing keeps the gate's stage floor (140 px) when filling cards share a short column, in every language and in the wide font. Products no longer restyle `.caos-plot.fill` to pass G6. Below 1280 px nothing changes. The gate fixture's Fit tab stacks two filling cards in one column.
+
+Adoption: a product drops any rule of its own that gave `.caos-plot.fill` a minimum height (CAOS_Contraste's
+`@media (min-width: 1280px) { .caos-plot.fill { min-height: 23rem; } }`).
+
 ## [0.11.000] - 2026-10-12
 
 ### Added
