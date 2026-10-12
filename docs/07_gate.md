@@ -29,7 +29,7 @@ CAOS_Fragmenta's deploy gate).
 | G3 errors | any `console.error`, page error, or GET answered 400 or above |
 | G4 deep links | a route loaded directly (and with a trailing slash) does not answer 200 with that route; an artifact answers HTML; a missing asset does not answer 404; a document holds less text than the floor |
 | G5 reach | horizontal overflow; an element outside the viewport or outside the rail; a container that cuts its content; a row that wraps or cuts its tabs; truncated text without its full text in a title; a control a pointer cannot reach (the probe scrolls as a reader does, clear of a header stuck at the top) |
-| G6 drawing | nothing drawn (unless the instrument declares `data-state="unavailable"` with a reason of 12 or more characters, 0.11.0; a declaration without a reason fails with its own message); a stage under 30% painted; drawn views under half the viewport on the App route at 1280 px and above; a repeated tick label; a visible `PlotCard fill` whose body (the drawing's stage) is under `--stage-floor` (140 px by default) at 1280 px and above, because its note took the height ("the drawing of <card> keeps <h> px under its note", 0.11.0) |
+| G6 drawing | nothing drawn (unless the instrument declares `data-state="unavailable"` on a note a reader can see, with a reason of 12 or more letters or digits in two words, and renders no drawing element, 0.11.0; an unreadable note, a missing reason and a collapsed or invisible chart each fail with their own message); a stage under 30% painted; drawn views under half the viewport on the App route at 1280 px and above; a repeated tick label; a visible `PlotCard fill` whose body (the drawing's stage) is under `--stage-floor` (140 px by default) at 1280 px and above, because its note took the height ("the drawing of <card> keeps <h> px under its note", 0.11.0) |
 | G7 settle | a state never declares itself ready; a tab cannot be clicked |
 | G8 idle | sustained animation frames or DOM mutations at rest |
 | G9 reactivity | a registered control does not change the selection key, or a view keeps an old key; the case shown is not the case asked for; the deep link `?case=` fails. A control whose inputs are all disabled is not moved (known shell defect 20) |
@@ -52,21 +52,42 @@ smallest margins against the G6 floors, and every waiver a documentation page de
 
 The Introduction, Methodology, Implementation, Experiments and Benchmark pages are measured against the named areas of ADR-0017 section 2.1, not against a count of sections: a page of five arbitrary sections fails. A section declares its area (`<DocSection area="math">`, `data-area`; a method also `kind`, `data-method-kind`); the gate fails a page that lacks an area, an area whose section lacks the content its rule names, an unknown area, a method with no valid kind, fewer topics or learned methods than the page floor, a lede under 35 words, an Introduction with no executive view first, and an executive view that holds an equation or a glossary. The areas, their rules and the floor ids are in [docs/04_views.md](04_views.md), transcribed from the one table, `gate/areas.mjs`.
 
-How it measures: each page once per language, at the primary size and first theme (the topics do not change with the size or the theme), visiting every topic (a walk that visits fewer topics than it found tabs fails); hidden elements never count; a paragraph counts once per distinct text (a known limit: two paragraphs that differ by a word are two); words are taken from the displayed language with equations removed. Each failure is reported once per route, area, topic and language, with the measured number and the floor, for example `Methodology, method area, topic "Theory" (EN): 3 dense paragraphs, the floor is 4`.
+How it measures: each page once per language, at the primary size and first theme (the topics do not change with the size or the theme), visiting every topic (a walk that visits fewer topics than it found tabs fails); what a reader cannot see never counts (an element that is not rendered, is transparent, is off-screen or clipped, or sits in the 1 by 1 px screen-reader-only pattern; hidden descendants are not in the rendered text); a paragraph counts once per distinct text (a known limit: two paragraphs that differ by a word are two); words are taken from the displayed language with equations removed. Each failure is reported once per route, area, topic and language, with the measured number and the floor, for example `Methodology, method area, topic "Theory" (EN): 3 dense paragraphs, the floor is 4`.
 
 A page that cannot carry a floor for a stated reason declares `floorWaivers` on `DocPage` (`data-floor-waiver="<floor>: <reason>"`). The gate skips only the floor named, lists every waiver in `gate-report.json` (`waivers`) and in `index.html`, and fails a waiver whose reason has fewer than 12 characters, whose floor is not in the table of its page, or that names an area of the executive view (the executive view cannot be waived). Plants: `floor-no-executive`, `floor-exec-second`, `floor-initiative-nostat`, `floor-outcomes-two`, `floor-positioning-three`, `floor-credibility-two`, `floor-exec-equation`, `floor-five-sections`, `floor-glossary-nine`, `floor-pipeline-unordered`, `floor-honesty-none`, `floor-area-unknown`, `floor-method-topics`, `floor-method-dense`, `floor-method-equations`, `floor-method-figure`, `floor-method-honest`, `floor-method-learned`, `floor-lede-short`, `floor-impl-architecture`, `floor-exp-datasets`, `floor-bench-caveat`, `floor-es-area`, `floor-waiver-reason`, `floor-waiver-unknown`, `floor-hidden`, `floor-duplicate`, `floor-waiver-other`; the clean fixture walks the waiver path with one valid waiver.
 
 The self-test's plant `stage-floor` is a filling card with a twenty-line note whose cap (the shell's 35%, 0.11.0) is removed by the plant, as it was before; the gate must fail it under G6 with "the drawing of ... keeps N px under its note (floor 140 px)".
 
 A view whose data is absent says so instead of drawing an empty chart (ADR-0080 decision 3): inside `[data-instrument]` it
-renders a visible element with `data-state="unavailable"` whose text states why (12 characters or more, in the reader's
-language). When nothing else is drawn in the instrument, G6 accepts that declared state and every other check still runs.
-It exempts only a view that draws nothing: a blank chart beside the note still fails "is blank", a hidden element does not
-count, and an element with no reason fails G6 naming `data-state="unavailable"` and the missing reason. Plants:
-`unavailable-unexplained`, `unavailable-short`, `unavailable-beside-blank`, `unavailable-hidden`.
+renders an element with `data-state="unavailable"` whose text states why. When nothing is drawn in the instrument, G6
+accepts that declared state and every other check still runs. The exact rule, decided per measured state (size, theme,
+language, case):
+
+- The element counts only when a reader can see it: rendered (not `display: none`, not `visibility: hidden`), opacity
+  above 0, font size above 0, and a box of at least 40 by 12 px that lies inside the instrument and inside every box
+  that clips it. A note that is transparent, has no box, sits off-screen, uses the 1 by 1 px screen-reader-only
+  pattern or is cut off fails G6 with "no reader can see the note"; a `display: none` or `visibility: hidden` note is
+  not a declaration at all and fails "nothing is drawn".
+- The reason is the text a reader sees (rendered text: a `display: none` descendant is not in it): at least 12 letters
+  or digits, in at least two words. Punctuation, whitespace and hidden text do not count; an element without a reason
+  fails G6 naming `data-state="unavailable"` and the missing reason.
+- No drawing element may be rendered in the instrument: a canvas, image, video, table, svg drawing, `data-plot` or
+  `data-drawn` element present, whatever its size or visibility (a collapsed or invisible chart too), cancels the
+  exemption and fails G6 "a drawing is present but not visible". A blank chart beside the note still fails "is blank". An
+  icon (`lucide`, or inside a button or link, or a small `aria-hidden` svg) and a card that holds the note are not drawings.
+- The gate checks that a reason exists and can be read, not that it is a true reason: whether the sentence says why the
+  data is absent is the reviewer's responsibility.
+
+Plants: `unavailable-unexplained`, `unavailable-short`, `unavailable-punct`, `unavailable-hidden-text`,
+`unavailable-beside-blank`, `unavailable-hidden`, `unavailable-opacity`, `unavailable-zero`, `unavailable-offscreen`,
+`unavailable-sronly`, `unavailable-fontsize`, `unavailable-collapsed-chart`, `unavailable-invisible-chart`.
+
+The content checks of the documentation pages use the same reader-visibility rule: a paragraph, glossary item,
+statement, question, row or item counts only when it is rendered, opaque, inside the page and not clipped, and on the
+text rendered (plant `area-hidden-filler`).
 
 ## The gate proves itself (G15)
 
 `npm run test:gate` builds the fixture product (`test/gate-fixture`), runs the gate on it clean in the full matrix
-(every check must pass), and once per planted defect (the check that owns it must fail with its own message): 69
+(every check must pass), and once per planted defect (the check that owns it must fail with its own message): 79
 plants, one per check and per distinct trap. A check without a plant is a check that can agree with a broken app.
