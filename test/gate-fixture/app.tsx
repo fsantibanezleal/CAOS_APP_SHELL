@@ -1,7 +1,7 @@
 // The gate's fixture (G15): a small real product built on this shell's sources, clean by default. The self-test
 // serves it as GitHub Pages would and runs the gate on it, once clean (every check must pass in the full matrix) and
 // once per planted defect (the check that owns the defect must fail). `window.__PLANT__` names the plant.
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from 'react-router';
 import 'katex/dist/katex.min.css';
@@ -366,15 +366,32 @@ function ValidationView({ sim }: { sim: Sim }) {
 function PendingView() {
   const lang = useShellLang();
   const reason = pick({ en: 'The trace for this case is not available yet: 1 of 5 artifacts are absent.', es: 'La traza de este caso aún no está disponible: falta 1 de 5 artefactos.' }, lang);
-  const text = PLANT === 'unavailable-unexplained' ? '' : PLANT === 'unavailable-short' ? 'n/a' : reason;
+  const text = PLANT === 'unavailable-unexplained' ? '' : PLANT === 'unavailable-short' ? 'n/a' : PLANT === 'unavailable-punct' ? ' - . - . - . - . - . - ' : reason;
+  // the note a reader cannot see, one way per plant (each used to pass the gate)
+  const hide: Record<string, CSSProperties> = {
+    'unavailable-hidden': { display: 'none' },
+    'unavailable-opacity': { opacity: 0 },
+    'unavailable-zero': { width: 0, height: 0, overflow: 'hidden', margin: 0, padding: 0 },
+    'unavailable-offscreen': { position: 'absolute', left: -10000, top: 0, width: 400 },
+    'unavailable-sronly': { position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 },
+    'unavailable-fontsize': { fontSize: 0 },
+  };
   return (
     <>
-      <p className="caos-pending" data-state="unavailable" style={PLANT === 'unavailable-hidden' ? { display: 'none' } : undefined}>
-        {text}
+      <p className="caos-pending" data-state="unavailable" style={hide[PLANT]}>
+        {PLANT === 'unavailable-hidden-text' ? (
+          <>
+            <span style={{ display: 'none' }}>{reason}</span>.
+          </>
+        ) : (
+          text
+        )}
       </p>
       {PLANT === 'unavailable-beside-blank' && (
         <Stage label="Pending curves">{(sz) => <canvas width={sz.width} height={sz.height} style={{ display: 'block' }} />}</Stage>
       )}
+      {PLANT === 'unavailable-collapsed-chart' && <canvas width={600} height={300} style={{ display: 'block', width: '100%', height: 0 }} />}
+      {PLANT === 'unavailable-invisible-chart' && <canvas width={600} height={300} style={{ display: 'block', visibility: 'hidden' }} />}
     </>
   );
 }

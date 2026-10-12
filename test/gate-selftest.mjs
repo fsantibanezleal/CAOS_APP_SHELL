@@ -60,6 +60,15 @@ const PLANTS = [
   { id: 'unavailable-short', check: 'G6', re: /data-state="unavailable".*reason/, trail: /pending/, opts: { routes: '/' } },
   { id: 'unavailable-beside-blank', check: 'G6', re: /is blank/, trail: /pending/, opts: { routes: '/' } },
   { id: 'unavailable-hidden', check: 'G6', re: /nothing is drawn in the instrument/, trail: /pending/, opts: { routes: '/' } },
+  { id: 'unavailable-opacity', check: 'G6', re: /no reader can see the note/, trail: /pending/, opts: { routes: '/' } },
+  { id: 'unavailable-zero', check: 'G6', re: /no reader can see the note/, trail: /pending/, opts: { routes: '/' } },
+  { id: 'unavailable-offscreen', check: 'G6', re: /no reader can see the note/, trail: /pending/, opts: { routes: '/' } },
+  { id: 'unavailable-sronly', check: 'G6', re: /no reader can see the note/, trail: /pending/, opts: { routes: '/' } },
+  { id: 'unavailable-fontsize', check: 'G6', re: /no reader can see the note/, trail: /pending/, opts: { routes: '/' } },
+  { id: 'unavailable-punct', check: 'G6', re: /data-state="unavailable".*reason/, trail: /pending/, opts: { routes: '/' } },
+  { id: 'unavailable-hidden-text', check: 'G6', re: /data-state="unavailable".*reason/, trail: /pending/, opts: { routes: '/' } },
+  { id: 'unavailable-collapsed-chart', check: 'G6', re: /a drawing is present but not visible/, trail: /pending/, opts: { routes: '/' } },
+  { id: 'unavailable-invisible-chart', check: 'G6', re: /a drawing is present but not visible/, trail: /pending/, opts: { routes: '/' } },
   { id: 'low-contrast', check: 'G13', re: /contrast \d\.\d\d:1, below 4\.5:1/, opts: { routes: '/,/introduction' } },
   // ADR-0017 2.1: the required areas of the documentation pages; each fails with its own floor
   { id: 'floor-no-executive', check: 'ADR-0017.2', re: /no executive view; the top-level topics are \[none\]/, opts: { routes: '/introduction' } },
@@ -90,6 +99,7 @@ const PLANTS = [
   { id: 'floor-hidden', check: 'ADR-0017.2', re: /method area, topic "Theory" \(EN\): 2 dense paragraphs, the floor is 4/, opts: { routes: '/methodology' } },
   { id: 'floor-duplicate', check: 'ADR-0017.2', re: /method area, topic "Theory" \(EN\): 1 dense paragraph, the floor is 4/, opts: { routes: '/methodology' } },
   { id: 'floor-waiver-other', check: 'ADR-0017.2', re: /pipeline area.*0 steps in an ordered list, the floor is 4/, not: /(math area|area "math")/, opts: { routes: '/introduction' } },
+  { id: 'area-hidden-filler', check: 'ADR-0017.2', re: /initiative area.*0 dense paragraphs, the floor is 1/, also: /initiative area.*0 quantified statements \(value, unit, source\), the floor is 1/, opts: { routes: '/introduction' } },
 ];
 
 /** A static server with an SPA fallback: every unknown path answers index.html with 200 (the G4 plant). */
