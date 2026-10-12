@@ -15,9 +15,10 @@ const NOTES = {
   en: Array.from({ length: 12 }, (_, i) => `Line ${i + 1} of a long note that the requirements ask for.`).join(' <br> '),
   es: Array.from({ length: 12 }, (_, i) => `Línea ${i + 1} de una nota larga que piden los requisitos de la vista.`).join(' <br> '),
 };
+// titles long enough to take two lines in the wide font, next to two badges (a header as tall as a product's)
 const TITLES = {
-  en: 'Infected, model against simulation at the checkpoints',
-  es: 'Infectados, modelo contra simulación en los puntos de control',
+  en: 'Infected, model against simulation at the checkpoints of every region',
+  es: 'Infectados, modelo contra simulación en los puntos de control de cada región',
 };
 
 let browser: Browser, server: Server, address: string;
@@ -33,15 +34,17 @@ before(async () => {
     const n = Number(url.searchParams.get('n') ?? 2);
     const h = Number(url.searchParams.get('h') ?? 520);
     const lang = (url.searchParams.get('lang') ?? 'en') as 'en' | 'es';
+    const withNote = url.searchParams.get('note') !== '0';
+    const colW = Number(url.searchParams.get('w') ?? 640);
     const card = (i: number) =>
       `<figure class="caos-plot fill" data-plot="c${i}"><figcaption class="caos-plot-head"><span class="caos-plot-title">${TITLES[lang]}</span>` +
-      '<span class="caos-plot-actions"><span class="badge">live</span></span></figcaption>' +
+      '<span class="caos-plot-actions"><span class="badge">' + (lang === 'es' ? 'En vivo' : 'Live') + '</span><span class="badge">' + (lang === 'es' ? 'Precalculado y en vivo' : 'Precomputed and live') + '</span></span></figcaption>' +
       '<div class="caos-plot-body"><div style="height:100%;background:#8884"></div></div>' +
-      `<p class="caos-plot-note">${NOTES[lang]}</p></figure>`;
+      (withNote ? `<p class="caos-plot-note">${NOTES[lang]}</p>` : '') + '</figure>';
     res.setHeader('Content-Type', 'text/html');
     res.end(
       `<!doctype html><html data-theme="light" lang="${lang}"><head><link rel="stylesheet" href="/styles.css"><style>${WIDE_FONT}</style></head>` +
-        '<body style="margin:0"><div style="display:flex;flex-direction:column;height:' + h + 'px;width:640px">' +
+        '<body style="margin:0"><div style="display:flex;flex-direction:column;height:' + h + 'px;width:' + colW + 'px">' +
         `<div class="caos-views-col" id="col" style="flex:1 1 0;overflow-y:auto">${Array.from({ length: n }, (_, i) => card(i)).join('')}</div></div></body></html>`,
     );
   });
@@ -64,10 +67,14 @@ for (const [w, h] of [[1280, 800], [1600, 900]] as const) {
         const page = await browser.newPage({ viewport: { width: w, height: h } });
         try {
           // the column of a 1280 x 800 instrument panel is about 520 px tall
-          await page.goto(`${address}/?n=${n}&lang=${lang}&h=${Math.round(h * 0.65)}`);
-          const stages = (await page.evaluate(STAGES)) as number[];
-          assert.equal(stages.length, n);
-          for (const [i, s] of stages.entries()) assert.ok(s >= FLOOR, `card ${i + 1} of ${n} keeps ${s} px of drawing (floor ${FLOOR})`);
+          // with a note and without one (a card without a note uses the tighter formula; CAOS_Contraste 0.07.000 found it 2 px short)
+          // a wide column and the narrow column of a three-view row (about 400 px), where a header wraps to a third line
+          for (const note of ['1', '0']) for (const cw of [640, 400]) {
+            await page.goto(`${address}/?n=${n}&lang=${lang}&note=${note}&w=${cw}&h=${Math.round(h * 0.65)}`);
+            const stages = (await page.evaluate(STAGES)) as number[];
+            assert.equal(stages.length, n);
+            for (const [i, s] of stages.entries()) assert.ok(s >= FLOOR, `card ${i + 1} of ${n} (note ${note}, column ${cw} px) keeps ${s} px of drawing (floor ${FLOOR})`);
+          }
         } finally {
           await page.close();
         }
