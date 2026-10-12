@@ -59,6 +59,83 @@ the document column (0.11.0; before it a 78-character cap left a wide page's tex
 Figures, tables and grids (`.two-col`, `.fig-row`, `.def-grid`) take the width. `Equation` requires a caption that
 defines its symbols; `Cite` requires a DOI or URL.
 
+## The areas of the documentation pages (ADR-0017 section 2.1)
+
+A documentation page is not "five sections": it carries named areas, and `caos-shell-gate` (check `ADR-0017.2`) fails a built page that lacks one, or whose area lacks the content its rule names, in either language. A section declares its area: `<DocSection area="math">` renders `data-area`; a Methodology section also takes `kind="classical"` or `kind="learned"` (`data-method-kind`). The vocabulary is fixed per page and an unknown area fails. The tables below are transcribed from `gate/areas.mjs`, the one table the gate reads; `test/docFloors.test.ts` keeps them in step.
+
+A **topic** is a leaf panel of the page: a tab of `Tabs`, a sub-tab of `SubTabs` or an item of `TabGroups`, counted across the groups (at most six top-level groups, ADR-0071 rule 5); a page without tabs is one topic. A tab list inside a `DocSection` belongs to that section: its panels are not topics, the gate visits each of them, and the section is judged on what it held across all of them (the distinct dense paragraphs, callouts, equations and figures together, the largest of every other count). A **dense paragraph** is a visible `<p>` of at least 40 words in the displayed language, equations removed, and not mostly a link; the same text counted once. A **figure** is an SVG (inline, or an `img` of an `.svg`) inside a `Figure` with a caption. Hidden elements never count, and neither does text a reader cannot read: the glyphs must be painted inside the page and not clipped (text pushed out of its box by `text-indent`, cut by `clip-path`, or set in a font under 8 px is not read; a `clip-path` other than `none` and `inset()` counts as cutting the element away). The gate measures each page once per language, at its primary size (1280 px or the first size at or above it) and first theme, visiting every topic.
+
+### Introduction (`/introduction`)
+
+The page opens with two top-level topics: `executive` first and open on load (the gate fails an executive view that is not the view the page opens on) and `technical`; every section of the page sits in one of the two views (a section outside both fails, and so does an equation or a symbol glossary anywhere on the page while the executive view is open). The executive view answers one question: would the person who owns this problem give it thirty more minutes, or delegate it down? It is written in business language, vision first, holds no `Equation` and no symbol glossary, and every claim of value carries a number with its unit and its source (`Stat`: `data-stat`); questions and answers are `Question` (`data-qa`). The executive view cannot be waived, as a whole or by area.
+
+| Area | View | What it is | What the gate requires in it |
+|---|---|---|---|
+| `initiative` | executive | the initiative an executive owns, named by role and industry, and the quantified reason to act now | at least 1 dense paragraph, at least 1 quantified statement (value, unit, source) |
+| `outcomes` | executive | the transformation story: the vision first, then each capability tied to a business outcome with a quantified proof point | at least 1 dense paragraph, at least 3 rows of capability, outcome and proof point, at most 0 rows whose proof point is not a quantified statement |
+| `positioning` | executive | the value story: four value points, each tied back to the problem of that executive | exactly 4 items, at most 0 items without a sentence |
+| `credibility` | executive | delivery and credibility: the business questions that executive would ask, each answered plainly with the honest limits | at least 3 question and answer pairs, exactly 1 honest callout |
+| `problem` | technical | the industrial or scientific problem, with the concrete equipment, setting and who it serves | at least 2 dense paragraphs |
+| `principles` | technical | the physics or the domain principles the product rests on | at least 2 dense paragraphs |
+| `math` | technical | the governing mathematics | at least 1 captioned equation, at least 10 glossary items |
+| `pipeline` | technical | the end-to-end pipeline, from the data to the screen | at least 4 steps in an ordered list |
+| `honesty` | technical | what is exact and what is illustrative; what the product is not | exactly 1 honest callout, at least 1 dense paragraph |
+
+What a count means: the rows of `outcomes` are those of the section's first table or, when a top-level list comes first, the items of that list, each proved by a quantified statement; an item of `positioning` is a sentence of at least 6 words; a glossary item counts when its term and its definition are visible and hold a letter or a digit; a step counts when it is visible and holds a letter or a digit; a statement is quantified when the reader sees its number, its unit and its source (an attribute alone does not count); hidden or empty items are not counted, and the failure message gives the count of what is visible.
+
+Page-level floors: `intro-figure` (at least 1 overview figure in the technical view); `intro-equations` (at least 3 captioned equations in the technical view).
+
+### Methodology (`/methodology`)
+
+| Area | What it is | What the gate requires in it |
+|---|---|---|
+| `method` (one per topic; `kind` is `classical` or `learned`) | one method family, as the build runs it: its exact behaviour and constants | at least 4 dense paragraphs, at least 2 captioned equations, at least 1 figure with a caption, exactly 1 honest callout, at least 1 reference cited |
+
+Page-level floors: `method-topics` (at least 6 topics, one per method family); `method-learned` (at least 2 topics of kind learned).
+
+### Implementation (`/implementation`)
+
+| Area | What it is | What the gate requires in it |
+|---|---|---|
+| `architecture` | offline pipeline, compact artifacts, the thin live lane, the browser | at least 1 figure with a caption |
+| `reproducibility` | determinism, seeds, versions, how a result is reproduced | at least 1 callout, at least 1 dense paragraph |
+| `engine` | the exact algorithm steps, constants, windows and scaling of one engine | at least 2 dense paragraphs, at least 1 captioned equation, at least 1 callout |
+| `lanes` | the live and precompute boundary, and what admits a feature to the live lane | at least 2 dense paragraphs |
+| `contract` | the artifact and data contracts | at least 1 table or code block(s), at least 1 dense paragraph |
+| `deployment` | where and how it is deployed | at least 1 dense paragraph |
+
+Page-level floors: `impl-topics` (at least 8 topics).
+
+### Experiments (`/experiments`)
+
+| Area | What it is | What the gate requires in it |
+|---|---|---|
+| `question` | a distinct experimental question and its answer (one section per question) | at least 2 dense paragraphs |
+| `metrics` | the exact metric equations with their real constants | at least 2 captioned equations |
+| `protocol` | the leakage-safe, held-out protocol, with the forbidden anti-pattern shown | at least 1 figure with a caption |
+| `datasets` | the datasets, their redistribution class and their live or roadmap status | at least 1 table |
+
+Page-level floors: `exp-topics` (at least 6 topics).
+
+### Benchmark (`/benchmark`)
+
+| Area | What it is | What the gate requires in it |
+|---|---|---|
+| `results` | held-out numbers read from committed artifacts | at least 1 table or chart(s) |
+| `comparison` | a learned model and a classical baseline on the same real data | at least 1 table or chart(s) |
+| `robustness` | an honest robustness or degradation curve | at least 1 chart |
+| `live` | a live in-browser inference panel on real held-out data (a control counts when it is registered with the panel, `data-control`; a plain button does not) | at least 1 control |
+| `provenance` | per row: dataset, difficulty source, redistribution | at least 1 table |
+| `caveat` | the honest limits of the comparison | exactly 1 honest or strong callout |
+
+### Every documentation page, and the waiver
+
+Page-level floor on every documentation page: `lede-words` (a lede of at least 35 words). Every equation is captioned and the references are one block at the end of the page or open topic (ADR-0017 sections 2 and 4).
+
+What the gate cannot measure stays a review duty: that the paragraphs are rigorous and name the real constants, that every symbol is defined, that no visible string holds an internal reference, that the Benchmark numbers come from committed artifacts. The language of a page is a reviewer's duty: the gate counts the words of the language displayed, but cannot tell that a Spanish page shows English paragraphs, so the reviewer reads each page in each language. A known limit: a paragraph is counted once per distinct text, but two paragraphs that differ by a word are two.
+
+A page that cannot carry an area or a floor for a stated reason declares a **waiver**: `<DocPage floorWaivers={[{ floor: "comparison", reason: { en: "...", es: "..." } }]}>` renders `data-floor-waiver="comparison: <reason>"` on the page root (several entries separated by `; `, so a reason holds no semicolon). A waiver names an area (`math`, `live`, `comparison`) or a page-level floor (`method-learned`, `method-topics`, `lede-words`, ...) of that page. The gate skips the waived floor and nothing else, lists every waiver in its summary (`waivers` in `gate-report.json`) and in `index.html`, and fails a waiver whose reason has fewer than 12 letters or digits in two words (a reason of punctuation does not count), whose floor is not in the table of its page, or that names an area of the executive view. The pull request that adds a waiver is where it is reviewed.
+
 ## Views inside a route
 
 | Component | What it is | Sizing |
