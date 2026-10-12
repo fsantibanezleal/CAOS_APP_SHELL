@@ -120,6 +120,7 @@ export function installLib() {
     if (fontPx(el) < 1) return false;
     const box = clipRect(el.getBoundingClientRect(), el, within, false);
     if (!box || box.right - box.left < minW || box.bottom - box.top < minH) return false;
+    if (!only && el.matches('svg, canvas, img, video')) return true; // a drawing: the box decides, its labels are not the text of a reader
     const nodes = only ? [only] : textNodesOf(el);
     if (nodes.length === 0) return true;
     return nodes.some((n) => glyphsSeen(n, within, Math.min(minW, 2), Math.min(minH, 4)));
