@@ -124,8 +124,16 @@ function Executive({ lang, plant }: { lang: Lang; plant: string }) {
   return (
     <>
       <DocSection title={{ en: 'The initiative', es: 'La iniciativa' }} area="initiative" refs={REFS}>
-        <p>{para(lang, pick({ en: 'initiative', es: 'iniciativa' }, lang), 1)}</p>
-        {plant !== 'floor-initiative-nostat' && (
+        {plant === 'area-hidden-filler' ? (
+          <>
+            {/* the text and the statement are in the page, and a reader cannot see either: transparent, and off-screen */}
+            <p style={{ opacity: 0 }}>{para(lang, pick({ en: 'initiative', es: 'iniciativa' }, lang), 1)}</p>
+            <p style={{ position: 'absolute', left: -10000, top: 0, width: 400 }}>{stat('12', { en: 'minutes per release', es: 'minutos por publicación' }, SRC)}</p>
+          </>
+        ) : (
+          <p>{para(lang, pick({ en: 'initiative', es: 'iniciativa' }, lang), 1)}</p>
+        )}
+        {plant !== 'floor-initiative-nostat' && plant !== 'area-hidden-filler' && (
           <p>
             {pick({ en: 'A decision maker who owns a release pipeline gains ', es: 'Quien decide sobre una cadena de publicación gana ' }, lang)}
             {stat('12', { en: 'minutes per release', es: 'minutos por publicación' }, SRC)}.
