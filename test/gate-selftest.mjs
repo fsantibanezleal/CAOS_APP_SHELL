@@ -65,6 +65,9 @@ const PLANTS = [
   { id: 'unavailable-offscreen', check: 'G6', re: /no reader can see the note/, trail: /pending/, opts: { routes: '/' } },
   { id: 'unavailable-sronly', check: 'G6', re: /no reader can see the note/, trail: /pending/, opts: { routes: '/' } },
   { id: 'unavailable-fontsize', check: 'G6', re: /no reader can see the note/, trail: /pending/, opts: { routes: '/' } },
+  { id: 'unavailable-clippath', check: 'G6', re: /no reader can see the note/, trail: /pending/, opts: { routes: '/' } },
+  { id: 'unavailable-textindent', check: 'G6', re: /no reader can see the note/, trail: /pending/, opts: { routes: '/' } },
+  { id: 'unavailable-tinyfont', check: 'G6', re: /no reader can see the note/, trail: /pending/, opts: { routes: '/' } },
   { id: 'unavailable-punct', check: 'G6', re: /data-state="unavailable".*reason/, trail: /pending/, opts: { routes: '/' } },
   { id: 'unavailable-hidden-text', check: 'G6', re: /data-state="unavailable".*reason/, trail: /pending/, opts: { routes: '/' } },
   { id: 'unavailable-collapsed-chart', check: 'G6', re: /a drawing is present but not visible/, trail: /pending/, opts: { routes: '/' } },
@@ -100,6 +103,27 @@ const PLANTS = [
   { id: 'floor-duplicate', check: 'ADR-0017.2', re: /method area, topic "Theory" \(EN\): 1 dense paragraph, the floor is 4/, opts: { routes: '/methodology' } },
   { id: 'floor-waiver-other', check: 'ADR-0017.2', re: /pipeline area.*0 steps in an ordered list, the floor is 4/, not: /(math area|area "math")/, opts: { routes: '/introduction' } },
   { id: 'area-hidden-filler', check: 'ADR-0017.2', re: /initiative area.*0 dense paragraphs, the floor is 1/, also: /initiative area.*0 quantified statements \(value, unit, source\), the floor is 1/, opts: { routes: '/introduction' } },
+  // 0.11.0 gate review: what a reader cannot read, whatever the box says; the views; the visible parts of a statement, item or step
+  { id: 'area-hidden-textindent', check: 'ADR-0017.2', re: /initiative area.*0 dense paragraphs, the floor is 1/, opts: { routes: '/introduction' } },
+  { id: 'area-hidden-tinyfont', check: 'ADR-0017.2', re: /initiative area.*0 dense paragraphs, the floor is 1/, opts: { routes: '/introduction' } },
+  { id: 'area-hidden-clippath', check: 'ADR-0017.2', re: /initiative area.*0 dense paragraphs, the floor is 1/, opts: { routes: '/introduction' } },
+  { id: 'floor-exec-not-default', check: 'ADR-0017.2', re: /the executive view is not the view the page opens on \(it opens on "technical"\)/, opts: { routes: '/introduction' } },
+  { id: 'floor-math-outside', check: 'ADR-0017.2', re: /section "The governing mathematics" sits outside the two views/, also: /executive view \(EN\): 3 equation\(s\); the executive view holds no equation/, opts: { routes: '/introduction' } },
+  { id: 'floor-glossary-hidden', check: 'ADR-0017.2', re: /math area.*1 glossary item, the floor is 10/, opts: { routes: '/introduction' } },
+  { id: 'floor-steps-hidden', check: 'ADR-0017.2', re: /pipeline area.*1 step in an ordered list, the floor is 4/, opts: { routes: '/introduction' } },
+  { id: 'floor-steps-empty', check: 'ADR-0017.2', re: /pipeline area.*0 steps in an ordered list, the floor is 4/, opts: { routes: '/introduction' } },
+  { id: 'floor-stat-hidden-unit', check: 'ADR-0017.2', re: /initiative area.*0 quantified statements \(value, unit, source\), the floor is 1/, opts: { routes: '/introduction' } },
+  { id: 'floor-waiver-punct', check: 'ADR-0017.2', re: /the waiver for "comparison" has a reason of 12 character/, opts: { routes: '/benchmark' } },
+  { id: 'floor-exec-transparent-es', check: 'G13', re: /contrast 1\.00:1/, mode: /light es$/, opts: { routes: '/introduction', langs: 'en,es' } },
+  { id: 'floor-method-norefs', check: 'ADR-0017.2', re: /method area, topic "Theory" \(EN\): 0 references cited, the floor is 1/, opts: { routes: '/methodology' } },
+  { id: 'floor-live-button', check: 'ADR-0017.2', re: /live area.*0 controls, the floor is 1/, opts: { routes: '/benchmark' } },
+];
+
+/** Legitimate pages that the gate once failed (ADR-0017 2.1 allows them): each must pass every check, in both languages. */
+const LEGIT = [
+  { id: 'legit-outcomes-list', opts: { routes: '/,/introduction' } },
+  { id: 'legit-engine-subtabs', opts: { routes: '/,/implementation' } },
+  { id: 'legit-method-view-tabs', opts: { routes: '/,/methodology' } },
 ];
 
 /** A static server with an SPA fallback: every unknown path answers index.html with 200 (the G4 plant). */
@@ -154,6 +178,17 @@ describe('every planted defect fails the check that owns it', { concurrency: 4 }
 ${show(r)}`);
       if (p.also) assert.ok(r.failures.some((f) => f.check === p.check && p.also.test(f.message)), `plant ${p.id} did not also fail ${p.check} with ${p.also}`);
       assert.ok(hit, `plant ${p.id} did not fail ${p.check} with ${p.re}${p.trail ? ` at ${p.trail}` : ''}; failures:\n${show(r) || '(none)'}`);
+    });
+  }
+});
+
+describe('a legitimate page passes the gate', { concurrency: 3 }, () => {
+  for (const p of LEGIT) {
+    test(`legit: ${p.id}`, { timeout: 600_000 }, async () => {
+      const dir = makePlant(clean, join(work, `plant-${p.id}`), p.id);
+      const r = await runGate({ ...QUICK, langs: 'en,es', serve: dir, expectBrand: BRAND, out: join(work, `out-${p.id}`), ...p.opts });
+      assert.equal(r.failures.length, 0, `the legitimate page ${p.id} failed:
+${show(r)}`);
     });
   }
 });
