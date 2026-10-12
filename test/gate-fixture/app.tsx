@@ -302,21 +302,41 @@ function ValidationView({ sim }: { sim: Sim }) {
                   onPick={() => undefined}
                 />
               </PlotCard>
-              <PlotCard fill title={{ en: 'Recovered on a log time axis', es: 'Recuperados en un eje de tiempo logarítmico' }} lane="live" provenance="synthetic" dataKey={stateKey}>
-                <UPlotChart
-                  height="fill"
-                  x={{ values: sim.t.slice(1), label: { en: 'Day', es: 'Día' }, unit: 'd', log: true }}
-                  y={{ label: { en: 'People', es: 'Personas' }, format: { decimals: 0 } }}
-                  series={[{ label: { en: 'Recovered', es: 'Recuperados' }, values: sim.R.slice(1) }]}
-                  // reference lines in every tone (0.11.0), one above the data and one below it: the range takes them in
-                  yMarks={[
-                    { y: Math.max(...sim.R) * 1.2, label: { en: 'red level', es: 'nivel rojo' }, tone: 'bad' },
-                    { y: Math.max(...sim.R) * 0.6, label: { en: 'target', es: 'meta' }, tone: 'good' },
-                    { y: -Math.max(...sim.R) * 0.1, label: { en: 'no bias', es: 'sin sesgo' }, tone: 'neutral' },
-                    { y: Math.max(...sim.R) * 0.3, label: { en: 'amber level', es: 'nivel ámbar' } },
-                  ]}
-                />
-              </PlotCard>
+              <>
+                <PlotCard fill title={{ en: 'Recovered on a log time axis', es: 'Recuperados en un eje de tiempo logarítmico' }} lane="live" provenance="synthetic" dataKey={stateKey}>
+                  <UPlotChart
+                    height="fill"
+                    x={{ values: sim.t.slice(1), label: { en: 'Day', es: 'Día' }, unit: 'd', log: true }}
+                    y={{ label: { en: 'People', es: 'Personas' }, format: { decimals: 0 } }}
+                    series={[{ label: { en: 'Recovered', es: 'Recuperados' }, values: sim.R.slice(1) }]}
+                    // reference lines in every tone (0.11.0), one above the data and one below it: the range takes them in
+                    yMarks={[
+                      { y: Math.max(...sim.R) * 1.2, label: { en: 'red level', es: 'nivel rojo' }, tone: 'bad' },
+                      { y: Math.max(...sim.R) * 0.6, label: { en: 'target', es: 'meta' }, tone: 'good' },
+                      { y: -Math.max(...sim.R) * 0.1, label: { en: 'no bias', es: 'sin sesgo' }, tone: 'neutral' },
+                      { y: Math.max(...sim.R) * 0.3, label: { en: 'amber level', es: 'nivel ámbar' } },
+                    ]}
+                  />
+                </PlotCard>
+                <PlotCard
+                  fill
+                  title={{ en: 'Recovered at checkpoints, with a note', es: 'Recuperados en puntos de control, con una nota' }}
+                  lane="live"
+                  provenance="synthetic"
+                  dataKey={stateKey}
+                  note={{
+                    en: 'Two filling cards share this short column: each keeps the stage floor, the note keeps at most a third of its card and scrolls beyond it, and the panel scrolls when the cards do not fit.',
+                    es: 'Dos tarjetas que llenan comparten esta columna corta: cada una conserva el piso del escenario, la nota ocupa a lo más un tercio de su tarjeta y se desplaza más allá, y el panel se desplaza cuando las tarjetas no caben.',
+                  }}
+                >
+                  <UPlotChart
+                    height="fill"
+                    x={{ values: rows.map((d) => d), label: { en: 'Day', es: 'Día' }, unit: 'd', format: { decimals: 0 } }}
+                    y={{ label: { en: 'People', es: 'Personas' }, format: { decimals: 0 } }}
+                    series={[{ label: { en: 'Recovered', es: 'Recuperados' }, values: rows.map((d) => sim.R[d]) }]}
+                  />
+                </PlotCard>
+              </>
             </ViewsRow>
           ),
         },
