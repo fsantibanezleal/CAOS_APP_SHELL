@@ -1,0 +1,38 @@
+# Requirements: workbench
+
+Status: live
+
+EARS (Mavin et al., RE'09, doi:10.1109/RE.2009.9). Every requirement names the test or the gate plant that fails when it is violated. A behaviour with no test is not a row here: it is listed as a gap in the delegation report and gets its row when its test exists.
+
+| ID | Requirement | Gate |
+|---|---|---|
+| SHW-001 | THE WorkbenchLayout SHALL render the full-viewport workbench as `page-body wide caos-wb`, mark its instrument with `data-instrument`, and label its rail `Controls`. | `test/workbench.test.tsx::WorkbenchLayout is the full-viewport workbench with a marked instrument (ADR-0071 rules 2 and 8)` |
+| SHW-002 | WHERE the rail is given as sections, THE WorkbenchLayout SHALL show one section at a time and never all of them, with the open section's chip marked. | `test/workbench.test.tsx::a rail given as sections shows one section at a time, never all of them (ADR-0071 rule 6)` |
+| SHW-003 | THE CaseWorkbench SHALL order its views as the product's groups, then the variant comparison, then the context. | `test/workbench.test.tsx::CaseWorkbench orders the groups, then the comparison, then the context (ADR-0016 §9 amended)` |
+| SHW-004 | IF a CaseWorkbench is given more than six peer groups, THEN THE CaseWorkbench SHALL refuse them with the limit named. | `test/workbench.test.tsx::CaseWorkbench refuses more than six peer groups (ADR-0071 rule 5)` |
+| SHW-005 | THE CaseWorkbench rail SHALL carry the case picker, the variants and the live values under the same state key, and the instrument SHALL NOT repeat the case picker. | `test/base07.test.tsx::the App route: the rail carries the case picker, the variants and the live values, under the same state key` |
+| SHW-006 | THE CaseWorkbench SHALL declare `data-case` with the case shown and `data-state-key` with the key of the full selection (case, variant, source and controls). | `test/base07.test.tsx::S10: the state key is deterministic and a view on an older key is stale` |
+| SHW-007 | THE `makeStateKey` function SHALL be deterministic whatever the order of the controls, and SHALL differ when a control value differs. | `test/base07.test.tsx::S10: the state key is deterministic and a view on an older key is stale` |
+| SHW-008 | WHEN a view is computed for an earlier state key, THE view SHALL be overlaid as stale (`data-stale=1`) with the text that it is recomputing, and `isStale` SHALL be false for a view with no key. | `test/base07.test.tsx::S10: the state key is deterministic and a view on an older key is stale` |
+| SHW-009 | WHEN a registered control does not change the selection key, a view keeps an earlier key, no control is registered, or the case shown is not the case asked for, THE gate SHALL fail under G9. | `test/gate-selftest.mjs::dead-knob`, `test/gate-selftest.mjs::stuck-view`, `test/gate-selftest.mjs::no-controls`, `test/gate-selftest.mjs::wrong-case` |
+| SHW-010 | THE VariantBar SHALL show the variant count, the active regime, its note and its lane on one row. | `test/workbench.test.tsx::VariantBar shows the count, the active regime, its note and its lane on one row` |
+| SHW-011 | THE LaneBadge SHALL state the lane in the interface language, English by default. | `test/workbench.test.tsx::LaneBadge states the lane in the user language, English by default` |
+| SHW-012 | THE ViewsRow SHALL give each view a column the shell owns and split the row by `shares`, equally without them, and a filling card in a views row SHALL take an equal share. | `test/base09.test.tsx::ViewsRow: each view in a shell column, the row split by shares`, `test/base08.test.tsx::BL-006 (defect 23, #54): a filling card in a views row takes an equal share` |
+| SHW-013 | THE Stage SHALL render its children only at a real size and declare `data-drawn=0` until it has one. | `test/base07.test.tsx::S13: a stage draws nothing until it has a size, and declares it` |
+| SHW-014 | IF a view throws while rendering, THEN THE PanelBoundary SHALL contain the failure, name the panel in `data-panel-error` and show that the view failed. | `test/base07.test.tsx::S3: a failing view is contained by its boundary and named` |
+| SHW-015 | THE `caseKind` function SHALL default a case to synthetic and return a declared kind as given. | `test/caseModel.test.ts::caseKind defaults to synthetic` |
+| SHW-016 | THE `sourcesPresent` function SHALL return the lanes present in a deck in the canonical order. | `test/caseModel.test.ts::sourcesPresent returns present lanes in canonical order` |
+| SHW-017 | THE `groupByCategory` function SHALL keep the first-seen category order and the order within a group, and a case with no category SHALL group under the empty key. | `test/caseModel.test.ts::groupByCategory preserves first-seen category and within-group order` |
+| SHW-018 | THE `casesInSource` function SHALL filter a deck by lane and SHALL return all cases for an undefined lane. | `test/caseModel.test.ts::casesInSource filters by lane; undefined source returns all` |
+| SHW-019 | THE `caseTooltip` function SHALL join the anchor and the expected band, and be empty when a case has neither. | `test/caseModel.test.ts::caseTooltip joins anchor and expectedBand, empty when neither` |
+| SHW-020 | THE case deep link SHALL round-trip through a query string: `readCaseParam` SHALL read the named parameter or null, and `withCaseParam` SHALL write it. | `test/caseModel.test.ts::deep-link param round-trips through a query string` |
+| SHW-021 | THE viz loop SHALL be paused by default, so that no frame runs until `play()` is called. | `test/vizLoop.test.ts::default paused: nothing runs until play()` |
+| SHW-022 | WHEN `play()` is called, THE viz loop SHALL run frames with the step and the elapsed time. | `test/vizLoop.test.ts::play() runs frames with dt and elapsed` |
+| SHW-023 | WHEN a frame returns false, THE viz loop SHALL complete once, pause, clear its intent and request no further frame. | `test/vizLoop.test.ts::run once then stop: returning false completes and pauses (onComplete fires once)` |
+| SHW-024 | WHERE `durationMs` is given, THE viz loop SHALL end the pass at it and clamp the final elapsed time to it. | `test/vizLoop.test.ts::durationMs caps the pass and clamps the final elapsed` |
+| SHW-025 | WHERE `loop: true` is given, THE viz loop SHALL repeat and reset the elapsed time on each pass. | `test/vizLoop.test.ts::loop:true repeats and resets elapsed each pass` |
+| SHW-026 | WHEN the tab is hidden, THE viz loop SHALL halt its frames while keeping the intent to play, and WHEN it is visible again the loop SHALL resume. | `test/vizLoop.test.ts::hidden tab halts the rAF but keeps intent; visible resumes` |
+| SHW-027 | THE elapsed time of the viz loop SHALL exclude the time spent hidden, with no jump on resume. | `test/vizLoop.test.ts::elapsed excludes time spent hidden (no dt jump on resume)` |
+| SHW-028 | THE viz loop SHALL pause, resume and toggle on request, `restart` SHALL reset the elapsed time to 0, and `dispose` SHALL cancel any pending frame. | `test/vizLoop.test.ts::pause() stops frames and can resume; toggle flips state`, `test/vizLoop.test.ts::restart resets elapsed to 0`, `test/vizLoop.test.ts::dispose cancels any pending frame` |
+| SHW-029 | WHEN a state never declares itself ready, THE gate SHALL fail under G7. | `test/gate-selftest.mjs::never-ready` |
+| SHW-030 | WHEN the page keeps requesting animation frames or mutating the DOM at rest, THE gate SHALL fail under G8. | `test/gate-selftest.mjs::raf-loop`, `test/gate-selftest.mjs::mutation-loop` |

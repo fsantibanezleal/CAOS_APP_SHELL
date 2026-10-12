@@ -53,5 +53,5 @@ The self-test's plant `stage-floor` is a filling card with a twenty-line note wh
 ## The gate proves itself (G15)
 
 `npm run test:gate` builds the fixture product (`test/gate-fixture`), runs the gate on it clean in the full matrix
-(every check must pass), and once per planted defect (the check that owns it must fail with its own message): 34
+(every check must pass), and once per planted defect (the check that owns it must fail with its own message): 37
 plants, one per check and per distinct trap. A check without a plant is a check that can agree with a broken app.

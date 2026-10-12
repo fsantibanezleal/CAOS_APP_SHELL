@@ -50,7 +50,8 @@
     "prepare": "npm run build",
     "prepublishOnly": "npm run build",
     "prebuild": "node scripts/reserved-classes.mjs",
-    "test:gate": "node --test test/gate-selftest.mjs"
+    "test:gate": "node --test test/gate-selftest.mjs",
+    "check:sdd": "python scripts/check_sdd.py ."
   },
   "peerDependencies": {
     "katex": "^0.16.0",

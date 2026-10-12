@@ -9,10 +9,13 @@ patch; a new primitive, a new check or a changed default is a minor version.
 ## Steps
 
 1. An issue names the defect or the requirement; a branch `task/<slug>` from `develop`.
-2. The change with its test: a unit test in `test/`, and for the gate a planted defect in `test/gate-selftest.mjs`
-   with its fixture state. `npm test`, `npm run test:browser`, `npm run test:gate` pass.
+2. The requirement first (a row, new or amended, with its ID, in `docs/design/features/<area>/requirements.md`), then
+   the change with its test, which names that ID in its title or a comment: a unit test in `test/`, and for the gate a
+   planted defect in `test/gate-selftest.mjs` with its fixture state. `npm test`, `npm run test:browser`,
+   `npm run test:gate` and `npm run check:sdd` pass (`check:sdd` also runs in CI, ADR-0075).
 3. `VERSION`, `package.json`, the CHANGELOG entry (what was wrong, in which product it was found, what a product does
-   on adoption); the known-defects record in CAOS_MANAGE (`conventions/shell-known-defects.md`) closes the entries
+   on adoption); the SDD (`docs/design/SDD.md`, section Versions and adoption) and the CHANGELOG entry agree on what the release
+   carries; the known-defects record in CAOS_MANAGE (`conventions/shell-known-defects.md`) closes the entries
    the release carries.
 4. PR into `develop`, then `develop` into `main`; the tag on `main`; a GitHub release from the tag.
 5. Publish to npm (below), then `npm view @fasl-work/caos-app-shell version` shows the release.
