@@ -1,3 +1,15 @@
+## [0.11.002] - 2026-10-12
+
+### Fixed
+
+Found by CAOS_Contraste 0.07.000 on the release gate of shell 0.11.1 (G6 at 138 px, Spanish, 1280x800, wide font):
+
+- The filling card's stage floor now holds on the stage itself: at 1280 px and wider the body of a `PlotCard fill` (the
+  box the gate measures) keeps at least `--caos-stage-floor` (140 px), so the card grows when its header or its note
+  wraps and the containing panel scrolls. 0.11.1 derived a card height from a fixed chrome, which a header wrapping to
+  a third line defeated (a 400 px column with a note left 106 px). The browser test now covers cards without a note and
+  the narrow column of a three-view row.
+
 ## [0.11.001] - 2026-10-12
 
 ### Fixed
