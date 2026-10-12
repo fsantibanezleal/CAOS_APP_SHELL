@@ -16,7 +16,7 @@ SECTIONS = (
     "Degradation and dependency states", "Verification", "Versions and adoption", "Risks", "ADR fit",
 )
 UNIT_TEST = "import test from 'node:test';\ntest('keeps the focus inside the drawer', () => {});\n"
-E2E_TEST = 'describe("the sidebar collapses", () => {});\n'
+E2E_TEST = 'test("the sidebar collapses", () => {});\n'
 SELFTEST = "const plants = [\n  { id: 'g15-overflow', plant: 1 },\n];\n"
 
 
@@ -65,7 +65,7 @@ class CheckSdd(unittest.TestCase):
             row("SHF-001", "The drawer SHALL trap focus.", "`test/focus.test.ts::keeps the focus inside the drawer`"),
             row("SHW-002", "The sidebar SHALL collapse.", "`e2e/sidebar.test.ts::the sidebar collapses`"),
             row("SHG-003", "The gate SHALL flag overflow.", "`test/gate-selftest.mjs::g15-overflow`"),
-            row("SHK-004", "The tree SHALL exist.", "`test/focus.test.ts`"),
+            row("SHK-004", "The drawer SHALL keep focus.", "`test/focus.test.ts::keeps the focus inside the drawer`"),
         ])
         code, out = t.run()
         self.assertEqual(code, 0, out)
@@ -130,6 +130,7 @@ class CheckSdd(unittest.TestCase):
 
     def test_planned_with_missing_file_passes_and_is_counted_apart(self) -> None:
         t = self.tree(status="planned", rows=[row("SHT-001", "A SHALL.", "`test/not-yet.test.ts::later`")])
+        t.write("docs/design/features/.status-allow", "drawer: lands in 0.12.0\n")
         code, out = t.run()
         self.assertEqual(code, 0, out)
         self.assertIn("0 live requirements", out)
@@ -158,7 +159,7 @@ class CheckSdd(unittest.TestCase):
         self.assertEqual(code, 0, out)
 
     def test_nested_describe_and_backtick_names_pass(self) -> None:
-        t = self.tree(rows=[row("SHF-001", "A SHALL.", "`test/focus.test.ts::inner` `test/focus.test.ts::tick name`")])
+        t = self.tree(rows=[row("SHF-001", "A SHALL.", "`test/focus.test.ts::tick name`")])
         t.write("test/focus.test.ts", "describe('outer', () => {\n  describe('inner', () => {\n    it(`tick name`, () => {});\n  });\n});\n")
         code, out = t.run()
         self.assertEqual(code, 0, out)
@@ -170,11 +171,103 @@ class CheckSdd(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("requirements.md", out)
 
-    def test_superseded_file_is_skipped(self) -> None:
+    def test_superseded_file_is_skipped_only_when_allowed(self) -> None:
         t = self.tree(status="superseded", rows=[row("SHF-001", "no shall", "nothing")])
+        code, out = t.run()
+        self.assertEqual(code, 1, out)
+        self.assertIn("status-allow", out)
+        t.write("docs/design/features/.status-allow", "drawer: replaced by the frame area in 0.12.0\n")
         code, out = t.run()
         self.assertEqual(code, 0, out)
         self.assertIn("superseded", out)
+
+    # --- the holes found by the adversarial review of PR #100 (wip/app-shell/review-pr100-sdd-2026-10-11.md D2) ---
+
+    def _gate_fails(self, body: str, name: str = "the drawer opens", path: str = "test/focus.test.ts") -> str:
+        t = self.tree(rows=[row("SHF-001", "A SHALL.", f"`{path}::{name}`")])
+        t.write(path, body)
+        code, out = t.run()
+        self.assertEqual(code, 1, out)
+        return out
+
+    def test_name_inside_a_string_fails(self) -> None:
+        self._gate_fails("const s = \"test('the drawer opens', () => {})\";\n")
+
+    def test_name_in_a_trailing_comment_fails(self) -> None:
+        self._gate_fails("foo(); // test('the drawer opens', () => {})\n")
+
+    def test_name_inside_another_tests_body_fails(self) -> None:
+        self._gate_fails("test('other', () => { const x = `test('the drawer opens'`; });\n")
+
+    def test_skipped_and_todo_tests_fail(self) -> None:
+        for body in ("test.skip('the drawer opens', () => {});\n", "test.todo('the drawer opens');\n",
+                     "it.skip('the drawer opens', () => {});\n", "test('the drawer opens', { skip: true }, () => {});\n",
+                     "test('the drawer opens', { todo: 'later' }, () => {});\n"):
+            with self.subTest(body=body):
+                out = self._gate_fails(body)
+                self.assertIn("skipped", out)
+
+    def test_describe_is_not_a_gate(self) -> None:
+        self._gate_fails("describe('the drawer opens', () => {});\n")
+
+    def test_plain_path_and_non_test_targets_fail_for_live_rows(self) -> None:
+        t = self.tree(rows=[row("SHF-001", "A SHALL.", "`test/focus.test.ts`")])
+        code, out = t.run()
+        self.assertEqual(code, 1, out)
+        self.assertIn("names no test", out)
+        t = self.tree(rows=[row("SHF-001", "A SHALL.", "`README.md::test('x')`")])
+        t.write("README.md", "test('x', () => {});\n")
+        code, out = t.run()
+        self.assertEqual(code, 1, out)
+        self.assertIn("test/ or e2e/", out)
+
+    def test_path_outside_the_repository_fails(self) -> None:
+        t = self.tree(rows=[row("SHF-001", "A SHALL.", "`test/../../outside.test.ts::x`")])
+        code, out = t.run()
+        self.assertEqual(code, 1, out)
+        self.assertIn("outside", out)
+
+    def test_malformed_rows_are_findings(self) -> None:
+        gate = "`test/focus.test.ts::keeps the focus inside the drawer`"
+        for bad in ("  | SHF-002 | indented SHALL. | " + gate + " |", "| SHF-002 | split SHALL.", "|  | empty id SHALL. | " + gate + " |"):
+            with self.subTest(bad=bad):
+                t = self.tree(rows=[row("SHF-001", "A SHALL.", gate), bad])
+                code, out = t.run()
+                self.assertEqual(code, 1, out)
+
+    def test_an_id_outside_a_row_is_a_finding(self) -> None:
+        gate = "`test/focus.test.ts::keeps the focus inside the drawer`"
+        t = self.tree(rows=[row("SHF-001", "A SHALL.", gate)])
+        path = t.root / "docs/design/features/drawer/requirements.md"
+        path.write_text(path.read_text(encoding="utf-8") + "\nSHF-009: the drawer SHALL close on Escape.\n", encoding="utf-8")
+        code, out = t.run()
+        self.assertEqual(code, 1, out)
+        self.assertIn("SHF-009", out)
+
+    def test_planned_area_needs_the_allow_list(self) -> None:
+        t = self.tree(status="planned", rows=[row("SHT-001", "A SHALL.", "`test/not-yet.test.ts::later`")])
+        code, out = t.run()
+        self.assertEqual(code, 1, out)
+        self.assertIn("status-allow", out)
+
+    def test_two_status_lines_fail(self) -> None:
+        gate = "`test/focus.test.ts::keeps the focus inside the drawer`"
+        t = self.tree(rows=[row("SHF-001", "A SHALL.", gate)])
+        path = t.root / "docs/design/features/drawer/requirements.md"
+        path.write_text(path.read_text(encoding="utf-8").replace("Status: live", "Status: live\nStatus: planned"), encoding="utf-8")
+        code, out = t.run()
+        self.assertEqual(code, 1, out)
+        self.assertIn("Status", out)
+
+    def test_sdd_headings_in_a_fence_or_comment_or_empty_fail(self) -> None:
+        body = "# SDD\n\n" + "".join(f"## {s}\n\ntext\n\n" for s in SECTIONS if s != "Risks")
+        for extra in ("```\n## Risks\n```\n", "<!--\n## Risks\n-->\n", "## Risks\n\n"):
+            with self.subTest(extra=extra):
+                t = self.tree()
+                t.write("docs/design/SDD.md", body.replace("## ADR fit", extra + "## ADR fit"))
+                code, out = t.run()
+                self.assertEqual(code, 1, out)
+                self.assertIn("Risks", out)
 
 
 if __name__ == "__main__":

@@ -139,7 +139,7 @@ Requirements per area (counted from the nine files at the time of writing; `scri
 | gate | SHG | 9 |
 | total | | 149 |
 
-Tests that verify them: 18 unit files in `test/` (node test runner) and the gate self-test `test/gate-selftest.mjs`, 10 browser files in `e2e/`
+Tests that verify them: 17 unit files in `test/` (node test runner) and the gate self-test `test/gate-selftest.mjs`, 11 browser files in `e2e/`
 (Playwright Chromium), and 37 plants in `PLANTS` of `test/gate-selftest.mjs`. The coverage is shown by the report that
 delivered this document, not duplicated here.
 
