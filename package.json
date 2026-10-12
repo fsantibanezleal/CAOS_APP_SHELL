@@ -1,6 +1,6 @@
 {
   "name": "@fasl-work/caos-app-shell",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Shared web-app shell, workbench primitives, content primitives, design system and measured gate for the CAOS / Faena public apps (ADR-0016, ADR-0017, ADR-0071).",
   "license": "MIT",
   "author": "Felipe Santibáñez-Leal",
@@ -50,7 +50,8 @@
     "prepare": "npm run build",
     "prepublishOnly": "npm run build",
     "prebuild": "node scripts/reserved-classes.mjs",
-    "test:gate": "node --test test/gate-selftest.mjs"
+    "test:gate": "node --test test/gate-selftest.mjs",
+    "check:sdd": "python scripts/check_sdd.py ."
   },
   "peerDependencies": {
     "katex": "^0.16.0",

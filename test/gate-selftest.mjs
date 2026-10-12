@@ -40,6 +40,7 @@ const PLANTS = [
   { id: 'shrunk-tabs', check: 'G5', re: /cuts its tabs by \d+px/, trail: /validation > daily/, opts: { routes: '/' } },
   { id: 'blank', check: 'G6', re: /is blank/, opts: { routes: '/' } },
   { id: 'small', check: 'G6', re: /draws on \d+% of its stage/, opts: { routes: '/' } },
+  { id: 'stage-floor', check: 'G6', re: /the drawing of .* keeps \d+ px under its note \(floor 140 px\)/, opts: { routes: '/' } },
   { id: 'repeat-ticks', check: 'G6', re: /axis tick label\(s\) repeat the label before them/, opts: { routes: '/' } },
   { id: 'never-ready', check: 'G7', re: /data-state="loading"/, opts: { routes: '/,/benchmark', settleMs: 3000 } },
   { id: 'raf-loop', check: 'G8', re: /animation frames/, opts: { routes: '/' } },
@@ -53,7 +54,76 @@ const PLANTS = [
   { id: 'label-wide', check: 'G10', re: /"a label sized for a narrow font only" is cut/, mode: /wide-font/, opts: { routes: '/,/introduction', wideFont: true, wideFontSizes: '1280x800' } },
   { id: 'decimal-point', check: 'G11', re: /writes 0\.25 with a decimal point/, also: /writes 2\.7e-08 with a decimal point/, opts: { langs: 'es', routes: '/,/introduction' } },
   { id: 'sticky-off', check: 'G12', re: /active sub-tab .* is out of view/, opts: { routes: '/,/implementation' } },
+  { id: 'refs-mid', check: 'ADR-0017.4', re: /references must be the last block of the page or tab/, opts: { routes: '/,/introduction' } },
+  { id: 'refs-missing', check: 'ADR-0017.4', re: /cite references the page never lists/, opts: { routes: '/,/introduction' } },
+  { id: 'unavailable-unexplained', check: 'G6', re: /data-state="unavailable".*reason/, trail: /pending/, opts: { routes: '/' } },
+  { id: 'unavailable-short', check: 'G6', re: /data-state="unavailable".*reason/, trail: /pending/, opts: { routes: '/' } },
+  { id: 'unavailable-beside-blank', check: 'G6', re: /is blank/, trail: /pending/, opts: { routes: '/' } },
+  { id: 'unavailable-hidden', check: 'G6', re: /nothing is drawn in the instrument/, trail: /pending/, opts: { routes: '/' } },
+  { id: 'unavailable-opacity', check: 'G6', re: /no reader can see the note/, trail: /pending/, opts: { routes: '/' } },
+  { id: 'unavailable-zero', check: 'G6', re: /no reader can see the note/, trail: /pending/, opts: { routes: '/' } },
+  { id: 'unavailable-offscreen', check: 'G6', re: /no reader can see the note/, trail: /pending/, opts: { routes: '/' } },
+  { id: 'unavailable-sronly', check: 'G6', re: /no reader can see the note/, trail: /pending/, opts: { routes: '/' } },
+  { id: 'unavailable-fontsize', check: 'G6', re: /no reader can see the note/, trail: /pending/, opts: { routes: '/' } },
+  { id: 'unavailable-clippath', check: 'G6', re: /no reader can see the note/, trail: /pending/, opts: { routes: '/' } },
+  { id: 'unavailable-textindent', check: 'G6', re: /no reader can see the note/, trail: /pending/, opts: { routes: '/' } },
+  { id: 'unavailable-tinyfont', check: 'G6', re: /no reader can see the note/, trail: /pending/, opts: { routes: '/' } },
+  { id: 'unavailable-punct', check: 'G6', re: /data-state="unavailable".*reason/, trail: /pending/, opts: { routes: '/' } },
+  { id: 'unavailable-hidden-text', check: 'G6', re: /data-state="unavailable".*reason/, trail: /pending/, opts: { routes: '/' } },
+  { id: 'unavailable-collapsed-chart', check: 'G6', re: /a drawing is present but not visible/, trail: /pending/, opts: { routes: '/' } },
+  { id: 'unavailable-invisible-chart', check: 'G6', re: /a drawing is present but not visible/, trail: /pending/, opts: { routes: '/' } },
   { id: 'low-contrast', check: 'G13', re: /contrast \d\.\d\d:1, below 4\.5:1/, opts: { routes: '/,/introduction' } },
+  // ADR-0017 2.1: the required areas of the documentation pages; each fails with its own floor
+  { id: 'floor-no-executive', check: 'ADR-0017.2', re: /no executive view; the top-level topics are \[none\]/, opts: { routes: '/introduction' } },
+  { id: 'floor-exec-second', check: 'ADR-0017.2', re: /the executive view is not the first topic \(the first is "technical"\)/, opts: { routes: '/introduction' } },
+  { id: 'floor-initiative-nostat', check: 'ADR-0017.2', re: /initiative area.*0 quantified statements \(value, unit, source\), the floor is 1/, opts: { routes: '/introduction' } },
+  { id: 'floor-outcomes-two', check: 'ADR-0017.2', re: /outcomes area.*2 rows of capability, outcome and proof point, the floor is 3/, opts: { routes: '/introduction' } },
+  { id: 'floor-positioning-three', check: 'ADR-0017.2', re: /positioning area.*3 items, exactly 4 is required/, opts: { routes: '/introduction' } },
+  { id: 'floor-credibility-two', check: 'ADR-0017.2', re: /credibility area.*2 question and answer pairs, the floor is 3/, opts: { routes: '/introduction' } },
+  { id: 'floor-exec-equation', check: 'ADR-0017.2', re: /executive view \(EN\): 1 equation\(s\); the executive view holds no equation/, opts: { routes: '/introduction' } },
+  { id: 'floor-five-sections', check: 'ADR-0017.2', re: /no section declares the area "math"/, opts: { routes: '/introduction' } },
+  { id: 'floor-glossary-nine', check: 'ADR-0017.2', re: /math area.*9 glossary items, the floor is 10/, opts: { routes: '/introduction' } },
+  { id: 'floor-pipeline-unordered', check: 'ADR-0017.2', re: /pipeline area.*0 steps in an ordered list, the floor is 4/, opts: { routes: '/introduction' } },
+  { id: 'floor-honesty-none', check: 'ADR-0017.2', re: /honesty area.*0 honest callouts, exactly 1 is required/, opts: { routes: '/introduction' } },
+  { id: 'floor-area-unknown', check: 'ADR-0017.2', re: /declares the unknown area "extras"/, opts: { routes: '/introduction' } },
+  { id: 'floor-method-topics', check: 'ADR-0017.2', re: /Methodology \(EN\): 5 topics, the floor is 6/, opts: { routes: '/methodology' } },
+  { id: 'floor-method-dense', check: 'ADR-0017.2', re: /method area, topic "Theory" \(EN\): 3 dense paragraphs, the floor is 4/, opts: { routes: '/methodology' } },
+  { id: 'floor-method-equations', check: 'ADR-0017.2', re: /method area, topic "Numerics" \(EN\): 1 captioned equation, the floor is 2/, opts: { routes: '/methodology' } },
+  { id: 'floor-method-figure', check: 'ADR-0017.2', re: /method area, topic "Numerics" \(EN\): 0 figures with a caption, the floor is 1/, opts: { routes: '/methodology' } },
+  { id: 'floor-method-honest', check: 'ADR-0017.2', re: /method area, topic "Theory" \(EN\): 2 honest callouts, exactly 1 is required/, opts: { routes: '/methodology' } },
+  { id: 'floor-method-learned', check: 'ADR-0017.2', re: /Methodology \(EN\): 1 topic of kind learned, the floor is 2/, opts: { routes: '/methodology' } },
+  { id: 'floor-lede-short', check: 'ADR-0017.2', re: /Experiments \(EN\): the lede holds 3 word\(s\), the floor is 35/, opts: { routes: '/experiments' } },
+  { id: 'floor-impl-architecture', check: 'ADR-0017.2', re: /no section declares the area "architecture"/, opts: { routes: '/implementation' } },
+  { id: 'floor-exp-datasets', check: 'ADR-0017.2', re: /no section declares the area "datasets"/, opts: { routes: '/experiments' } },
+  { id: 'floor-bench-caveat', check: 'ADR-0017.2', re: /no section declares the area "caveat"/, opts: { routes: '/benchmark' } },
+  { id: 'floor-es-area', check: 'ADR-0017.2', re: /Implementation \(ES\): no section declares the area "lanes"/, opts: { routes: '/implementation', langs: 'es' } },
+  { id: 'floor-waiver-reason', check: 'ADR-0017.2', re: /the waiver for "comparison" has a reason of 5 character/, opts: { routes: '/benchmark' } },
+  { id: 'floor-waiver-unknown', check: 'ADR-0017.2', re: /the waiver for "nonsense" is refused/, opts: { routes: '/benchmark' } },
+  { id: 'floor-hidden', check: 'ADR-0017.2', re: /method area, topic "Theory" \(EN\): 2 dense paragraphs, the floor is 4/, opts: { routes: '/methodology' } },
+  { id: 'floor-duplicate', check: 'ADR-0017.2', re: /method area, topic "Theory" \(EN\): 1 dense paragraph, the floor is 4/, opts: { routes: '/methodology' } },
+  { id: 'floor-waiver-other', check: 'ADR-0017.2', re: /pipeline area.*0 steps in an ordered list, the floor is 4/, not: /(math area|area "math")/, opts: { routes: '/introduction' } },
+  { id: 'area-hidden-filler', check: 'ADR-0017.2', re: /initiative area.*0 dense paragraphs, the floor is 1/, also: /initiative area.*0 quantified statements \(value, unit, source\), the floor is 1/, opts: { routes: '/introduction' } },
+  // 0.11.0 gate review: what a reader cannot read, whatever the box says; the views; the visible parts of a statement, item or step
+  { id: 'area-hidden-textindent', check: 'ADR-0017.2', re: /initiative area.*0 dense paragraphs, the floor is 1/, opts: { routes: '/introduction' } },
+  { id: 'area-hidden-tinyfont', check: 'ADR-0017.2', re: /initiative area.*0 dense paragraphs, the floor is 1/, opts: { routes: '/introduction' } },
+  { id: 'area-hidden-clippath', check: 'ADR-0017.2', re: /initiative area.*0 dense paragraphs, the floor is 1/, opts: { routes: '/introduction' } },
+  { id: 'floor-exec-not-default', check: 'ADR-0017.2', re: /the executive view is not the view the page opens on \(it opens on "technical"\)/, opts: { routes: '/introduction' } },
+  { id: 'floor-math-outside', check: 'ADR-0017.2', re: /section "The governing mathematics" sits outside the two views/, also: /executive view \(EN\): 3 equation\(s\); the executive view holds no equation/, opts: { routes: '/introduction' } },
+  { id: 'floor-glossary-hidden', check: 'ADR-0017.2', re: /math area.*1 glossary item, the floor is 10/, opts: { routes: '/introduction' } },
+  { id: 'floor-steps-hidden', check: 'ADR-0017.2', re: /pipeline area.*1 step in an ordered list, the floor is 4/, opts: { routes: '/introduction' } },
+  { id: 'floor-steps-empty', check: 'ADR-0017.2', re: /pipeline area.*0 steps in an ordered list, the floor is 4/, opts: { routes: '/introduction' } },
+  { id: 'floor-stat-hidden-unit', check: 'ADR-0017.2', re: /initiative area.*0 quantified statements \(value, unit, source\), the floor is 1/, opts: { routes: '/introduction' } },
+  { id: 'floor-waiver-punct', check: 'ADR-0017.2', re: /the waiver for "comparison" has a reason of 12 character/, opts: { routes: '/benchmark' } },
+  { id: 'floor-exec-transparent-es', check: 'G13', re: /contrast 1\.00:1/, mode: /light es$/, opts: { routes: '/introduction', langs: 'en,es' } },
+  { id: 'floor-method-norefs', check: 'ADR-0017.2', re: /method area, topic "Theory" \(EN\): 0 references cited, the floor is 1/, opts: { routes: '/methodology' } },
+  { id: 'floor-live-button', check: 'ADR-0017.2', re: /live area.*0 controls, the floor is 1/, opts: { routes: '/benchmark' } },
+];
+
+/** Legitimate pages that the gate once failed (ADR-0017 2.1 allows them): each must pass every check, in both languages. */
+const LEGIT = [
+  { id: 'legit-outcomes-list', opts: { routes: '/,/introduction' } },
+  { id: 'legit-engine-subtabs', opts: { routes: '/,/implementation' } },
+  { id: 'legit-method-view-tabs', opts: { routes: '/,/methodology' } },
 ];
 
 /** A static server with an SPA fallback: every unknown path answers index.html with 200 (the G4 plant). */
@@ -104,8 +174,21 @@ describe('every planted defect fails the check that owns it', { concurrency: 4 }
         ...(p.opts ?? {}),
       });
       const hit = r.failures.find((f) => f.check === p.check && p.re.test(f.message) && (!p.trail || p.trail.test(f.trail)) && (!p.mode || p.mode.test(f.mode)));
+      if (p.not) assert.ok(!r.failures.some((f) => f.check === p.check && p.not.test(f.message)), `plant ${p.id} failed ${p.check} with ${p.not}, a floor its waiver names; failures:
+${show(r)}`);
       if (p.also) assert.ok(r.failures.some((f) => f.check === p.check && p.also.test(f.message)), `plant ${p.id} did not also fail ${p.check} with ${p.also}`);
       assert.ok(hit, `plant ${p.id} did not fail ${p.check} with ${p.re}${p.trail ? ` at ${p.trail}` : ''}; failures:\n${show(r) || '(none)'}`);
+    });
+  }
+});
+
+describe('a legitimate page passes the gate', { concurrency: 3 }, () => {
+  for (const p of LEGIT) {
+    test(`legit: ${p.id}`, { timeout: 600_000 }, async () => {
+      const dir = makePlant(clean, join(work, `plant-${p.id}`), p.id);
+      const r = await runGate({ ...QUICK, langs: 'en,es', serve: dir, expectBrand: BRAND, out: join(work, `out-${p.id}`), ...p.opts });
+      assert.equal(r.failures.length, 0, `the legitimate page ${p.id} failed:
+${show(r)}`);
     });
   }
 });

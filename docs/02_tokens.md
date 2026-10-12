@@ -58,7 +58,7 @@ rendered text the same way.
 | `--maxw` | 1200px | the document column |
 | `--maxw-wide` | 100% | the workbench and the surface |
 | `--measure` | 70ch | the `.measure` column and the lede |
-| `--measure-text` | 78ch | the longest line of a text block inside a document |
+| `--measure-text` | 78ch | the longest line of a caption inside a document (text blocks take the full column since 0.11.0) |
 | `--header-h` | 56px | the header row (52 px at 760 px and below) |
 | `--rail-w` | `clamp(248px, 19vw, 340px)` | the workbench rail and the focus rail |
 | `--fade` | 28px | the faded end of a scrolling row |

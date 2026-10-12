@@ -22,3 +22,4 @@ first (issue, test, CHANGELOG, release), never patched in the product (ADR-0078 
 | [06 Icons and numbers](06_icons-and-numbers.md) | icon sizing by context, the brand mark; numbers in the interface language |
 | [07 The gate](07_gate.md) | `caos-shell-gate`: what each check measures, its options, its self-test |
 | [08 Releasing](08_releasing.md) | versions, the release steps, npm, how products pin and adopt |
+| [Design (SDD)](design/SDD.md) | the software design document: problem, dimensioning, contracts, degradation states, verification, risks, ADR fit; every requirement in `design/features/` names its test or gate plant |
