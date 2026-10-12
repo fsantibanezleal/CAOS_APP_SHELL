@@ -21,7 +21,7 @@
 //                            wide-font pass: Verdana, else DejaVu Sans, the Linux runner's font)
 //   G11 Spanish numbers      a page in Spanish writes no decimal point (canvas text excepted)
 //   G12 sticky lists         a vertical sub-tab list is still in view at the end of a long section
-//   G13 contrast             every visible text at WCAG AA against the colour behind it (primary size, both themes)
+//   G13 contrast             every visible text at WCAG AA against the colour behind it (primary size, both themes; first language, and every language on a documentation route)
 //   G14 captures index       gate-output/index.html shows every capture by route and mode, the failures first
 // plus the ADR-0071 and ADR-0017 measures (viewport, one-row tabs, rail without scroll, centred prose, captions,
 // references).
@@ -257,12 +257,13 @@ export async function runGate(o) {
           const mode = `${w}x${h} ${theme} ${lang}`;
           const primary = size === primarySize && theme === themes[0] && lang === langs[0];
           const idleHere = theme === themes[0] && lang === langs[0];
-          const contrast = size === primarySize && lang === langs[0];
           const ctx = await openContext(size, theme, lang);
           const { page, sink } = await newPage(ctx);
           for (const route of routes) {
             const isWorkbench = workbenchRoutes.has(route);
             const at = { route, mode };
+            // G13 runs in the first language; the documentation routes (the prose a reader reads) in every language
+            const contrast = size === primarySize && (lang === langs[0] || DOC_ROUTES.includes(route));
             const res = await page.goto(urlFor(route), { waitUntil: 'load', timeout: 30000 }).catch((e) => e);
             const status = res && typeof res.status === 'function' ? res.status() : `error ${res?.message ?? res}`;
             if (status !== 200) {
@@ -548,7 +549,7 @@ export async function runGate(o) {
     }
   }
 
-  /** Walks every tab of every list owned by `trail`; returns the number of leaf topics found (a tab with no list inside it is one). */
+  /** Walks every tab of every list owned by `trail`; returns the number of leaf topics found (a tab with no list inside it is one; a list inside a documentation section adds none). */
   async function walkTabs(page, sink, where, trail, handled, s) {
     let leaves = 0;
     const lists = (await page.evaluate(() => window.__caosGate.tablists())).filter((l) => !handled.has(l.key) && !l.source);
@@ -569,7 +570,7 @@ export async function runGate(o) {
             await tab.click({ timeout: 5000 });
           } catch (e) {
             fail('G7', at, `the tab could not be clicked: ${e.message.split('\n')[0]}`);
-            leaves += 1;
+            if (!tl.inSection) leaves += 1;
             continue;
           }
           const why = await settle(page);
@@ -577,7 +578,8 @@ export async function runGate(o) {
           await processState(page, sink, at, { ...s, first: false, idle: s.idle });
         }
         const inner = await walkTabs(page, sink, where, here, new Set(handled), s);
-        leaves += inner === 0 ? 1 : inner;
+        // the tabs of a list inside a documentation section are visited, but they are parts of that section, not topics
+        if (!tl.inSection) leaves += inner === 0 ? 1 : inner;
       }
       if (tl.active >= 0 && tl.tabs.length > 1) {
         await page.locator(tl.key).locator('[role="tab"]').filter({ visible: true }).nth(tl.active).click({ timeout: 5000 }).catch(() => undefined);
