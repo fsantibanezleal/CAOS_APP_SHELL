@@ -116,8 +116,9 @@ it is re-exported.
 
 | Other source | Lines |
 |---|---|
-| `gate/run.mjs` | 722 |
-| `gate/inpage.mjs` | 824 |
+| `gate/run.mjs` | 755 |
+| `gate/inpage.mjs` | 1141 |
+| `gate/areas.mjs` | 327 |
 | `gate/png.mjs` | 149 |
 | `gate/serve.mjs` | 97 |
 | `bin/caos-shell-gate.mjs` | 71 |
@@ -128,7 +129,7 @@ Requirements per area (counted from the nine files at the time of writing; `scri
 
 | Area | Prefix | Requirements |
 |---|---|---|
-| documents | SHD | 20 |
+| documents | SHD | 33 |
 | frame-and-navigation | SHF | 27 |
 | workbench | SHW | 30 |
 | charts | SHC | 28 |
@@ -136,11 +137,11 @@ Requirements per area (counted from the nine files at the time of writing; `scri
 | numbers-and-units | SHN | 9 |
 | theme-and-language | SHT | 10 |
 | architecture-modal | SHA | 4 |
-| gate | SHG | 9 |
-| total | | 149 |
+| gate | SHG | 35 |
+| total | | 188 |
 
 Tests that verify them: 17 unit files in `test/` (node test runner) and the gate self-test `test/gate-selftest.mjs`, 11 browser files in `e2e/`
-(Playwright Chromium), and 79 plants in `PLANTS` of `test/gate-selftest.mjs`. The coverage is shown by the report that
+(Playwright Chromium), and 95 plants in `PLANTS` of `test/gate-selftest.mjs` (and 3 legitimate pages in `LEGIT`). The coverage is shown by the report that
 delivered this document, not duplicated here.
 
 ## Technology and versions
@@ -388,7 +389,7 @@ From the CHANGELOG's known shell defects and the docs; each has the requirement 
 | A filling card's note starved its drawing (0.11.0) | note capped at 35 percent, G6 stage floor: SHK-009, SHK-012, SHG-008 |
 | Faint text under WCAG AA in the light and dark themes (0.7) | SHT-003, G13 plant `low-contrast` |
 | Lucide 1.x removed an export the shell used, breaking consumer builds (0.06.006) | SHT-006 |
-| A gate check that can agree with a broken app | one plant per check: SHG-007; the count in `docs/07_gate.md` is kept equal to `PLANTS` (79 at 0.11.0) |
+| A gate check that can agree with a broken app | one plant per check: SHG-007; the count in `docs/07_gate.md` is kept equal to `PLANTS` (95 at 0.11.0) |
 | A behaviour documented but never tested (see the gaps list in the report) | the gaps are not requirement rows; each gets a row when its test exists, tests first |
 | The npm Trusted Publisher is not configured and direct-publish tokens stop in January 2027 ([`docs/08_releasing.md`](../08_releasing.md)) | the owner's switch on the package page; not verifiable from this repository |
 
