@@ -118,6 +118,16 @@ class CheckSdd(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("g99-nothing", out)
 
+    def test_named_test_in_the_gate_selftest_passes(self) -> None:
+        t = self.tree(rows=[row("SHG-001", "A SHALL.", "`test/gate-selftest.mjs::the clean fixture passes`")])
+        t.write("test/gate-selftest.mjs", SELFTEST + "test('the clean fixture passes', () => {});\n")
+        code, out = t.run()
+        self.assertEqual(code, 0, out)
+        bad = self.tree(rows=[row("SHG-001", "A SHALL.", "`test/gate-selftest.mjs::a test that is not there`")])
+        code, out = bad.run()
+        self.assertEqual(code, 1)
+        self.assertIn("a test that is not there", out)
+
     def test_planned_with_missing_file_passes_and_is_counted_apart(self) -> None:
         t = self.tree(status="planned", rows=[row("SHT-001", "A SHALL.", "`test/not-yet.test.ts::later`")])
         code, out = t.run()

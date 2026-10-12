@@ -78,3 +78,5 @@ jobs:
         run: python scripts/check_version_coherence.py .
       - name: The SDD, every requirement with a real gate (ADR-0075)
         run: python scripts/check_sdd.py .
+      - name: The SDD gate's own tests
+        run: python -m unittest scripts/test_check_sdd.py

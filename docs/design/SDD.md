@@ -388,7 +388,7 @@ From the CHANGELOG's known shell defects and the docs; each has the requirement 
 | A filling card's note starved its drawing (0.11.0) | note capped at 35 percent, G6 stage floor: SHK-009, SHK-012, SHG-008 |
 | Faint text under WCAG AA in the light and dark themes (0.7) | SHT-003, G13 plant `low-contrast` |
 | Lucide 1.x removed an export the shell used, breaking consumer builds (0.06.006) | SHT-006 |
-| A gate check that can agree with a broken app | one plant per check: SHG-007; plants documented as "34" in `docs/07_gate.md` while `PLANTS` holds 37 (the doc count is stale; a gap in the docs, not in the gate) |
+| A gate check that can agree with a broken app | one plant per check: SHG-007; the count in `docs/07_gate.md` is kept equal to `PLANTS` (37 at 0.11.0) |
 | A behaviour documented but never tested (see the gaps list in the report) | the gaps are not requirement rows; each gets a row when its test exists, tests first |
 | The npm Trusted Publisher is not configured and direct-publish tokens stop in January 2027 ([`docs/08_releasing.md`](../08_releasing.md)) | the owner's switch on the package page; not verifiable from this repository |
 

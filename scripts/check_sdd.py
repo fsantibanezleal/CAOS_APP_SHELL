@@ -67,8 +67,9 @@ def test_defined(path: Path, name: str) -> bool:
     # a name that exists only in a comment is not a test: drop block comments and whole-line // comments
     text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
     text = re.sub(r"^[ \t]*//.*$", "", text, flags=re.M)
-    if path.as_posix().endswith(SELFTEST):
-        return re.search(rf"""\bid:\s*(['"`]){re.escape(name)}\1""", text) is not None
+    # the gate self-test holds both named tests and plants: a plant id counts there, and only there
+    if path.as_posix().endswith(SELFTEST) and re.search(rf"""\bid:\s*(['"`]){re.escape(name)}\1""", text):
+        return True
     # the name is the first string argument of test(, it( or describe( (test.skip( and the like count)
     return re.search(rf"""\b(?:test|it|describe)(?:\.\w+)*\(\s*(['"`]){re.escape(name)}\1""", text) is not None
 
