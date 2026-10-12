@@ -2,7 +2,9 @@
 // (inpage.mjs) measures what a section holds; this module says what each area must hold, and run.mjs applies it.
 // docs/04_views.md transcribes the table and a unit test keeps the two in step: a rule is never written twice.
 //
-// A "topic" is a leaf panel of a page (a tab, a sub-tab or a tab-group item); a page without tabs is one topic.
+// A "topic" is a leaf panel of a page (a tab, a sub-tab or a tab-group item) that holds sections; a page without tabs is
+// one topic. A tab list inside a section belongs to that section: its panels are not topics, and what they hold counts
+// for the section across every state the gate visited.
 // A "dense paragraph" is a visible `<p>` of at least DENSE_WORDS words in the displayed language, equations removed,
 // counted once per distinct text. Hidden elements never count.
 
@@ -20,6 +22,7 @@ export const RULES = {
   glossary: { noun: 'glossary item(s)', min: true },
   steps: { noun: 'step(s) in an ordered list', min: true },
   controls: { noun: 'control(s)', min: true },
+  refs: { noun: 'reference(s) cited', min: true },
   stats: { noun: 'quantified statement(s) (value, unit, source)', min: true },
   rows: { noun: 'row(s) of capability, outcome and proof point', min: true },
   rowsNoStat: { noun: 'row(s) whose proof point is not a quantified statement', max: true },
@@ -101,7 +104,7 @@ export const PAGES = {
       method: A(
         'one method family, as the build runs it: its exact behaviour and constants',
         'una familia de métodos, tal como la ejecuta el producto: su comportamiento exacto y sus constantes',
-        { dense: 4, equations: 2, figures: 1, honest: 1 },
+        { dense: 4, equations: 2, figures: 1, honest: 1, refs: 1 },
         { perTopic: true, kinds: METHOD_KINDS },
       ),
     },
@@ -180,6 +183,34 @@ export function parseWaivers(attr) {
 
 const plural = (noun, n) => noun.replaceAll('(s)', n === 1 ? '' : 's');
 
+/** What a waiver's reason holds that a reader can read: letters and digits, and the words that carry one (as the unavailable reason is judged). */
+export const reasonStats = (reason) => ({
+  chars: reason.replace(/[^\p{L}\p{N}]+/gu, '').length,
+  words: reason.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length,
+});
+export const REASON_WORDS = 2;
+const reasonOk = (reason) => {
+  const s = reasonStats(reason);
+  return s.chars >= REASON_MIN && s.words >= REASON_WORDS;
+};
+
+/** Sets of distinct things a section holds: seen again in another state they count once (a sub-tab shows others). */
+const SET_KEYS = { dense: 'denseKeys', equations: 'equationKeys', figures: 'figureKeys', callouts: 'calloutKeys', honest: 'honestKeys', strong: 'strongKeys' };
+
+/**
+ * One section seen in several states (the sub-tabs of a section show different parts of it): the union of what is
+ * distinct (dense paragraphs, equations, figures, callouts), the maximum of every other count. A fact without the
+ * distinct keys falls back to the maximum.
+ */
+export function mergeSections(list) {
+  const out = { ...list[0] };
+  for (const key of Object.keys(list[0])) if (typeof list[0][key] === 'number') out[key] = Math.max(...list.map((s) => s[key] ?? 0));
+  for (const [key, keys] of Object.entries(SET_KEYS)) {
+    if (list.every((s) => Array.isArray(s[keys]))) out[key] = new Set(list.flatMap((s) => s[keys])).size;
+  }
+  return out;
+}
+
 /**
  * Applies the table to what a documentation page showed across its visited states (`G.docPage` of gate/inpage.mjs, one
  * entry per state) in one language. Pure: the runner passes the facts, this returns the failures and the waivers.
@@ -198,12 +229,15 @@ export function docFloorFailures({ route, lang, states, expectedTopics }) {
   // ---- the waivers: parsed, validated, and applied only when valid
   const entries = parseWaivers(first.waiver);
   const ok = new Set(waivable(route));
-  const waivers = entries.map((w) => ({ ...w, valid: ok.has(w.floor) && w.reason.length >= REASON_MIN }));
+  const waivers = entries.map((w) => ({ ...w, valid: ok.has(w.floor) && reasonOk(w.reason) }));
   for (const w of entries) {
     if (!ok.has(w.floor)) {
       const exec = P.areas[w.floor]?.view === 'executive';
       bad('', `${NAME} (${L}): the waiver for "${w.floor}" is refused: ${exec ? NOT_WAIVABLE_NOTE : `it names no floor of this page (${[...ok].join(', ')})`}`);
-    } else if (w.reason.length < REASON_MIN) bad('', `${NAME} (${L}): the waiver for "${w.floor}" has a reason of ${w.reason.length} character(s), the floor is ${REASON_MIN}`);
+    } else if (!reasonOk(w.reason)) {
+      const s = reasonStats(w.reason);
+      bad('', `${NAME} (${L}): the waiver for "${w.floor}" has a reason of ${w.reason.length} character(s) (${s.chars} letter(s) or digit(s) in ${s.words} word(s)), the floor is ${REASON_MIN} letters or digits in ${REASON_WORDS} words`);
+    }
   }
   const waived = new Set(waivers.filter((w) => w.valid).map((w) => w.floor));
 
@@ -218,7 +252,8 @@ export function docFloorFailures({ route, lang, states, expectedTopics }) {
     for (const sec of st.sections) {
       const n = ordinal.get(sec.topicKey) ?? 0;
       ordinal.set(sec.topicKey, n + 1);
-      sections.set(`${sec.topicKey}#${n}`, sec);
+      const k = `${sec.topicKey}#${n}`;
+      sections.set(k, [...(sections.get(k) ?? []), sec]);
     }
     if (st.view !== 'executive') {
       for (const f of st.figures) figures.add(`${st.topics.map((t) => t.key).join('|')}::${f}`);
@@ -229,6 +264,7 @@ export function docFloorFailures({ route, lang, states, expectedTopics }) {
       if (st.viewGlossaries > 0) bad(st.topics[0]?.label ?? '', `${NAME}, executive view (${L}): ${st.viewGlossaries} symbol glossary(ies); the executive view holds none`);
     }
   }
+  const seen = [...sections.values()].map(mergeSections);
   const tname = (label) => (label ? `topic "${label}"` : 'the page');
 
   if (expectedTopics > topics.size) bad('', `${NAME} (${L}): the walk visited ${topics.size} of ${expectedTopics} topics; the floors of an unvisited topic were never checked`);
@@ -241,12 +277,16 @@ export function docFloorFailures({ route, lang, states, expectedTopics }) {
     const v = first.views ?? [];
     if (!v.includes('executive')) bad('', `${NAME} (${L}): no executive view; the top-level topics are [${v.join(', ') || 'none'}] and the executive view must be the first (ADR-0017 2.1)`);
     else if (v[0] !== 'executive') bad('', `${NAME} (${L}): the executive view is not the first topic (the first is "${v[0]}")`);
+    if (v.includes('executive') && first.view !== 'executive') bad('', `${NAME} (${L}): the executive view is not the view the page opens on (it opens on "${first.view ?? 'none'}")`);
     if (!v.includes('technical')) bad('', `${NAME} (${L}): no technical view; the top-level topics are [${v.join(', ') || 'none'}]`);
   }
 
   // ---- each section that declares an area
   const present = new Set();
-  for (const sec of sections.values()) {
+  for (const sec of seen) {
+    if (route === '/introduction' && (first.views ?? []).length > 0 && sec.view !== 'executive' && sec.view !== 'technical') {
+      bad(sec.topic, `${NAME} (${L}): section "${sec.title}" sits outside the two views (the executive view and the technical view hold every section of the Introduction)`);
+    }
     if (!sec.area) continue;
     const def = P.areas[sec.area];
     if (!def) {
@@ -271,13 +311,13 @@ export function docFloorFailures({ route, lang, states, expectedTopics }) {
   // ---- Methodology: one method section per topic
   if (route === '/methodology' && !waived.has('method')) {
     for (const [key, label] of topics) {
-      const n = [...sections.values()].filter((s) => s.topicKey === key && s.area === 'method').length;
+      const n = seen.filter((s) => s.topicKey === key && s.area === 'method').length;
       if (n !== 1) bad(label, `${NAME}, ${tname(label)} (${L}): ${n} method section(s), exactly 1 is required`);
     }
   }
 
   // ---- the page-level floors
-  const kinds = new Set([...sections.values()].filter((s) => s.area === 'method' && s.kind === 'learned').map((s) => s.topicKey));
+  const kinds = new Set(seen.filter((s) => s.area === 'method' && s.kind === 'learned').map((s) => s.topicKey));
   const measured = { topics: topics.size, learned: kinds.size, figures: figures.size, equations: equations.size };
   for (const [id, f] of Object.entries(P.floors)) {
     if (waived.has(id)) continue;
