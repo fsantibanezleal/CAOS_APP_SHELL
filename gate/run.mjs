@@ -457,6 +457,11 @@ export async function runGate(o) {
 
   async function paintedChecks(page, f, where, big) {
     if (f.prose) return; // the context write-up is prose, measured as a document, not as a drawing
+    if (f.surfaces.length === 0 && f.unavailable === 'explained') return; // a declared, explained absence (ADR-0080): nothing to draw, every other check still ran
+    if (f.surfaces.length === 0 && f.unavailable === 'unexplained') {
+      fail('G6', where, 'the instrument declares data-state="unavailable" and draws nothing, but gives no reason (the element needs at least 12 characters of text saying why the data is absent)');
+      return;
+    }
     if (f.surfaces.length === 0) {
       fail('G6', where, 'nothing is drawn in the instrument (no canvas, svg drawing, image or table)');
       return;

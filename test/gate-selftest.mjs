@@ -56,6 +56,10 @@ const PLANTS = [
   { id: 'sticky-off', check: 'G12', re: /active sub-tab .* is out of view/, opts: { routes: '/,/implementation' } },
   { id: 'refs-mid', check: 'ADR-0017.4', re: /references must be the last block of the page or tab/, opts: { routes: '/,/introduction' } },
   { id: 'refs-missing', check: 'ADR-0017.4', re: /cite references the page never lists/, opts: { routes: '/,/introduction' } },
+  { id: 'unavailable-unexplained', check: 'G6', re: /data-state="unavailable".*reason/, trail: /pending/, opts: { routes: '/' } },
+  { id: 'unavailable-short', check: 'G6', re: /data-state="unavailable".*reason/, trail: /pending/, opts: { routes: '/' } },
+  { id: 'unavailable-beside-blank', check: 'G6', re: /is blank/, trail: /pending/, opts: { routes: '/' } },
+  { id: 'unavailable-hidden', check: 'G6', re: /nothing is drawn in the instrument/, trail: /pending/, opts: { routes: '/' } },
   { id: 'low-contrast', check: 'G13', re: /contrast \d\.\d\d:1, below 4\.5:1/, opts: { routes: '/,/introduction' } },
 ];
 

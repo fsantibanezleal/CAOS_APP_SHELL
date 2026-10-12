@@ -364,6 +364,23 @@ function ValidationView({ sim }: { sim: Sim }) {
   );
 }
 
+/** A view whose document is absent says so and draws nothing (ADR-0080 decision 3); the unavailable-* plants break it. */
+function PendingView() {
+  const lang = useShellLang();
+  const reason = pick({ en: 'The trace for this case is not available yet: 1 of 5 artifacts are absent.', es: 'La traza de este caso aún no está disponible: falta 1 de 5 artefactos.' }, lang);
+  const text = PLANT === 'unavailable-unexplained' ? '' : PLANT === 'unavailable-short' ? 'n/a' : reason;
+  return (
+    <>
+      <p className="caos-pending" data-state="unavailable" style={PLANT === 'unavailable-hidden' ? { display: 'none' } : undefined}>
+        {text}
+      </p>
+      {PLANT === 'unavailable-beside-blank' && (
+        <Stage label="Pending curves">{(sz) => <canvas width={sz.width} height={sz.height} style={{ display: 'block' }} />}</Stage>
+      )}
+    </>
+  );
+}
+
 function CompareView({ peaks }: { peaks: { id: string; label: string; peak: number }[] }) {
   return (
     <PlotCard fill title={{ en: 'Peak infected by variant', es: 'Pico de infectados por variante' }} lane="live" provenance="synthetic" dataKey={useWorkbenchState().stateKey}>
@@ -479,6 +496,7 @@ function Workbench() {
         groups={[
           { id: 'model', label: { en: 'Model', es: 'Modelo' }, content: <ModelView sim={sim} /> },
           { id: 'validation', label: { en: 'Validation', es: 'Validación' }, content: <ValidationView sim={sim} /> },
+          { id: 'pending', label: { en: 'Pending', es: 'Pendiente' }, content: <PendingView /> },
         ]}
         compare={{ content: <CompareView peaks={peaks} /> }}
         context={{

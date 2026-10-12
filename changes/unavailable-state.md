@@ -1,0 +1,1 @@
+- The gate accepts a declared, explained unavailable view: an instrument that draws nothing and holds a visible `data-state="unavailable"` element with a reason (12 characters or more) passes G6 and still gets every other check; a declaration without a reason fails G6 naming the missing reason; a blank chart beside the note or a hidden element does not exempt (refs #99).
