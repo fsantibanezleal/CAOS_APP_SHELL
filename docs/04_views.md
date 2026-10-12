@@ -81,7 +81,7 @@ The page opens with two top-level topics: `executive` first and open on load (th
 | `pipeline` | technical | the end-to-end pipeline, from the data to the screen | at least 4 steps in an ordered list |
 | `honesty` | technical | what is exact and what is illustrative; what the product is not | exactly 1 honest callout, at least 1 dense paragraph |
 
-What a count means: the rows of `outcomes` are those of the section's first table or, when a top-level list comes first, the items of that list, each proved by a quantified statement; an item of `positioning` is a sentence of at least 6 words; a glossary item counts when its term and its definition are visible and hold a letter or a digit; a step counts when it is visible and holds a letter or a digit; a statement is quantified when the reader sees its number, its unit and its source (an attribute alone does not count); a section of `glossary` or `steps` that hides its items fails with the count of what is visible.
+What a count means: the rows of `outcomes` are those of the section's first table or, when a top-level list comes first, the items of that list, each proved by a quantified statement; an item of `positioning` is a sentence of at least 6 words; a glossary item counts when its term and its definition are visible and hold a letter or a digit; a step counts when it is visible and holds a letter or a digit; a statement is quantified when the reader sees its number, its unit and its source (an attribute alone does not count); hidden or empty items are not counted, and the failure message gives the count of what is visible.
 
 Page-level floors: `intro-figure` (at least 1 overview figure in the technical view); `intro-equations` (at least 3 captioned equations in the technical view).
 
