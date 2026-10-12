@@ -601,17 +601,14 @@ svg.lucide { flex: none; }
    (CAOS_APP_SHELL#95: a long note left plots of 10 to 90 px at 1280 x 800). */
 .caos-plot.fill > .caos-plot-note { flex: 0 1 auto; max-height: 35%; overflow-y: auto; }
 
-/* The stage floor of a filling card (shell 0.11.1; the gate's G6 floor, `--stage-floor` 140 px). A card sharing a short
-   column (two stacked filling cards in a ViewsRow at 1280 x 800) was squeezed below the floor because it had no minimum
-   height of its own. At 1280 px and wider it keeps one, derived from its own layout: the card spends
-   chrome = 2 px border + 0.85rem padding + 2.75rem header (two lines of title in the wide font) + 0.2rem header margin
-   + 0.4rem note margin = 4.2rem + 2 px, and its note takes at most 35% of the card, so the stage is at least
-   0.65 * card - chrome; the card is therefore at least (floor + chrome) / 0.65 (about 321 px at a 16 px root). A card
-   without a note spends 0.4rem less and needs no note share: floor + 3.8rem + 2 px. The containing panel scrolls when
-   the cards do not fit (ADR-0071); the rail never does. Below 1280 px the document scrolls and nothing changes. */
+/* The stage floor of a filling card (shell 0.11.2; the gate's G6 floor, `--stage-floor` 140 px). At 1280 px and wider the
+   body of a filling card, the box the gate measures, keeps at least the floor itself, so the card grows when its header
+   or its note wraps (a narrow column, the Spanish title, two badges, the wide font) and the containing panel scrolls
+   when the cards do not fit (ADR-0071; the rail never does). 0.11.1 derived a card height from a fixed chrome instead,
+   and a header that wrapped to a third line left the stage under the floor (CAOS_Contraste 0.07.000: 138 px; a
+   400 px column with a note: 106 px). Below 1280 px the document scrolls and nothing changes. */
 @media (min-width: 1280px) {
-  .caos-plot.fill { min-height: calc(var(--caos-stage-floor, 140px) + 3.8rem + 2px); }
-  .caos-plot.fill:has(> .caos-plot-note) { min-height: calc((var(--caos-stage-floor, 140px) + 4.2rem + 2px) / 0.65); }
+  .caos-plot.fill > .caos-plot-body { min-height: var(--caos-stage-floor, 140px); }
 }
 
 /* A row of views side by side. Every view of the row takes an equal share, a filling card included (known shell
