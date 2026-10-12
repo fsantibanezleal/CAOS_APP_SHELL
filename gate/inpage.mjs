@@ -200,6 +200,7 @@ export function installLib() {
     let instrument = null;
     const surfaces = [];
     let prose = false;
+    let unavailable = null; // data-state="unavailable" declared in the instrument: 'explained' (12+ characters of reason) or 'unexplained'
     if (inst && visible(inst)) {
       const ir = inst.getBoundingClientRect();
       const cx0 = Math.max(0, ir.left);
@@ -209,6 +210,8 @@ export function installLib() {
       instrument = { x: cx0, y: cy0, w: Math.max(0, cx1 - cx0), h: Math.max(0, cy1 - cy0) };
       const ctx = inst.querySelector('.caos-cw-context');
       prose = Boolean(ctx && visible(ctx));
+      const declared = [...inst.querySelectorAll('[data-state="unavailable"]')].filter(shown);
+      if (declared.length) unavailable = declared.some((el) => (el.textContent || '').trim().length >= 12) ? 'explained' : 'unexplained';
       for (const el of inst.querySelectorAll('canvas, svg, img, table, video')) {
         const tag = el.tagName.toLowerCase();
         if (tag === 'svg' && el.parentElement && el.parentElement.closest('svg')) continue;
@@ -290,6 +293,7 @@ export function installLib() {
       instrument,
       surfaces,
       prose,
+      unavailable,
       workbench,
       offCentre,
       pageText: pageBody ? (pageBody.innerText || '').trim().length : 0,

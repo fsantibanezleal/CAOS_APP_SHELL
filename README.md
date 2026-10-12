@@ -70,7 +70,9 @@ const config: ShellConfig = {
   Every control writes `data-control`. `PlotCard` and `Readout` take `lane`, `provenance` and a `dataKey`:
   pass `useWorkbenchState().stateKey` as captured when the computation started (rail and instrument share it), and
   a view still showing an earlier selection is overlaid as stale. Anything that loads declares
-  `data-state="loading"` until it is ready; the gate waits for that, never for the network.
+  `data-state="loading"` until it is ready; the gate waits for that, never for the network. A view whose data is absent declares
+  `data-state="unavailable"` on a visible element that states the reason (12 characters or more) and draws nothing;
+  the gate then accepts it under G6, while a declaration without a reason, or one beside a blank chart, still fails.
 - **Fill the instrument:** `<PlotCard fill>` takes the height its panel leaves (several `fill` cards share it, a
   `.caos-views-row` puts them side by side), and a `Stage` or `<UPlotChart height="fill">` inside it gets a real
   size. A table (`.caos-table`) is sized to its rows: put it above the drawing of the same numbers, never alone.
