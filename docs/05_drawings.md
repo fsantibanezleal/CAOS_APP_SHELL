@@ -58,6 +58,25 @@ rebuilt on a theme or language change; compared by value, so a parent re-render 
 - **More than six series:** the rotation has six colours; from the seventh, a repeated colour is drawn dashed, in the
   plot and in the key, so no two series look the same (`seriesStyle`).
 
+## The filling card's stage floor
+
+A `PlotCard fill` fills the height its column gives it; its note keeps at most 35% of the card (0.11.0, #95). Since
+0.11.1 the card also keeps a minimum height of its own at 1280 px and wider, so its drawing keeps the gate's stage
+floor (`--stage-floor`, 140 px) when two or three filling cards share a short column, in every language and in the
+wide fallback font. The value is derived from the card's layout, not tuned:
+
+- the card spends `chrome` = 2 px border + 0.85rem padding + 2.75rem header (two lines of title in the wide font)
+  + 0.2rem header margin + 0.4rem note margin = 4.2rem + 2 px;
+- the note takes at most 35% of the card, so the stage is at least `0.65 * card - chrome`;
+- the card is therefore at least `(floor + chrome) / 0.65`, about 321 px at a 16 px root (`min-height` on
+  `.caos-plot.fill` when it has a note); a card without a note needs `floor + 3.8rem + 2 px`.
+
+The containing panel scrolls when the cards do not fit (ADR-0071); the rail never does. Below 1280 px the document
+scrolls and the card has no minimum. A product never restyles `.caos-plot.fill` to meet the floor (the template's web
+baseline refuses it, ADR-0078). Measured by `e2e/fill-floor.test.ts` (two and three stacked cards, 1280 x 800 and
+1600 x 900, English and Spanish, wide font; the stage keeps 166 px with the note at its cap) and walked by the gate
+fixture's `Fit` tab, which stacks two filling cards in one column.
+
 ## `BarChart`
 
 A categorical chart in SVG, without uPlot:
