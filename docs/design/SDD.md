@@ -140,7 +140,7 @@ Requirements per area (counted from the nine files at the time of writing; `scri
 | total | | 149 |
 
 Tests that verify them: 17 unit files in `test/` (node test runner) and the gate self-test `test/gate-selftest.mjs`, 11 browser files in `e2e/`
-(Playwright Chromium), and 41 plants in `PLANTS` of `test/gate-selftest.mjs`. The coverage is shown by the report that
+(Playwright Chromium), and 69 plants in `PLANTS` of `test/gate-selftest.mjs`. The coverage is shown by the report that
 delivered this document, not duplicated here.
 
 ## Technology and versions
@@ -284,7 +284,7 @@ reads this file from the installed package. The counts and the separation are he
 
 `data-*` attributes. The gate reads these (counted from `gate/run.mjs` and `gate/inpage.mjs`): `data-control`, `data-case`, `data-case-workbench`, `data-plot`, `data-instrument`,
 `data-rail`, `data-state`, `data-state-key`, `data-stale`, `data-drawn`, `data-ticks-repeat`, `data-readout`, `data-tab`, `data-panel`, `data-stage`, `data-chart`,
-`data-text-overlap` (the value `allowed` lets a drawing cross labels on purpose), `data-refs`, `data-no-refs-reason`, `data-doc-references`, `data-doc-page`, `data-replay-only`,
+`data-text-overlap` (the value `allowed` lets a drawing cross labels on purpose), `data-refs`, `data-no-refs-reason`, `data-doc-references`, `data-doc-page`, `data-doc-section`, `data-area`, `data-method-kind`, `data-callout`, `data-glossary`, `data-stat`, `data-stat-unit`, `data-stat-source`, `data-qa`, `data-question`, `data-answer`, `data-floor-waiver`, `data-replay-only`,
 `data-theme`, `data-brand`, `data-version`, `data-build` and `data-caos-gate-font` (set by the gate's wide-font pass). The components that declare them are named in the area requirement files.
 
 Gate CLI options (`bin/caos-shell-gate.mjs`): a subject, `--serve <dir>` (with `--base-path`) or `--url <origin>`, and the required `--expect-brand`; `--routes`, `--workbench`,
@@ -388,7 +388,7 @@ From the CHANGELOG's known shell defects and the docs; each has the requirement 
 | A filling card's note starved its drawing (0.11.0) | note capped at 35 percent, G6 stage floor: SHK-009, SHK-012, SHG-008 |
 | Faint text under WCAG AA in the light and dark themes (0.7) | SHT-003, G13 plant `low-contrast` |
 | Lucide 1.x removed an export the shell used, breaking consumer builds (0.06.006) | SHT-006 |
-| A gate check that can agree with a broken app | one plant per check: SHG-007; the count in `docs/07_gate.md` is kept equal to `PLANTS` (41 at 0.11.0) |
+| A gate check that can agree with a broken app | one plant per check: SHG-007; the count in `docs/07_gate.md` is kept equal to `PLANTS` (69 at 0.11.0) |
 | A behaviour documented but never tested (see the gaps list in the report) | the gaps are not requirement rows; each gets a row when its test exists, tests first |
 | The npm Trusted Publisher is not configured and direct-publish tokens stop in January 2027 ([`docs/08_releasing.md`](../08_releasing.md)) | the owner's switch on the package page; not verifiable from this repository |
 

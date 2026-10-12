@@ -391,6 +391,15 @@ code, kbd { font-family: var(--font-mono); }
 /* Equations and figures. */
 .equation { margin: 1rem 0; padding: 0.9rem 1rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow-x: auto; }
 .equation-caption { margin-top: 0.5rem; font-size: 0.82rem; color: var(--color-fg-faint); text-align: center; }
+.caos-glossary { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 0.4rem 1.25rem; margin: 0.75rem 0; }
+.caos-glossary-item { display: flex; gap: 0.5rem; align-items: baseline; }
+.caos-glossary dt { flex: none; min-width: 3rem; font-weight: 600; }
+.caos-glossary dd { margin: 0; color: var(--color-fg); }
+.caos-stat-value { font-variant-numeric: tabular-nums; }
+.caos-stat-source { color: var(--color-fg-faint); font-size: var(--text-sm); }
+.caos-qa { margin: 0.9rem 0; }
+.caos-qa-question { font-weight: 600; margin-bottom: 0.25rem; }
+.caos-qa-answer > :first-child { margin-top: 0; }
 .katex { color: var(--color-fg); }
 .figure { margin: 1.5rem 0; }
 .figure-caption, .fig-cap { text-align: center; font-size: var(--text-sm); color: var(--color-fg-faint); margin-top: 0.6rem; font-style: italic; }

@@ -31,6 +31,7 @@ import { join } from 'node:path';
 import { decodePng, paintedBox, unionArea } from './png.mjs';
 import { servePages } from './serve.mjs';
 import { installLib } from './inpage.mjs';
+import { DOC_ROUTES, docFloorFailures } from './areas.mjs';
 
 export const DEFAULTS = {
   sizes: '390x844,768x1024,1280x800,1600x900,2560x1440',
@@ -105,6 +106,7 @@ export async function runGate(o) {
   };
 
   const failures = [];
+  const waivers = []; // ADR-0017 2.1: every waiver a documentation page declares, with its verdict
   // The smallest measured values against each floor, so a pass shows its margin (and a CI font change that eats it
   // is visible before it fails).
   const minima = { drawnShare: null, stageFill: null };
@@ -280,7 +282,9 @@ export async function runGate(o) {
             if (!String(id.lang ?? '').startsWith(lang)) fail('G2', at, `asked for ${lang} through ${LANG_STORAGE_KEY}; <html lang> is ${id.lang}`);
             if (route !== '/' && id.activeHref && routeOf(id.activeHref) !== route) fail('G4', at, `loaded directly, the page shows route ${routeOf(id.activeHref)}`);
 
-            const walkState = { tested: new Set(), keyedViews: 0, controls: 0, tablists: 0 };
+            // ADR-0017 2.1: the documentation floors are measured once per language, at the primary size and first theme
+            const docFloors = size === primarySize && theme === themes[0] && DOC_ROUTES.includes(route);
+            const walkState = { tested: new Set(), keyedViews: 0, controls: 0, tablists: 0, doc: docFloors ? [] : null };
             await processState(page, sink, { ...at, trail: '' }, { route, isWorkbench, primary, idle: idleHere, first: true, size, w, h, theme, lang, walkState, contrast });
 
             if (primary && route !== '/') {
@@ -301,7 +305,8 @@ export async function runGate(o) {
               sink.splice(0);
             }
 
-            await walkTabs(page, sink, { ...at }, [], new Set(), { route, isWorkbench, primary, idle: primary, size, w, h, theme, lang, walkState, contrast });
+            const leaves = await walkTabs(page, sink, { ...at }, [], new Set(), { route, isWorkbench, primary, idle: primary, size, w, h, theme, lang, walkState, contrast });
+            if (walkState.doc) docResult(at, lang, walkState.doc, Math.max(1, leaves));
 
             if (isWorkbench) await walkCases(page, sink, at, { route, isWorkbench, primary, size, w, h, theme, lang, walkState, contrast });
 
@@ -415,6 +420,10 @@ export async function runGate(o) {
     if (f.referencesNotLast) fail('ADR-0017.4', where, `${f.referencesNotLast} references block(s) with content after them; references must be the last block of the page or tab`);
     if (f.refsDeclaredNoBlock) fail('ADR-0017.4', where, `${f.refsDeclaredNoBlock} section(s) cite references the page never lists (no references block in their page or tab)`);
     if (f.uncaptioned) fail('ADR-0017.2', where, `${f.uncaptioned} equation(s) without a caption`);
+    if (s.walkState?.doc) {
+      const d = await page.evaluate(() => window.__caosGate.docPage());
+      if (d) s.walkState.doc.push(d);
+    }
     for (const r of f.repeatedTicks ?? []) {
       fail('G6', where, `${r.label}: ${r.n} axis tick label(s) repeat the label before them (give the axis fixed decimals)`);
     }
@@ -537,7 +546,9 @@ export async function runGate(o) {
     }
   }
 
+  /** Walks every tab of every list owned by `trail`; returns the number of leaf topics found (a tab with no list inside it is one). */
   async function walkTabs(page, sink, where, trail, handled, s) {
+    let leaves = 0;
     const lists = (await page.evaluate(() => window.__caosGate.tablists())).filter((l) => !handled.has(l.key) && !l.source);
     const parentKey = trail.length ? trail[trail.length - 1].key : null;
     const mine = lists.filter((l) => (parentKey ? l.owner === parentKey : l.owner === null));
@@ -556,13 +567,15 @@ export async function runGate(o) {
             await tab.click({ timeout: 5000 });
           } catch (e) {
             fail('G7', at, `the tab could not be clicked: ${e.message.split('\n')[0]}`);
+            leaves += 1;
             continue;
           }
           const why = await settle(page);
           if (why) fail('G7', at, `never settled: ${why}`);
           await processState(page, sink, at, { ...s, first: false, idle: s.idle });
         }
-        await walkTabs(page, sink, where, here, new Set(handled), s);
+        const inner = await walkTabs(page, sink, where, here, new Set(handled), s);
+        leaves += inner === 0 ? 1 : inner;
       }
       if (tl.active >= 0 && tl.tabs.length > 1) {
         await page.locator(tl.key).locator('[role="tab"]').filter({ visible: true }).nth(tl.active).click({ timeout: 5000 }).catch(() => undefined);
@@ -570,6 +583,14 @@ export async function runGate(o) {
         sink.splice(0);
       }
     }
+    return leaves;
+  }
+
+  /** ADR-0017 2.1: applies the area table (gate/areas.mjs) to what a documentation page showed in one language. */
+  function docResult(at, lang, states, expectedTopics) {
+    const r = docFloorFailures({ route: at.route, lang, states, expectedTopics });
+    for (const f of r.failures) fail('ADR-0017.2', { ...at, trail: f.trail }, f.message);
+    for (const w of r.waivers) waivers.push({ route: at.route, lang, ...w });
   }
 
   async function walkCases(page, sink, at, s) {
@@ -681,6 +702,7 @@ export async function runGate(o) {
       wideFontSizes: opt.wideFont === false ? '' : opt.wideFontSizes,
       states,
       minima,
+      waivers,
       checks,
       captures: captures.length,
       failures,
@@ -718,8 +740,10 @@ export function captureIndex(report, captures) {
     '.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}figure{margin:0;background:#fff;border:1px solid #d0d7de;padding:6px}' +
     'img{width:100%;height:auto;display:block}figcaption{font-size:11px;color:#57606a;margin-top:4px}';
   const head = `caos-shell-gate: ${esc(report.expectBrand)} at ${esc(report.base)}: ${report.ok ? 'OK' : `${report.failures.length} failure(s)`} in ${report.states} states, ${captures.length} captures`;
+  const wrows = (report.waivers ?? []).map((w) => `<tr><td>${esc(w.route)}</td><td>${esc(w.lang)}</td><td>${esc(w.floor)}</td><td>${esc(w.reason)}</td><td>${w.valid ? 'accepted' : 'refused'}</td></tr>`).join('');
+  const waiverTable = wrows ? `<h2>Waivers (${report.waivers.length})</h2><table><tr><td>route</td><td>language</td><td>floor</td><td>reason</td><td>verdict</td></tr>${wrows}</table>` : '';
   const table = rows ? `<table><tr><td>check</td><td>route</td><td>mode</td><td>trail</td><td>message</td></tr>${rows}</table>` : '';
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${head}</title><style>${style}</style></head><body><h1>${head}</h1>${table}${sections}</body></html>\n`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${head}</title><style>${style}</style></head><body><h1>${head}</h1>${table}${waiverTable}${sections}</body></html>\n`;
 }
 
 function slug(route) {

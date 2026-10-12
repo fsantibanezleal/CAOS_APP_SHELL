@@ -38,7 +38,7 @@ CAOS_Fragmenta's deploy gate).
 | G12 sticky lists | at the end of a long section, the active vertical sub-tab is out of view |
 | G13 contrast | a visible text under WCAG AA (4.5:1; 3:1 for large text) against the colour behind it, at the primary size in both themes; disabled controls are exempt, colour transitions are finished first |
 | G14 captures | (always written) `index.html` in the output folder shows every capture, grouped by route, the failure list and the failure captures first |
-| ADR-0071, ADR-0017 | the document scrolls at 1280 px and above when the route is the viewport; the rail scrolls; prose off-centre; a bibliography outside the end-of-page references block (`.reference-list`); a references block with content after it (it must be the last block of the page or open tab); a section that declares `refs` while its page or tab shows no references block; an equation without a caption; a section without references or a reason |
+| ADR-0071, ADR-0017 | the document scrolls at 1280 px and above when the route is the viewport; the rail scrolls; prose off-centre; a bibliography outside the end-of-page references block (`.reference-list`); a references block with content after it (it must be the last block of the page or open tab); a section that declares `refs` while its page or tab shows no references block; an equation without a caption; a section without references or a reason; and the required areas of the documentation pages (below) |
 
 ## Options
 
@@ -46,7 +46,15 @@ CAOS_Fragmenta's deploy gate).
 App is a `SurfacePage`), `--sizes`, `--themes`, `--langs`, `--case-sample`, `--single-case`, `--idle-ms`, `--settle-ms`,
 `--text-floor`, `--instrument-min`, `--stage-fill-min`, `--stage-floor` (the least height in pixels a filling card's drawing keeps, 140), `--wide-font-sizes`, `--no-wide-font`, `--out`. Exit 1 on any
 failure, 2 on misuse. The report (`gate-report.json`) lists every failure, the number of states and captures, and the
-smallest margins against the G6 floors.
+smallest margins against the G6 floors, and every waiver a documentation page declared (`waivers`).
+
+## The required areas of the documentation pages (`ADR-0017.2`, 0.11.0)
+
+The Introduction, Methodology, Implementation, Experiments and Benchmark pages are measured against the named areas of ADR-0017 section 2.1, not against a count of sections: a page of five arbitrary sections fails. A section declares its area (`<DocSection area="math">`, `data-area`; a method also `kind`, `data-method-kind`); the gate fails a page that lacks an area, an area whose section lacks the content its rule names, an unknown area, a method with no valid kind, fewer topics or learned methods than the page floor, a lede under 35 words, an Introduction with no executive view first, and an executive view that holds an equation or a glossary. The areas, their rules and the floor ids are in [docs/04_views.md](04_views.md), transcribed from the one table, `gate/areas.mjs`.
+
+How it measures: each page once per language, at the primary size and first theme (the topics do not change with the size or the theme), visiting every topic (a walk that visits fewer topics than it found tabs fails); hidden elements never count; a paragraph counts once per distinct text (a known limit: two paragraphs that differ by a word are two); words are taken from the displayed language with equations removed. Each failure is reported once per route, area, topic and language, with the measured number and the floor, for example `Methodology, method area, topic "Theory" (EN): 3 dense paragraphs, the floor is 4`.
+
+A page that cannot carry a floor for a stated reason declares `floorWaivers` on `DocPage` (`data-floor-waiver="<floor>: <reason>"`). The gate skips only the floor named, lists every waiver in `gate-report.json` (`waivers`) and in `index.html`, and fails a waiver whose reason has fewer than 12 characters, whose floor is not in the table of its page, or that names an area of the executive view (the executive view cannot be waived). Plants: `floor-no-executive`, `floor-exec-second`, `floor-initiative-nostat`, `floor-outcomes-two`, `floor-positioning-three`, `floor-credibility-two`, `floor-exec-equation`, `floor-five-sections`, `floor-glossary-nine`, `floor-pipeline-unordered`, `floor-honesty-none`, `floor-area-unknown`, `floor-method-topics`, `floor-method-dense`, `floor-method-equations`, `floor-method-figure`, `floor-method-honest`, `floor-method-learned`, `floor-lede-short`, `floor-impl-architecture`, `floor-exp-datasets`, `floor-bench-caveat`, `floor-es-area`, `floor-waiver-reason`, `floor-waiver-unknown`, `floor-hidden`, `floor-duplicate`, `floor-waiver-other`; the clean fixture walks the waiver path with one valid waiver.
 
 The self-test's plant `stage-floor` is a filling card with a twenty-line note whose cap (the shell's 35%, 0.11.0) is removed by the plant, as it was before; the gate must fail it under G6 with "the drawing of ... keeps N px under its note (floor 140 px)".
 
@@ -60,5 +68,5 @@ count, and an element with no reason fails G6 naming `data-state="unavailable"` 
 ## The gate proves itself (G15)
 
 `npm run test:gate` builds the fixture product (`test/gate-fixture`), runs the gate on it clean in the full matrix
-(every check must pass), and once per planted defect (the check that owns it must fail with its own message): 41
+(every check must pass), and once per planted defect (the check that owns it must fail with its own message): 69
 plants, one per check and per distinct trap. A check without a plant is a check that can agree with a broken app.

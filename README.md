@@ -101,7 +101,10 @@ const config: ShellConfig = {
   reader cannot scroll to, see whole or click (G5), blank or underfilled drawings and an instrument under half the
   viewport (G6), a view that never settles (G7), loops at rest (G8), controls that change nothing (G9), labels cut or
   overlapping in a drawing, also in a wider fallback font (G10), a decimal point on a Spanish page (G11), a vertical
-  sub-tab list that scrolls away (G12), text under WCAG AA contrast (G13). The report
+  sub-tab list that scrolls away (G12), text under WCAG AA contrast (G13), and a documentation page without the
+  required areas of its kind (`ADR-0017.2`: executive and technical Introduction, Methodology, Implementation,
+  Experiments, Benchmark; declared with `<DocSection area="...">`, waived only with a reason through `floorWaivers`;
+  [docs/04](docs/04_views.md)). The report
   (`gate-output/gate-report.json`) lists every failure and the smallest margins against each floor; `index.html`
   beside it shows every capture (G14). Details: [docs/07](docs/07_gate.md).
 - **Your own CSS:** never restyle a class of `reserved-classes.json` `components`; a `modifiers` word (`on`,
