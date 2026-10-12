@@ -21,7 +21,7 @@
 //                            wide-font pass: Verdana, else DejaVu Sans, the Linux runner's font)
 //   G11 Spanish numbers      a page in Spanish writes no decimal point (canvas text excepted)
 //   G12 sticky lists         a vertical sub-tab list is still in view at the end of a long section
-//   G13 contrast             every visible text at WCAG AA against the colour behind it (primary size, both themes)
+//   G13 contrast             every visible text at WCAG AA against the colour behind it (primary size, both themes; first language, and every language on a documentation route)
 //   G14 captures index       gate-output/index.html shows every capture by route and mode, the failures first
 // plus the ADR-0071 and ADR-0017 measures (viewport, one-row tabs, rail without scroll, centred prose, captions,
 // references).
@@ -31,6 +31,7 @@ import { join } from 'node:path';
 import { decodePng, paintedBox, unionArea } from './png.mjs';
 import { servePages } from './serve.mjs';
 import { installLib } from './inpage.mjs';
+import { DOC_ROUTES, docFloorFailures } from './areas.mjs';
 
 export const DEFAULTS = {
   sizes: '390x844,768x1024,1280x800,1600x900,2560x1440',
@@ -42,6 +43,7 @@ export const DEFAULTS = {
   textFloor: 400,
   instrumentMin: 0.5,
   stageFillMin: 0.3,
+  stageFloor: 140,
   viewportMinWidth: 1280,
   out: 'gate-output',
   maxShots: 40,
@@ -104,6 +106,7 @@ export async function runGate(o) {
   };
 
   const failures = [];
+  const waivers = []; // ADR-0017 2.1: every waiver a documentation page declares, with its verdict
   // The smallest measured values against each floor, so a pass shows its margin (and a CI font change that eats it
   // is visible before it fails).
   const minima = { drawnShare: null, stageFill: null };
@@ -254,12 +257,13 @@ export async function runGate(o) {
           const mode = `${w}x${h} ${theme} ${lang}`;
           const primary = size === primarySize && theme === themes[0] && lang === langs[0];
           const idleHere = theme === themes[0] && lang === langs[0];
-          const contrast = size === primarySize && lang === langs[0];
           const ctx = await openContext(size, theme, lang);
           const { page, sink } = await newPage(ctx);
           for (const route of routes) {
             const isWorkbench = workbenchRoutes.has(route);
             const at = { route, mode };
+            // G13 runs in the first language; the documentation routes (the prose a reader reads) in every language
+            const contrast = size === primarySize && (lang === langs[0] || DOC_ROUTES.includes(route));
             const res = await page.goto(urlFor(route), { waitUntil: 'load', timeout: 30000 }).catch((e) => e);
             const status = res && typeof res.status === 'function' ? res.status() : `error ${res?.message ?? res}`;
             if (status !== 200) {
@@ -279,7 +283,9 @@ export async function runGate(o) {
             if (!String(id.lang ?? '').startsWith(lang)) fail('G2', at, `asked for ${lang} through ${LANG_STORAGE_KEY}; <html lang> is ${id.lang}`);
             if (route !== '/' && id.activeHref && routeOf(id.activeHref) !== route) fail('G4', at, `loaded directly, the page shows route ${routeOf(id.activeHref)}`);
 
-            const walkState = { tested: new Set(), keyedViews: 0, controls: 0, tablists: 0 };
+            // ADR-0017 2.1: the documentation floors are measured once per language, at the primary size and first theme
+            const docFloors = size === primarySize && theme === themes[0] && DOC_ROUTES.includes(route);
+            const walkState = { tested: new Set(), keyedViews: 0, controls: 0, tablists: 0, doc: docFloors ? [] : null };
             await processState(page, sink, { ...at, trail: '' }, { route, isWorkbench, primary, idle: idleHere, first: true, size, w, h, theme, lang, walkState, contrast });
 
             if (primary && route !== '/') {
@@ -300,7 +306,8 @@ export async function runGate(o) {
               sink.splice(0);
             }
 
-            await walkTabs(page, sink, { ...at }, [], new Set(), { route, isWorkbench, primary, idle: primary, size, w, h, theme, lang, walkState, contrast });
+            const leaves = await walkTabs(page, sink, { ...at }, [], new Set(), { route, isWorkbench, primary, idle: primary, size, w, h, theme, lang, walkState, contrast });
+            if (walkState.doc) docResult(at, lang, walkState.doc, Math.max(1, leaves));
 
             if (isWorkbench) await walkCases(page, sink, at, { route, isWorkbench, primary, size, w, h, theme, lang, walkState, contrast });
 
@@ -410,11 +417,19 @@ export async function runGate(o) {
     if (f.truncatedCount) fail('G5', where, `${f.truncatedCount} truncated text(s) without the full text in a title: ${f.truncated.join('; ')}`);
     for (const c of f.clipped) fail('G5', where, c);
     if (f.offCentre !== null && f.offCentre > 2) fail('ADR-0017.1', where, `the prose page is off-centre by ${f.offCentre.toFixed(1)}px`);
-    if (f.referenceLists) fail('ADR-0017.4', where, `${f.referenceLists} bibliography dump(s); references belong at the end of each section`);
+    if (f.referenceLists) fail('ADR-0017.4', where, `${f.referenceLists} bibliography outside the end-of-page references block (a .reference-list); give each DocSection its refs and let the page list them once`);
+    if (f.referencesNotLast) fail('ADR-0017.4', where, `${f.referencesNotLast} references block(s) with content after them; references must be the last block of the page or tab`);
+    if (f.refsDeclaredNoBlock) fail('ADR-0017.4', where, `${f.refsDeclaredNoBlock} section(s) cite references the page never lists (no references block in their page or tab)`);
     if (f.uncaptioned) fail('ADR-0017.2', where, `${f.uncaptioned} equation(s) without a caption`);
+    if (s.walkState?.doc) {
+      const d = await page.evaluate(() => window.__caosGate.docPage());
+      if (d) s.walkState.doc.push(d);
+    }
     for (const r of f.repeatedTicks ?? []) {
       fail('G6', where, `${r.label}: ${r.n} axis tick label(s) repeat the label before them (give the axis fixed decimals)`);
     }
+    // a filling card whose note leaves its drawing under the floor (CAOS_APP_SHELL#95); below 1280 px the document scrolls
+    if (big) for (const c of f.fillStages ?? []) if (c.h < opt.stageFloor) fail('G6', where, `the drawing of ${c.label} keeps ${Math.round(c.h)} px under its note (floor ${opt.stageFloor} px)`);
     for (const m of await page.evaluate(() => window.__caosGate.drawingText())) fail('G10', where, m);
     if (s.lang === 'es') for (const m of await page.evaluate(() => window.__caosGate.decimals())) fail('G11', where, m);
     if (s.w > 760) for (const m of await page.evaluate(() => window.__caosGate.sticky())) fail('G12', where, m);
@@ -452,6 +467,13 @@ export async function runGate(o) {
 
   async function paintedChecks(page, f, where, big) {
     if (f.prose) return; // the context write-up is prose, measured as a document, not as a drawing
+    if (f.surfaces.length === 0 && f.unavailable) {
+      // a declared absence a reader can see and read (ADR-0080 decision 3): nothing to draw, every other check still ran
+      if (f.drawn > 0) fail('G6', where, `a drawing is present but not visible beside a data-state="unavailable" note (${f.drawn} drawing element(s) rendered in the instrument, collapsed, hidden or too small to see): draw it, or remove it`);
+      else if (f.unavailable === 'unexplained') fail('G6', where, 'the instrument declares data-state="unavailable" and draws nothing, but gives no reason (the text a reader sees needs at least 12 letters or digits in two words or more, saying why the data is absent)');
+      else if (f.unavailable === 'unseen') fail('G6', where, 'the instrument declares data-state="unavailable" and draws nothing, but no reader can see the note (it needs a visible box of at least 40 x 12 px inside the instrument, not transparent, not clipped, not off-screen)');
+      return;
+    }
     if (f.surfaces.length === 0) {
       fail('G6', where, 'nothing is drawn in the instrument (no canvas, svg drawing, image or table)');
       return;
@@ -527,7 +549,9 @@ export async function runGate(o) {
     }
   }
 
+  /** Walks every tab of every list owned by `trail`; returns the number of leaf topics found (a tab with no list inside it is one; a list inside a documentation section adds none). */
   async function walkTabs(page, sink, where, trail, handled, s) {
+    let leaves = 0;
     const lists = (await page.evaluate(() => window.__caosGate.tablists())).filter((l) => !handled.has(l.key) && !l.source);
     const parentKey = trail.length ? trail[trail.length - 1].key : null;
     const mine = lists.filter((l) => (parentKey ? l.owner === parentKey : l.owner === null));
@@ -546,13 +570,16 @@ export async function runGate(o) {
             await tab.click({ timeout: 5000 });
           } catch (e) {
             fail('G7', at, `the tab could not be clicked: ${e.message.split('\n')[0]}`);
+            if (!tl.inSection) leaves += 1;
             continue;
           }
           const why = await settle(page);
           if (why) fail('G7', at, `never settled: ${why}`);
           await processState(page, sink, at, { ...s, first: false, idle: s.idle });
         }
-        await walkTabs(page, sink, where, here, new Set(handled), s);
+        const inner = await walkTabs(page, sink, where, here, new Set(handled), s);
+        // the tabs of a list inside a documentation section are visited, but they are parts of that section, not topics
+        if (!tl.inSection) leaves += inner === 0 ? 1 : inner;
       }
       if (tl.active >= 0 && tl.tabs.length > 1) {
         await page.locator(tl.key).locator('[role="tab"]').filter({ visible: true }).nth(tl.active).click({ timeout: 5000 }).catch(() => undefined);
@@ -560,6 +587,14 @@ export async function runGate(o) {
         sink.splice(0);
       }
     }
+    return leaves;
+  }
+
+  /** ADR-0017 2.1: applies the area table (gate/areas.mjs) to what a documentation page showed in one language. */
+  function docResult(at, lang, states, expectedTopics) {
+    const r = docFloorFailures({ route: at.route, lang, states, expectedTopics });
+    for (const f of r.failures) fail('ADR-0017.2', { ...at, trail: f.trail }, f.message);
+    for (const w of r.waivers) waivers.push({ route: at.route, lang, ...w });
   }
 
   async function walkCases(page, sink, at, s) {
@@ -671,6 +706,7 @@ export async function runGate(o) {
       wideFontSizes: opt.wideFont === false ? '' : opt.wideFontSizes,
       states,
       minima,
+      waivers,
       checks,
       captures: captures.length,
       failures,
@@ -708,8 +744,10 @@ export function captureIndex(report, captures) {
     '.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}figure{margin:0;background:#fff;border:1px solid #d0d7de;padding:6px}' +
     'img{width:100%;height:auto;display:block}figcaption{font-size:11px;color:#57606a;margin-top:4px}';
   const head = `caos-shell-gate: ${esc(report.expectBrand)} at ${esc(report.base)}: ${report.ok ? 'OK' : `${report.failures.length} failure(s)`} in ${report.states} states, ${captures.length} captures`;
+  const wrows = (report.waivers ?? []).map((w) => `<tr><td>${esc(w.route)}</td><td>${esc(w.lang)}</td><td>${esc(w.floor)}</td><td>${esc(w.reason)}</td><td>${w.valid ? 'accepted' : 'refused'}</td></tr>`).join('');
+  const waiverTable = wrows ? `<h2>Waivers (${report.waivers.length})</h2><table><tr><td>route</td><td>language</td><td>floor</td><td>reason</td><td>verdict</td></tr>${wrows}</table>` : '';
   const table = rows ? `<table><tr><td>check</td><td>route</td><td>mode</td><td>trail</td><td>message</td></tr>${rows}</table>` : '';
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${head}</title><style>${style}</style></head><body><h1>${head}</h1>${table}${sections}</body></html>\n`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${head}</title><style>${style}</style></head><body><h1>${head}</h1>${table}${waiverTable}${sections}</body></html>\n`;
 }
 
 function slug(route) {

@@ -136,8 +136,9 @@ test('BL-007: the rail section row fades and holds the keyboard like a tab row',
   assert.match(CSS, /:is\([^)]*\.caos-wb-rail-sections[^)]*\)\[data-fade-end="1"\]/);
 });
 
-test('BL-008: text blocks in a document keep the reading line; figures and tables take the width', () => {
-  assert.match(CSS, /\.prose :where\(p, li, blockquote, dd, \.callout\) \{ max-width: var\(--measure-text\); \}/);
+test('BL-008 (0.11.0): text blocks in a document take the full column; only captions keep a measure', () => {
+  assert.doesNotMatch(CSS, /\.prose :where\(p, li, blockquote, dd, \.callout\) \{[^}]*max-width/);
+  assert.match(CSS, /\.prose :where\(\.equation-caption, \.figure-caption, \.fig-cap\) \{ max-width: var\(--measure-text\); margin-inline: auto; \}/);
   assert.equal(declared('.measure', 'max-width'), 'var(--measure)');
   assert.match(RAW, /--measure: 70ch;/);
   assert.match(RAW, /--measure-text: 78ch;/);

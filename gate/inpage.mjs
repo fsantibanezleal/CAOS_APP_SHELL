@@ -31,6 +31,105 @@ export function installLib() {
     return s.visibility !== 'hidden' && s.display !== 'none' && Number(s.opacity) !== 0;
   };
   const shown = (el) => el.getClientRects().length > 0 && (el.checkVisibility ? el.checkVisibility({ checkVisibilityCSS: true }) : true);
+  const FONT_FLOOR = 8; // px: a smaller font is not legible, whatever its line box
+  const fontPx = (el) => Number.parseFloat(getComputedStyle(el).fontSize);
+  /**
+   * The box a `clip-path` leaves of an element's own box `ar`, or null when the gate cannot read the shape: `inset()` is
+   * computed, any other shape (circle, polygon, path, url) is taken as cutting the element away.
+   */
+  const clipPathBox = (cp, ar) => {
+    const m = /^inset\((.*)\)$/.exec(cp.trim());
+    if (!m) return null;
+    const v = m[1].split(/\bround\b/)[0].trim().split(/\s+/).filter(Boolean);
+    if (v.length < 1 || v.length > 4) return null;
+    const [top, right, bottom, left] = [v[0], v[1] ?? v[0], v[2] ?? v[0], v[3] ?? v[1] ?? v[0]];
+    const px = (x, ref) => (x.endsWith('%') ? (Number.parseFloat(x) / 100) * ref : Number.parseFloat(x));
+    const o = { top: px(top, ar.height), right: px(right, ar.width), bottom: px(bottom, ar.height), left: px(left, ar.width) };
+    if (Object.values(o).some((n) => Number.isNaN(n))) return null;
+    return { left: ar.left + o.left, top: ar.top + o.top, right: ar.right - o.right, bottom: ar.bottom - o.bottom };
+  };
+  /**
+   * The part of `rect` a reader can see: inside `within`, inside every ancestor from `el` up (below `within`) that
+   * hides its overflow (`el` itself only when `self`: its overflow cuts its own text, not its own box) and inside every
+   * `clip-path` of `el` and of those ancestors. Null when nothing is left.
+   */
+  const clipRect = (rect, el, within, self) => {
+    const b = within.getBoundingClientRect();
+    let left = Math.max(rect.left, b.left);
+    let top = Math.max(rect.top, b.top);
+    let right = Math.min(rect.right, b.right);
+    let bottom = Math.min(rect.bottom, b.bottom);
+    for (let a = el; a && a !== within && a !== document.body; a = a.parentElement) {
+      const s = getComputedStyle(a);
+      const ar = a.getBoundingClientRect();
+      if (a !== el || self) {
+        if (/hidden|clip/.test(s.overflowX)) {
+          left = Math.max(left, ar.left);
+          right = Math.min(right, ar.right);
+        }
+        if (/hidden|clip/.test(s.overflowY)) {
+          top = Math.max(top, ar.top);
+          bottom = Math.min(bottom, ar.bottom);
+        }
+      }
+      if (s.clipPath && s.clipPath !== 'none') {
+        const c = clipPathBox(s.clipPath, ar);
+        if (!c) return null;
+        left = Math.max(left, c.left);
+        top = Math.max(top, c.top);
+        right = Math.min(right, c.right);
+        bottom = Math.min(bottom, c.bottom);
+      }
+    }
+    return right > left && bottom > top ? { left, top, right, bottom } : null;
+  };
+  const textNodesOf = (el) => {
+    const out = [];
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      if (!/\S/.test(n.nodeValue || '') || !n.parentElement || n.parentElement.closest('script, style, .katex-mathml')) continue;
+      out.push(n);
+    }
+    return out;
+  };
+  const probe = document.createRange();
+  /** Whether a reader sees the glyphs of a text node: its element is rendered, its font is legible, and a line of it lies inside what is not clipped. */
+  const glyphsSeen = (node, within, minW, minH) => {
+    const p = node.parentElement;
+    if (!p || (p.checkVisibility && !p.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) || fontPx(p) < FONT_FLOOR) return false;
+    probe.selectNodeContents(node);
+    for (const rc of probe.getClientRects()) {
+      if (rc.width <= 0 || rc.height <= 0) continue;
+      const c = clipRect(rc, p, within, true);
+      if (c && c.right - c.left >= minW && c.bottom - c.top >= minH) return true;
+    }
+    return false;
+  };
+  /**
+   * What a reader can read (ADR-0080 decision 3, ADR-0017 2.1): the element is rendered (a box, opacity above 0, CSS
+   * visibility), its font is not zero, the part of its box that lies inside `within` (and inside every ancestor that
+   * hides its overflow, and every clip-path) is at least minW by minH px, and the glyphs of its text are painted where
+   * that is so: a text node counts when its font is at least FONT_FLOOR px and a line of it is inside what is not clipped
+   * (text pushed out of its box by `text-indent`, cut by `clip-path` or set in a 1 px font is not read). An element with
+   * no text (a drawing) is judged by its box. `only` judges one text node of the element. A 1 by 1 px screen-reader-only
+   * note, a transparent one, one positioned off-screen or one cut off by a clipping box is not readable. `shown` stays
+   * for `data-state="loading"`, which must catch every pending element, visible or not.
+   */
+  const readable = (el, within, minW = 40, minH = 12, only = null) => {
+    if (!visible(el) || !within) return false;
+    if (fontPx(el) < 1) return false;
+    const box = clipRect(el.getBoundingClientRect(), el, within, false);
+    if (!box || box.right - box.left < minW || box.bottom - box.top < minH) return false;
+    if (!only && el.matches('svg, canvas, img, video')) return true; // a drawing: the box decides, its labels are not the text of a reader
+    const nodes = only ? [only] : textNodesOf(el);
+    if (nodes.length === 0) return true;
+    return nodes.some((n) => glyphsSeen(n, within, Math.min(minW, 2), Math.min(minH, 4)));
+  };
+  /** The words and the letters and digits of the text a reader sees in an element (rendered text: hidden descendants are not in it). */
+  const renderedText = (el) => {
+    const t = el.innerText || '';
+    return { chars: t.replace(/[^\p{L}\p{N}]+/gu, '').length, words: t.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length };
+  };
   const path = (el) => {
     const parts = [];
     let e = el;
@@ -200,6 +299,8 @@ export function installLib() {
     let instrument = null;
     const surfaces = [];
     let prose = false;
+    let unavailable = null; // data-state="unavailable" declared in the instrument: 'explained' (a reason a reader can read), 'unexplained' (readable, no reason) or 'unseen' (no reader can see it)
+    let drawn = 0; // drawing elements rendered in the instrument, whatever their size or visibility
     if (inst && visible(inst)) {
       const ir = inst.getBoundingClientRect();
       const cx0 = Math.max(0, ir.left);
@@ -209,6 +310,32 @@ export function installLib() {
       instrument = { x: cx0, y: cy0, w: Math.max(0, cx1 - cx0), h: Math.max(0, cy1 - cy0) };
       const ctx = inst.querySelector('.caos-cw-context');
       prose = Boolean(ctx && visible(ctx));
+      // a declaration counts when a reader can see the element (a box of 40 by 12 px at least, inside the instrument,
+      // opaque); its reason is the text rendered, 12 letters or digits in two words at least
+      const declared = [...inst.querySelectorAll('[data-state="unavailable"]')].filter(shown);
+      const seen = declared.filter((el) => readable(el, inst));
+      if (seen.length) {
+        unavailable = seen.some((el) => {
+          const t = renderedText(el);
+          return t.chars >= 12 && t.words >= 2;
+        })
+          ? 'explained'
+          : 'unexplained';
+      } else if (declared.length) unavailable = 'unseen';
+      // a drawing element rendered at all (a collapsed or invisible chart too) cancels the exemption; a card that holds the note is not one
+      drawn = [...inst.querySelectorAll('canvas, img, video, table, svg, [data-plot], [data-drawn]')].filter((el) => {
+        if (el.getClientRects().length === 0) return false;
+        const tag = el.tagName.toLowerCase();
+        if (tag === 'svg') {
+          if (el.parentElement && el.parentElement.closest('svg')) return false;
+          if (el.classList.contains('lucide') || el.closest('button, a, summary, [role="tab"], [role="button"]')) return false;
+          const r = el.getBoundingClientRect();
+          if (el.getAttribute('aria-hidden') === 'true' && r.width > 0 && r.height > 0 && r.width <= 32 && r.height <= 32) return false;
+        }
+        if (tag === 'table' && el.parentElement && el.parentElement.closest('table')) return false;
+        if (el.matches('[data-plot], [data-drawn]') && declared.some((d) => el.contains(d))) return false;
+        return true;
+      }).length;
       for (const el of inst.querySelectorAll('canvas, svg, img, table, video')) {
         const tag = el.tagName.toLowerCase();
         if (tag === 'svg' && el.parentElement && el.parentElement.closest('svg')) continue;
@@ -254,6 +381,18 @@ export function installLib() {
       ? { case: wb.getAttribute('data-case'), key: wb.getAttribute('data-state-key'), replayOnly: wb.getAttribute('data-replay-only') === '1' }
       : null;
 
+    // The references of a page or open tab (ADR-0017 s4): one block, the last thing in its scope (the document page
+    // or the tab panel that holds it).
+    const refScope = (el) => el.closest('[role="tabpanel"], [data-doc-page]');
+    const refBlocks = [...document.querySelectorAll('[data-doc-references]')].filter(visible);
+    const isLastInScope = (block) => {
+      const scope = refScope(block);
+      for (let el = block; el && el !== scope; el = el.parentElement) {
+        for (let n = el.nextElementSibling; n; n = n.nextElementSibling) if (visible(n)) return false;
+      }
+      return true;
+    };
+
     let offCentre = null;
     const proseBody = document.querySelector('.page-body:not(.wide)');
     if (proseBody && visible(proseBody)) {
@@ -278,16 +417,214 @@ export function installLib() {
       instrument,
       surfaces,
       prose,
+      unavailable,
+      drawn,
       workbench,
       offCentre,
       pageText: pageBody ? (pageBody.innerText || '').trim().length : 0,
       referenceLists: [...document.querySelectorAll('.reference-list')].filter(visible).length,
+      // shell 0.11.0: the references of a page or open tab are one block at its end (ADR-0017 s4)
+      referenceBlocks: refBlocks.length,
+      referencesNotLast: refBlocks.filter((b) => !isLastInScope(b)).length,
+      refsDeclaredNoBlock: [...document.querySelectorAll('[data-refs]')].filter((sec) => visible(sec) && !refBlocks.some((b) => refScope(b) === refScope(sec))).length,
       uncaptioned: [...document.querySelectorAll('.equation')].filter((e) => visible(e) && !e.querySelector('.equation-caption')).length,
       // charts whose axis gives a tick the label of the tick before it (UPlotChart declares data-ticks-repeat)
       repeatedTicks: [...document.querySelectorAll('[data-ticks-repeat]')]
         .filter((el) => visible(el) && Number(el.getAttribute('data-ticks-repeat')) > 0)
         .map((el) => ({ label: describe(el.closest('[data-plot]') || el), n: Number(el.getAttribute('data-ticks-repeat')) })),
+      // the drawing a filling card keeps under its note (G6 stage floor): the body of every visible `PlotCard fill`
+      fillStages: [...document.querySelectorAll('.caos-plot.fill')]
+        .filter(visible)
+        .map((card) => ({ label: describe(card), h: (card.querySelector(':scope > .caos-plot-body') || card).getBoundingClientRect().height })),
       sectionsWithoutRefs: [...document.querySelectorAll('[data-no-refs-reason="missing"]')].filter(visible).length,
+    };
+  };
+
+  // ---- 0.11.0: the required areas of the documentation pages (ADR-0017 section 2.1) ------------------------------
+
+  let docBound = null; // the page being measured: what lies outside it, or is clipped out of it, is not read
+  const wordsOf = (el) => {
+    // the words a reader reads: visible text outside equations; `linkWords` of them inside links
+    let words = 0;
+    let linkWords = 0;
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      const parent = n.parentElement;
+      if (!parent || parent.closest('.katex, script, style') || !readable(parent, docBound, 4, 4, n)) continue;
+      const k = (n.nodeValue || '').split(/\s+/).filter(Boolean).length;
+      words += k;
+      if (parent.closest('a')) linkWords += k;
+    }
+    return { words, linkWords };
+  };
+  const tabLabel = (t) => (t.textContent || '').trim().replace(/\s+/g, ' ');
+  /** The tabs from the outermost one to the one that opens `panel`: their labels (for messages) and their ids (for rules). */
+  const chainOf = (panel) => {
+    const labels = [];
+    const ids = [];
+    let p = panel;
+    while (p) {
+      const id = p.getAttribute('aria-labelledby');
+      const tab = id ? document.getElementById(id) : null;
+      if (!tab) break;
+      labels.unshift(tabLabel(tab));
+      ids.unshift(tab.getAttribute('data-tab') || tabLabel(tab));
+      const tl = tab.closest('[role="tablist"]');
+      p = tl && tl.parentElement ? tl.parentElement.closest('[role="tabpanel"]') : null;
+    }
+    return { label: labels.join(' > '), key: ids.join('/'), head: ids[0] ?? null };
+  };
+  const textOf = (el) => (el.innerText || '').trim().replace(/\s+/g, ' '); // rendered text: a hidden descendant is not in it
+  const norm = (s) => String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+  /** A part of a statement a reader sees: the declared text is in the rendered text, in the readable part (`sel`) when the element has one. */
+  const statPart = (el, want, sel) => {
+    if (!want) return false;
+    const kids = [...el.querySelectorAll(sel)];
+    return kids.length ? kids.some((k) => readable(k, docBound, 4, 4) && norm(k.innerText).includes(want)) : norm(el.innerText).includes(want);
+  };
+  /** A quantified statement: visible, a digit in its value, and the unit and the source it declares readable beside it (the `Stat` component). */
+  const validStat = (el) => {
+    if (!readable(el, docBound, 4, 4)) return false;
+    const value = el.querySelector('.caos-stat-value');
+    return /\d/.test((value ? value.innerText : el.innerText) || '') && statPart(el, norm(el.getAttribute('data-stat-unit')), '.caos-stat-unit') && statPart(el, norm(el.getAttribute('data-stat-source')), '.caos-stat-source');
+  };
+
+  /**
+   * What a documentation page shows in this state: its lede, its waivers, the leaf topics open, the views (the outermost
+   * tabs), every visible section with what it holds, and the figures and captioned equations of the open view. The rules
+   * (gate/areas.mjs) are applied by the runner; this only measures. A hidden element is never counted, a paragraph is
+   * counted once per distinct text, and the words are those of the displayed language.
+   */
+  G.docPage = () => {
+    const page = document.querySelector('[data-doc-page]');
+    if (!page || !visible(page)) return null;
+    docBound = page;
+    const seen = (el) => readable(el, page, 4, 4);
+    const lede = page.querySelector('.lede');
+    const panels = [...page.querySelectorAll('[role="tabpanel"]')].filter(visible);
+    // a tab list inside a section belongs to that section: its panels are not topics, and it does not make its topic a branch
+    const inSection = (el) => Boolean(el.closest('[data-doc-section]'));
+    const leaves = panels.filter((p) => !inSection(p) && ![...p.querySelectorAll('[role="tablist"]')].some((tl) => visible(tl) && !inSection(tl)));
+    const topicPanel = (el) => {
+      let p = el.closest('[role="tabpanel"]');
+      while (p && inSection(p)) p = p.parentElement ? p.parentElement.closest('[role="tabpanel"]') : null;
+      return p;
+    };
+    const topics = leaves.length ? leaves.map((p) => chainOf(p)) : [{ label: '', key: '', head: null }];
+    // the outermost tab list: the views of the page (the Introduction: executive, then technical)
+    const outer = [...page.querySelectorAll('[role="tablist"]')].filter(visible).find((tl) => !tl.closest('[role="tabpanel"]') && !inSection(tl));
+    const outerTabs = outer ? [...outer.querySelectorAll('[role="tab"]')] : [];
+    const outerPanel = outer && outer.parentElement ? [...outer.parentElement.children].find((c) => c.getAttribute('role') === 'tabpanel' && visible(c)) : null;
+    const captioned = (fig) => {
+      const cap = fig.querySelector('figcaption');
+      if (!cap || !textOf(cap)) return null;
+      const svg = fig.querySelector('svg');
+      const img = [...fig.querySelectorAll('img')].find((i) => /\.svg(\?|#|$)/i.test(i.getAttribute('src') || ''));
+      if (!(svg && visible(svg)) && !(img && visible(img))) return null;
+      return textOf(cap);
+    };
+    const equationCaption = (eq) => {
+      const cap = eq.querySelector('.equation-caption');
+      return cap && textOf(cap) ? textOf(cap) : null;
+    };
+    const sections = [...page.querySelectorAll('[data-doc-section]')].filter(visible).map((sec) => {
+      const mine = (el) => el.closest('[data-doc-section]') === sec && seen(el);
+      const dense = new Set();
+      for (const p of sec.querySelectorAll('p')) {
+        if (!mine(p) || p.closest('.callout, figure, .equation, table, [data-glossary], [data-stat]')) continue;
+        const { words, linkWords } = wordsOf(p);
+        if (words >= 40 && linkWords * 2 < words) dense.add(textOf(p).toLowerCase());
+      }
+      const callouts = [...sec.querySelectorAll('.callout')].filter(mine);
+      const variant = (c) => c.getAttribute('data-callout') || (c.classList.contains('callout-honest') ? 'honest' : c.classList.contains('callout-strong') ? 'strong' : 'note');
+      // what is distinct in this state, so the same thing seen in another state (a sub-tab of the section) counts once
+      const keyed = (els, key) => {
+        const seenKey = new Map();
+        return els.map((e) => {
+          const k = key(e);
+          const n = seenKey.get(k) ?? 0;
+          seenKey.set(k, n + 1);
+          return `${k}#${n}`;
+        });
+      };
+      const hasText = (el) => /[\p{L}\p{N}]/u.test(textOf(el));
+      // glossary items a reader sees: a term and a definition, both visible and holding a letter or a digit
+      const glossary = [...sec.querySelectorAll('[data-glossary]')].filter(mine).reduce((a, g) => {
+        const dts = [...g.querySelectorAll('dt')];
+        if (!dts.length) return a + [...g.querySelectorAll(':scope > li')].filter((li) => seen(li) && hasText(li)).length;
+        return a + dts.filter((dt) => {
+          const dd = dt.nextElementSibling;
+          return seen(dt) && hasText(dt) && dd && dd.tagName === 'DD' && seen(dd) && hasText(dd);
+        }).length;
+      }, 0);
+      const plots = [...sec.querySelectorAll('[data-plot]')].filter(mine);
+      const bare = [...sec.querySelectorAll('canvas, svg[data-chart]')].filter((c) => mine(c) && !c.closest('[data-plot]'));
+      const panel = topicPanel(sec);
+      const topic = panel ? chainOf(panel) : { label: '', key: '', head: null };
+      // the first table of the section: its rows of three or more cells, each proved by a quantified statement
+      const table = [...sec.querySelectorAll('table')].find(mine);
+      const tableRows = table ? [...table.querySelectorAll('tbody tr')].filter((r) => seen(r) && r.querySelectorAll('td, th').length >= 3) : [];
+      const list = [...sec.querySelectorAll('ul, ol')].find((l) => mine(l) && !l.closest('[data-glossary]') && !l.parentElement.closest('ul, ol'));
+      const items = list ? [...list.querySelectorAll(':scope > li')].filter(seen) : [];
+      // the rows of the area: those of its first table, or the items of its first list when the list comes first
+      const rowEls = list && (!table || !(table.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING)) ? items : tableRows;
+      const nonEmpty = (q, sel) => {
+        const e = q.querySelector(sel);
+        return Boolean(e && seen(e) && /[\p{L}\p{N}]/u.test(textOf(e)));
+      };
+      const eqEls = [...sec.querySelectorAll('.equation')].filter((e) => mine(e) && equationCaption(e));
+      const figEls = [...sec.querySelectorAll('figure')].filter((f) => mine(f) && captioned(f));
+      const honestEls = callouts.filter((c) => variant(c) === 'honest');
+      const strongEls = callouts.filter((c) => variant(c) === 'strong');
+      return {
+        title: ((sec.querySelector('h2') || {}).textContent || '').trim().slice(0, 60),
+        area: sec.getAttribute('data-area'),
+        kind: sec.getAttribute('data-method-kind'),
+        topic: topic.label,
+        topicKey: topic.key,
+        view: topic.head,
+        dense: dense.size,
+        denseKeys: [...dense],
+        equations: eqEls.length,
+        equationKeys: keyed(eqEls, (e) => `${equationCaption(e)}|${(e.querySelector('annotation') || {}).textContent || ''}`),
+        figures: figEls.length,
+        figureKeys: keyed(figEls, (f) => captioned(f)),
+        callouts: callouts.length,
+        calloutKeys: keyed(callouts, (c) => `${variant(c)}|${textOf(c)}`),
+        honest: honestEls.length,
+        honestKeys: keyed(honestEls, (c) => `${variant(c)}|${textOf(c)}`),
+        strong: strongEls.length,
+        strongKeys: keyed(strongEls, (c) => `${variant(c)}|${textOf(c)}`),
+        refs: Number(sec.getAttribute('data-refs')) || 0,
+        glossary,
+        steps: Math.max(0, ...[...sec.querySelectorAll('ol')].filter(mine).map((o) => [...o.querySelectorAll(':scope > li')].filter((li) => seen(li) && hasText(li)).length)),
+        tables: [...sec.querySelectorAll('table')].filter((t) => mine(t) && !t.parentElement.closest('table')).length,
+        codes: [...sec.querySelectorAll('pre')].filter(mine).length,
+        charts: plots.length + bare.length,
+        // a control registered with the panel (data-control), not any button or link
+        controls: [...sec.querySelectorAll('[data-control]')].filter(mine).length,
+        stats: [...sec.querySelectorAll('[data-stat]')].filter((e) => mine(e) && validStat(e)).length,
+        rows: rowEls.length,
+        rowsNoStat: rowEls.filter((r) => ![...r.querySelectorAll('[data-stat]')].some(validStat)).length,
+        items: items.length,
+        thinItems: items.filter((li) => wordsOf(li).words < 6).length,
+        qa: [...sec.querySelectorAll('[data-qa]')].filter((q) => mine(q) && nonEmpty(q, '[data-question]') && nonEmpty(q, '[data-answer]')).length,
+      };
+    });
+    const inView = (sel) => (outerPanel ? [...outerPanel.querySelectorAll(sel)] : [...page.querySelectorAll(sel)]).filter(seen);
+    const selected = outerTabs.find((t) => t.getAttribute('aria-selected') === 'true');
+    return {
+      ledeWords: lede && visible(lede) ? wordsOf(lede).words : 0,
+      waiver: page.getAttribute('data-floor-waiver'),
+      topics,
+      views: outerTabs.map((t) => t.getAttribute('data-tab') || tabLabel(t)),
+      view: selected ? selected.getAttribute('data-tab') || tabLabel(selected) : null,
+      // the executive view holds none anywhere on the page, the part outside the two views included
+      viewEquations: [...page.querySelectorAll('.equation')].filter(seen).length,
+      viewGlossaries: [...page.querySelectorAll('[data-glossary]')].filter(seen).length,
+      sections,
+      figures: inView('figure').map(captioned).filter(Boolean),
+      equations: inView('.equation').map(equationCaption).filter(Boolean),
     };
   };
 
@@ -486,6 +823,7 @@ export function installLib() {
           owner,
           name: tl.getAttribute('aria-label') || '',
           source: Boolean(tl.closest('.cs-source-tabs') || tl.classList.contains('cs-source-tabs')),
+          inSection: Boolean(tl.closest('[data-doc-section]')),
           tabs: tabs.map((t) => (t.getAttribute('data-tab') || (t.textContent || '').trim()).slice(0, 40)),
           active: tabs.findIndex((t) => t.getAttribute('aria-selected') === 'true'),
         };

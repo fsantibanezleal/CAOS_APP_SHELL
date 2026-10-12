@@ -30,6 +30,19 @@ This project uses a three-level branch flow:
 - Keep pull requests small and frequent rather than large and batched.
 - Do not disable commit hooks or force-push shared branches.
 
+## Change process: the spec first (ADR-0075)
+
+The shell's design lives in `docs/design/SDD.md` and its requirements in
+`docs/design/features/<area>/requirements.md` (one table `| ID | Requirement | Gate |`, IDs `SH[DFWCKNTAG]-NNN`,
+every statement with SHALL). A change goes in this order:
+
+1. A requirement row, new or amended, with its ID, in the area's `requirements.md`.
+2. A failing test that names it in its title or a comment (`test/`, `e2e/`, or a plant in `test/gate-selftest.mjs`).
+3. The code that makes it pass.
+4. `npm test`, `npm run test:browser`, `npm run test:gate` and `npm run check:sdd` are green.
+
+`npm run check:sdd` fails when the SDD lacks a section or a requirement names a test that does not exist.
+
 ## Code conventions
 
 - Code, identifiers, comments, and commit messages are written in **English**.

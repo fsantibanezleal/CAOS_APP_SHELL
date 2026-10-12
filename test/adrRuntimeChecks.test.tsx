@@ -53,9 +53,9 @@ test('a citation without a doi or url, a duplicate id and an unknown Cite are re
   assert.match(text, /unknown citation id missing/);
 });
 
-test('a bibliography dump is reported as banned (ADR-0017 s4)', () => {
+test('a bibliography outside the end-of-page block is reported as superseded (ADR-0017 s4)', () => {
   const seen = capture(() => renderToStaticMarkup(<ReferenceList />));
-  assert.match(seen.join('\n'), /ReferenceList is banned/);
+  assert.match(seen.join('\n'), /ReferenceList is superseded by the end-of-page references block/);
 });
 
 test('the architecture configuration is validated: tab count, inline SVG, tokens, hex colours, languages (ADR-0058, S11)', async () => {
