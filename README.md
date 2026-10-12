@@ -72,7 +72,7 @@ const config: ShellConfig = {
   a view still showing an earlier selection is overlaid as stale. Anything that loads declares
   `data-state="loading"` until it is ready; the gate waits for that, never for the network. A view whose data is absent declares
   `data-state="unavailable"` on an element a reader can see (a visible box of 40 by 12 px at least inside the instrument,
-  opaque) whose rendered text states the reason (12 letters or digits in two words at least) and renders no drawing element;
+  opaque, its text painted inside the box: not pushed out by `text-indent`, cut by `clip-path` or under 8 px) whose rendered text states the reason (12 letters or digits in two words at least) and renders no drawing element;
   the gate then accepts it under G6, while an unreadable note, a declaration without a reason, or one beside a blank,
   collapsed or invisible chart still fails. The gate checks that a reason exists, not that it is true.
 - **Fill the instrument:** `<PlotCard fill>` takes the height its panel leaves (several `fill` cards share it, a
@@ -103,9 +103,11 @@ const config: ShellConfig = {
   reader cannot scroll to, see whole or click (G5), blank or underfilled drawings and an instrument under half the
   viewport (G6), a view that never settles (G7), loops at rest (G8), controls that change nothing (G9), labels cut or
   overlapping in a drawing, also in a wider fallback font (G10), a decimal point on a Spanish page (G11), a vertical
-  sub-tab list that scrolls away (G12), text under WCAG AA contrast (G13), and a documentation page without the
+  sub-tab list that scrolls away (G12), text under WCAG AA contrast (G13, every language on a documentation page), and a documentation page without the
   required areas of its kind (`ADR-0017.2`: executive and technical Introduction, Methodology, Implementation,
-  Experiments, Benchmark; declared with `<DocSection area="...">`, waived only with a reason through `floorWaivers`;
+  Experiments, Benchmark; declared with `<DocSection area="...">`, waived only with a reason of 12 letters or digits in two
+  words through `floorWaivers`; the executive view opens first, every Introduction section sits in a view, a method cites
+  references, a `live` control is registered with `data-control`, and a tab list inside a section belongs to it;
   [docs/04](docs/04_views.md)). The report
   (`gate-output/gate-report.json`) lists every failure and the smallest margins against each floor; `index.html`
   beside it shows every capture (G14). Details: [docs/07](docs/07_gate.md).

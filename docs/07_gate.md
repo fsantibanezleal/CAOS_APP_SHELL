@@ -36,7 +36,7 @@ CAOS_Fragmenta's deploy gate).
 | G10 text in drawings | a label of a chart, an instrument SVG or a document figure is cut at the drawing's edge, lies outside it, or overlaps another label; in the native fonts and in the wide-font pass |
 | G11 Spanish numbers | a Spanish page shows a number with a decimal point (`0.25`, `2.7e-08`); a Spanish thousands group (`27.345`) passes; code, formulas, versions and `translate="no"` are not read |
 | G12 sticky lists | at the end of a long section, the active vertical sub-tab is out of view |
-| G13 contrast | a visible text under WCAG AA (4.5:1; 3:1 for large text) against the colour behind it, at the primary size in both themes; disabled controls are exempt, colour transitions are finished first |
+| G13 contrast | a visible text under WCAG AA (4.5:1; 3:1 for large text) against the colour behind it, at the primary size in both themes, in the first language and, on the documentation routes, in every language; disabled controls are exempt, colour transitions are finished first |
 | G14 captures | (always written) `index.html` in the output folder shows every capture, grouped by route, the failure list and the failure captures first |
 | ADR-0071, ADR-0017 | the document scrolls at 1280 px and above when the route is the viewport; the rail scrolls; prose off-centre; a bibliography outside the end-of-page references block (`.reference-list`); a references block with content after it (it must be the last block of the page or open tab); a section that declares `refs` while its page or tab shows no references block; an equation without a caption; a section without references or a reason; and the required areas of the documentation pages (below) |
 
@@ -50,11 +50,13 @@ smallest margins against the G6 floors, and every waiver a documentation page de
 
 ## The required areas of the documentation pages (`ADR-0017.2`, 0.11.0)
 
-The Introduction, Methodology, Implementation, Experiments and Benchmark pages are measured against the named areas of ADR-0017 section 2.1, not against a count of sections: a page of five arbitrary sections fails. A section declares its area (`<DocSection area="math">`, `data-area`; a method also `kind`, `data-method-kind`); the gate fails a page that lacks an area, an area whose section lacks the content its rule names, an unknown area, a method with no valid kind, fewer topics or learned methods than the page floor, a lede under 35 words, an Introduction with no executive view first, and an executive view that holds an equation or a glossary. The areas, their rules and the floor ids are in [docs/04_views.md](04_views.md), transcribed from the one table, `gate/areas.mjs`.
+The Introduction, Methodology, Implementation, Experiments and Benchmark pages are measured against the named areas of ADR-0017 section 2.1, not against a count of sections: a page of five arbitrary sections fails. A section declares its area (`<DocSection area="math">`, `data-area`; a method also `kind`, `data-method-kind`); the gate fails a page that lacks an area, an area whose section lacks the content its rule names, an unknown area, a method with no valid kind, fewer topics or learned methods than the page floor, a lede under 35 words, an Introduction with no executive view first, an executive view that is not the view the page opens on, a section of the Introduction outside the two views, and an executive view that holds an equation or a glossary anywhere on the page. The areas, their rules and the floor ids are in [docs/04_views.md](04_views.md), transcribed from the one table, `gate/areas.mjs`.
 
-How it measures: each page once per language, at the primary size and first theme (the topics do not change with the size or the theme), visiting every topic (a walk that visits fewer topics than it found tabs fails); what a reader cannot see never counts (an element that is not rendered, is transparent, is off-screen or clipped, or sits in the 1 by 1 px screen-reader-only pattern; hidden descendants are not in the rendered text); a paragraph counts once per distinct text (a known limit: two paragraphs that differ by a word are two); words are taken from the displayed language with equations removed. Each failure is reported once per route, area, topic and language, with the measured number and the floor, for example `Methodology, method area, topic "Theory" (EN): 3 dense paragraphs, the floor is 4`.
+How it measures: each page once per language, at the primary size and first theme (the topics do not change with the size or the theme), visiting every topic (a walk that visits fewer topics than it found tabs fails); what a reader cannot see never counts (an element that is not rendered, is transparent, is off-screen or clipped, or sits in the 1 by 1 px screen-reader-only pattern; text pushed out of its box, cut by `clip-path` or in a font under 8 px; hidden descendants are not in the rendered text); a tab list inside a section belongs to the section: the walk visits it, its panels are not topics, and the section is judged on what it held across every state (the union of its distinct paragraphs, callouts, equations and figures, the largest of every other count); a paragraph counts once per distinct text (a known limit: two paragraphs that differ by a word are two); words are taken from the displayed language with equations removed. Each failure is reported once per route, area, topic and language, with the measured number and the floor, for example `Methodology, method area, topic "Theory" (EN): 3 dense paragraphs, the floor is 4`.
 
-A page that cannot carry a floor for a stated reason declares `floorWaivers` on `DocPage` (`data-floor-waiver="<floor>: <reason>"`). The gate skips only the floor named, lists every waiver in `gate-report.json` (`waivers`) and in `index.html`, and fails a waiver whose reason has fewer than 12 characters, whose floor is not in the table of its page, or that names an area of the executive view (the executive view cannot be waived). Plants: `floor-no-executive`, `floor-exec-second`, `floor-initiative-nostat`, `floor-outcomes-two`, `floor-positioning-three`, `floor-credibility-two`, `floor-exec-equation`, `floor-five-sections`, `floor-glossary-nine`, `floor-pipeline-unordered`, `floor-honesty-none`, `floor-area-unknown`, `floor-method-topics`, `floor-method-dense`, `floor-method-equations`, `floor-method-figure`, `floor-method-honest`, `floor-method-learned`, `floor-lede-short`, `floor-impl-architecture`, `floor-exp-datasets`, `floor-bench-caveat`, `floor-es-area`, `floor-waiver-reason`, `floor-waiver-unknown`, `floor-hidden`, `floor-duplicate`, `floor-waiver-other`; the clean fixture walks the waiver path with one valid waiver.
+A page that cannot carry a floor for a stated reason declares `floorWaivers` on `DocPage` (`data-floor-waiver="<floor>: <reason>"`). The gate skips only the floor named, lists every waiver in `gate-report.json` (`waivers`) and in `index.html`, and fails a waiver whose reason has fewer than 12 letters or digits in two words (a reason of punctuation fails), whose floor is not in the table of its page, or that names an area of the executive view (the executive view cannot be waived). Plants: `floor-no-executive`, `floor-exec-second`, `floor-initiative-nostat`, `floor-outcomes-two`, `floor-positioning-three`, `floor-credibility-two`, `floor-exec-equation`, `floor-five-sections`, `floor-glossary-nine`, `floor-pipeline-unordered`, `floor-honesty-none`, `floor-area-unknown`, `floor-method-topics`, `floor-method-dense`, `floor-method-equations`, `floor-method-figure`, `floor-method-honest`, `floor-method-learned`, `floor-lede-short`, `floor-impl-architecture`, `floor-exp-datasets`, `floor-bench-caveat`, `floor-es-area`, `floor-waiver-reason`, `floor-waiver-unknown`, `floor-hidden`, `floor-duplicate`, `floor-waiver-other`, `floor-exec-not-default`, `floor-math-outside`, `floor-glossary-hidden`, `floor-steps-hidden`, `floor-steps-empty`, `floor-stat-hidden-unit`, `floor-waiver-punct`, `floor-exec-transparent-es`, `floor-method-norefs`, `floor-live-button`; the clean fixture walks the waiver path with one valid waiver.
+
+Limits that stay a review duty (ADR-0017 section 2.1): the language of a page. The gate counts the words of the language displayed, so a Spanish page that shows English paragraphs passes; the reviewer reads each page in each language. Likewise whether a positioning item names the problem it answers (the gate requires a sentence of at least 6 words), whether a method cites the right references (the gate requires at least one), and whether a live control drives a real panel (the gate requires one registered with `data-control`).
 
 The self-test's plant `stage-floor` is a filling card with a twenty-line note whose cap (the shell's 35%, 0.11.0) is removed by the plant, as it was before; the gate must fail it under G6 with "the drawing of ... keeps N px under its note (floor 140 px)".
 
@@ -64,9 +66,11 @@ accepts that declared state and every other check still runs. The exact rule, de
 language, case):
 
 - The element counts only when a reader can see it: rendered (not `display: none`, not `visibility: hidden`), opacity
-  above 0, font size above 0, and a box of at least 40 by 12 px that lies inside the instrument and inside every box
-  that clips it. A note that is transparent, has no box, sits off-screen, uses the 1 by 1 px screen-reader-only
-  pattern or is cut off fails G6 with "no reader can see the note"; a `display: none` or `visibility: hidden` note is
+  above 0, and a box of at least 40 by 12 px that lies inside the instrument and inside every box that clips it
+  (overflow and `clip-path`); and its glyphs are where the box is: a line of its text lies inside what is not clipped
+  and its font is at least 8 px. A note that is transparent, has no box, sits off-screen, uses the 1 by 1 px
+  screen-reader-only pattern, is cut off, has its text pushed out of its box by `text-indent`, cut by `clip-path`
+  (any shape other than `none` and `inset()` counts as cutting it away) or set in a 1 px font fails G6 with "no reader can see the note"; a `display: none` or `visibility: hidden` note is
   not a declaration at all and fails "nothing is drawn".
 - The reason is the text a reader sees (rendered text: a `display: none` descendant is not in it): at least 12 letters
   or digits, in at least two words. Punctuation, whitespace and hidden text do not count; an element without a reason
@@ -80,14 +84,20 @@ language, case):
 
 Plants: `unavailable-unexplained`, `unavailable-short`, `unavailable-punct`, `unavailable-hidden-text`,
 `unavailable-beside-blank`, `unavailable-hidden`, `unavailable-opacity`, `unavailable-zero`, `unavailable-offscreen`,
-`unavailable-sronly`, `unavailable-fontsize`, `unavailable-collapsed-chart`, `unavailable-invisible-chart`.
+`unavailable-sronly`, `unavailable-fontsize`, `unavailable-clippath`, `unavailable-textindent`, `unavailable-tinyfont`,
+`unavailable-collapsed-chart`, `unavailable-invisible-chart`.
 
 The content checks of the documentation pages use the same reader-visibility rule: a paragraph, glossary item,
 statement, question, row or item counts only when it is rendered, opaque, inside the page and not clipped, and on the
-text rendered (plant `area-hidden-filler`).
+text rendered, with the glyph test above (plants `area-hidden-filler`, `area-hidden-textindent`, `area-hidden-tinyfont`,
+`area-hidden-clippath`). A glossary item counts when its term and its definition are visible and hold a letter or a digit,
+a step of an ordered list when it is visible and holds a letter or a digit, and a quantified statement when the reader
+sees its unit and its source (in the rendered text), not when they are attributes alone.
 
 ## The gate proves itself (G15)
 
 `npm run test:gate` builds the fixture product (`test/gate-fixture`), runs the gate on it clean in the full matrix
-(every check must pass), and once per planted defect (the check that owns it must fail with its own message): 79
-plants, one per check and per distinct trap. A check without a plant is a check that can agree with a broken app.
+(every check must pass), and once per planted defect (the check that owns it must fail with its own message): 95
+plants, one per check and per distinct trap, then the legitimate pages that the gate once failed
+(`legit-outcomes-list`, `legit-engine-subtabs`, `legit-method-view-tabs`), which must pass every check in both languages.
+A check without a plant is a check that can agree with a broken app.
