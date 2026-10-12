@@ -375,6 +375,10 @@ function PendingView() {
     'unavailable-offscreen': { position: 'absolute', left: -10000, top: 0, width: 400 },
     'unavailable-sronly': { position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 },
     'unavailable-fontsize': { fontSize: 0 },
+    // the box is in place and a reader cannot read the glyphs: cut away, painted far outside the box, or a 1 px font on a tall line
+    'unavailable-clippath': { clipPath: 'inset(100%)' },
+    'unavailable-textindent': { textIndent: -10000, whiteSpace: 'nowrap' },
+    'unavailable-tinyfont': { fontSize: 1, lineHeight: '16px' },
   };
   return (
     <>

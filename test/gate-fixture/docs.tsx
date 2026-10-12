@@ -1,7 +1,7 @@
 // The documentation pages of the gate's fixture (ADR-0017 section 2.1): every page carries the areas its page must have,
 // in plain, truthful filler about the fixture itself (a test product that exists to exercise the gate). The self-test
 // plants one defect per floor through `plant` (`window.__PLANT__`); clean, every floor holds in both languages.
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { Callout, DocSection, Equation, Figure, Glossary, Question, Stat, SubTabs, Tabs, pick, type BiText } from '../../src/index';
 
 type Lang = 'en' | 'es';
@@ -100,6 +100,13 @@ const Note = ({ lang }: { lang: Lang }) => (
 
 const NO_REFS = { en: 'A business summary of the fixture; its evidence is in the technical view.', es: 'Un resumen de negocio del producto de prueba; su evidencia está en la vista técnica.' };
 
+/** Ways to leave text in the page that a reader cannot read, one per plant (each used to pass the gate). */
+export const HIDE_TEXT: Record<string, CSSProperties> = {
+  'area-hidden-textindent': { textIndent: -10000, whiteSpace: 'nowrap' },
+  'area-hidden-tinyfont': { fontSize: 1, lineHeight: '16px' },
+  'area-hidden-clippath': { clipPath: 'inset(0 0 100% 0)' },
+};
+
 const stat = (v: string, unit: BiText, source: BiText) => <Stat value={v} unit={unit} source={source} />;
 const SRC = { en: 'the gate self-test', es: 'la autoprueba del verificador' };
 
@@ -131,18 +138,36 @@ function Executive({ lang, plant }: { lang: Lang; plant: string }) {
             <p style={{ position: 'absolute', left: -10000, top: 0, width: 400 }}>{stat('12', { en: 'minutes per release', es: 'minutos por publicación' }, SRC)}</p>
           </>
         ) : (
-          <p>{para(lang, pick({ en: 'initiative', es: 'iniciativa' }, lang), 1)}</p>
+          // the dense paragraph of the area-hidden-* plants is in the page and a reader cannot read it (glyphs painted outside, cut away, or a 1 px font)
+          <p style={HIDE_TEXT[plant] ?? (plant === 'floor-exec-transparent-es' && lang === 'es' ? { color: 'transparent' } : undefined)}>{para(lang, pick({ en: 'initiative', es: 'iniciativa' }, lang), 1)}</p>
         )}
         {plant !== 'floor-initiative-nostat' && plant !== 'area-hidden-filler' && (
           <p>
             {pick({ en: 'A decision maker who owns a release pipeline gains ', es: 'Quien decide sobre una cadena de publicación gana ' }, lang)}
-            {stat('12', { en: 'minutes per release', es: 'minutos por publicación' }, SRC)}.
+            {plant === 'floor-stat-hidden-unit' ? (
+              // the unit and the source are attributes only: the reader sees "12"
+              <span data-stat="" data-stat-unit="minutes" data-stat-source="survey">
+                12
+              </span>
+            ) : (
+              stat('12', { en: 'minutes per release', es: 'minutos por publicación' }, SRC)
+            )}
+            .
           </p>
         )}
         {plant === 'floor-exec-equation' && <Equation tex="R_0 = \frac{\beta}{\gamma}" caption={pick({ en: 'A planted equation.', es: 'Una ecuación plantada.' }, lang)} />}
       </DocSection>
       <DocSection title={{ en: 'The outcomes', es: 'Los resultados' }} area="outcomes" noRefsReason={NO_REFS}>
         <p>{para(lang, pick({ en: 'outcomes', es: 'resultados' }, lang), 1)}</p>
+        {plant === 'legit-outcomes-list' ? (
+          <ul>
+            {rows.map((r) => (
+              <li key={r.v}>
+                {pick(r.cap, lang)}: {pick(r.out, lang)}, {stat(r.v, r.unit, SRC)}
+              </li>
+            ))}
+          </ul>
+        ) : (
         <table>
           <thead>
             <tr>
@@ -161,6 +186,7 @@ function Executive({ lang, plant }: { lang: Lang; plant: string }) {
             ))}
           </tbody>
         </table>
+        )}
       </DocSection>
       <DocSection title={{ en: 'The positioning', es: 'El posicionamiento' }} area="positioning" noRefsReason={NO_REFS}>
         <ul>
@@ -194,8 +220,30 @@ const GLOSSARY = [
   ['Ipeak', { en: 'the largest infected count', es: 'el mayor número de contagiados' }],
 ] as const;
 
-function Technical({ lang, plant }: { lang: Lang; plant: string }) {
+/** The governing mathematics: three captioned equations and the symbol glossary. `area` is what the section declares. */
+function MathSection({ lang, plant, area }: { lang: Lang; plant: string; area: string | undefined }) {
   const glossary = GLOSSARY.slice(0, plant === 'floor-glossary-nine' ? 9 : 10).map(([term, def]) => ({ term, definition: def }));
+  return (
+    <DocSection title={{ en: 'The governing mathematics', es: 'La matemática que gobierna' }} area={area} refs={REFS}>
+      <Eqs lang={lang} n={3} />
+      {plant === 'floor-glossary-hidden' ? (
+        // ten items in the page, one of them visible
+        <dl className="caos-glossary" data-glossary="" aria-label={pick({ en: 'Symbols', es: 'Símbolos' }, lang)}>
+          {GLOSSARY.map(([term, def], i) => (
+            <div className="caos-glossary-item" data-glossary-item="" key={term} style={i === 0 ? undefined : { display: 'none' }}>
+              <dt>{term}</dt>
+              <dd>{pick(def, lang)}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        <Glossary entries={glossary} ariaLabel={{ en: 'Symbols', es: 'Símbolos' }} />
+      )}
+    </DocSection>
+  );
+}
+
+function Technical({ lang, plant }: { lang: Lang; plant: string }) {
   const mathArea = plant === 'floor-five-sections' || plant === 'floor-waiver-other' ? undefined : 'math';
   return (
     <>
@@ -205,13 +253,31 @@ function Technical({ lang, plant }: { lang: Lang; plant: string }) {
       <DocSection title={{ en: 'The principles', es: 'Los principios' }} area="principles" refs={REFS}>
         <Paras lang={lang} tag={pick({ en: 'principles', es: 'principios' }, lang)} n={2} />
       </DocSection>
-      <DocSection title={{ en: 'The governing mathematics', es: 'La matemática que gobierna' }} area={mathArea} refs={REFS}>
-        <Eqs lang={lang} n={3} />
-        <Glossary entries={glossary} ariaLabel={{ en: 'Symbols', es: 'Símbolos' }} />
-      </DocSection>
+      {plant === 'floor-math-outside' ? (
+        // the area is declared outside both views; the technical view keeps its three equations in a section with no area
+        <DocSection title={{ en: 'The equations', es: 'Las ecuaciones' }} refs={REFS}>
+          <Eqs lang={lang} n={3} />
+        </DocSection>
+      ) : (
+        <MathSection lang={lang} plant={plant} area={mathArea} />
+      )}
       <DocSection title={{ en: 'The pipeline', es: 'El flujo' }} area="pipeline" refs={REFS}>
         <Fig lang={lang} label={{ en: 'the pipeline', es: 'el flujo' }} />
-        {plant === 'floor-pipeline-unordered' || plant === 'floor-waiver-other' ? (
+        {plant === 'floor-steps-hidden' ? (
+          <ol>
+            <li>{pick({ en: 'Read the artifact', es: 'Leer el artefacto' }, lang)}</li>
+            <li style={{ display: 'none' }}>{pick({ en: 'Integrate the model', es: 'Integrar el modelo' }, lang)}</li>
+            <li style={{ display: 'none' }}>{pick({ en: 'Draw the result', es: 'Dibujar el resultado' }, lang)}</li>
+            <li style={{ display: 'none' }}>{pick({ en: 'Report the state', es: 'Informar el estado' }, lang)}</li>
+          </ol>
+        ) : plant === 'floor-steps-empty' ? (
+          <ol>
+            <li />
+            <li />
+            <li />
+            <li />
+          </ol>
+        ) : plant === 'floor-pipeline-unordered' || plant === 'floor-waiver-other' ? (
           <ul>
             <li>{pick({ en: 'Read the artifact', es: 'Leer el artefacto' }, lang)}</li>
             <li>{pick({ en: 'Integrate the model', es: 'Integrar el modelo' }, lang)}</li>
@@ -246,7 +312,22 @@ function Introduction({ lang, plant }: { lang: Lang; plant: string }) {
     { id: 'executive', label: pick({ en: 'Executive', es: 'Ejecutiva' }, lang), content: <Executive lang={lang} plant={plant} /> },
     { id: 'technical', label: pick({ en: 'Technical', es: 'Técnica' }, lang), content: <Technical lang={lang} plant={plant} /> },
   ];
-  return <Tabs ariaLabel={pick({ en: 'Views of the introduction', es: 'Vistas de la introducción' }, lang)} tabs={plant === 'floor-exec-second' ? [tabs[1], tabs[0]] : tabs} />;
+  const views = (
+    <Tabs
+      ariaLabel={pick({ en: 'Views of the introduction', es: 'Vistas de la introducción' }, lang)}
+      tabs={plant === 'floor-exec-second' ? [tabs[1], tabs[0]] : tabs}
+      initial={plant === 'floor-exec-not-default' ? 'technical' : undefined}
+    />
+  );
+  // the math section above the views: it shows in the executive view too
+  return plant === 'floor-math-outside' ? (
+    <>
+      <MathSection lang={lang} plant={plant} area="math" />
+      {views}
+    </>
+  ) : (
+    views
+  );
 }
 
 // ----------------------------------------------------------------------------------------------------- Methodology
@@ -258,7 +339,13 @@ function MethodSection({ lang, m, plant }: { lang: Lang; m: Method; plant: strin
   const dense = is('floor-method-dense') ? 3 : is('floor-hidden') ? 2 : 4;
   const tag = pick(m.label as { en: string; es: string }, lang);
   return (
-    <DocSection title={m.label} area="method" kind={m.kind} refs={REFS}>
+    <DocSection
+      title={m.label}
+      area="method"
+      kind={m.kind}
+      refs={is('floor-method-norefs') ? undefined : REFS}
+      noRefsReason={is('floor-method-norefs') ? { en: 'A planted method that cites nothing and says so.', es: 'Un método plantado que no cita nada y lo dice.' } : undefined}
+    >
       {is('floor-duplicate') ? Array.from({ length: 4 }, (_, i) => <p key={i}>{para(lang, tag, 1)}</p>) : <Paras lang={lang} tag={tag} n={dense} />}
       {is('floor-hidden') && (
         <>
@@ -270,6 +357,16 @@ function MethodSection({ lang, m, plant }: { lang: Lang; m: Method; plant: strin
       {!(plant === 'floor-method-figure' && m.id === 'numerics') && <Fig lang={lang} label={{ en: `the ${(m.label as { en: string }).en} method`, es: `el método ${(m.label as { es: string }).es}` }} />}
       <Honest lang={lang} tag={tag} />
       {is('floor-method-honest') && <Honest lang={lang} tag={`${tag} (second)`} />}
+      {is('legit-method-view-tabs') && (
+        // view tabs of one figure inside the method section: they belong to the section, they are not topics
+        <SubTabs
+          ariaLabel={pick({ en: 'Views of the method', es: 'Vistas del método' }, lang)}
+          tabs={[
+            { id: 'one-d', label: '1D', content: <p>{pick({ en: 'In one dimension the groups mix evenly along a line and the epidemic moves as a front.', es: 'En una dimensión los grupos se mezclan por igual a lo largo de una línea y la epidemia avanza como un frente.' }, lang)}</p> },
+            { id: 'two-d', label: '2D', content: <p>{pick({ en: 'In two dimensions the front becomes a ring that spreads out from the first infected place.', es: 'En dos dimensiones el frente se vuelve un anillo que se extiende desde el primer lugar contagiado.' }, lang)}</p> },
+          ]}
+        />
+      )}
     </DocSection>
   );
 }
@@ -379,9 +476,32 @@ function Implementation({ lang, plant }: { lang: Lang; plant: string }) {
       label: lbl('Engine: step', 'Motor: paso'),
       content: (
         <DocSection title={{ en: 'The stepping engine', es: 'El motor de pasos' }} area="engine" refs={REFS}>
-          <Paras lang={lang} tag="stepping" n={2} />
-          <Eqs lang={lang} n={2} from={1} />
-          <Note lang={lang} />
+          {plant === 'legit-engine-subtabs' ? (
+            // everything the area asks for, spread over the sub-tabs of the section
+            <SubTabs
+              ariaLabel={lbl('Parts of the engine', 'Partes del motor')}
+              tabs={[
+                {
+                  id: 'steps',
+                  label: lbl('Steps', 'Pasos'),
+                  content: (
+                    <>
+                      <Paras lang={lang} tag="stepping" n={2} />
+                      <Eqs lang={lang} n={2} from={1} />
+                      <Note lang={lang} />
+                    </>
+                  ),
+                },
+                { id: 'constants', label: lbl('Constants', 'Constantes'), content: <pre>{'{ "dt": 0.1, "beta": 0.3, "gamma": 0.1 }'}</pre> },
+              ]}
+            />
+          ) : (
+            <>
+              <Paras lang={lang} tag="stepping" n={2} />
+              <Eqs lang={lang} n={2} from={1} />
+              <Note lang={lang} />
+            </>
+          )}
         </DocSection>
       ),
     },
@@ -532,9 +652,14 @@ function Benchmark({ lang, plant, status }: { lang: Lang; plant: string; status:
         </svg>
       </DocSection>
       <DocSection title={{ en: 'The live panel', es: 'El panel en vivo' }} area="live" refs={REFS}>
+        {plant === 'floor-live-button' ? (
+          // a button that is not a registered control of the panel
+          <button type="button">{lbl('Copy the setting', 'Copiar el ajuste')}</button>
+        ) : (
         <label>
-          {lbl('Contact rate', 'Tasa de contacto')} <input type="range" min={1} max={9} defaultValue={4} />
+          {lbl('Contact rate', 'Tasa de contacto')} <input type="range" min={1} max={9} defaultValue={4} data-control="contact" />
         </label>
+        )}
         {status}
       </DocSection>
       <DocSection title={{ en: 'The provenance', es: 'La procedencia' }} area="provenance" refs={REFS}>
@@ -555,7 +680,7 @@ export function fixtureDoc(id: string, lang: Lang, plant: string, status: ReactN
   const noModel = { en: 'The fixture has no learned model to compare.', es: 'El producto de prueba no tiene modelo aprendido que comparar.' };
   if (id === 'benchmark') {
     // the clean fixture walks the waiver path: it has no learned model to compare against a baseline
-    waivers.push({ floor: 'comparison', reason: plant === 'floor-waiver-reason' ? 'short' : noModel });
+    waivers.push({ floor: 'comparison', reason: plant === 'floor-waiver-reason' ? 'short' : plant === 'floor-waiver-punct' ? '............' : noModel });
     if (plant === 'floor-waiver-unknown') waivers.push({ floor: 'nonsense', reason: { en: 'A planted waiver naming no floor.', es: 'Una exención plantada que no nombra ningún piso.' } });
   }
   if (id === 'introduction' && plant === 'floor-waiver-other') waivers.push({ floor: 'math', reason: { en: 'A planted waiver for the math area only.', es: 'Una exención plantada solo para el área de matemática.' } });

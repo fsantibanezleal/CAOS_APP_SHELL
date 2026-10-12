@@ -31,7 +31,7 @@ test('the numbers of the table are those of ADR-0017 section 2.1', () => {
   assert.deepEqual(PAGES['/introduction'].areas.math.requires, { equations: 1, glossary: 10 });
   assert.deepEqual(PAGES['/introduction'].areas.positioning.requires, { items: 4, thinItems: 0 });
   assert.deepEqual(PAGES['/introduction'].areas.credibility.requires, { qa: 3, honest: 1 });
-  assert.deepEqual(PAGES['/methodology'].areas.method.requires, { dense: 4, equations: 2, figures: 1, honest: 1 });
+  assert.deepEqual(PAGES['/methodology'].areas.method.requires, { dense: 4, equations: 2, figures: 1, honest: 1, refs: 1 });
   assert.equal(PAGES['/methodology'].floors['method-topics'].min, 6);
   assert.equal(PAGES['/methodology'].floors['method-learned'].min, 2);
   assert.equal(PAGES['/implementation'].floors['impl-topics'].min, 8);
@@ -56,7 +56,7 @@ test('the waiver parser splits entries and keeps the reason; the executive view 
   assert.equal(REASON_MIN, 12);
 });
 
-const section = (o: object) => ({ title: 'S', area: null, kind: null, topic: '', topicKey: '', view: null, dense: 0, equations: 0, figures: 0, callouts: 0, honest: 0, strong: 0, glossary: 0, steps: 0, tables: 0, codes: 0, charts: 0, controls: 0, stats: 0, rows: 0, rowsNoStat: 0, items: 0, thinItems: 0, qa: 0, ...o });
+const section = (o: object) => ({ title: 'S', area: null, kind: null, topic: '', topicKey: '', view: null, dense: 0, equations: 0, figures: 0, callouts: 0, honest: 0, strong: 0, glossary: 0, steps: 0, tables: 0, codes: 0, charts: 0, controls: 0, refs: 1, stats: 0, rows: 0, rowsNoStat: 0, items: 0, thinItems: 0, qa: 0, ...o });
 const state = (o: object) => ({ ledeWords: 40, waiver: null, topics: [{ label: '', key: '', head: null }], views: [], view: null, viewEquations: 0, viewGlossaries: 0, sections: [], figures: [], equations: [], ...o });
 
 test('docFloorFailures: an empty section that declares an area fails, and a page of five plain sections has no area', () => {
@@ -86,4 +86,46 @@ test('docFloorFailures: the executive view holds no glossary and an unvisited to
   assert.ok(exec.failures.some((f) => /executive view \(EN\): 1 symbol glossary/.test(f.message)), JSON.stringify(exec.failures));
   const walked = docFloorFailures({ route: '/benchmark', lang: 'en', expectedTopics: 3, states: [state({ sections: [] })] });
   assert.ok(walked.failures.some((f) => /visited 1 of 3 topics/.test(f.message)));
+});
+
+test('the waiver reason is judged on its letters and digits in two words', () => {
+  const run = (reason: string) => docFloorFailures({ route: '/benchmark', lang: 'en', expectedTopics: 1, states: [state({ waiver: `comparison: ${reason}`, sections: [] })] });
+  for (const bad of ['............', '- . - . - . - . - .', 'abcdefghijklmnop']) {
+    const r = run(bad);
+    assert.ok(r.failures.some((f) => /waiver for "comparison" has a reason of \d+ character/.test(f.message)), `${bad}: ${JSON.stringify(r.failures)}`);
+    assert.equal(r.waivers[0].valid, false, bad);
+  }
+  assert.equal(run('no learned model here').waivers[0].valid, true);
+  assert.equal(run('twelve letters, two words').failures.some((f) => /waiver for "comparison"/.test(f.message)), false);
+});
+
+test('docFloorFailures: a section is judged on what it held across every state it was seen in', () => {
+  // one engine section whose content sits in two sub-tabs: paragraphs and equations in the first, a code block in the second
+  const topic = { label: 'Core > Engine', key: 'core/engine' };
+  const one = (o: object) => section({ area: 'engine', topic: topic.label, topicKey: topic.key, view: 'core', ...o });
+  const steps = one({ dense: 2, denseKeys: ['a', 'b'], equations: 2, equationKeys: ['e1', 'e2'], callouts: 1, calloutKeys: ['note|n'] });
+  const consts = one({ codes: 1 });
+  const at = (sections: object[]) => state({ topics: [{ label: topic.label, key: topic.key, head: 'core' }], sections });
+  const merged = docFloorFailures({ route: '/implementation', lang: 'en', expectedTopics: 1, states: [at([steps]), at([consts])] });
+  assert.ok(!merged.failures.some((f) => /engine area/.test(f.message)), JSON.stringify(merged.failures));
+  // the last state alone would fail it; the first alone passes the engine rule
+  const last = docFloorFailures({ route: '/implementation', lang: 'en', expectedTopics: 1, states: [at([consts])] });
+  assert.ok(last.failures.some((f) => /engine area.*0 dense paragraphs, the floor is 2/.test(f.message)));
+  // the same paragraph seen in two states counts once; two honest callouts in two sub-tabs count twice
+  const dup = docFloorFailures({ route: '/implementation', lang: 'en', expectedTopics: 1, states: [at([one({ dense: 1, denseKeys: ['a'], equations: 1, callouts: 1 })]), at([one({ dense: 1, denseKeys: ['a'] })])] });
+  assert.ok(dup.failures.some((f) => /engine area.*1 dense paragraph, the floor is 2/.test(f.message)), JSON.stringify(dup.failures));
+  const honest = (key: string) => one({ callouts: 1, honest: 1, calloutKeys: [`honest|${key}`], honestKeys: [`honest|${key}`] });
+  const two = docFloorFailures({ route: '/methodology', lang: 'en', expectedTopics: 1, states: [at([{ ...honest('x'), area: 'method', kind: 'classical', dense: 4, equations: 2, figures: 1 }]), at([{ ...honest('y'), area: 'method', kind: 'classical' }])] });
+  assert.ok(two.failures.some((f) => /method area.*2 honest callouts, exactly 1 is required/.test(f.message)), JSON.stringify(two.failures));
+});
+
+test('docFloorFailures: the executive view is the one the page opens on, and no section sits outside the two views', () => {
+  const tops = [{ label: 'Executive', key: 'executive', head: 'executive' }];
+  const base = { views: ['executive', 'technical'], viewEquations: 0, viewGlossaries: 0 };
+  const open = docFloorFailures({ route: '/introduction', lang: 'en', expectedTopics: 1, states: [state({ ...base, view: 'technical', topics: tops })] });
+  assert.ok(open.failures.some((f) => /the executive view is not the view the page opens on \(it opens on "technical"\)/.test(f.message)), JSON.stringify(open.failures));
+  const fine = docFloorFailures({ route: '/introduction', lang: 'en', expectedTopics: 1, states: [state({ ...base, view: 'executive', topics: tops })] });
+  assert.ok(!fine.failures.some((f) => /opens on|outside the two views/.test(f.message)));
+  const outside = docFloorFailures({ route: '/introduction', lang: 'en', expectedTopics: 1, states: [state({ ...base, view: 'executive', topics: tops, sections: [section({ title: 'Math', area: 'math', view: null })] })] });
+  assert.ok(outside.failures.some((f) => /section "Math" sits outside the two views/.test(f.message)), JSON.stringify(outside.failures));
 });
