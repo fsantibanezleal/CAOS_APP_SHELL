@@ -123,7 +123,7 @@ function Executive({ lang, plant }: { lang: Lang; plant: string }) {
   ].slice(0, plant === 'floor-credibility-two' ? 2 : 3);
   return (
     <>
-      <DocSection title={{ en: 'The initiative', es: 'La iniciativa' }} area="initiative" noRefsReason={NO_REFS}>
+      <DocSection title={{ en: 'The initiative', es: 'La iniciativa' }} area="initiative" refs={REFS}>
         <p>{para(lang, pick({ en: 'initiative', es: 'iniciativa' }, lang), 1)}</p>
         {plant !== 'floor-initiative-nostat' && (
           <p>
