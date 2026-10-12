@@ -369,7 +369,7 @@ Versions are `X.XX.XXX` in `VERSION` (ADR-0068) with the semver form in `package
 (`scripts/check_version_coherence.py`). A fix is a patch; a new primitive, a new check or a changed default is a minor version. The package is published to npm; `.github/workflows/publish-npm.yml` publishes on a GitHub
 release through Trusted Publishing, which has never published (the package page has no Trusted Publisher yet), so releases are published with the owner's direct-publish token until it is set
 ([`docs/08_releasing.md`](../08_releasing.md)). Products pin the shell exactly and adopt a release when their owner names it (ADR-0078 section 5): bump the pin, remove the overrides the CHANGELOG entry says are unnecessary,
-and pass the gate again. The CHANGELOG at the time of writing ends at 0.10.000; the 0.11.0 work (#91, #94, #95, #96) is on `develop` and its entry is written at release.
+and pass the gate again. The CHANGELOG's latest entry is 0.11.000 (2026-10-12): this design document, the gated requirements, the documentation-page areas of ADR-0017 section 2.1 with the executive view, the declared unavailable state, toned `yMarks`, the filling card's note cap and stage floor, and the knob's margin.
 
 ## Risks
 
