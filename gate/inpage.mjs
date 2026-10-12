@@ -31,6 +31,41 @@ export function installLib() {
     return s.visibility !== 'hidden' && s.display !== 'none' && Number(s.opacity) !== 0;
   };
   const shown = (el) => el.getClientRects().length > 0 && (el.checkVisibility ? el.checkVisibility({ checkVisibilityCSS: true }) : true);
+  /**
+   * What a reader can read (ADR-0080 decision 3, ADR-0017 2.1): the element is rendered (a box, opacity above 0, CSS
+   * visibility), its font is not zero, and the part of its box that lies inside `within` (and inside every ancestor
+   * that hides its overflow) is at least minW by minH px. A 1 by 1 px screen-reader-only note, a transparent one, one
+   * positioned off-screen or one cut off by a clipping box is not readable. `shown` stays for `data-state="loading"`,
+   * which must catch every pending element, visible or not.
+   */
+  const readable = (el, within, minW = 40, minH = 12) => {
+    if (!visible(el) || !within) return false;
+    if (Number.parseFloat(getComputedStyle(el).fontSize) < 1) return false;
+    const b = within.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    let left = Math.max(r.left, b.left);
+    let top = Math.max(r.top, b.top);
+    let right = Math.min(r.right, b.right);
+    let bottom = Math.min(r.bottom, b.bottom);
+    for (let a = el.parentElement; a && a !== within && a !== document.body; a = a.parentElement) {
+      const s = getComputedStyle(a);
+      const ar = a.getBoundingClientRect();
+      if (/hidden|clip/.test(s.overflowX)) {
+        left = Math.max(left, ar.left);
+        right = Math.min(right, ar.right);
+      }
+      if (/hidden|clip/.test(s.overflowY)) {
+        top = Math.max(top, ar.top);
+        bottom = Math.min(bottom, ar.bottom);
+      }
+    }
+    return right - left >= minW && bottom - top >= minH;
+  };
+  /** The words and the letters and digits of the text a reader sees in an element (rendered text: hidden descendants are not in it). */
+  const renderedText = (el) => {
+    const t = el.innerText || '';
+    return { chars: t.replace(/[^\p{L}\p{N}]+/gu, '').length, words: t.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length };
+  };
   const path = (el) => {
     const parts = [];
     let e = el;
@@ -200,7 +235,8 @@ export function installLib() {
     let instrument = null;
     const surfaces = [];
     let prose = false;
-    let unavailable = null; // data-state="unavailable" declared in the instrument: 'explained' (12+ characters of reason) or 'unexplained'
+    let unavailable = null; // data-state="unavailable" declared in the instrument: 'explained' (a reason a reader can read), 'unexplained' (readable, no reason) or 'unseen' (no reader can see it)
+    let drawn = 0; // drawing elements rendered in the instrument, whatever their size or visibility
     if (inst && visible(inst)) {
       const ir = inst.getBoundingClientRect();
       const cx0 = Math.max(0, ir.left);
@@ -210,8 +246,32 @@ export function installLib() {
       instrument = { x: cx0, y: cy0, w: Math.max(0, cx1 - cx0), h: Math.max(0, cy1 - cy0) };
       const ctx = inst.querySelector('.caos-cw-context');
       prose = Boolean(ctx && visible(ctx));
+      // a declaration counts when a reader can see the element (a box of 40 by 12 px at least, inside the instrument,
+      // opaque); its reason is the text rendered, 12 letters or digits in two words at least
       const declared = [...inst.querySelectorAll('[data-state="unavailable"]')].filter(shown);
-      if (declared.length) unavailable = declared.some((el) => (el.textContent || '').trim().length >= 12) ? 'explained' : 'unexplained';
+      const seen = declared.filter((el) => readable(el, inst));
+      if (seen.length) {
+        unavailable = seen.some((el) => {
+          const t = renderedText(el);
+          return t.chars >= 12 && t.words >= 2;
+        })
+          ? 'explained'
+          : 'unexplained';
+      } else if (declared.length) unavailable = 'unseen';
+      // a drawing element rendered at all (a collapsed or invisible chart too) cancels the exemption; a card that holds the note is not one
+      drawn = [...inst.querySelectorAll('canvas, img, video, table, svg, [data-plot], [data-drawn]')].filter((el) => {
+        if (el.getClientRects().length === 0) return false;
+        const tag = el.tagName.toLowerCase();
+        if (tag === 'svg') {
+          if (el.parentElement && el.parentElement.closest('svg')) return false;
+          if (el.classList.contains('lucide') || el.closest('button, a, summary, [role="tab"], [role="button"]')) return false;
+          const r = el.getBoundingClientRect();
+          if (el.getAttribute('aria-hidden') === 'true' && r.width > 0 && r.height > 0 && r.width <= 32 && r.height <= 32) return false;
+        }
+        if (tag === 'table' && el.parentElement && el.parentElement.closest('table')) return false;
+        if (el.matches('[data-plot], [data-drawn]') && declared.some((d) => el.contains(d))) return false;
+        return true;
+      }).length;
       for (const el of inst.querySelectorAll('canvas, svg, img, table, video')) {
         const tag = el.tagName.toLowerCase();
         if (tag === 'svg' && el.parentElement && el.parentElement.closest('svg')) continue;
@@ -294,6 +354,7 @@ export function installLib() {
       surfaces,
       prose,
       unavailable,
+      drawn,
       workbench,
       offCentre,
       pageText: pageBody ? (pageBody.innerText || '').trim().length : 0,
@@ -317,6 +378,7 @@ export function installLib() {
 
   // ---- 0.11.0: the required areas of the documentation pages (ADR-0017 section 2.1) ------------------------------
 
+  let docBound = null; // the page being measured: what lies outside it, or is clipped out of it, is not read
   const wordsOf = (el) => {
     // the words a reader reads: visible text outside equations; `linkWords` of them inside links
     let words = 0;
@@ -324,7 +386,7 @@ export function installLib() {
     const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
     for (let n = walker.nextNode(); n; n = walker.nextNode()) {
       const parent = n.parentElement;
-      if (!parent || parent.closest('.katex, script, style') || !shown(parent)) continue;
+      if (!parent || parent.closest('.katex, script, style') || !readable(parent, docBound, 4, 4)) continue;
       const k = (n.nodeValue || '').split(/\s+/).filter(Boolean).length;
       words += k;
       if (parent.closest('a')) linkWords += k;
@@ -348,9 +410,9 @@ export function installLib() {
     }
     return { label: labels.join(' > '), key: ids.join('/'), head: ids[0] ?? null };
   };
-  const textOf = (el) => (el.textContent || '').trim().replace(/\s+/g, ' ');
+  const textOf = (el) => (el.innerText || '').trim().replace(/\s+/g, ' '); // rendered text: a hidden descendant is not in it
   /** A quantified statement: visible, a digit in it, and its unit and source declared (the `Stat` component). */
-  const validStat = (el) => visible(el) && /\d/.test(el.textContent || '') && Boolean((el.getAttribute('data-stat-source') || '').trim()) && Boolean((el.getAttribute('data-stat-unit') || '').trim());
+  const validStat = (el) => readable(el, docBound, 4, 4) && /\d/.test(el.innerText || '') && Boolean((el.getAttribute('data-stat-source') || '').trim()) && Boolean((el.getAttribute('data-stat-unit') || '').trim());
 
   /**
    * What a documentation page shows in this state: its lede, its waivers, the leaf topics open, the views (the outermost
@@ -361,6 +423,8 @@ export function installLib() {
   G.docPage = () => {
     const page = document.querySelector('[data-doc-page]');
     if (!page || !visible(page)) return null;
+    docBound = page;
+    const seen = (el) => readable(el, page, 4, 4);
     const lede = page.querySelector('.lede');
     const panels = [...page.querySelectorAll('[role="tabpanel"]')].filter(visible);
     const leaves = panels.filter((p) => ![...p.querySelectorAll('[role="tablist"]')].some(visible));
@@ -382,7 +446,7 @@ export function installLib() {
       return cap && textOf(cap) ? textOf(cap) : null;
     };
     const sections = [...page.querySelectorAll('[data-doc-section]')].filter(visible).map((sec) => {
-      const mine = (el) => el.closest('[data-doc-section]') === sec && visible(el);
+      const mine = (el) => el.closest('[data-doc-section]') === sec && seen(el);
       const dense = new Set();
       for (const p of sec.querySelectorAll('p')) {
         if (!mine(p) || p.closest('.callout, figure, .equation, table, [data-glossary], [data-stat]')) continue;
@@ -398,12 +462,12 @@ export function installLib() {
       const topic = panel ? chainOf(panel) : { label: '', key: '', head: null };
       // the first table of the section: its rows of three or more cells, each proved by a quantified statement
       const table = [...sec.querySelectorAll('table')].find(mine);
-      const rowEls = table ? [...table.querySelectorAll('tbody tr')].filter((r) => visible(r) && r.querySelectorAll('td, th').length >= 3) : [];
+      const rowEls = table ? [...table.querySelectorAll('tbody tr')].filter((r) => seen(r) && r.querySelectorAll('td, th').length >= 3) : [];
       const list = [...sec.querySelectorAll('ul, ol')].find((l) => mine(l) && !l.closest('[data-glossary]') && !l.parentElement.closest('ul, ol'));
-      const items = list ? [...list.querySelectorAll(':scope > li')].filter(visible) : [];
+      const items = list ? [...list.querySelectorAll(':scope > li')].filter(seen) : [];
       const nonEmpty = (q, sel) => {
         const e = q.querySelector(sel);
-        return Boolean(e && textOf(e));
+        return Boolean(e && seen(e) && /[\p{L}\p{N}]/u.test(textOf(e)));
       };
       return {
         title: ((sec.querySelector('h2') || {}).textContent || '').trim().slice(0, 60),
@@ -432,7 +496,7 @@ export function installLib() {
         qa: [...sec.querySelectorAll('[data-qa]')].filter((q) => mine(q) && nonEmpty(q, '[data-question]') && nonEmpty(q, '[data-answer]')).length,
       };
     });
-    const inView = (sel) => (outerPanel ? [...outerPanel.querySelectorAll(sel)] : [...page.querySelectorAll(sel)]).filter(visible);
+    const inView = (sel) => (outerPanel ? [...outerPanel.querySelectorAll(sel)] : [...page.querySelectorAll(sel)]).filter(seen);
     const selected = outerTabs.find((t) => t.getAttribute('aria-selected') === 'true');
     return {
       ledeWords: lede && visible(lede) ? wordsOf(lede).words : 0,

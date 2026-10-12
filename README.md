@@ -71,8 +71,10 @@ const config: ShellConfig = {
   pass `useWorkbenchState().stateKey` as captured when the computation started (rail and instrument share it), and
   a view still showing an earlier selection is overlaid as stale. Anything that loads declares
   `data-state="loading"` until it is ready; the gate waits for that, never for the network. A view whose data is absent declares
-  `data-state="unavailable"` on a visible element that states the reason (12 characters or more) and draws nothing;
-  the gate then accepts it under G6, while a declaration without a reason, or one beside a blank chart, still fails.
+  `data-state="unavailable"` on an element a reader can see (a visible box of 40 by 12 px at least inside the instrument,
+  opaque) whose rendered text states the reason (12 letters or digits in two words at least) and renders no drawing element;
+  the gate then accepts it under G6, while an unreadable note, a declaration without a reason, or one beside a blank,
+  collapsed or invisible chart still fails. The gate checks that a reason exists, not that it is true.
 - **Fill the instrument:** `<PlotCard fill>` takes the height its panel leaves (several `fill` cards share it, a
   `.caos-views-row` puts them side by side), and a `Stage` or `<UPlotChart height="fill">` inside it gets a real
   size. A table (`.caos-table`) is sized to its rows: put it above the drawing of the same numbers, never alone.

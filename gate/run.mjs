@@ -466,9 +466,11 @@ export async function runGate(o) {
 
   async function paintedChecks(page, f, where, big) {
     if (f.prose) return; // the context write-up is prose, measured as a document, not as a drawing
-    if (f.surfaces.length === 0 && f.unavailable === 'explained') return; // a declared, explained absence (ADR-0080): nothing to draw, every other check still ran
-    if (f.surfaces.length === 0 && f.unavailable === 'unexplained') {
-      fail('G6', where, 'the instrument declares data-state="unavailable" and draws nothing, but gives no reason (the element needs at least 12 characters of text saying why the data is absent)');
+    if (f.surfaces.length === 0 && f.unavailable) {
+      // a declared absence a reader can see and read (ADR-0080 decision 3): nothing to draw, every other check still ran
+      if (f.drawn > 0) fail('G6', where, `a drawing is present but not visible beside a data-state="unavailable" note (${f.drawn} drawing element(s) rendered in the instrument, collapsed, hidden or too small to see): draw it, or remove it`);
+      else if (f.unavailable === 'unexplained') fail('G6', where, 'the instrument declares data-state="unavailable" and draws nothing, but gives no reason (the text a reader sees needs at least 12 letters or digits in two words or more, saying why the data is absent)');
+      else if (f.unavailable === 'unseen') fail('G6', where, 'the instrument declares data-state="unavailable" and draws nothing, but no reader can see the note (it needs a visible box of at least 40 x 12 px inside the instrument, not transparent, not clipped, not off-screen)');
       return;
     }
     if (f.surfaces.length === 0) {
