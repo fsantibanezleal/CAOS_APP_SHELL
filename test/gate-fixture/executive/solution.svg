@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 300" role="img" aria-label="With the tool the gap is seen two weeks ahead">
+  <title>With the tool the gap is seen two weeks ahead</title>
+  <rect x="0" y="0" width="480" height="300" rx="10" fill="var(--color-surface)" stroke="var(--color-border)"/>
+  <rect x="20" y="70" width="130" height="64" rx="8" fill="var(--color-surface-2)" stroke="var(--color-border)"/>
+  <text data-lang="en" x="85" y="108" text-anchor="middle" font-size="16" fill="var(--color-fg)" font-weight="600">Admissions</text>
+  <text data-lang="es" x="85" y="108" text-anchor="middle" font-size="16" fill="var(--color-fg)" font-weight="600">Ingresos</text>
+  <rect x="175" y="70" width="130" height="64" rx="8" fill="var(--color-surface-2)" stroke="var(--color-border)"/>
+  <text data-lang="en" x="240" y="108" text-anchor="middle" font-size="16" fill="var(--color-fg)" font-weight="600">Staffing</text>
+  <text data-lang="es" x="240" y="108" text-anchor="middle" font-size="16" fill="var(--color-fg)" font-weight="600">Dotación</text>
+  <rect x="330" y="70" width="130" height="64" rx="8" fill="var(--color-surface-2)" stroke="var(--color-border)"/>
+  <text data-lang="en" x="395" y="108" text-anchor="middle" font-size="16" fill="var(--color-fg)" font-weight="600">Wards</text>
+  <text data-lang="es" x="395" y="108" text-anchor="middle" font-size="16" fill="var(--color-fg)" font-weight="600">Salas</text>
+  <path d="M 150 102 L 172 102" fill="none" stroke="var(--color-good)" stroke-width="3"/>
+  <path d="M 305 102 L 327 102" fill="none" stroke="var(--color-good)" stroke-width="3"/>
+  <rect x="150" y="166" width="180" height="44" rx="8" fill="var(--color-accent-soft)" stroke="var(--color-accent)" stroke-width="2"/>
+  <text data-lang="en" x="240" y="194" text-anchor="middle" font-size="16" fill="var(--color-fg)" font-weight="600">Planning tool</text>
+  <text data-lang="es" x="240" y="194" text-anchor="middle" font-size="16" fill="var(--color-fg)" font-weight="600">Herramienta de plan</text>
+  <path d="M 90 134 L 90 188 L 148 188" fill="none" stroke="var(--color-accent)" stroke-width="3"/>
+  <path d="M 240 134 L 240 164" fill="none" stroke="var(--color-accent)" stroke-width="3"/>
+  <path d="M 332 188 L 395 188 L 395 136" fill="none" stroke="var(--color-accent)" stroke-width="3"/>
+  <g transform="translate(350 262) scale(0.8)">
+    <circle cx="0" cy="-34" r="11" fill="var(--color-good)" stroke="var(--color-border)"/>
+    <path d="M -16 0 Q -16 -22 0 -22 Q 16 -22 16 0 Z" fill="var(--color-good)" stroke="var(--color-border)"/>
+  </g>
+  <g transform="translate(378 262) scale(0.8)">
+    <circle cx="0" cy="-34" r="11" fill="var(--color-good)" stroke="var(--color-border)"/>
+    <path d="M -16 0 Q -16 -22 0 -22 Q 16 -22 16 0 Z" fill="var(--color-good)" stroke="var(--color-border)"/>
+  </g>
+  <g transform="translate(406 262) scale(0.8)">
+    <circle cx="0" cy="-34" r="11" fill="var(--color-good)" stroke="var(--color-border)"/>
+    <path d="M -16 0 Q -16 -22 0 -22 Q 16 -22 16 0 Z" fill="var(--color-good)" stroke="var(--color-border)"/>
+  </g>
+  <g transform="translate(434 262) scale(0.8)">
+    <circle cx="0" cy="-34" r="11" fill="var(--color-good)" stroke="var(--color-border)"/>
+    <path d="M -16 0 Q -16 -22 0 -22 Q 16 -22 16 0 Z" fill="var(--color-good)" stroke="var(--color-border)"/>
+  </g>
+  <text data-lang="en" x="20" y="262" text-anchor="start" font-size="15" fill="var(--color-good)" font-weight="600">Ward A: staffed</text>
+  <text data-lang="es" x="20" y="262" text-anchor="start" font-size="15" fill="var(--color-good)" font-weight="600">Sala A: con personal</text>
+  <text data-lang="en" x="20" y="284" text-anchor="start" font-size="15" fill="var(--color-fg-subtle)">Gap seen 2 weeks ahead</text>
+  <text data-lang="es" x="20" y="284" text-anchor="start" font-size="15" fill="var(--color-fg-subtle)">Brecha vista 2 semanas antes</text>
+</svg>

@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 300" role="img" aria-label="Today the staffing gap is seen too late">
+  <title>Today the staffing gap is seen too late</title>
+  <rect x="0" y="0" width="480" height="300" rx="10" fill="var(--color-surface)" stroke="var(--color-border)"/>
+  <rect x="20" y="70" width="130" height="64" rx="8" fill="var(--color-surface-2)" stroke="var(--color-border)"/>
+  <text data-lang="en" x="85" y="108" text-anchor="middle" font-size="16" fill="var(--color-fg)" font-weight="600">Admissions</text>
+  <text data-lang="es" x="85" y="108" text-anchor="middle" font-size="16" fill="var(--color-fg)" font-weight="600">Ingresos</text>
+  <rect x="175" y="70" width="130" height="64" rx="8" fill="var(--color-surface-2)" stroke="var(--color-border)"/>
+  <text data-lang="en" x="240" y="108" text-anchor="middle" font-size="16" fill="var(--color-fg)" font-weight="600">Staffing</text>
+  <text data-lang="es" x="240" y="108" text-anchor="middle" font-size="16" fill="var(--color-fg)" font-weight="600">Dotación</text>
+  <rect x="330" y="70" width="130" height="64" rx="8" fill="var(--color-surface-2)" stroke="var(--color-border)"/>
+  <text data-lang="en" x="395" y="108" text-anchor="middle" font-size="16" fill="var(--color-fg)" font-weight="600">Wards</text>
+  <text data-lang="es" x="395" y="108" text-anchor="middle" font-size="16" fill="var(--color-fg)" font-weight="600">Salas</text>
+  <path d="M 150 102 L 172 102" fill="none" stroke="var(--color-fg-faint)" stroke-width="3" stroke-dasharray="4 4"/>
+  <path d="M 150 90 L 172 114 M 172 90 L 150 114" fill="none" stroke="var(--color-bad)" stroke-width="3" stroke-linecap="round"/>
+  <path d="M 305 102 L 327 102" fill="none" stroke="var(--color-fg-faint)" stroke-width="3"/>
+  <text data-lang="en" x="160" y="160" text-anchor="middle" font-size="14" fill="var(--color-bad)">The gap is not seen</text>
+  <text data-lang="es" x="160" y="160" text-anchor="middle" font-size="14" fill="var(--color-bad)">La brecha no se ve</text>
+  <g transform="translate(350 196) scale(0.8)">
+    <circle cx="0" cy="-34" r="11" fill="var(--color-warn)" stroke="var(--color-border)"/>
+    <path d="M -16 0 Q -16 -22 0 -22 Q 16 -22 16 0 Z" fill="var(--color-warn)" stroke="var(--color-border)"/>
+  </g>
+  <g transform="translate(378 196) scale(0.8)">
+    <circle cx="0" cy="-34" r="11" fill="var(--color-warn)" stroke="var(--color-border)"/>
+    <path d="M -16 0 Q -16 -22 0 -22 Q 16 -22 16 0 Z" fill="var(--color-warn)" stroke="var(--color-border)"/>
+  </g>
+  <g transform="translate(406 196) scale(0.8)">
+    <circle cx="0" cy="-34" r="11" fill="var(--color-warn)" stroke="var(--color-border)"/>
+    <path d="M -16 0 Q -16 -22 0 -22 Q 16 -22 16 0 Z" fill="var(--color-warn)" stroke="var(--color-border)"/>
+  </g>
+  <g transform="translate(434 196) scale(0.8)">
+    <circle cx="0" cy="-34" r="11" fill="var(--color-warn)" stroke="var(--color-border)"/>
+    <path d="M -16 0 Q -16 -22 0 -22 Q 16 -22 16 0 Z" fill="var(--color-warn)" stroke="var(--color-border)"/>
+  </g>
+  <text data-lang="en" x="470" y="232" text-anchor="end" font-size="15" fill="var(--color-bad)" font-weight="600">Ward A: 6 nurses short</text>
+  <text data-lang="es" x="470" y="232" text-anchor="end" font-size="15" fill="var(--color-bad)" font-weight="600">Sala A: faltan 6 enfermeras</text>
+  <circle cx="60" cy="200" r="26" fill="none" stroke="var(--color-bad)" stroke-width="3"/>
+  <path d="M 60 200 L 60 184 M 60 200 L 72 206" fill="none" stroke="var(--color-bad)" stroke-width="3" stroke-linecap="round"/>
+  <text data-lang="en" x="20" y="258" text-anchor="start" font-size="15" fill="var(--color-fg)">Seen too late</text>
+  <text data-lang="es" x="20" y="258" text-anchor="start" font-size="15" fill="var(--color-fg)">Se ve demasiado tarde</text>
+  <text data-lang="en" x="20" y="280" text-anchor="start" font-size="15" fill="var(--color-fg-subtle)">Surgery is cancelled</text>
+  <text data-lang="es" x="20" y="280" text-anchor="start" font-size="15" fill="var(--color-fg-subtle)">Se cancela la cirugía</text>
+</svg>

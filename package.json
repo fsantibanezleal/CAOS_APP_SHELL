@@ -1,6 +1,6 @@
 {
   "name": "@fasl-work/caos-app-shell",
-  "version": "0.11.2",
+  "version": "0.12.0",
   "description": "Shared web-app shell, workbench primitives, content primitives, design system and measured gate for the CAOS / Faena public apps (ADR-0016, ADR-0017, ADR-0071).",
   "license": "MIT",
   "author": "Felipe Santibáñez-Leal",
@@ -31,6 +31,7 @@
     "./styles.css": "./styles.css",
     "./chart.css": "./chart.css",
     "./reserved-classes.json": "./reserved-classes.json",
+    "./executive.schema.json": "./src/content/executive.schema.json",
     "./serve": "./gate/serve.mjs",
     "./gate": "./gate/run.mjs",
     "./package.json": "./package.json"
@@ -41,7 +42,8 @@
     "chart.css",
     "bin",
     "gate",
-    "reserved-classes.json"
+    "reserved-classes.json",
+    "src/content/executive.schema.json"
   ],
   "scripts": {
     "build": "tsup",
