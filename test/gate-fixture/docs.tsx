@@ -4,6 +4,7 @@
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import { Callout, DocSection, Equation, ExecutiveView, Figure, Glossary, SubTabs, Tabs, pick, type BiText } from '../../src/index';
 import executiveData from './executive/executive.json';
+import { SECTION_TITLES } from '../../src/content/executive';
 
 type Lang = 'en' | 'es';
 const REFS = ['km1927', 'hethcote2000'];
@@ -105,28 +106,87 @@ const HIDE_STYLE: Record<string, string> = {
   'area-hidden-tinyfont': '.caos-exec [data-exec-field] { font-size: 1px !important; line-height: 16px; }',
   'area-hidden-clippath': '.caos-exec [data-exec-field] { clip-path: inset(0 0 100% 0); }',
   'area-hidden-filler': '.caos-exec [data-exec-field] { opacity: 0; }',
+  // the lede held to a narrow measure, and the executive view held to a fraction of the column (Felipe, 2026-10-13)
+  'lede-narrow': '.lede { max-width: 40ch; }',
+  'exec-narrow': '.caos-exec { max-width: 40rem; }',
+  // sub-tabs 2 to 5 cannot be reached: the gate's walk never opens them
+  'exec-tab-unreachable': '.caos-exec [data-exec-tabs] [role="tab"]:not(.active) { display: none; }',
 };
 const HIDE_ES = '.caos-exec p, .caos-exec dd, .caos-exec span, .caos-exec strong { color: transparent !important; }';
 
 /** The text a plant writes into a rendered field, bypassing the component's own validation (the gate must catch it on the page). */
 const WORDS31 = Array.from({ length: 31 }, (_, i) => `word${i}`).join(' ');
+const CLEAN_KEY = { en: 'Wards learn they are short of staff only days before the shift, and planned surgery pays for it.', es: 'Las salas saben que les falta personal solo días antes del turno, y la cirugía programada lo paga.' };
 const DOM_PLANT: Record<string, Record<'en' | 'es', string>> = {
   'exec-long-sentence': { en: `${WORDS31}.`, es: `${WORDS31}.` },
-  'exec-es-only-long': { en: 'A short vision for the English reader.', es: `${WORDS31}.` },
+  'exec-es-only-long': { en: CLEAN_KEY.en, es: `${WORDS31}.` },
   'exec-citation-inline': { en: 'Admissions rose (Smith et al., 2019).', es: 'Los ingresos subieron (Smith et al., 2019).' },
   'exec-equation-text': { en: 'Admissions follow $x = y$.', es: 'Los ingresos siguen $x = y$.' },
+  // the rubric's labels and questions printed on the page (Felipe, 2026-10-13: ideas and language, never the labels)
+  'exec-rubric-label': { en: 'AI Transformation Story', es: 'Posicionamiento 4C' },
+  'exec-rubric-question': { en: 'Built for a C-suite exec?', es: '¿Confiaría en ellos frente a un ejecutivo?' },
+  'exec-rubric-label-es': { en: 'AI Transformation Story', es: 'Posicionamiento 4C' },
+  'exec-rubric-question-es': { en: 'Built for a C-suite exec?', es: '¿Confiaría en ellos frente a un ejecutivo?' },
+  // promotional or client-bound wording (Felipe, 2026-10-13): one plant per word, written into the key message of the rendered view
+  'exec-promo-our-client': { en: 'Our client cuts agency hours in every ward.', es: CLEAN_KEY.es },
+  'exec-promo-nuestro-cliente': { en: CLEAN_KEY.en, es: 'Nuestro cliente reduce las horas de agencia en cada sala.' },
+  'exec-promo-contact-us': { en: 'Contact us to see the ward forecast.', es: CLEAN_KEY.es },
+  'exec-promo-contactenos': { en: CLEAN_KEY.en, es: 'Contáctenos para ver el pronóstico por sala.' },
+  'exec-promo-buy': { en: 'Buy the forecast before winter.', es: CLEAN_KEY.es },
+  'exec-promo-comprar': { en: CLEAN_KEY.en, es: 'Hay que comprar el pronóstico antes del invierno.' },
+  'exec-promo-price': { en: 'The price falls as wards join.', es: CLEAN_KEY.es },
+  'exec-promo-precio': { en: CLEAN_KEY.en, es: 'El precio baja a medida que se suman salas.' },
+  'exec-promo-offer': { en: 'The offer ends in December.', es: CLEAN_KEY.es },
+  'exec-promo-oferta': { en: CLEAN_KEY.en, es: 'La oferta termina en diciembre.' },
 };
 
-/** The data file of the fixture, with the defect of a data plant. */
+const clip = (list: any[], n: number) => list.splice(n);
+/** The data file of the fixture, with the defect of a data plant (the page then shows the validator's reason, or the gate catches the rule). */
+const DATA_PLANT: Record<string, (d: any) => void> = {
+  'exec-invalid-data': (d) => {
+    delete d.title;
+    d.tagline = 'an extra field';
+  },
+  // the floors of the structure, one plant each: too few rows (and too many for the headline figures)
+  'exec-headline-one': (d) => clip(d.headline_figures, 1),
+  'exec-headline-four': (d) => d.headline_figures.push(JSON.parse(JSON.stringify(d.headline_figures[0]))),
+  'exec-pain-one-paragraph': (d) => clip(d.pain.paragraphs, 1),
+  'exec-pain-bearers-two': (d) => clip(d.pain.bearers, 2),
+  'exec-pain-figures-one': (d) => clip(d.pain.figures, 1),
+  'exec-pain-causes-two': (d) => clip(d.pain.causes, 2),
+  'exec-pain-causes-over': (d) => d.pain.causes.forEach((c: any) => (c.weight = 60)),
+  'exec-context-forces-two': (d) => clip(d.context.forces, 2),
+  'exec-context-no-evidence': (d) => clip(d.context.evidence, 0),
+  'exec-situation-roles-two': (d) => clip(d.situation.roles, 2),
+  'exec-situation-sota-two': (d) => clip(d.situation.state_of_the_art, 2),
+  'exec-situation-no-status': (d) => delete d.situation.status,
+  'exec-trends-two': (d) => clip(d.trends.items, 2),
+  'exec-trend-kind': (d) => (d.trends.items[0].kind = 'fashion'),
+  'exec-trend-horizon': (d) => (d.trends.items[0].horizon = 'next_week'),
+  'exec-trend-no-signal-source': (d) => delete d.trends.items[0].signal.source,
+  'exec-proposal-actions-two': (d) => clip(d.proposal.actions, 2),
+  'exec-proposal-no-risks': (d) => clip(d.proposal.risks, 0),
+  'exec-proposal-no-unknowns': (d) => clip(d.proposal.unknowns, 0),
+  'exec-action-owner-stranger': (d) => (d.proposal.actions[0].owner = { en: 'The minister', es: 'La ministra' }),
+  'exec-key-message-missing': (d) => delete d.context.key_message,
+  'exec-paragraph-short': (d) => (d.pain.paragraphs[0].en = 'Too short to be a paragraph of substance.'),
+  // the 4 C's of the proposal
+  'exec-four-cs-fifth': (d) => d.proposal.four_cs.push({ c: { en: 'Cause', es: 'Causa' }, applies: { en: 'It ties to the problem.', es: 'Se ata al problema.' } }),
+  'exec-four-cs-missing': (d) => delete d.proposal.four_cs,
+  'exec-four-cs-renamed': (d) => (d.proposal.four_cs[1].c.en = 'Contexts'),
+  'exec-four-cs-reordered': (d) => ([d.proposal.four_cs[0], d.proposal.four_cs[1]] = [d.proposal.four_cs[1], d.proposal.four_cs[0]]),
+  'exec-four-cs-no-applies': (d) => delete d.proposal.four_cs[2].applies,
+  // the sources are links
+  'exec-source-no-url': (d) => delete d.sources[0].url,
+  'exec-source-http': (d) => (d.sources[0].url = 'http://example.org/report'),
+  'exec-source-file-citation': (d) => (d.sources[0].note = { en: 'Report file 2026080375, section 2', es: 'Informe archivo 2026080375, sección 2' }),
+  'exec-source-unknown-id': (d) => (d.pain.figures[0].source = 'nothing'),
+  'exec-source-uncited': (d) => d.sources.push({ id: 'spare', title: { en: 'A spare source', es: 'Una fuente de repuesto' }, url: 'https://example.org/spare' }),
+};
+
 function executiveDataFor(plant: string) {
   const d = JSON.parse(JSON.stringify(executiveData));
-  if (plant === 'exec-invalid-data') {
-    delete d.why_now.figure;
-    d.tagline = 'an extra field';
-  }
-  if (plant === 'exec-outcomes-two') d.outcomes.splice(2, 1);
-  if (plant === 'exec-dialogue-six') d.dialogue = Array.from({ length: 6 }, () => d.dialogue[0]);
-  if (plant === 'exec-four-cs-present') d.four_cs = ['A', 'B', 'C', 'D'].map((c) => ({ c: { en: c, es: c }, exec_problem: { en: 'It ties to the problem.', es: 'Se ata al problema.' } }));
+  DATA_PLANT[plant]?.(d);
   return d;
 }
 
@@ -135,10 +195,51 @@ function ExecutiveFixture({ lang, plant }: { lang: Lang; plant: string }) {
   const box = useRef<HTMLDivElement | null>(null);
   const injected = DOM_PLANT[plant];
   useEffect(() => {
-    // write the plant into the vision of the rendered view once it is on the page
-    const el = box.current?.querySelector('[data-exec-field="vision"]');
-    if (el && injected) el.textContent = injected[lang];
-  }, [injected, lang]);
+    // write the plant into the key message of the rendered view whenever it is on the page (the sub-tabs render one section at
+    // a time), and change the structure of the view the way a plant needs: a source note written as prose with no link, the key
+    // message moved off the top, the landing block or the onward links removed, the technical link reworded
+    const apply = () => {
+      const root = box.current;
+      if (!root) return;
+      const el = root.querySelector('[data-exec-field="pain.key_message"]');
+      if (el && injected && el.textContent !== injected[lang]) el.textContent = injected[lang];
+      const note = root.querySelector('[data-exec-notes] > li');
+      const prose = lang === 'en' ? 'Stability report, section 2, page 14, file 2026080375.' : 'Informe de estabilidad, sección 2, página 14, archivo 2026080375.';
+      if (note && plant === 'exec-note-no-link' && note.textContent !== prose) note.textContent = prose;
+      if (plant === 'exec-key-not-first') {
+        for (const section of root.querySelectorAll('[data-exec-section]')) {
+          const key = section.querySelector('[data-exec-key-message]');
+          if (key && key !== section.lastElementChild) section.appendChild(key);
+        }
+      }
+      if (plant === 'exec-no-landing') root.querySelector('[data-exec-landing]')?.remove();
+      if (plant === 'exec-links-missing') root.querySelector('[data-exec-links]')?.remove();
+      const technical = root.querySelector('[data-exec-link="technical"]');
+      if (plant === 'exec-link-wording' && technical && technical.textContent !== 'Read more') technical.textContent = 'Read more';
+    };
+    apply();
+    if (!box.current) return undefined;
+    const watch = new MutationObserver(apply);
+    watch.observe(box.current, { childList: true, subtree: true });
+    return () => watch.disconnect();
+  }, [injected, lang, plant]);
+  if (plant === 'exec-sections-stacked') {
+    // the sections stacked in one scroll, the way shell 0.12.0 showed them: they are not sub-tabs
+    return (
+      <div className="caos-exec" data-executive-view="" data-executive-schema="2.0.0" data-executive-valid="true">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <section key={n} className="caos-exec-section" data-exec-section={n} aria-label={pick(SECTION_TITLES[n - 1], lang)}>
+            <p className="caos-exec-key" data-exec-key-message="">
+              {pick(CLEAN_KEY, lang)}
+            </p>
+          </section>
+        ))}
+        <aside>
+          <ol data-exec-notes="" />
+        </aside>
+      </div>
+    );
+  }
   if (plant === 'exec-old-areas') {
     // the four areas of shell 0.11, composed by hand: they are not an executive view
     return (

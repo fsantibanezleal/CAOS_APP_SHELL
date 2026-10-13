@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 300" role="img" aria-label="Three roles each see a part of the picture">
+  <title>Three roles each see a part of the picture</title>
+  <rect x="0" y="0" width="480" height="300" rx="10" fill="var(--color-surface)" stroke="var(--color-border)"/>
+  <rect x="20" y="30" width="130" height="64" rx="8" fill="var(--color-surface-2)" stroke="var(--color-border)"/>
+  <text data-lang="en" x="85" y="68" text-anchor="middle" font-size="15" fill="var(--color-fg)" font-weight="600">Operations</text>
+  <text data-lang="es" x="85" y="68" text-anchor="middle" font-size="15" fill="var(--color-fg)" font-weight="600">Operaciones</text>
+  <rect x="175" y="30" width="130" height="64" rx="8" fill="var(--color-surface-2)" stroke="var(--color-border)"/>
+  <text data-lang="en" x="240" y="68" text-anchor="middle" font-size="15" fill="var(--color-fg)" font-weight="600">Nursing</text>
+  <text data-lang="es" x="240" y="68" text-anchor="middle" font-size="15" fill="var(--color-fg)" font-weight="600">Enfermería</text>
+  <rect x="330" y="30" width="130" height="64" rx="8" fill="var(--color-surface-2)" stroke="var(--color-border)"/>
+  <text data-lang="en" x="395" y="68" text-anchor="middle" font-size="15" fill="var(--color-fg)" font-weight="600">Beds</text>
+  <text data-lang="es" x="395" y="68" text-anchor="middle" font-size="15" fill="var(--color-fg)" font-weight="600">Camas</text>
+  <path d="M 85 94 L 85 140 M 240 94 L 240 140 M 395 94 L 395 140" fill="none" stroke="var(--color-fg-faint)" stroke-width="3" stroke-dasharray="4 4"/>
+  <rect x="20" y="140" width="130" height="44" rx="8" fill="var(--color-surface)" stroke="var(--color-warn)" stroke-width="2"/>
+  <text data-lang="en" x="85" y="167" text-anchor="middle" font-size="14" fill="var(--color-fg)">Budget list</text>
+  <text data-lang="es" x="85" y="167" text-anchor="middle" font-size="14" fill="var(--color-fg)">Lista de presupuesto</text>
+  <rect x="175" y="140" width="130" height="44" rx="8" fill="var(--color-surface)" stroke="var(--color-warn)" stroke-width="2"/>
+  <text data-lang="en" x="240" y="167" text-anchor="middle" font-size="14" fill="var(--color-fg)">Roster sheet</text>
+  <text data-lang="es" x="240" y="167" text-anchor="middle" font-size="14" fill="var(--color-fg)">Planilla de turnos</text>
+  <rect x="330" y="140" width="130" height="44" rx="8" fill="var(--color-surface)" stroke="var(--color-warn)" stroke-width="2"/>
+  <text data-lang="en" x="395" y="167" text-anchor="middle" font-size="14" fill="var(--color-fg)">Bed board</text>
+  <text data-lang="es" x="395" y="167" text-anchor="middle" font-size="14" fill="var(--color-fg)">Pizarra de camas</text>
+  <path d="M 150 162 L 172 162 M 305 162 L 327 162" fill="none" stroke="var(--color-bad)" stroke-width="3" stroke-linecap="round"/>
+  <path d="M 156 152 L 166 172 M 166 152 L 156 172 M 311 152 L 321 172 M 321 152 L 311 172" fill="none" stroke="var(--color-bad)" stroke-width="2.5" stroke-linecap="round"/>
+  <text data-lang="en" x="240" y="226" text-anchor="middle" font-size="15" fill="var(--color-bad)" font-weight="600">Three lists that do not meet</text>
+  <text data-lang="es" x="240" y="226" text-anchor="middle" font-size="15" fill="var(--color-bad)" font-weight="600">Tres listas que no se encuentran</text>
+  <text data-lang="en" x="240" y="256" text-anchor="middle" font-size="14" fill="var(--color-fg-subtle)">Each role sees only part of the gap</text>
+  <text data-lang="es" x="240" y="256" text-anchor="middle" font-size="14" fill="var(--color-fg-subtle)">Cada rol ve solo parte de la brecha</text>
+</svg>

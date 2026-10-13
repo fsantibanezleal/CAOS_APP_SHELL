@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 300" role="img" aria-label="With the tool the gap is seen two weeks ahead">
-  <title>With the tool the gap is seen two weeks ahead</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 300" role="img" aria-label="With the approach in place the gap is seen two weeks ahead">
+  <title>With the approach in place the gap is seen two weeks ahead</title>
   <rect x="0" y="0" width="480" height="300" rx="10" fill="var(--color-surface)" stroke="var(--color-border)"/>
   <rect x="20" y="70" width="130" height="64" rx="8" fill="var(--color-surface-2)" stroke="var(--color-border)"/>
   <text data-lang="en" x="85" y="108" text-anchor="middle" font-size="16" fill="var(--color-fg)" font-weight="600">Admissions</text>
@@ -13,8 +13,8 @@
   <path d="M 150 102 L 172 102" fill="none" stroke="var(--color-good)" stroke-width="3"/>
   <path d="M 305 102 L 327 102" fill="none" stroke="var(--color-good)" stroke-width="3"/>
   <rect x="150" y="166" width="180" height="44" rx="8" fill="var(--color-accent-soft)" stroke="var(--color-accent)" stroke-width="2"/>
-  <text data-lang="en" x="240" y="194" text-anchor="middle" font-size="16" fill="var(--color-fg)" font-weight="600">Planning tool</text>
-  <text data-lang="es" x="240" y="194" text-anchor="middle" font-size="16" fill="var(--color-fg)" font-weight="600">Herramienta de plan</text>
+  <text data-lang="en" x="240" y="194" text-anchor="middle" font-size="16" fill="var(--color-fg)" font-weight="600">Shared plan</text>
+  <text data-lang="es" x="240" y="194" text-anchor="middle" font-size="16" fill="var(--color-fg)" font-weight="600">Plan compartido</text>
   <path d="M 90 134 L 90 188 L 148 188" fill="none" stroke="var(--color-accent)" stroke-width="3"/>
   <path d="M 240 134 L 240 164" fill="none" stroke="var(--color-accent)" stroke-width="3"/>
   <path d="M 332 188 L 395 188 L 395 136" fill="none" stroke="var(--color-accent)" stroke-width="3"/>
