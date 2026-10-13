@@ -67,21 +67,17 @@ A **topic** is a leaf panel of the page: a tab of `Tabs`, a sub-tab of `SubTabs`
 
 ### Introduction (`/introduction`)
 
-The page opens with two top-level topics: `executive` first and open on load (the gate fails an executive view that is not the view the page opens on) and `technical`; every section of the page sits in one of the two views (a section outside both fails, and so does an equation or a symbol glossary anywhere on the page while the executive view is open). The executive view answers one question: would the person who owns this problem give it thirty more minutes, or delegate it down? It is written in business language, vision first, holds no `Equation` and no symbol glossary, and every claim of value carries a number with its unit and its source (`Stat`: `data-stat`); questions and answers are `Question` (`data-qa`). The executive view cannot be waived, as a whole or by area.
+The page opens with two top-level topics: `executive` first and open on load (the gate fails an executive view that is not the view the page opens on) and `technical`; every section of the page sits in one of the two views (a section outside both fails, and so does an equation or a symbol glossary anywhere on the page while the executive view is open). The executive view is not composed by the product: it is the shell's `ExecutiveView` fed by the product's `content/executive.json` (schema `executive.schema.json`), with the four sections of the executive-pitch rubric, three illustrations and numbered source notes; it has no areas, it is checked by the gate as a whole (`docs/06_executive-view.md`), and it cannot be waived, as a whole or by part. The areas `initiative`, `outcomes`, `positioning` and `credibility` of shell 0.11 no longer exist; a section declaring one fails as an unknown area.
 
 | Area | View | What it is | What the gate requires in it |
 |---|---|---|---|
-| `initiative` | executive | the initiative an executive owns, named by role and industry, and the quantified reason to act now | at least 1 dense paragraph, at least 1 quantified statement (value, unit, source) |
-| `outcomes` | executive | the transformation story: the vision first, then each capability tied to a business outcome with a quantified proof point | at least 1 dense paragraph, at least 3 rows of capability, outcome and proof point, at most 0 rows whose proof point is not a quantified statement |
-| `positioning` | executive | the value story: four value points, each tied back to the problem of that executive | exactly 4 items, at most 0 items without a sentence |
-| `credibility` | executive | delivery and credibility: the business questions that executive would ask, each answered plainly with the honest limits | at least 3 question and answer pairs, exactly 1 honest callout |
 | `problem` | technical | the industrial or scientific problem, with the concrete equipment, setting and who it serves | at least 2 dense paragraphs |
 | `principles` | technical | the physics or the domain principles the product rests on | at least 2 dense paragraphs |
 | `math` | technical | the governing mathematics | at least 1 captioned equation, at least 10 glossary items |
 | `pipeline` | technical | the end-to-end pipeline, from the data to the screen | at least 4 steps in an ordered list |
 | `honesty` | technical | what is exact and what is illustrative; what the product is not | exactly 1 honest callout, at least 1 dense paragraph |
 
-What a count means: the rows of `outcomes` are those of the section's first table or, when a top-level list comes first, the items of that list, each proved by a quantified statement; an item of `positioning` is a sentence of at least 6 words; a glossary item counts when its term and its definition are visible and hold a letter or a digit; a step counts when it is visible and holds a letter or a digit; a statement is quantified when the reader sees its number, its unit and its source (an attribute alone does not count); hidden or empty items are not counted, and the failure message gives the count of what is visible.
+What a count means: a glossary item counts when its term and its definition are visible and hold a letter or a digit; a step counts when it is visible and holds a letter or a digit; a statement is quantified when the reader sees its number, its unit and its source (an attribute alone does not count); hidden or empty items are not counted, and the failure message gives the count of what is visible.
 
 Page-level floors: `intro-figure` (at least 1 overview figure in the technical view); `intro-equations` (at least 3 captioned equations in the technical view).
 

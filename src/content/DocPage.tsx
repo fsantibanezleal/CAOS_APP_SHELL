@@ -14,7 +14,7 @@ import { DocRefsScope, useRefsScope } from './Cite';
  * holds each area's rule; `test/docFloors.test.ts` keeps these names equal to that table's.
  */
 export const DOC_AREAS = {
-  '/introduction': ['initiative', 'outcomes', 'positioning', 'credibility', 'problem', 'principles', 'math', 'pipeline', 'honesty'],
+  '/introduction': ['problem', 'principles', 'math', 'pipeline', 'honesty'],
   '/methodology': ['method'],
   '/implementation': ['architecture', 'reproducibility', 'engine', 'lanes', 'contract', 'deployment'],
   '/experiments': ['question', 'metrics', 'protocol', 'datasets'],
