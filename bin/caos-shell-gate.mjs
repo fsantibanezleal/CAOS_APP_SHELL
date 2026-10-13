@@ -9,7 +9,7 @@
 // Options:
 //   --base-path /Repo/           the site's base path with --serve (a project page); default /
 //   --routes /,/methodology      the routes; default: read from the header navigation
-//   --workbench /                the routes that carry the case workbench; default /
+//   --workbench /app             the routes that carry the case workbench; default /app
 //   --sizes 390x844,...,2560x1440  --themes light,dark  --langs en,es
 //   --case-sample id1,id2        cases walked outside the primary mode; default the first and the last
 //   --single-case                the workbench has one case and no case control

@@ -17,6 +17,7 @@ import {
   Knob,
   PlotCard,
   Readout,
+  Landing,
   STANDARD_ROUTES,
   Stage,
   SubTabs,
@@ -595,7 +596,7 @@ function Doc({ id }: { id: string }) {
       .catch(() => setArtifact({ cases: -1 }));
     if (PLANT === 'http404') fetch('/data/missing.json').catch(() => undefined);
   }, [id]);
-  const route = STANDARD_ROUTES.find((r) => r.path === `/${id}`) ?? STANDARD_ROUTES[1];
+  const route = STANDARD_ROUTES.find((r) => r.path === `/${id}`) ?? STANDARD_ROUTES[0];
   const title = { en: route.en, es: route.es };
   if (PLANT === 'thin-doc' && id === 'experiments') {
     return (
@@ -676,10 +677,12 @@ function App() {
       <AppShell config={config}>
         <ModePlants />
         <Routes>
-          <Route path="/" element={<Workbench />} />
+          <Route path="/" element={PLANT === 'landing-app' ? <Workbench /> : <Landing />} />
+          <Route path="/app" element={<Workbench />} />
           {['introduction', 'methodology', 'implementation', 'experiments', 'benchmark'].map((id) => (
             <Route key={id} path={`/${id}`} element={<Doc id={id} />} />
           ))}
+          <Route path="*" element={<Landing />} />
         </Routes>
       </AppShell>
     </CitationsProvider>

@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { THEME_BOOT_SCRIPT } from '../../dist/keys.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
-export const ROUTES = ['introduction', 'methodology', 'implementation', 'experiments', 'benchmark'];
+export const ROUTES = ['app', 'introduction', 'methodology', 'implementation', 'experiments', 'benchmark'];
 
 function page(plant) {
   return `<!doctype html>

@@ -1,13 +1,31 @@
 {
-  "executive": { "en": "Chief Operating Officer", "es": "Director de Operaciones" },
-  "organisation": { "en": "a regional hospital network", "es": "una red regional de hospitales" },
+  "executive": {
+    "en": "Chief Operating Officer",
+    "es": "Director de Operaciones"
+  },
+  "organisation": {
+    "en": "a regional hospital network",
+    "es": "una red regional de hospitales"
+  },
   "initiative": {
     "en": "Keep every ward staffed through the winter wave without cancelling planned surgery.",
     "es": "Mantener todas las salas con personal durante la ola de invierno sin cancelar cirugías programadas."
   },
   "why_now": {
-    "figure": { "value": { "en": "18", "es": "18" }, "unit": { "en": "percent more admissions than last winter", "es": "por ciento más ingresos que el invierno pasado" } },
-    "deadline": { "en": "by 1 December 2026", "es": "antes del 1 de diciembre de 2026" }
+    "figure": {
+      "value": {
+        "en": "18",
+        "es": "18"
+      },
+      "unit": {
+        "en": "percent more admissions than last winter",
+        "es": "por ciento más ingresos que el invierno pasado"
+      }
+    },
+    "deadline": {
+      "en": "by 1 December 2026",
+      "es": "antes del 1 de diciembre de 2026"
+    }
   },
   "vision": {
     "en": "Every ward knows its staffing gap two weeks ahead, so surgery stays on schedule.",
@@ -15,68 +33,181 @@
   },
   "outcomes": [
     {
-      "capability": { "en": "Forecasts admissions by ward", "es": "Pronostica los ingresos por sala" },
-      "outcome": { "en": "Fewer last-minute shift calls", "es": "Menos llamados de turno a último minuto" },
+      "capability": {
+        "en": "Forecasts admissions by ward",
+        "es": "Pronostica los ingresos por sala"
+      },
+      "outcome": {
+        "en": "Fewer last-minute shift calls",
+        "es": "Menos llamados de turno a último minuto"
+      },
       "proof": {
-        "value": { "en": "40", "es": "40" },
-        "unit": { "en": "percent fewer", "es": "por ciento menos" },
-        "statement": { "en": "Shift calls fell in the pilot ward.", "es": "Los llamados de turno bajaron en la sala piloto." }
+        "value": {
+          "en": "40",
+          "es": "40"
+        },
+        "unit": {
+          "en": "percent fewer",
+          "es": "por ciento menos"
+        },
+        "statement": {
+          "en": "Shift calls fell in the pilot ward.",
+          "es": "Los llamados de turno bajaron en la sala piloto."
+        }
       }
     },
     {
-      "capability": { "en": "Compares staffing plans side by side", "es": "Compara planes de dotación lado a lado" },
-      "outcome": { "en": "Planned surgery stays on schedule", "es": "La cirugía programada se mantiene en fecha" },
+      "capability": {
+        "en": "Compares staffing plans side by side",
+        "es": "Compara planes de dotación lado a lado"
+      },
+      "outcome": {
+        "en": "Planned surgery stays on schedule",
+        "es": "La cirugía programada se mantiene en fecha"
+      },
       "proof": {
-        "value": { "en": "3", "es": "3" },
-        "unit": { "en": "cancellations avoided per month", "es": "cancelaciones evitadas por mes" },
-        "statement": { "en": "The pilot ward avoided three cancellations each month.", "es": "La sala piloto evitó tres cancelaciones cada mes." }
+        "value": {
+          "en": "3",
+          "es": "3"
+        },
+        "unit": {
+          "en": "cancellations avoided per month",
+          "es": "cancelaciones evitadas por mes"
+        },
+        "statement": {
+          "en": "The pilot ward avoided three cancellations each month.",
+          "es": "La sala piloto evitó tres cancelaciones cada mes."
+        }
       }
     },
     {
-      "capability": { "en": "Explains every number it shows", "es": "Explica cada cifra que muestra" },
-      "outcome": { "en": "Plans the board can audit", "es": "Planes que el directorio puede auditar" },
+      "capability": {
+        "en": "Explains every number it shows",
+        "es": "Explica cada cifra que muestra"
+      },
+      "outcome": {
+        "en": "Plans the board can audit",
+        "es": "Planes que el directorio puede auditar"
+      },
       "proof": {
-        "value": { "en": "100", "es": "100" },
-        "unit": { "en": "percent of figures traced", "es": "por ciento de cifras rastreadas" },
-        "statement": { "en": "Each figure links to its source record.", "es": "Cada cifra enlaza con su registro de origen." }
+        "value": {
+          "en": "100",
+          "es": "100"
+        },
+        "unit": {
+          "en": "percent of figures traced",
+          "es": "por ciento de cifras rastreadas"
+        },
+        "statement": {
+          "en": "Each figure links to its source record.",
+          "es": "Cada cifra enlaza con su registro de origen."
+        }
       }
     }
   ],
   "dialogue": [
     {
-      "question": { "en": "What does it cost to adopt?", "es": "¿Cuánto cuesta adoptarlo?" },
-      "answer": { "en": "Nothing: it is a test product with no customers and no price.", "es": "Nada: es un producto de prueba sin clientes ni precio." }
+      "question": {
+        "en": "What does it cost to adopt?",
+        "es": "¿Cuánto cuesta adoptarlo?"
+      },
+      "answer": {
+        "en": "Nothing: it is a test product with no customers and no fee.",
+        "es": "Nada: es un producto de prueba sin clientes ni tarifa."
+      }
     },
     {
-      "question": { "en": "How do we know the numbers hold?", "es": "¿Cómo sabemos que las cifras se sostienen?" },
+      "question": {
+        "en": "How do we know the numbers hold?",
+        "es": "¿Cómo sabemos que las cifras se sostienen?"
+      },
       "answer": {
         "en": "The gate measures every page before release. Its own plants prove it can fail.",
         "es": "El verificador mide cada página antes de publicar. Sus propias plantas prueban que puede fallar."
       }
     },
     {
-      "question": { "en": "What is it not?", "es": "¿Qué no es?" },
-      "answer": { "en": "It is not a forecast and it serves no real decision.", "es": "No es un pronóstico y no sirve a ninguna decisión real." }
+      "question": {
+        "en": "What is it not?",
+        "es": "¿Qué no es?"
+      },
+      "answer": {
+        "en": "It is not a forecast and it serves no real decision.",
+        "es": "No es un pronóstico y no sirve a ninguna decisión real."
+      }
     }
   ],
   "illustrations": {
     "initiative": {
       "file": "executive/initiative.svg",
-      "caption": { "en": "The executive at the desk, with the winter deadline on the calendar.", "es": "El ejecutivo en su escritorio, con la fecha límite del invierno en el calendario." }
+      "caption": {
+        "en": "The executive at the desk, with the winter deadline on the calendar.",
+        "es": "El ejecutivo en su escritorio, con la fecha límite del invierno en el calendario."
+      }
     },
     "problem": {
       "file": "executive/problem.svg",
-      "caption": { "en": "Today the gap between admissions and staff shows up too late.", "es": "Hoy la brecha entre ingresos y personal aparece demasiado tarde." }
+      "caption": {
+        "en": "Today the gap between admissions and staff shows up too late.",
+        "es": "Hoy la brecha entre ingresos y personal aparece demasiado tarde."
+      }
     },
     "solution": {
       "file": "executive/solution.svg",
-      "caption": { "en": "With the tool in place, the gap is seen two weeks ahead.", "es": "Con la herramienta, la brecha se ve con dos semanas de anticipación." }
+      "caption": {
+        "en": "With the tool in place, the gap is seen two weeks ahead.",
+        "es": "Con la herramienta, la brecha se ve con dos semanas de anticipación."
+      }
     }
   },
   "sources": [
-    { "field": "why_now.figure", "source": { "en": "Fixture record, not a real hospital.", "es": "Registro de prueba, no un hospital real." } },
-    { "field": "outcomes[0].proof", "source": { "en": "Pilot ward log of the fixture.", "es": "Bitácora de la sala piloto de la prueba." } },
-    { "field": "outcomes[1].proof", "source": { "en": "Pilot ward log of the fixture.", "es": "Bitácora de la sala piloto de la prueba." } },
-    { "field": "outcomes[2].proof", "source": { "en": "Audit trail of the fixture.", "es": "Traza de auditoría de la prueba." } }
+    {
+      "field": "why_now.figure",
+      "title": {
+        "en": "Executive view fixture data of the shell",
+        "es": "Datos de prueba de la vista ejecutiva del shell"
+      },
+      "url": "https://github.com/fsantibanezleal/CAOS_APP_SHELL/blob/main/test/gate-fixture/executive/executive.json",
+      "note": {
+        "en": "Test record, not a real hospital.",
+        "es": "Registro de prueba, no un hospital real."
+      }
+    },
+    {
+      "field": "outcomes[0].proof",
+      "title": {
+        "en": "The executive view guide of the shell",
+        "es": "La guía de la vista ejecutiva del shell"
+      },
+      "url": "https://github.com/fsantibanezleal/CAOS_APP_SHELL/blob/main/docs/06_executive-view.md",
+      "note": {
+        "en": "Pilot ward figures of the fixture.",
+        "es": "Cifras de la sala piloto de la prueba."
+      }
+    },
+    {
+      "field": "outcomes[1].proof",
+      "title": {
+        "en": "The gate guide of the shell",
+        "es": "La guía del verificador del shell"
+      },
+      "url": "https://github.com/fsantibanezleal/CAOS_APP_SHELL/blob/main/docs/07_gate.md",
+      "note": {
+        "en": "Pilot ward figures of the fixture.",
+        "es": "Cifras de la sala piloto de la prueba."
+      }
+    },
+    {
+      "field": "outcomes[2].proof",
+      "title": {
+        "en": "The software design document of the shell",
+        "es": "El documento de diseño de software del shell"
+      },
+      "url": "https://github.com/fsantibanezleal/CAOS_APP_SHELL/blob/main/docs/design/SDD.md",
+      "note": {
+        "en": "Audit trail figures of the fixture.",
+        "es": "Cifras de la traza de auditoría de la prueba."
+      }
+    }
   ]
 }

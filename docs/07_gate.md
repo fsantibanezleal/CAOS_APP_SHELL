@@ -42,7 +42,7 @@ CAOS_Fragmenta's deploy gate).
 
 ## Options
 
-`--base-path`, `--routes`, `--workbench` (the routes with the case workbench, default `/`; pass `''` for a product whose
+`--base-path`, `--routes`, `--workbench` (the routes with the case workbench, default `/app`; pass `''` for a product whose
 App is a `SurfacePage`), `--sizes`, `--themes`, `--langs`, `--case-sample`, `--single-case`, `--idle-ms`, `--settle-ms`,
 `--text-floor`, `--instrument-min`, `--stage-fill-min`, `--stage-floor` (the least height in pixels a filling card's drawing keeps, 140), `--wide-font-sizes`, `--no-wide-font`, `--out`. Exit 1 on any
 failure, 2 on misuse. The report (`gate-report.json`) lists every failure, the number of states and captures, and the

@@ -173,15 +173,17 @@ export const EXECUTIVE_FLOORS = ['executive', 'executive-view', 'initiative', 'o
 // (conventions/problem-context-first.md). Its structure is `src/content/executive.schema.json`; its writing limits are
 // here AND in `src/content/executive.ts` (test/executive.test.ts keeps the two equal): the gate measures the rendered
 // page, the component validates the data.
-export const EXEC_SCHEMA_VERSION = '1.0.0';
+export const EXEC_SCHEMA_VERSION = '2.0.0';
 export const EXEC_LIMITS = {
   maxWords: 30,
   maxAnswerSentences: 2,
   equation: /\$|\\\(|\\\[|\\[a-zA-Z]+/,
   citations: [/\(\s*Source/i, /\[\d+\]/, /\(\s*ECB/, /\(\w[^()]*\d{4}\)/],
   minLabelPx: 9,
+  fileCitations: [/\bfile\s*\d/i, /\barchivo\s*\d/i, /\.pdf\b/i, /\bPublished on\b/i],
+  promotional: [/\bour\s+clients?\b/i, /\bnuestros?\s+clientes?\b/i, /\bcontact\s+us\b/i, /\bcontáctenos\b/i, /\bbuy\b/i, /\bcomprar\b/i, /\bprices?\b/i, /\bprecios?\b/i, /\boffers?\b/i, /\bofertas?\b/i],
 };
-/** The four sections of the view: title and rubric question (Felipe's rubric, verbatim). */
+/** The sections of the view: title and rubric question (Felipe's rubric, verbatim). A copy of EXEC_SECTION_DEFS of src/content/executive.ts; test/executive.test.ts keeps the two equal. */
 export const EXEC_SECTIONS = [
   { title: { en: 'Industry & Exec Tailoring', es: 'Industria y foco ejecutivo' }, question: { en: 'Built for a C-suite exec?', es: '¿Pensado para un ejecutivo de primer nivel?' } },
   { title: { en: 'AI Transformation Story', es: 'Historia de transformación con IA' }, question: { en: 'Outcomes, not a feature tour', es: 'Resultados, no un recorrido de funciones' } },
@@ -211,67 +213,157 @@ const sentencesOf = (text) =>
     .filter(Boolean);
 const wordsIn = (text) => text.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
 
+/** The problems with the title or the note of one source note (the same rules as sourceTextProblems of src/content/executive.ts). */
+export function execSourceTextProblems(text, maxSentences) {
+  const out = [];
+  const sentences = sentencesOf(text);
+  for (const sentence of sentences) {
+    const n = wordsIn(sentence);
+    if (n > EXEC_LIMITS.maxWords) out.push(`a sentence of ${n} words; the limit is ${EXEC_LIMITS.maxWords}`);
+  }
+  if (maxSentences !== undefined && sentences.length > maxSentences) out.push(maxSentences === 1 ? `must be one sentence, has ${sentences.length}` : `has ${sentences.length} sentences; the limit is ${maxSentences}`);
+  const written = /https?:\/\//i.test(text);
+  for (const re of EXEC_LIMITS.fileCitations) {
+    if (re.source.includes('pdf') && written) continue;
+    const m = re.exec(text);
+    if (m) out.push(`cites a file name or number in place of the link ("${m[0]}"); give the publication as the title and its https link as the url`);
+  }
+  return out;
+}
+
 /**
- * The problems of the executive view in one language, from what the page showed (`G.docPage().executive` of
- * gate/inpage.mjs). Pure. `facts` is null or {count: 0} when the page renders no ExecutiveView.
+ * The problems of the executive view in one language, from what the page showed in every state of the walk in which
+ * the executive view was open (`G.docPage().executive` of gate/inpage.mjs, one entry per state, the first being the
+ * state the page opened on). Pure. Since shell 0.13.0 the four sections are sub-tabs, so one state shows one section:
+ * the sections, fields, illustrations and figures of the states are gathered and checked together, and a sub-tab the
+ * walk never opened is a failure. An entry is null or {count: 0} when the page renders no ExecutiveView.
  * @returns {string[]} one text per problem
  */
-export function executiveFailures(facts, lang) {
+export function executiveFailures(list, lang) {
   const L = lang.toUpperCase();
   const out = [];
   const bad = (m) => out.push(`Introduction, executive view (${L}): ${m}`);
-  if (!facts || facts.count === 0) {
+  const states = (list ?? []).filter(Boolean);
+  const first = states[0];
+  if (!first || first.count === 0) {
     bad("no ExecutiveView ([data-executive-view]); the executive view is the shell's ExecutiveView fed by content/executive.json (docs/06_executive-view.md)");
     return out;
   }
-  if (facts.count > 1) bad(`${facts.count} ExecutiveView elements; exactly 1 is required`);
-  if (facts.schema !== EXEC_SCHEMA_VERSION) bad(`the view declares schema "${facts.schema ?? 'none'}", expected "${EXEC_SCHEMA_VERSION}"`);
-  if (facts.valid !== 'true') {
-    bad(`the data file is not valid in the page: ${String(facts.errors || 'no reason given').slice(0, 400)}`);
-    return out;
+  for (const facts of states) {
+    if (facts.count === 0) continue;
+    if (facts.count > 1) bad(`${facts.count} ExecutiveView elements; exactly 1 is required`);
+    if (facts.schema !== EXEC_SCHEMA_VERSION) bad(`the view declares schema "${facts.schema ?? 'none'}", expected "${EXEC_SCHEMA_VERSION}"`);
+    if (facts.valid !== 'true') {
+      bad(`the data file is not valid in the page: ${String(facts.errors || 'no reason given').slice(0, 400)}`);
+      return [...new Set(out)];
+    }
+    if (facts.docSections > 0) bad(`${facts.docSections} DocSection(s) placed in the executive view (${facts.docSectionTitles.join(', ')}); the view has exactly its four sections and takes none`);
+    if (facts.strangers.length > 0) bad(`${facts.strangers.length} block(s) beside the ExecutiveView (${facts.strangers.slice(0, 3).map((x) => `"${x}"`).join(', ')}); the view is the whole of the executive view`);
+    if (!facts.inOpenView) bad('the ExecutiveView is not in the open executive view');
   }
-  if (facts.docSections > 0) bad(`${facts.docSections} DocSection(s) placed in the executive view (${facts.docSectionTitles.join(', ')}); the view has exactly its four sections and takes none`);
-  if (facts.strangers.length > 0) bad(`${facts.strangers.length} block(s) beside the ExecutiveView (${facts.strangers.slice(0, 3).map((x) => `"${x}"`).join(', ')}); the view is the whole of the executive view`);
-  if (!facts.inOpenView) bad('the ExecutiveView is not in the open executive view');
-  // the four sections, in order, with their titles and questions
-  if (facts.sections.length !== 4) bad(`${facts.sections.length} section(s), exactly 4 are required`);
+
+  // the four sections are the four sub-tabs, in order, the first selected, one section shown at a time
+  const tabs = first.tabs ?? [];
+  if (tabs.length === 0) bad('the four sections are not sub-tabs: the view has no sub-tab list; the sections must be the four sub-tabs of SubTabs, one per section (shell 0.13.0)');
+  else {
+    if (tabs.length !== 4) bad(`the executive view shows ${tabs.length} sub-tab(s), exactly 4 are required (one per section)`);
+    EXEC_SECTIONS.forEach((def, i) => {
+      if (tabs[i] !== undefined && tabs[i] !== def.title[lang]) bad(`sub-tab ${i + 1} is labelled "${tabs[i]}", expected "${def.title[lang]}"`);
+    });
+    if (first.activeTab !== 0) bad('the first sub-tab is not the one selected when the view opens');
+  }
+  for (const facts of states) {
+    if (facts.count === 0) continue;
+    if (facts.sections.length > 1) bad(`${facts.sections.length} sections shown at once; the view shows one section at a time, each in its own sub-tab`);
+  }
+  const bySection = new Map();
+  for (const facts of states) {
+    if (facts.count === 0) continue;
+    for (const sec of facts.sections) {
+      if (!bySection.has(sec.n)) bySection.set(sec.n, { sec, facts });
+      if (tabs.length > 0 && facts.sections.length === 1 && facts.activeTab !== sec.n - 1) bad(`section ${sec.n} sits in sub-tab ${facts.activeTab + 1}, it belongs in sub-tab ${sec.n}`);
+    }
+  }
   EXEC_SECTIONS.forEach((def, i) => {
-    const got = facts.sections[i];
-    if (!got) return;
-    if (got.n !== i + 1) bad(`section ${i + 1} is out of order (it declares ${got.n})`);
-    if (got.title !== def.title[lang]) bad(`section ${i + 1} is titled "${got.title}", expected "${def.title[lang]}"`);
-    if (got.question !== def.question[lang]) bad(`section ${i + 1} asks "${got.question}", expected "${def.question[lang]}"`);
+    const got = bySection.get(i + 1);
+    if (!got) {
+      bad(`sub-tab "${def.title[lang]}" was never visited, so its section was never checked`);
+      return;
+    }
+    if (got.sec.title !== def.title[lang]) bad(`section ${i + 1} is titled "${got.sec.title}", expected "${def.title[lang]}"`);
+    if (got.sec.question !== def.question[lang]) bad(`section ${i + 1} asks "${got.sec.question}", expected "${def.question[lang]}"`);
   });
-  const s3 = facts.sections[2];
-  if (s3) {
-    if (s3.pending === 1 && s3.rows === 0) {
-      if (s3.pendingText !== EXEC_PENDING[lang]) bad(`section 3 declares the pending state "${s3.pendingText}", expected "${EXEC_PENDING[lang]}"`);
-      if (s3.pendingState !== 'unavailable') bad('section 3 is pending without data-state="unavailable"');
-    } else if (s3.rows !== 4) bad(`section 3 holds ${s3.rows} row(s) of the 4 C's, exactly 4 are required (or the pending state)`);
+  for (const n of bySection.keys()) if (n < 1 || n > 4) bad(`section ${n} is not one of the four sections`);
+
+  // the view takes the full width of the document column (its illustrations may stay centred inside their figure)
+  const narrow = new Set();
+  let column = 0;
+  for (const facts of states) {
+    column = Math.max(column, facts.column ?? 0);
+    for (const x of facts.narrow ?? []) narrow.add(x);
   }
-  // the writing limits, on the text a reader sees
+  if (narrow.size > 0) bad(`${narrow.size} block(s) narrower than the ${column}px document column: ${[...narrow].slice(0, 4).join(', ')}; the executive view takes the full width of the column`);
+
+  // section 3: the declared pending state while FOUR_CS is empty, else the 4 rows (the structure of the section is being redefined)
+  const s3 = bySection.get(3);
+  if (s3) {
+    if (s3.sec.pending === 1 && s3.sec.rows === 0) {
+      if (s3.sec.pendingText !== EXEC_PENDING[lang]) bad(`section 3 declares the pending state "${s3.sec.pendingText}", expected "${EXEC_PENDING[lang]}"`);
+      if (s3.sec.pendingState !== 'unavailable') bad('section 3 is pending without data-state="unavailable"');
+    } else if (s3.sec.rows !== 4) bad(`section 3 holds ${s3.sec.rows} row(s) of the 4 C's, exactly 4 are required (or the pending state)`);
+  }
+
+  // the writing limits, on the text a reader sees, across every sub-tab
+  const fields = new Map();
+  for (const facts of states) for (const f of facts.fields ?? []) fields.set(`${f.path}|${f.text}`, f);
   const unreadable = [];
-  for (const f of facts.fields) {
+  for (const f of fields.values()) {
     if (!f.readable) {
       unreadable.push(f.path);
       continue;
     }
     const sentences = sentencesOf(f.text);
-    for (const s of sentences) {
-      const n = wordsIn(s);
+    for (const sentence of sentences) {
+      const n = wordsIn(sentence);
       if (n > EXEC_LIMITS.maxWords) bad(`field "${f.path}": a sentence of ${n} words; the limit is ${EXEC_LIMITS.maxWords}`);
     }
     const max = execSentenceLimit(f.path);
     if (max !== undefined && sentences.length > max) bad(`field "${f.path}": ${sentences.length} sentences; the limit is ${max}`);
     if (EXEC_LIMITS.equation.test(f.text)) bad(`field "${f.path}": holds an equation or a TeX marker`);
     if (EXEC_LIMITS.citations.some((re) => re.test(f.text))) bad(`field "${f.path}": holds an inline citation (sources are numbered notes)`);
+    for (const re of EXEC_LIMITS.promotional) {
+      const m = re.exec(f.text);
+      if (m) bad(`field "${f.path}": holds promotional or client-bound wording ("${m[0]}"); the executive view is general, never a client, never a pitch`);
+    }
   }
-  if (unreadable.length > 0) bad(`${unreadable.length} field(s) are in the page and a reader cannot read them: ${unreadable.slice(0, 4).join(', ')}`);
-  if (facts.notes !== facts.figures) bad(`${facts.notes} numbered source note(s) for ${facts.figures} figure(s)`);
+  if (unreadable.length > 0) bad(`${unreadable.length} field(s) are in the page and a reader cannot read them: ${[...new Set(unreadable)].slice(0, 4).join(', ')}`);
+
+  // the source notes: always there, one per figure, each a title that links to an https url, with a note that cites no file
+  const figures = new Set(states.flatMap((x) => x.cites ?? []));
+  for (const facts of states) {
+    const notes = facts.notes ?? [];
+    if (notes.length !== figures.size) bad(`${notes.length} source note(s) for ${figures.size} figure(s)`);
+    notes.forEach((n, i) => {
+      const at = `source note ${i + 1}`;
+      if (!n.href || !n.title) {
+        bad(`${at} has no link: a source is its title linked to an https:// url (docs/06_executive-view.md)`);
+        return;
+      }
+      if (!/^https:\/\/\S+$/.test(n.href)) bad(`${at} links to "${n.href}"; a source is an https:// link`);
+      for (const [what, text, max] of [['title', n.title, undefined], ['note', n.note, 1]]) {
+        if (!text) continue;
+        for (const m of execSourceTextProblems(text, max)) bad(`${at}: the ${what} ${m}`);
+      }
+    });
+  }
+
   // the three illustrations, in their places
-  const names = facts.illustrations.map((x) => x.name);
-  if (names.join() !== EXEC_ILLUSTRATIONS.map((x) => x.name).join()) bad(`the illustrations are [${names.join(', ')}], expected [initiative, problem, solution] in that order`);
-  for (const ill of facts.illustrations) {
+  const seen = new Map();
+  for (const facts of states) for (const ill of facts.illustrations ?? []) if (!seen.has(ill.name)) seen.set(ill.name, ill);
+  const names = [...seen.keys()];
+  const expected = EXEC_ILLUSTRATIONS.map((x) => x.name);
+  if (names.slice().sort().join() !== expected.slice().sort().join()) bad(`the illustrations are [${names.join(', ')}], expected [${expected.join(', ')}]`);
+  for (const ill of seen.values()) {
     const want = EXEC_ILLUSTRATIONS.find((x) => x.name === ill.name);
     const name = `illustration "${ill.name}"`;
     if (want && ill.section !== want.section) bad(`${name} sits in section ${ill.section}, it belongs in section ${want.section}`);
@@ -369,6 +461,7 @@ export function docFloorFailures({ route, lang, states, expectedTopics }) {
   const figures = new Set();
   const equations = new Set();
   const execMessages = new Set();
+  const execStates = [];
   for (const st of states) {
     for (const t of st.topics) topics.set(t.key, t.label);
     const ordinal = new Map();
@@ -386,11 +479,12 @@ export function docFloorFailures({ route, lang, states, expectedTopics }) {
       bad('', `${NAME} (${L}): the ExecutiveView sits in the "${st.view ?? 'none'}" view; it belongs to the executive view`);
     }
     if (route === '/introduction' && st.view === 'executive') {
-      for (const m of executiveFailures(st.executive, lang)) execMessages.add(m);
+      execStates.push(st.executive);
       if (st.viewEquations > 0) bad(st.topics[0]?.label ?? '', `${NAME}, executive view (${L}): ${st.viewEquations} equation(s); the executive view holds no equation`);
       if (st.viewGlossaries > 0) bad(st.topics[0]?.label ?? '', `${NAME}, executive view (${L}): ${st.viewGlossaries} symbol glossary(ies); the executive view holds none`);
     }
   }
+  if (route === '/introduction' && execStates.length > 0) for (const m of executiveFailures(execStates, lang)) execMessages.add(m);
   for (const m of execMessages) bad('', m);
   const seen = [...sections.values()].map(mergeSections);
   const tname = (label) => (label ? `topic "${label}"` : 'the page');
@@ -398,6 +492,7 @@ export function docFloorFailures({ route, lang, states, expectedTopics }) {
   if (expectedTopics > topics.size) bad('', `${NAME} (${L}): the walk visited ${topics.size} of ${expectedTopics} topics; the floors of an unvisited topic were never checked`);
 
   // ---- the lede
+  if (first.ledeWidth > 0 && first.ledeWidth < first.columnWidth - 2) bad('', `${NAME} (${L}): the lede is ${first.ledeWidth}px wide in a ${first.columnWidth}px document column; the lede takes the full width of the column`);
   if (!waived.has('lede-words') && first.ledeWords < LEDE_WORDS) bad('', `${NAME} (${L}): the lede holds ${first.ledeWords} word(s), the floor is ${LEDE_WORDS}`);
 
   // ---- the Introduction's views: the executive one first

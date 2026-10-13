@@ -3,6 +3,7 @@ import { useShellLang } from '../lib/lang';
 import type { Lang } from '../lib/lang';
 import {
   EXECUTIVE_SCHEMA_VERSION,
+  EXEC_SECTION_DEFS,
   FOUR_CS,
   PENDING_FOUR_CS,
   SECTION_QUESTIONS,
@@ -14,6 +15,7 @@ import {
   type ExecutiveIllustration,
 } from './executive';
 import { Question } from './Question';
+import { SubTabs } from './SubTabs';
 
 /** The words the view itself writes (the product writes none of them). */
 const UI = {
@@ -25,6 +27,7 @@ const UI = {
   result: { en: 'Business result', es: 'Resultado de negocio' },
   proof: { en: 'Proof', es: 'Prueba' },
   sources: { en: 'Sources', es: 'Fuentes' },
+  sections: { en: 'The sections of the executive view', es: 'Las secciones de la vista ejecutiva' },
   source: { en: 'Source', es: 'Fuente' },
   errorTitle: { en: 'The executive view data is not valid', es: 'Los datos de la vista ejecutiva no son válidos' },
   errorLead: {
@@ -130,18 +133,21 @@ export interface ExecutiveViewProps {
   base?: string;
 }
 
+
 /**
- * The executive view of an Introduction (CAOS_MANAGE conventions/problem-context-first.md, Felipe 2026-10-12): the four
- * sections of the executive-pitch rubric in order, the three illustrations in their places, the sources as numbered
- * notes. A product fills `content/executive.json`; it does not design this view, so the component takes no children.
- * Invalid data renders an error state that lists each field path, never a blank.
+ * The executive view of an Introduction (CAOS_MANAGE conventions/problem-context-first.md, Felipe 2026-10-12 and
+ * 2026-10-13): the sections of `EXEC_SECTION_DEFS` as the sub-tabs of `SubTabs`, in order, the first
+ * selected; the three illustrations in their places; section 3 (the 4 C's, pending while FOUR_CS is empty); the sources as
+ * numbered notes that link to the publication, under the sub-tabs, whichever one is open. A product fills
+ * `content/executive.json`; it does not design this view, so the component takes no children. Invalid data renders an
+ * error state that lists each field path, never a blank.
  */
 export function ExecutiveView({ data, base }: ExecutiveViewProps) {
   return <ExecutiveViewBody data={data} base={base} fourCs={FOUR_CS} />;
 }
 
-/** The view with the names of the 4 C's (and the language) as parameters, so the tests can exercise the filled state; the product-facing entry is `ExecutiveView`. */
-export function ExecutiveViewBody({ data, base = '/', fourCs, lang: forced }: ExecutiveViewProps & { fourCs: readonly string[]; lang?: Lang }) {
+/** The view with the language and the open sub-tab as parameters, so the tests can render each section; the product-facing entry is `ExecutiveView`. */
+export function ExecutiveViewBody({ data, base = '/', fourCs, lang: forced, open = 1 }: ExecutiveViewProps & { fourCs: readonly string[]; lang?: Lang; open?: 1 | 2 | 3 | 4 }) {
   const stored = useShellLang();
   const lang = forced ?? stored;
   const problems = validateExecutive(data, { fourCs });
@@ -180,81 +186,110 @@ export function ExecutiveViewBody({ data, base = '/', fourCs, lang: forced }: Ex
     </sup>
   );
   const field = (path: string, text: BiTextValue) => <span data-exec-field={path}>{t(text, lang)}</span>;
-  return (
-    <div className="caos-exec" data-executive-view="" data-executive-schema={EXECUTIVE_SCHEMA_VERSION} data-executive-valid="true">
-      <Section n={1} lang={lang}>
-        <dl className="caos-exec-facts">
-          <div>
-            <dt>{t(UI.executive, lang)}</dt>
-            <dd data-exec-field="executive">{t(d.executive, lang)}</dd>
-          </div>
-          <div>
-            <dt>{t(UI.organisation, lang)}</dt>
-            <dd data-exec-field="organisation">{t(d.organisation, lang)}</dd>
-          </div>
-        </dl>
-        <p className="caos-exec-initiative" data-exec-field="initiative">
-          {t(d.initiative, lang)}
+  const sectionOne = (
+    <Section n={1} lang={lang}>
+      <dl className="caos-exec-facts">
+        <div>
+          <dt>{t(UI.executive, lang)}</dt>
+          <dd data-exec-field="executive">{t(d.executive, lang)}</dd>
+        </div>
+        <div>
+          <dt>{t(UI.organisation, lang)}</dt>
+          <dd data-exec-field="organisation">{t(d.organisation, lang)}</dd>
+        </div>
+      </dl>
+      <p className="caos-exec-initiative" data-exec-field="initiative">
+        {t(d.initiative, lang)}
+      </p>
+      <Illustration name="initiative" spec={d.illustrations.initiative} base={base} lang={lang} />
+      <p className="caos-exec-whynow" data-exec-line="why_now">
+        <Label>{t(UI.whyNow, lang)}</Label> <strong className="caos-exec-value" data-exec-field="why_now.figure.value">{t(d.why_now.figure.value, lang)}</strong>{' '}
+        {field('why_now.figure.unit', d.why_now.figure.unit)} <span className="caos-exec-sep">&middot;</span> {field('why_now.deadline', d.why_now.deadline)}
+        <Cite field="why_now.figure" />
+      </p>
+      <Illustration name="problem" spec={d.illustrations.problem} base={base} lang={lang} />
+    </Section>
+  );
+  const sectionTwo = (
+    <Section n={2} lang={lang}>
+      <p className="caos-exec-vision" data-exec-field="vision">
+        {t(d.vision, lang)}
+      </p>
+      <Illustration name="solution" spec={d.illustrations.solution} base={base} lang={lang} />
+      <ul className="caos-exec-outcomes">
+        {d.outcomes.map((o, i) => (
+          <li key={i} className="caos-exec-outcome" data-exec-outcome={i}>
+            <div>
+              <Label>{t(UI.does, lang)}</Label> {field(`outcomes[${i}].capability`, o.capability)}
+            </div>
+            <div>
+              <Label>{t(UI.result, lang)}</Label> {field(`outcomes[${i}].outcome`, o.outcome)}
+            </div>
+            <div className="caos-exec-proof">
+              <Label>{t(UI.proof, lang)}</Label> <strong className="caos-exec-value" data-exec-field={`outcomes[${i}].proof.value`}>{t(o.proof.value, lang)}</strong>{' '}
+              {field(`outcomes[${i}].proof.unit`, o.proof.unit)}. {field(`outcomes[${i}].proof.statement`, o.proof.statement)}
+              <Cite field={`outcomes[${i}].proof`} />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </Section>
+  );
+  const sectionThree = (
+    <Section n={3} lang={lang}>
+      {fourCs.length === 0 ? (
+        <p className="caos-exec-pending" data-state="unavailable" data-exec-pending="">
+          {t(PENDING_FOUR_CS, lang)}
         </p>
-        <Illustration name="initiative" spec={d.illustrations.initiative} base={base} lang={lang} />
-        <p className="caos-exec-whynow" data-exec-line="why_now">
-          <Label>{t(UI.whyNow, lang)}</Label> <strong className="caos-exec-value" data-exec-field="why_now.figure.value">{t(d.why_now.figure.value, lang)}</strong>{' '}
-          {field('why_now.figure.unit', d.why_now.figure.unit)} <span className="caos-exec-sep">&middot;</span> {field('why_now.deadline', d.why_now.deadline)}
-          <Cite field="why_now.figure" />
-        </p>
-        <Illustration name="problem" spec={d.illustrations.problem} base={base} lang={lang} />
-      </Section>
-      <Section n={2} lang={lang}>
-        <p className="caos-exec-vision" data-exec-field="vision">
-          {t(d.vision, lang)}
-        </p>
-        <Illustration name="solution" spec={d.illustrations.solution} base={base} lang={lang} />
-        <ul className="caos-exec-outcomes">
-          {d.outcomes.map((o, i) => (
-            <li key={i} className="caos-exec-outcome" data-exec-outcome={i}>
-              <div>
-                <Label>{t(UI.does, lang)}</Label> {field(`outcomes[${i}].capability`, o.capability)}
-              </div>
-              <div>
-                <Label>{t(UI.result, lang)}</Label> {field(`outcomes[${i}].outcome`, o.outcome)}
-              </div>
-              <div className="caos-exec-proof">
-                <Label>{t(UI.proof, lang)}</Label> <strong className="caos-exec-value" data-exec-field={`outcomes[${i}].proof.value`}>{t(o.proof.value, lang)}</strong>{' '}
-                {field(`outcomes[${i}].proof.unit`, o.proof.unit)}. {field(`outcomes[${i}].proof.statement`, o.proof.statement)}
-                <Cite field={`outcomes[${i}].proof`} />
-              </div>
+      ) : (
+        <ul className="caos-exec-cs">
+          {d.four_cs!.map((r, i) => (
+            <li key={i} data-exec-c={i}>
+              <strong data-exec-field={`four_cs[${i}].c`}>{t(r.c, lang)}</strong> {field(`four_cs[${i}].exec_problem`, r.exec_problem)}
             </li>
           ))}
         </ul>
-      </Section>
-      <Section n={3} lang={lang}>
-        {fourCs.length === 0 ? (
-          <p className="caos-exec-pending" data-state="unavailable" data-exec-pending="">
-            {t(PENDING_FOUR_CS, lang)}
-          </p>
-        ) : (
-          <ul className="caos-exec-cs">
-            {d.four_cs!.map((r, i) => (
-              <li key={i} data-exec-c={i}>
-                <strong data-exec-field={`four_cs[${i}].c`}>{t(r.c, lang)}</strong> {field(`four_cs[${i}].exec_problem`, r.exec_problem)}
-              </li>
-            ))}
-          </ul>
-        )}
-      </Section>
-      <Section n={4} lang={lang}>
-        {d.dialogue.map((q, i) => (
-          <Question key={i} question={field(`dialogue[${i}].question`, q.question)} answer={<p>{field(`dialogue[${i}].answer`, q.answer)}</p>} />
-        ))}
-      </Section>
+      )}
+    </Section>
+  );
+  const sectionFour = (
+    <Section n={4} lang={lang}>
+      {d.dialogue.map((q, i) => (
+        <Question key={i} question={field(`dialogue[${i}].question`, q.question)} answer={<p>{field(`dialogue[${i}].answer`, q.answer)}</p>} />
+      ))}
+    </Section>
+  );
+  const bodies = [sectionOne, sectionTwo, sectionThree, sectionFour];
+  return (
+    <div className="caos-exec" data-executive-view="" data-executive-schema={EXECUTIVE_SCHEMA_VERSION} data-executive-valid="true">
+      <div className="caos-exec-tabs" data-exec-tabs="">
+        <SubTabs
+          ariaLabel={t(UI.sections, lang)}
+          initial={EXEC_SECTION_DEFS[open - 1]?.id}
+          tabs={EXEC_SECTION_DEFS.map((def, i) => ({ id: def.id, label: t(def.title, lang), content: bodies[i] }))}
+        />
+      </div>
       <aside className="caos-exec-notes-wrap" aria-label={t(UI.sources, lang)}>
         <h3 className="caos-exec-notes-title">{t(UI.sources, lang)}</h3>
         <ol className="caos-exec-notes" data-exec-notes="">
-          {figures.map((f, i) => (
-            <li key={f} id={`exec-note-${i + 1}`}>
-              {t(sourceOf(f).source, lang)}
-            </li>
-          ))}
+          {figures.map((f, i) => {
+            const src = sourceOf(f);
+            return (
+              <li key={f} id={`exec-note-${i + 1}`} data-exec-source={f}>
+                <a href={src.url} target="_blank" rel="noopener noreferrer" data-exec-source-title="">
+                  {t(src.title, lang)}
+                </a>
+                {src.note && (
+                  <>
+                    {' '}
+                    <span className="caos-exec-note-text" data-exec-source-note="">
+                      {t(src.note, lang)}
+                    </span>
+                  </>
+                )}
+              </li>
+            );
+          })}
         </ol>
       </aside>
     </div>

@@ -503,6 +503,9 @@ export function installLib() {
     docBound = page;
     const seen = (el) => readable(el, page, 4, 4);
     const lede = page.querySelector('.lede');
+    // the document column: the page body without its padding; the lede and the executive view take all of it (Felipe, 2026-10-13)
+    const pageStyle = getComputedStyle(page);
+    const columnWidth = Math.round(page.clientWidth - parseFloat(pageStyle.paddingLeft) - parseFloat(pageStyle.paddingRight));
     const panels = [...page.querySelectorAll('[role="tabpanel"]')].filter(visible);
     // a tab list inside a section belongs to that section: its panels are not topics, and it does not make its topic a branch
     const inSection = (el) => Boolean(el.closest('[data-doc-section]'));
@@ -614,7 +617,7 @@ export function installLib() {
       };
     });
     const selected = outerTabs.find((t) => t.getAttribute('aria-selected') === 'true');
-    // The executive view (shell 0.12.0): what the ExecutiveView shows, for executiveFailures of gate/areas.mjs.
+    // The executive view (shell 0.13.0): what the ExecutiveView shows in this state (one sub-tab = one section), for executiveFailures of gate/areas.mjs.
     const execRoots = [...page.querySelectorAll('[data-executive-view]')].filter(visible);
     const executive = (() => {
       if (!execRoots.length) return { count: 0 };
@@ -671,6 +674,8 @@ export function installLib() {
           rows: [...sec.querySelectorAll('[data-exec-c]')].filter(seen).length,
         };
       });
+      // the sub-tabs of the view: their labels (all of them, shown or not), and the one selected
+      const tabEls = [...root.querySelectorAll('[data-exec-tabs] [role="tab"]')];
       const panelOpen = outerPanel ? outerPanel.contains(root) : true;
       const execOpen = selected && (selected.getAttribute('data-tab') || tabLabel(selected)) === 'executive';
       const area = execOpen && outerPanel ? outerPanel : null;
@@ -692,14 +697,33 @@ export function installLib() {
         strangers,
         sections,
         fields: [...root.querySelectorAll('[data-exec-field]')].map((e) => ({ path: e.getAttribute('data-exec-field'), text: textOf(e), readable: seen(e) })),
-        notes: root.querySelectorAll('[data-exec-notes] > li').length,
-        figures: root.querySelectorAll('.caos-exec-cite').length,
+        // the blocks of this state narrower than the document column (an illustration may stay centred inside its figure)
+        narrow: [...root.querySelectorAll('.subtabs, .caos-exec-notes-wrap, [data-exec-section], [data-exec-section] > *')]
+          .filter((e) => visible(e))
+          .map((e) => [`${e.tagName.toLowerCase()}${e.className && typeof e.className === 'string' ? '.' + e.className.split(' ')[0] : ''}`, Math.round(e.getBoundingClientRect().width)])
+          .filter(([, w]) => w < columnWidth - 2)
+          .map(([name, w]) => `${name} ${w}px`),
+        column: columnWidth,
+        tabs: tabEls.map(tabLabel),
+        activeTab: tabEls.findIndex((t) => t.getAttribute('aria-selected') === 'true'),
+        // each source note: the link it holds (its target and its text) and the text beside the link
+        notes: [...root.querySelectorAll('[data-exec-notes] > li')].map((li) => {
+          const a = li.querySelector('a');
+          const link = a && seen(a) ? textOf(a) : '';
+          const note = li.querySelector('[data-exec-source-note]');
+          const rest = note ? textOf(note) : textOf(li).replace(link, '').trim();
+          return { href: a ? a.getAttribute('href') : null, title: link, note: rest };
+        }),
+        // the figures this state shows: the notes they point at (the same figure seen in two states counts once)
+        cites: [...root.querySelectorAll('.caos-exec-cite a')].map((a) => a.getAttribute('href')),
         illustrations,
       };
     })();
     const inView = (sel) => (outerPanel ? [...outerPanel.querySelectorAll(sel)] : [...page.querySelectorAll(sel)]).filter(seen);
     return {
       ledeWords: lede && visible(lede) ? wordsOf(lede).words : 0,
+      ledeWidth: lede && visible(lede) ? Math.round(lede.getBoundingClientRect().width) : 0,
+      columnWidth,
       waiver: page.getAttribute('data-floor-waiver'),
       topics,
       views: outerTabs.map((t) => t.getAttribute('data-tab') || tabLabel(t)),

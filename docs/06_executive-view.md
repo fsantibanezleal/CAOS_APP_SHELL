@@ -30,6 +30,49 @@ transformación con IA", "Posicionamiento 4C", "Entrega y credibilidad"; the que
 nivel?", "Resultados, no un recorrido de funciones", "Historia de valor, no lista de funciones", "¿Confiaría en ellos frente a
 un ejecutivo?").
 
+## The layout: one sub-tab per section
+
+The view shows its sections as the sub-tabs of the shell's `SubTabs`, the first selected, as every documentation page shows a
+topic with subsections: never one long scroll. The sections, their ids, their titles and their rubric questions come from ONE
+definition, `EXEC_SECTION_DEFS` in `src/content/executive.ts` (the gate keeps a copy in `gate/areas.mjs`, `EXEC_SECTIONS`, that a
+unit test holds equal), so when the section structure changes it changes in that list. The rubric question and the content of a
+section sit inside its tab; the three illustrations stay in their sections (`initiative` and `problem` in section 1, `solution`
+in section 2); the source notes sit below the sub-tabs and stay visible whichever tab is open. Every sub-tab is reachable by
+keyboard (arrow keys, Home and End). The view and the lede of the page take the full width of the document column; only an
+illustration may stay centred at its natural size inside its figure.
+
+## Sources are links
+
+Each `sources` entry is `{ field, title, url, note? }`: `url` is required and `https://` only; `title` is the publication in
+plain words; `note` is optional and at most one sentence (a page number, for example). The note renders the title as a link to
+the url, then the note. The validator and the gate fail a source without a url, with a non-https url, with a title or note over
+the writing limits, or with a text that cites a file in place of the link (`file` and a digit, `archivo` and a digit, a `.pdf`
+name without a written-out https link, "Published on").
+
+## General, never a client, never a pitch
+
+The view is general (Felipe, 2026-10-13: "I'm not selling or promoting that to anybody"): no named client, no offer, no price, no
+contact, no call to buy. The validator and the gate fail these whole words in any text field, in English and in Spanish and in
+either case: "our client", "nuestro cliente", "contact us", "contáctenos", "buy", "comprar", "price", "precio", "offer", "oferta"
+(and their plurals).
+
+## The landing
+
+Every product lands on the Introduction, whose executive view is its first and default view (Felipe, 2026-10-13). The shell
+exports `Landing`, `LANDING_ROUTE` (`/introduction`), `APP_ROUTE` (`/app`) and `STANDARD_ROUTES` in the new order (Introduction,
+App, Methodology, Implementation, Experiments, Benchmark). A product that moves from 0.12 changes its router by hand, once:
+
+```tsx
+<Route path="/" element={<Landing />} />
+<Route path="/app" element={<App />} />
+<Route path="*" element={<Landing />} />
+```
+
+and its `fixedRoutes`, if it sets any, names `/app` instead of `/`. An old link to the App (the root with a query string such as
+`?case=B2`, or a hash) is forwarded to `/app` with both kept; the root alone and any unknown path open the Introduction. A
+product that builds a static site materialises `app/index.html` beside the other routes. The gate checks the landing: the root
+must open the Introduction on its executive view, and `/?case=...#...` must reach `/app` with both kept.
+
 ## Using it
 
 ```tsx
@@ -44,7 +87,7 @@ tab holds the `ExecutiveView` and nothing else: the gate fails any `DocSection`,
 
 ## The data file `content/executive.json`
 
-Valid against `src/content/executive.schema.json` (version 1.0.0, the contract; bundled into the package, and exposed as a file when the release adds it to `files`). Every text field is
+Valid against `src/content/executive.schema.json` (version 2.0.0, the contract; bundled into the package, and exposed as a file when the release adds it to `files`). Every text field is
 `{ "en": ..., "es": ... }`; nothing outside these fields is allowed.
 
 | Section | Field | Rule |
@@ -58,7 +101,7 @@ Valid against `src/content/executive.schema.json` (version 1.0.0, the contract; 
 | 3 | `four_cs` | Exactly 4 rows, one per C, in the owner's order: `c` (the C's name) and `exec_problem` (one sentence tying it to this executive's problem). Absent until the names are given. |
 | 4 | `dialogue` | 3 to 5 pairs: `question` (a business question that executive asks) and `answer` (at most 2 sentences). |
 | 1, 2 | `illustrations` | Exactly `initiative`, `problem`, `solution`, each with its SVG `file` (one path, or `{ "en", "es" }` with one per language) and its `caption` (one sentence). |
-| all | `sources` | `{ field, source }` rows: the source of every figure, by field path (`why_now.figure`, `outcomes[0].proof`, ...). Shown as numbered notes under the view, never inline. |
+| all | `sources` | The source of every figure, by field: `{ field, title, url, note? }` with `field` the path of the figure (`why_now.figure`, `outcomes[0].proof`, ...), `title` (the publication, in plain words), `url` (https, the page or document itself) and an optional one-sentence `note`. Shown as numbered linked notes under the view, never inline. A source is always a link: never a file name, a file number, a page of prose or a citation without its URL. |
 
 An invalid file renders an error state in the view that lists each field path and its problem, and fails the gate with the
 same list. A field missing from the file is a validation error, never an empty rendering.
@@ -115,7 +158,7 @@ npx caos-shell-gate --serve dist --expect-brand <Brand> --routes /introduction
 
 `validateExecutive(data)` (exported by the package; call it in a unit test of the product) returns the list of `{ path, message }` problems (empty when valid). The gate, on `/introduction`,
 checks that the executive view is the first and default view; that the `ExecutiveView` is present, in the executive view,
-with `data-executive-schema="1.0.0"` and `data-executive-valid="true"`; the four titles and questions in order; section 3
+with `data-executive-schema="2.0.0"` and `data-executive-valid="true"`; the four titles and questions in order; section 3
 filled or pending; the writing limits on the rendered text; that no section, text or equation sits beside the view; that the
 fields are readable; one numbered note per figure; and for each illustration its place, its caption, that it is inline, loaded,
 token-coloured, free of `data-chart`, and that every label sits inside its `viewBox` and is not too small. It also keeps the

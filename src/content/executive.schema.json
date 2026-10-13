@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/fsantibanezleal/CAOS_APP_SHELL/blob/main/src/content/executive.schema.json",
-  "title": "CAOS executive view data, version 1.0.0",
-  "description": "The one data file a CAOS product fills for the executive view of its Introduction (content/executive.json). Every text is { en, es }; nothing outside these fields is allowed. The writing limits (30 words per sentence, an answer of at most 2 sentences, one sentence for initiative, vision, statement, exec_problem and caption, no equation, no inline citation), the four_cs rule (absent until FOUR_CS names the 4 C's) and the sources-by-field rule are checked by validateExecutive in executive.ts, on top of this structure.",
+  "title": "CAOS executive view data, version 2.0.0",
+  "description": "The one data file a CAOS product fills for the executive view of its Introduction (content/executive.json). Every text is { en, es }; nothing outside these fields is allowed. The writing limits (30 words per sentence, an answer of at most 2 sentences, one sentence for initiative, vision, statement, exec_problem and caption, no equation, no inline citation, no promotional or client-bound wording), the four_cs rule (absent until FOUR_CS names the 4 C's), the sources-by-field rule and the source-text rules (a source is an https link; its title and note cite no file) are checked by validateExecutive in executive.ts, on top of this structure.",
   "type": "object",
   "additionalProperties": false,
   "required": ["executive", "organisation", "initiative", "why_now", "vision", "outcomes", "dialogue", "illustrations", "sources"],
@@ -86,14 +86,16 @@
     "sources": {
       "type": "array",
       "minItems": 1,
-      "description": "The source of every figure (why_now.figure and each outcomes[i].proof), by field path; shown as numbered notes, never inline.",
+      "description": "The source of every figure (why_now.figure and each outcomes[i].proof), by field path; shown as numbered linked notes, never inline. A source is always a link.",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["field", "source"],
+        "required": ["field", "title", "url"],
         "properties": {
           "field": { "type": "string", "minLength": 1 },
-          "source": { "$ref": "#/$defs/text" }
+          "title": { "$ref": "#/$defs/text", "description": "The publication, in plain words." },
+          "url": { "type": "string", "minLength": 1, "pattern": "^https://[^\\s]+$", "x-pattern-message": "must be an https:// link (the page or document itself, no other scheme, no spaces)", "description": "The https link to the page or document." },
+          "note": { "$ref": "#/$defs/text", "description": "Optional, at most one sentence, for example a page number. Never a file name or number." }
         }
       }
     }
