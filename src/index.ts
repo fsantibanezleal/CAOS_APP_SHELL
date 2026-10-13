@@ -64,6 +64,10 @@ export { Glossary } from './content/Glossary';
 export type { GlossaryEntry } from './content/Glossary';
 export { Stat } from './content/Stat';
 export type { StatProps } from './content/Stat';
+export { ExecutiveView } from './content/ExecutiveView';
+export type { ExecutiveViewProps } from './content/ExecutiveView';
+export { EXECUTIVE_SCHEMA_VERSION, FOUR_CS, validateExecutive } from './content/executive';
+export type { ExecutiveData, ExecutiveProblem } from './content/executive';
 export { Question } from './content/Question';
 export type { QuestionProps } from './content/Question';
 // The surface route type (0.8.0): a tab App that fills the viewport; its open view is held in the URL.

@@ -11,7 +11,7 @@ const views = readFileSync(new URL('../docs/04_views.md', import.meta.url), 'utf
 test('the area table names the areas of ADR-0017 section 2.1 and the docs list each one', () => {
   assert.deepEqual(DOC_ROUTES, ['/introduction', '/methodology', '/implementation', '/experiments', '/benchmark']);
   const names = Object.fromEntries(DOC_ROUTES.map((r) => [r, Object.keys(PAGES[r].areas)]));
-  assert.deepEqual(names['/introduction'], ['initiative', 'outcomes', 'positioning', 'credibility', 'problem', 'principles', 'math', 'pipeline', 'honesty']);
+  assert.deepEqual(names['/introduction'], ['problem', 'principles', 'math', 'pipeline', 'honesty']);
   assert.deepEqual(names['/methodology'], ['method']);
   assert.deepEqual(names['/implementation'], ['architecture', 'reproducibility', 'engine', 'lanes', 'contract', 'deployment']);
   assert.deepEqual(names['/experiments'], ['question', 'metrics', 'protocol', 'datasets']);
@@ -29,8 +29,6 @@ test('the area table names the areas of ADR-0017 section 2.1 and the docs list e
 
 test('the numbers of the table are those of ADR-0017 section 2.1', () => {
   assert.deepEqual(PAGES['/introduction'].areas.math.requires, { equations: 1, glossary: 10 });
-  assert.deepEqual(PAGES['/introduction'].areas.positioning.requires, { items: 4, thinItems: 0 });
-  assert.deepEqual(PAGES['/introduction'].areas.credibility.requires, { qa: 3, honest: 1 });
   assert.deepEqual(PAGES['/methodology'].areas.method.requires, { dense: 4, equations: 2, figures: 1, honest: 1, refs: 1 });
   assert.equal(PAGES['/methodology'].floors['method-topics'].min, 6);
   assert.equal(PAGES['/methodology'].floors['method-learned'].min, 2);

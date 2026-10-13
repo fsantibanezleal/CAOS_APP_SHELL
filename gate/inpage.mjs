@@ -7,6 +7,8 @@
 export function installLib() {
   const G = (window.__caosGate = window.__caosGate || {});
   G.raf = 0;
+  // The smallest rendered size of an illustration label (EXEC_LIMITS.minLabelPx of gate/areas.mjs; test/executive.test.ts keeps them equal).
+  const EXEC_MIN_LABEL_PX = 9;
   G.counting = false;
   const nativeRaf = window.requestAnimationFrame ? window.requestAnimationFrame.bind(window) : null;
   if (nativeRaf) {
@@ -611,8 +613,91 @@ export function installLib() {
         qa: [...sec.querySelectorAll('[data-qa]')].filter((q) => mine(q) && nonEmpty(q, '[data-question]') && nonEmpty(q, '[data-answer]')).length,
       };
     });
-    const inView = (sel) => (outerPanel ? [...outerPanel.querySelectorAll(sel)] : [...page.querySelectorAll(sel)]).filter(seen);
     const selected = outerTabs.find((t) => t.getAttribute('aria-selected') === 'true');
+    // The executive view (shell 0.12.0): what the ExecutiveView shows, for executiveFailures of gate/areas.mjs.
+    const execRoots = [...page.querySelectorAll('[data-executive-view]')].filter(visible);
+    const executive = (() => {
+      if (!execRoots.length) return { count: 0 };
+      const root = execRoots[0];
+      const isTok = (v) => {
+        const x = String(v || '').trim().toLowerCase();
+        return !x || ['none', 'currentcolor', 'transparent', 'inherit', 'initial', 'unset', 'context-fill', 'context-stroke'].includes(x) || x.startsWith('var(--') || x.startsWith('url(');
+      };
+      const COLOR_PROPS = ['fill', 'stroke', 'stop-color', 'flood-color', 'lighting-color', 'color'];
+      const literalsOf = (svg) => {
+        const out = new Set();
+        const scan = (css) => {
+          for (const m of css.matchAll(/(?:^|[;{\s])(fill|stroke|stop-color|flood-color|lighting-color|color)\s*:\s*([^;}]+)/gi)) if (!isTok(m[2])) out.add(`${m[1].toLowerCase()}: ${m[2].trim()}`);
+        };
+        for (const el of [svg, ...svg.querySelectorAll('*')]) {
+          for (const p of COLOR_PROPS) if (el.hasAttribute(p) && !isTok(el.getAttribute(p))) out.add(`${p}: ${el.getAttribute(p).trim()}`);
+          if (el.hasAttribute('style')) scan(el.getAttribute('style'));
+          if (el.localName === 'style') scan(el.textContent || '');
+        }
+        return [...out];
+      };
+      const illustrations = [...root.querySelectorAll('[data-exec-illustration]')].map((fig) => {
+        const svg = fig.querySelector('svg');
+        const sec = fig.closest('[data-exec-section]');
+        const cap = fig.querySelector('figcaption');
+        const info = { name: fig.getAttribute('data-exec-illustration'), section: sec ? Number(sec.getAttribute('data-exec-section')) : 0, file: fig.getAttribute('data-exec-file'), state: fig.getAttribute('data-state'), why: textOf(fig.querySelector('.caos-exec-fig-error') || fig).slice(0, 80), svg: Boolean(svg), img: fig.querySelectorAll('img').length, chart: fig.querySelectorAll('[data-chart], [data-plot]').length, caption: Boolean(cap && textOf(cap)), literal: [], outside: [], small: [], labels: 0 };
+        if (!svg) return info;
+        info.literal = literalsOf(svg);
+        const vb = svg.viewBox && svg.viewBox.baseVal;
+        const w = svg.getBoundingClientRect().width;
+        const scale = vb && vb.width ? w / vb.width : 1;
+        for (const t of svg.querySelectorAll('text')) {
+          const label = (t.textContent || '').trim();
+          if (!label || !visible(t)) continue;
+          info.labels += 1;
+          if (vb && vb.width) {
+            const b = t.getBBox();
+            if (b.x < vb.x - 1 || b.y < vb.y - 1 || b.x + b.width > vb.x + vb.width + 1 || b.y + b.height > vb.y + vb.height + 1) info.outside.push(label.slice(0, 40));
+          }
+          const px = parseFloat(getComputedStyle(t).fontSize) * scale;
+          if (px < EXEC_MIN_LABEL_PX) info.small.push(`"${label.slice(0, 30)}" at ${px.toFixed(1)}px`);
+        }
+        return info;
+      });
+      const sections = [...root.querySelectorAll('[data-exec-section]')].map((sec) => {
+        const pending = sec.querySelector('[data-exec-pending]');
+        return {
+          n: Number(sec.getAttribute('data-exec-section')),
+          title: textOf(sec.querySelector('h2') || sec),
+          question: textOf(sec.querySelector('[data-exec-question]') || sec),
+          pending: pending && seen(pending) ? 1 : 0,
+          pendingText: pending ? textOf(pending) : '',
+          pendingState: pending ? pending.getAttribute('data-state') : null,
+          rows: [...sec.querySelectorAll('[data-exec-c]')].filter(seen).length,
+        };
+      });
+      const panelOpen = outerPanel ? outerPanel.contains(root) : true;
+      const execOpen = selected && (selected.getAttribute('data-tab') || tabLabel(selected)) === 'executive';
+      const area = execOpen && outerPanel ? outerPanel : null;
+      const docSections = area ? [...area.querySelectorAll('[data-doc-section]')].filter((e) => visible(e) && !root.contains(e)) : [];
+      // anything of the open executive view that is neither the ExecutiveView nor the references block of the panel
+      const strangers = area
+        ? [...area.querySelectorAll('p, ul, ol, table, figure, h1, h2, h3, h4, pre, canvas, .callout, .equation, .caos-qa')]
+            .filter((e) => visible(e) && !root.contains(e) && !e.closest('[data-doc-references], [data-doc-section]'))
+            .map((e) => textOf(e).slice(0, 50) || e.tagName.toLowerCase())
+        : [];
+      return {
+        count: execRoots.length,
+        schema: root.getAttribute('data-executive-schema'),
+        valid: root.getAttribute('data-executive-valid'),
+        errors: root.getAttribute('data-executive-errors') || '',
+        inOpenView: panelOpen,
+        docSections: docSections.length,
+        docSectionTitles: docSections.map((e) => textOf(e.querySelector('h2') || e).slice(0, 40)),
+        strangers,
+        sections,
+        fields: [...root.querySelectorAll('[data-exec-field]')].map((e) => ({ path: e.getAttribute('data-exec-field'), text: textOf(e), readable: seen(e) })),
+        notes: root.querySelectorAll('[data-exec-notes] > li').length,
+        figures: root.querySelectorAll('.caos-exec-cite').length,
+        illustrations,
+      };
+    })();
+    const inView = (sel) => (outerPanel ? [...outerPanel.querySelectorAll(sel)] : [...page.querySelectorAll(sel)]).filter(seen);
     return {
       ledeWords: lede && visible(lede) ? wordsOf(lede).words : 0,
       waiver: page.getAttribute('data-floor-waiver'),
@@ -623,6 +708,7 @@ export function installLib() {
       viewEquations: [...page.querySelectorAll('.equation')].filter(seen).length,
       viewGlossaries: [...page.querySelectorAll('[data-glossary]')].filter(seen).length,
       sections,
+      executive,
       figures: inView('figure').map(captioned).filter(Boolean),
       equations: inView('.equation').map(equationCaption).filter(Boolean),
     };
