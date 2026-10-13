@@ -703,7 +703,7 @@ if (PLANT === 'clip') {
 }
 if (PLANT === 'shrunk-tabs') {
   const style = document.createElement('style');
-  style.textContent = '.caos-cw-panel > .subtabs > .subtablist, .caos-cw > .tabs > .tablist { flex: 0 1 auto !important; }';
+  style.textContent = '.caos-cw-panel > .subtabs > .subtablist, .caos-cw > .tabs > .tablist { flex: 0 1 auto !important; } .caos-cw-panel > .subtabs > .subtablist, .caos-cw > .tabs > .tablist { max-height: 16px !important; }';
   document.head.appendChild(style);
 }
 if (PLANT === 'sticky-off') {

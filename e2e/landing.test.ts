@@ -62,7 +62,7 @@ before(async () => {
   const css = await readFile(new URL('../styles.css', import.meta.url), 'utf8');
   server = createServer((req, res) => {
     const url = (req.url ?? '/').split('?')[0];
-    const file = /^\/executive\/(initiative|problem|solution)\.svg$/.exec(url);
+    const file = /^\/executive\/(pain|situation|proposal)\.svg$/.exec(url);
     if (url === '/landing.js') {
       res.setHeader('Content-Type', 'text/javascript');
       res.end(script.outputFiles[0].text);

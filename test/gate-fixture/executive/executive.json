@@ -1,18 +1,18 @@
 {
-  "executive": {
-    "en": "Chief Operating Officer",
-    "es": "Director de Operaciones"
+  "title": {
+    "en": "Winter staffing gaps in hospital networks",
+    "es": "Brechas de personal invernales en redes de hospitales"
   },
-  "organisation": {
-    "en": "a regional hospital network",
-    "es": "una red regional de hospitales"
+  "key_statement": {
+    "en": "Hospital networks learn about their winter staffing gaps too late, and planned surgery is cancelled as a result. Seeing each gap two weeks ahead, with a named owner for every action, keeps surgery on schedule.",
+    "es": "Las redes de hospitales conocen sus brechas de personal invernales demasiado tarde, y por eso se cancela cirugía programada. Ver cada brecha con dos semanas de anticipación, con un responsable para cada acción, mantiene la cirugía en fecha."
   },
-  "initiative": {
-    "en": "Keep every ward staffed through the winter wave without cancelling planned surgery.",
-    "es": "Mantener todas las salas con personal durante la ola de invierno sin cancelar cirugías programadas."
-  },
-  "why_now": {
-    "figure": {
+  "headline_figures": [
+    {
+      "heading": {
+        "en": "Admissions rise",
+        "es": "Suben los ingresos"
+      },
       "value": {
         "en": "18",
         "es": "18"
@@ -20,193 +20,637 @@
       "unit": {
         "en": "percent more admissions than last winter",
         "es": "por ciento más ingresos que el invierno pasado"
-      }
-    },
-    "deadline": {
-      "en": "by 1 December 2026",
-      "es": "antes del 1 de diciembre de 2026"
-    }
-  },
-  "vision": {
-    "en": "Every ward knows its staffing gap two weeks ahead, so surgery stays on schedule.",
-    "es": "Cada sala conoce su brecha de personal con dos semanas de anticipación, y la cirugía se mantiene en fecha."
-  },
-  "outcomes": [
-    {
-      "capability": {
-        "en": "Forecasts admissions by ward",
-        "es": "Pronostica los ingresos por sala"
       },
-      "outcome": {
-        "en": "Fewer last-minute shift calls",
-        "es": "Menos llamados de turno a último minuto"
-      },
-      "proof": {
-        "value": {
-          "en": "40",
-          "es": "40"
-        },
-        "unit": {
-          "en": "percent fewer",
-          "es": "por ciento menos"
-        },
-        "statement": {
-          "en": "Shift calls fell in the pilot ward.",
-          "es": "Los llamados de turno bajaron en la sala piloto."
-        }
-      }
+      "source": "admissions"
     },
     {
-      "capability": {
-        "en": "Compares staffing plans side by side",
-        "es": "Compara planes de dotación lado a lado"
+      "heading": {
+        "en": "Cancelled surgery",
+        "es": "Cirugía cancelada"
       },
-      "outcome": {
-        "en": "Planned surgery stays on schedule",
-        "es": "La cirugía programada se mantiene en fecha"
+      "value": {
+        "en": "3",
+        "es": "3"
       },
-      "proof": {
-        "value": {
-          "en": "3",
-          "es": "3"
-        },
-        "unit": {
-          "en": "cancellations avoided per month",
-          "es": "cancelaciones evitadas por mes"
-        },
-        "statement": {
-          "en": "The pilot ward avoided three cancellations each month.",
-          "es": "La sala piloto evitó tres cancelaciones cada mes."
-        }
-      }
+      "unit": {
+        "en": "cancellations per ward each month",
+        "es": "cancelaciones por sala cada mes"
+      },
+      "source": "cancellations"
     },
     {
-      "capability": {
-        "en": "Explains every number it shows",
-        "es": "Explica cada cifra que muestra"
+      "heading": {
+        "en": "Notice given",
+        "es": "Aviso recibido"
       },
-      "outcome": {
-        "en": "Plans the board can audit",
-        "es": "Planes que el directorio puede auditar"
+      "value": {
+        "en": "2",
+        "es": "2"
       },
-      "proof": {
-        "value": {
-          "en": "100",
-          "es": "100"
-        },
-        "unit": {
-          "en": "percent of figures traced",
-          "es": "por ciento de cifras rastreadas"
-        },
-        "statement": {
-          "en": "Each figure links to its source record.",
-          "es": "Cada cifra enlaza con su registro de origen."
-        }
-      }
+      "unit": {
+        "en": "days of notice before a shift is short",
+        "es": "días de aviso antes de que falte personal"
+      },
+      "source": "notice"
     }
   ],
-  "dialogue": [
-    {
-      "question": {
-        "en": "What does it cost to adopt?",
-        "es": "¿Cuánto cuesta adoptarlo?"
-      },
-      "answer": {
-        "en": "Nothing: it is a test product with no customers and no fee.",
-        "es": "Nada: es un producto de prueba sin clientes ni tarifa."
-      }
+  "pain": {
+    "key_message": {
+      "en": "Wards learn they are short of staff only days before the shift, and planned surgery pays for it.",
+      "es": "Las salas saben que les falta personal solo días antes del turno, y la cirugía programada lo paga."
     },
-    {
-      "question": {
-        "en": "How do we know the numbers hold?",
-        "es": "¿Cómo sabemos que las cifras se sostienen?"
+    "paragraphs": [
+      {
+        "en": "Every winter, admissions climb faster than the staffing plan can follow. The plan is written weeks earlier for the whole hospital, so the gap in a single ward appears only when the shift is already close.",
+        "es": "Cada invierno los ingresos suben más rápido de lo que el plan de dotación puede seguir. El plan se escribe semanas antes para todo el hospital, así que la brecha de una sala aparece cuando el turno ya está cerca."
       },
-      "answer": {
-        "en": "The gate measures every page before release. Its own plants prove it can fail.",
-        "es": "El verificador mide cada página antes de publicar. Sus propias plantas prueban que puede fallar."
+      {
+        "en": "When the gap is found late, the options are few and costly: extra shifts at short notice, borrowed staff from other wards, or cancelling planned surgery. Each option moves the problem to someone else instead of solving it.",
+        "es": "Cuando la brecha se descubre tarde, las opciones son pocas y costosas: turnos extra con poco aviso, personal prestado de otras salas o cancelar cirugía programada. Cada opción traslada el problema a otra persona en vez de resolverlo."
       }
+    ],
+    "bearers": [
+      {
+        "who": {
+          "en": "Patients on a surgical list",
+          "es": "Pacientes en lista quirúrgica"
+        },
+        "cost": {
+          "en": "A cancelled operation and weeks of extra waiting",
+          "es": "Una operación cancelada y semanas más de espera"
+        },
+        "measure": {
+          "en": "Cancellations per ward each month",
+          "es": "Cancelaciones por sala cada mes"
+        }
+      },
+      {
+        "who": {
+          "en": "Ward nursing teams",
+          "es": "Equipos de enfermería de las salas"
+        },
+        "cost": {
+          "en": "Overtime and shifts moved at short notice",
+          "es": "Horas extra y turnos cambiados con poco aviso"
+        },
+        "measure": {
+          "en": "Overtime as a share of nursing hours",
+          "es": "Horas extra como parte de las horas de enfermería"
+        }
+      },
+      {
+        "who": {
+          "en": "Hospital leadership",
+          "es": "La dirección del hospital"
+        },
+        "cost": {
+          "en": "Agency staff and lost theatre time",
+          "es": "Personal de agencia y tiempo de pabellón perdido"
+        },
+        "measure": {
+          "en": "Spend on agency staff each quarter",
+          "es": "Gasto en personal de agencia cada trimestre"
+        }
+      }
+    ],
+    "figures": [
+      {
+        "heading": {
+          "en": "Short notice",
+          "es": "Poco aviso"
+        },
+        "value": {
+          "en": "2",
+          "es": "2"
+        },
+        "unit": {
+          "en": "days of notice before a shift is short",
+          "es": "días de aviso antes de que falte personal"
+        },
+        "source": "notice"
+      },
+      {
+        "heading": {
+          "en": "Overtime",
+          "es": "Horas extra"
+        },
+        "value": {
+          "en": "12",
+          "es": "12"
+        },
+        "unit": {
+          "en": "percent of nursing hours worked as overtime",
+          "es": "por ciento de las horas de enfermería son extra"
+        },
+        "source": "overtime"
+      }
+    ],
+    "causes": [
+      {
+        "cause": {
+          "en": "Admissions are forecast for the hospital, not for each ward",
+          "es": "Los ingresos se pronostican para el hospital, no para cada sala"
+        },
+        "weight": 45
+      },
+      {
+        "cause": {
+          "en": "Staffing plans live in separate spreadsheets that do not meet",
+          "es": "Los planes de dotación viven en planillas separadas que no se encuentran"
+        },
+        "weight": 35
+      },
+      {
+        "cause": {
+          "en": "Absence is reported late and in different ways",
+          "es": "Las ausencias se informan tarde y de maneras distintas"
+        },
+        "weight": 20
+      }
+    ]
+  },
+  "context": {
+    "key_message": {
+      "en": "Rules, data and habits that were built for a steady year keep the winter gap invisible until it is too late.",
+      "es": "Las reglas, los datos y las costumbres hechos para un año estable mantienen invisible la brecha invernal hasta que es tarde."
     },
-    {
-      "question": {
-        "en": "What is it not?",
-        "es": "¿Qué no es?"
-      },
-      "answer": {
-        "en": "It is not a forecast and it serves no real decision.",
-        "es": "No es un pronóstico y no sirve a ninguna decisión real."
+    "paragraphs": [
+      {
+        "en": "Hospital networks plan staffing once a quarter, from last year's occupancy. Admissions data is kept by each ward in its own format, and no one is paid to join it across wards before the shift is set.",
+        "es": "Las redes de hospitales planifican la dotación una vez al trimestre, a partir de la ocupación del año anterior. Los datos de ingresos los guarda cada sala en su propio formato, y nadie tiene la tarea de unirlos entre salas antes de fijar el turno."
       }
+    ],
+    "setting": {
+      "en": "Public and private hospital networks with several wards, fixed nursing rosters and a published waiting-list target.",
+      "es": "Redes de hospitales públicos y privados con varias salas, turnos fijos de enfermería y una meta publicada de listas de espera."
+    },
+    "forces": [
+      {
+        "force": {
+          "en": "Admissions peaks are getting steeper each winter",
+          "es": "Los peaks de ingresos son más pronunciados cada invierno"
+        },
+        "direction": "rising"
+      },
+      {
+        "force": {
+          "en": "Rosters are fixed weeks before the shift",
+          "es": "Los turnos se fijan semanas antes de la jornada"
+        },
+        "direction": "steady"
+      },
+      {
+        "force": {
+          "en": "Waiting-list targets leave less room to delay surgery",
+          "es": "Las metas de listas de espera dejan menos margen para postergar cirugías"
+        },
+        "direction": "rising"
+      }
+    ],
+    "evidence": [
+      {
+        "statement": {
+          "en": "Admissions were 18 percent higher than in the previous winter in the sample.",
+          "es": "Los ingresos fueron 18 por ciento más altos que el invierno anterior en la muestra."
+        },
+        "source": "admissions"
+      },
+      {
+        "statement": {
+          "en": "A published target limits how long a patient may wait for surgery.",
+          "es": "Una meta publicada limita cuánto puede esperar un paciente por una cirugía."
+        },
+        "source": "target"
+      }
+    ]
+  },
+  "situation": {
+    "key_message": {
+      "en": "Three roles each hold part of the picture, and today nothing joins their views before the shift.",
+      "es": "Tres roles tienen cada uno una parte del cuadro, y hoy nada une sus vistas antes del turno."
+    },
+    "roles": [
+      {
+        "role": {
+          "en": "Chief operating officers",
+          "es": "Directores de operaciones"
+        },
+        "decides": {
+          "en": "How much surge capacity to fund",
+          "es": "Cuánta capacidad extra financiar"
+        },
+        "needs": {
+          "en": "An early, ward-level view of the gap",
+          "es": "Una vista temprana de la brecha por sala"
+        }
+      },
+      {
+        "role": {
+          "en": "Heads of nursing",
+          "es": "Jefaturas de enfermería"
+        },
+        "decides": {
+          "en": "Who works which shift on each ward",
+          "es": "Quién trabaja qué turno en cada sala"
+        },
+        "needs": {
+          "en": "The expected admissions for the next two weeks",
+          "es": "Los ingresos esperados para las próximas dos semanas"
+        }
+      },
+      {
+        "role": {
+          "en": "Bed managers",
+          "es": "Gestores de camas"
+        },
+        "decides": {
+          "en": "Which patients are admitted and when",
+          "es": "Qué pacientes ingresan y cuándo"
+        },
+        "needs": {
+          "en": "The discharge outlook of every ward",
+          "es": "El panorama de altas de cada sala"
+        }
+      }
+    ],
+    "interaction": {
+      "en": "Leaders set the budget, nursing sets the rosters and bed managers set the flow, each from a different list.",
+      "es": "La dirección fija el presupuesto, enfermería fija los turnos y los gestores de camas fijan el flujo, cada uno desde una lista distinta."
+    },
+    "state_of_the_art": [
+      {
+        "approach": {
+          "en": "Quarterly staffing plans from last year's occupancy",
+          "es": "Planes trimestrales de dotación según la ocupación del año anterior"
+        },
+        "achieves": {
+          "en": "A stable, predictable roster",
+          "es": "Un turno estable y predecible"
+        },
+        "falls_short": {
+          "en": "It cannot follow a steep winter peak",
+          "es": "No puede seguir un peak invernal pronunciado"
+        },
+        "source": "practice"
+      },
+      {
+        "approach": {
+          "en": "Daily bed meetings with a shared whiteboard",
+          "es": "Reuniones diarias de camas con una pizarra compartida"
+        },
+        "achieves": {
+          "en": "A fast view of today",
+          "es": "Una vista rápida del día de hoy"
+        },
+        "falls_short": {
+          "en": "It looks only a day or two ahead",
+          "es": "Mira solo uno o dos días hacia adelante"
+        },
+        "source": "notice"
+      },
+      {
+        "approach": {
+          "en": "Hospital-wide admissions forecasts",
+          "es": "Pronósticos de ingresos de todo el hospital"
+        },
+        "achieves": {
+          "en": "A reliable total for the whole site",
+          "es": "Un total confiable para todo el recinto"
+        },
+        "falls_short": {
+          "en": "It hides the gap of each ward",
+          "es": "Esconde la brecha de cada sala"
+        },
+        "source": "forecast"
+      }
+    ],
+    "status": {
+      "heading": {
+        "en": "Wards with a ward-level forecast",
+        "es": "Salas con pronóstico propio"
+      },
+      "value": {
+        "en": "1 in 5",
+        "es": "1 de cada 5"
+      },
+      "unit": {
+        "en": "wards",
+        "es": "salas"
+      },
+      "date": {
+        "en": "March 2026",
+        "es": "marzo de 2026"
+      },
+      "source": "forecast"
     }
-  ],
+  },
+  "trends": {
+    "key_message": {
+      "en": "Steeper peaks and tighter targets are arriving first, and the heads of nursing feel them before anyone else.",
+      "es": "Los peaks más pronunciados y las metas más estrictas llegan primero, y las jefaturas de enfermería los sienten antes que nadie."
+    },
+    "items": [
+      {
+        "trend": {
+          "en": "Stricter limits on how long surgery may wait",
+          "es": "Límites más estrictos a la espera por cirugía"
+        },
+        "kind": "regulatory",
+        "direction": "rising",
+        "horizon": "two_years",
+        "signal": {
+          "statement": {
+            "en": "The published target was tightened in the latest revision.",
+            "es": "La meta publicada se hizo más estricta en la última revisión."
+          },
+          "source": "target"
+        },
+        "effect": {
+          "en": "Chief operating officers lose the option of postponing surgery.",
+          "es": "Los directores de operaciones pierden la opción de postergar cirugías."
+        },
+        "confidence": "high"
+      },
+      {
+        "trend": {
+          "en": "Ward-level admissions forecasts become routine",
+          "es": "Los pronósticos de ingresos por sala se vuelven rutina"
+        },
+        "kind": "technological",
+        "direction": "rising",
+        "horizon": "now",
+        "signal": {
+          "statement": {
+            "en": "One in five wards already has one.",
+            "es": "Una de cada cinco salas ya cuenta con uno."
+          },
+          "source": "forecast"
+        },
+        "effect": {
+          "en": "Heads of nursing can write rosters from an expected gap.",
+          "es": "Las jefaturas de enfermería pueden escribir turnos a partir de una brecha esperada."
+        },
+        "confidence": "medium"
+      },
+      {
+        "trend": {
+          "en": "Shortages of nursing staff persist",
+          "es": "La escasez de personal de enfermería persiste"
+        },
+        "kind": "market",
+        "direction": "steady",
+        "horizon": "ten_years",
+        "signal": {
+          "statement": {
+            "en": "Overtime remains a large share of nursing hours.",
+            "es": "Las horas extra siguen siendo una parte grande de las horas de enfermería."
+          },
+          "source": "overtime"
+        },
+        "effect": {
+          "en": "Bed managers and nursing must plan with the staff they have.",
+          "es": "Los gestores de camas y enfermería deben planificar con el personal que tienen."
+        },
+        "confidence": "low"
+      }
+    ]
+  },
+  "proposal": {
+    "key_message": {
+      "en": "Forecast the staffing gap for each ward two weeks ahead, and start by naming who owns the first roster change.",
+      "es": "Pronosticar la brecha de personal de cada sala con dos semanas de anticipación, y empezar por nombrar quién cambia el primer turno."
+    },
+    "paragraphs": [
+      {
+        "en": "The approach joins admissions, discharges and absences at ward level, so the gap is visible while a roster can still change. It answers the three causes of the pain: ward-level forecasts, one shared plan and earlier absence reports.",
+        "es": "El enfoque une ingresos, altas y ausencias a nivel de sala, de modo que la brecha se ve mientras un turno todavía puede cambiar. Responde a las tres causas del problema: pronósticos por sala, un plan compartido y avisos de ausencia más tempranos."
+      }
+    ],
+    "four_cs": [
+      {
+        "c": {
+          "en": "Choice",
+          "es": "Elección"
+        },
+        "applies": {
+          "en": "The forecast can use an open or a proprietary model, whichever fits each ward best.",
+          "es": "El pronóstico puede usar un modelo abierto o propietario, el que mejor sirva a cada sala."
+        }
+      },
+      {
+        "c": {
+          "en": "Context",
+          "es": "Contexto"
+        },
+        "applies": {
+          "en": "Every number is tied to wards, shifts and surgeries, so a gap means something to the board.",
+          "es": "Cada cifra se ata a salas, turnos y cirugías, así que una brecha tiene sentido para el directorio."
+        }
+      },
+      {
+        "c": {
+          "en": "Cost",
+          "es": "Costo"
+        },
+        "applies": {
+          "en": "The board sees what each forecast run spends and which ward it serves.",
+          "es": "El directorio ve lo que gasta cada corrida de pronóstico y qué sala atiende."
+        }
+      },
+      {
+        "c": {
+          "en": "Control",
+          "es": "Control"
+        },
+        "applies": {
+          "en": "One set of rules covers the admissions data, the models and the agents that propose rosters.",
+          "es": "Un solo conjunto de reglas cubre los datos de ingresos, los modelos y los agentes que proponen turnos."
+        }
+      }
+    ],
+    "actions": [
+      {
+        "action": {
+          "en": "Share one ward-level admissions forecast with every roster owner.",
+          "es": "Compartir un pronóstico de ingresos por sala con cada responsable de turnos."
+        },
+        "owner": {
+          "en": "Chief operating officers",
+          "es": "Directores de operaciones"
+        },
+        "horizon": {
+          "en": "Within one quarter",
+          "es": "Dentro de un trimestre"
+        },
+        "check": {
+          "en": "Every ward has a forecast two weeks ahead.",
+          "es": "Cada sala tiene un pronóstico con dos semanas de anticipación."
+        }
+      },
+      {
+        "action": {
+          "en": "Write rosters from the expected gap, not from last year.",
+          "es": "Escribir los turnos desde la brecha esperada, no desde el año pasado."
+        },
+        "owner": {
+          "en": "Heads of nursing",
+          "es": "Jefaturas de enfermería"
+        },
+        "horizon": {
+          "en": "Before next winter",
+          "es": "Antes del próximo invierno"
+        },
+        "check": {
+          "en": "Overtime falls as a share of nursing hours.",
+          "es": "Las horas extra bajan como parte de las horas de enfermería."
+        }
+      },
+      {
+        "action": {
+          "en": "Plan admissions against the discharge outlook of each ward.",
+          "es": "Planificar los ingresos según el panorama de altas de cada sala."
+        },
+        "owner": {
+          "en": "Bed managers",
+          "es": "Gestores de camas"
+        },
+        "horizon": {
+          "en": "Within two quarters",
+          "es": "Dentro de dos trimestres"
+        },
+        "check": {
+          "en": "Cancellations per ward each month fall.",
+          "es": "Las cancelaciones por sala cada mes bajan."
+        }
+      }
+    ],
+    "risks": [
+      {
+        "en": "A forecast that is wrong for one ward could move staff away from a ward that needs them.",
+        "es": "Un pronóstico errado en una sala podría sacar personal de una sala que lo necesita."
+      },
+      {
+        "en": "Absence reports may stay late if ward teams see no benefit.",
+        "es": "Los avisos de ausencia pueden seguir tardíos si los equipos no ven un beneficio."
+      }
+    ],
+    "unknowns": [
+      {
+        "en": "How much of the gap can be closed without hiring more staff is not yet known.",
+        "es": "Cuánto de la brecha puede cerrarse sin contratar más personal todavía no se sabe."
+      }
+    ],
+    "handoff": {
+      "en": "The method used to forecast each ward is described in the technical view.",
+      "es": "El método para pronosticar cada sala se describe en la vista técnica."
+    }
+  },
   "illustrations": {
-    "initiative": {
-      "file": "executive/initiative.svg",
-      "caption": {
-        "en": "The executive at the desk, with the winter deadline on the calendar.",
-        "es": "El ejecutivo en su escritorio, con la fecha límite del invierno en el calendario."
-      }
-    },
-    "problem": {
-      "file": "executive/problem.svg",
+    "pain": {
+      "file": "executive/pain.svg",
       "caption": {
         "en": "Today the gap between admissions and staff shows up too late.",
         "es": "Hoy la brecha entre ingresos y personal aparece demasiado tarde."
       }
     },
-    "solution": {
-      "file": "executive/solution.svg",
+    "situation": {
+      "file": "executive/situation.svg",
       "caption": {
-        "en": "With the tool in place, the gap is seen two weeks ahead.",
-        "es": "Con la herramienta, la brecha se ve con dos semanas de anticipación."
+        "en": "Three roles each see a part of the picture, and none sees the whole.",
+        "es": "Tres roles ven cada uno una parte del cuadro, y ninguno ve el total."
+      }
+    },
+    "proposal": {
+      "file": "executive/proposal.svg",
+      "caption": {
+        "en": "With the approach in place, the gap is seen two weeks ahead.",
+        "es": "Con el enfoque en marcha, la brecha se ve con dos semanas de anticipación."
       }
     }
   },
   "sources": [
     {
-      "field": "why_now.figure",
+      "id": "admissions",
       "title": {
         "en": "Executive view fixture data of the shell",
         "es": "Datos de prueba de la vista ejecutiva del shell"
       },
       "url": "https://github.com/fsantibanezleal/CAOS_APP_SHELL/blob/main/test/gate-fixture/executive/executive.json",
       "note": {
-        "en": "Test record, not a real hospital.",
-        "es": "Registro de prueba, no un hospital real."
+        "en": "Test record, not a real hospital study.",
+        "es": "Registro de prueba, no un estudio real de hospitales."
       }
     },
     {
-      "field": "outcomes[0].proof",
+      "id": "cancellations",
       "title": {
         "en": "The executive view guide of the shell",
         "es": "La guía de la vista ejecutiva del shell"
       },
       "url": "https://github.com/fsantibanezleal/CAOS_APP_SHELL/blob/main/docs/06_executive-view.md",
       "note": {
-        "en": "Pilot ward figures of the fixture.",
-        "es": "Cifras de la sala piloto de la prueba."
+        "en": "Test record, not a real hospital study.",
+        "es": "Registro de prueba, no un estudio real de hospitales."
       }
     },
     {
-      "field": "outcomes[1].proof",
+      "id": "notice",
       "title": {
         "en": "The gate guide of the shell",
         "es": "La guía del verificador del shell"
       },
       "url": "https://github.com/fsantibanezleal/CAOS_APP_SHELL/blob/main/docs/07_gate.md",
       "note": {
-        "en": "Pilot ward figures of the fixture.",
-        "es": "Cifras de la sala piloto de la prueba."
+        "en": "Test record, not a real hospital study.",
+        "es": "Registro de prueba, no un estudio real de hospitales."
       }
     },
     {
-      "field": "outcomes[2].proof",
+      "id": "overtime",
       "title": {
         "en": "The software design document of the shell",
         "es": "El documento de diseño de software del shell"
       },
       "url": "https://github.com/fsantibanezleal/CAOS_APP_SHELL/blob/main/docs/design/SDD.md",
       "note": {
-        "en": "Audit trail figures of the fixture.",
-        "es": "Cifras de la traza de auditoría de la prueba."
+        "en": "Test record, not a real hospital study.",
+        "es": "Registro de prueba, no un estudio real de hospitales."
+      }
+    },
+    {
+      "id": "target",
+      "title": {
+        "en": "The navigation guide of the shell",
+        "es": "La guía de navegación del shell"
+      },
+      "url": "https://github.com/fsantibanezleal/CAOS_APP_SHELL/blob/main/docs/03_navigation.md",
+      "note": {
+        "en": "Test record, not a real hospital study.",
+        "es": "Registro de prueba, no un estudio real de hospitales."
+      }
+    },
+    {
+      "id": "practice",
+      "title": {
+        "en": "The structure guide of the shell",
+        "es": "La guía de estructura del shell"
+      },
+      "url": "https://github.com/fsantibanezleal/CAOS_APP_SHELL/blob/main/docs/01_structure.md",
+      "note": {
+        "en": "Test record, not a real hospital study.",
+        "es": "Registro de prueba, no un estudio real de hospitales."
+      }
+    },
+    {
+      "id": "forecast",
+      "title": {
+        "en": "The views guide of the shell",
+        "es": "La guía de vistas del shell"
+      },
+      "url": "https://github.com/fsantibanezleal/CAOS_APP_SHELL/blob/main/docs/04_views.md",
+      "note": {
+        "en": "Test record, not a real hospital study.",
+        "es": "Registro de prueba, no un estudio real de hospitales."
       }
     }
   ]

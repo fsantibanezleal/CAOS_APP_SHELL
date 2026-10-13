@@ -48,7 +48,7 @@ before(async () => {
   const css = await readFile(new URL('../styles.css', import.meta.url), 'utf8');
   server = createServer((req, res) => {
     const url = req.url ?? '/';
-    const file = /^\/executive\/(initiative|problem|solution)\.svg$/.exec(url);
+    const file = /^\/executive\/(pain|situation|proposal)\.svg$/.exec(url);
     if (url === '/executive-view.js') {
       res.setHeader('Content-Type', 'text/javascript');
       res.end(script.outputFiles[0].text);
@@ -90,10 +90,10 @@ test('the executive view fits 390, 1280 and 1600 px in both themes and both lang
           await page.waitForSelector('[data-executive-view] figure svg');
           const seen: string[] = [];
           // the four sections are the four sub-tabs: visit each and measure what it shows
-          for (let tab = 0; tab < 4; tab += 1) {
+          for (let tab = 0; tab < 5; tab += 1) {
             const where2 = `${where}, sub-tab ${tab + 1}`;
             if (tab > 0) await page.locator('[data-exec-tabs] [role="tab"]').nth(tab).click();
-            const expected = [2, 1, 0, 0][tab];
+            const expected = [1, 0, 1, 0, 1][tab];
             await page.waitForFunction((n) => document.querySelectorAll('[data-exec-illustration] svg').length === n, expected);
             const m = await page.evaluate(`(() => {
               const de = document.documentElement;
@@ -116,9 +116,9 @@ test('the executive view fits 390, 1280 and 1600 px in both themes and both lang
             })()`) as { scrollW: number; innerW: number; valid: string; sections: number[]; tabs: string[]; notes: Array<{ href: string | null; w: number; h: number; right: number }>; figures: Array<{ name: string; w: number; h: number; col: number; bad: string[]; langs: string[]; img: number }> };
             assert.equal(m.valid, 'true', where2);
             assert.deepEqual(m.sections, [tab + 1], `${where2}: one section at a time, in its own sub-tab`);
-            assert.deepEqual(m.tabs, [0, 1, 2, 3].map((i) => String(i === tab)), `${where2}: the selected sub-tab`);
+            assert.deepEqual(m.tabs, [0, 1, 2, 3, 4].map((i) => String(i === tab)), `${where2}: the selected sub-tab`);
             assert.ok(m.scrollW <= m.innerW, `${where2}: the page scrolls sideways (${m.scrollW} > ${m.innerW})`);
-            assert.equal(m.notes.length, 4, `${where2}: the source notes stay visible`);
+            assert.equal(m.notes.length, 7, `${where2}: the source notes stay visible`);
             for (const n of m.notes) assert.ok(n.href?.startsWith('https://') && n.h > 0 && n.right <= m.innerW, `${where2}: a source note is a visible https link inside the column`);
             for (const f of m.figures) {
               seen.push(f.name);
@@ -128,7 +128,7 @@ test('the executive view fits 390, 1280 and 1600 px in both themes and both lang
               assert.equal(f.img, 0, `${where2}: an img tag`);
             }
           }
-          assert.deepEqual(seen, ['initiative', 'problem', 'solution'], where);
+          assert.deepEqual(seen, ['pain', 'situation', 'proposal'], where);
           await page.close();
         }
       }
@@ -136,22 +136,22 @@ test('the executive view fits 390, 1280 and 1600 px in both themes and both lang
   }
 });
 
-test('the four sub-tabs are reachable by keyboard and the source notes stay visible', async () => {
+test('the five sub-tabs are reachable by keyboard and the source notes stay visible', async () => {
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   await page.goto(address);
   await page.waitForSelector('[data-exec-tabs] [role="tab"]');
   const tabs = page.locator('[data-exec-tabs] [role="tab"]');
-  assert.equal(await tabs.count(), 4);
+  assert.equal(await tabs.count(), 5);
   const selected = async () => page.evaluate(() => [...document.querySelectorAll('[data-exec-tabs] [role="tab"]')].findIndex((t) => t.getAttribute('aria-selected') === 'true'));
   const section = async () => page.evaluate(() => [...document.querySelectorAll('[data-exec-section]')].map((s) => s.getAttribute('data-exec-section')).join(','));
   assert.equal(await selected(), 0);
   await tabs.nth(0).focus();
-  const steps: Array<[string, number]> = [['ArrowRight', 1], ['ArrowRight', 2], ['ArrowRight', 3], ['ArrowRight', 0], ['End', 3], ['Home', 0], ['ArrowLeft', 3]];
+  const steps: Array<[string, number]> = [['ArrowRight', 1], ['ArrowRight', 2], ['ArrowRight', 3], ['ArrowRight', 4], ['ArrowRight', 0], ['End', 4], ['Home', 0], ['ArrowLeft', 4]];
   for (const [key, want] of steps) {
     await page.keyboard.press(key);
     assert.equal(await selected(), want, `${key} selects sub-tab ${want + 1}`);
     assert.equal(await section(), String(want + 1), `${key} shows section ${want + 1} alone`);
-    assert.equal(await page.locator('[data-exec-notes] > li a[href^="https://"]').count(), 4, `${key}: the notes are still there`);
+    assert.equal(await page.locator('[data-exec-notes] > li a[href^="https://"]').count(), 7, `${key}: the notes are still there`);
   }
   // the rendered tab row is one row (ADR-0071 rule 4) at the narrowest width
   await page.setViewportSize({ width: 390, height: 900 });
@@ -175,7 +175,7 @@ test('the lede and every part of the executive view take the full width of the d
       const w = (el) => Math.round(el.getBoundingClientRect().width);
       const lede = document.querySelector('.page-head .lede');
       const view = document.querySelector('[data-executive-view]');
-      const parts = [['.subtabs', view.querySelector('.subtabs')], ['notes', view.querySelector('.caos-exec-notes-wrap')]];
+      const parts = [['landing', view.querySelector('.caos-exec-landing')], ['.subtabs', view.querySelector('.subtabs')], ['notes', view.querySelector('.caos-exec-notes-wrap')], ['links', view.querySelector('.caos-exec-links')]];
       const section = view.querySelector('[data-exec-section]');
       if (section) {
         parts.push(['section ' + section.getAttribute('data-exec-section'), section]);
@@ -186,7 +186,7 @@ test('the lede and every part of the executive view take the full width of the d
     const first = (await page.evaluate(read)) as { column: number; lede: number; parts: Array<[string, number]> };
     assert.ok(first.lede >= first.column - 1, `${width}px: the lede is ${first.lede}px in a ${first.column}px column`);
     const seen: string[] = [];
-    for (let tab = 0; tab < 4; tab += 1) {
+    for (let tab = 0; tab < 5; tab += 1) {
       if (tab > 0) await page.locator('[data-exec-tabs] [role="tab"]').nth(tab).click();
       const m = (await page.evaluate(read)) as { column: number; lede: number; parts: Array<[string, number]> };
       for (const [name, got] of m.parts) {
@@ -194,7 +194,7 @@ test('the lede and every part of the executive view take the full width of the d
         assert.ok(got >= m.column - 1, `${width}px, sub-tab ${tab + 1}: ${name} is ${got}px in a ${m.column}px column`);
       }
     }
-    assert.ok(seen.some((n) => n.includes('dl.')) && seen.some((n) => n.includes('ul.')) && seen.some((n) => n.includes('figure.')), `${width}px: the facts, the outcomes and the figures were measured`);
+    assert.ok(seen.some((n) => n.includes('ul.')) && seen.some((n) => n.includes('figure.')) && seen.some((n) => n.includes('p.caos-exec-key')) && seen.some((n) => n.includes('ol.')), `${width}px: the lists, the figures, the key messages and the actions were measured`);
     await page.close();
   }
 });
@@ -223,12 +223,12 @@ test('an invalid data file shows its error in the browser and no section', async
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   await page.route('**/executive-view.js', async (route) => {
     const r = await route.fetch();
-    await route.fulfill({ response: r, body: (await r.text()).replace(/\bvision:\s*\{/, 'vision_x: {') });
+    await route.fulfill({ response: r, body: (await r.text()).replace(/\bkey_statement:\s*\{/, 'key_statement_x: {') });
   });
   await page.goto(address);
   await page.waitForSelector('[data-executive-view]');
   assert.equal(await page.getAttribute('[data-executive-view]', 'data-executive-valid'), 'false');
-  assert.ok((await page.textContent('[data-executive-view]'))?.includes('vision'));
+  assert.ok((await page.textContent('[data-executive-view]'))?.includes('key_statement'));
   assert.equal(await page.locator('[data-exec-section]').count(), 0);
   await page.close();
 });
