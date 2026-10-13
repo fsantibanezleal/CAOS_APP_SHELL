@@ -1,8 +1,9 @@
 // The documentation pages of the gate's fixture (ADR-0017 section 2.1): every page carries the areas its page must have,
 // in plain, truthful filler about the fixture itself (a test product that exists to exercise the gate). The self-test
 // plants one defect per floor through `plant` (`window.__PLANT__`); clean, every floor holds in both languages.
-import type { CSSProperties, ReactNode } from 'react';
-import { Callout, DocSection, Equation, Figure, Glossary, Question, Stat, SubTabs, Tabs, pick, type BiText } from '../../src/index';
+import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
+import { Callout, DocSection, Equation, ExecutiveView, Figure, Glossary, SubTabs, Tabs, pick, type BiText } from '../../src/index';
+import executiveData from './executive/executive.json';
 
 type Lang = 'en' | 'es';
 const REFS = ['km1927', 'hethcote2000'];
@@ -98,112 +99,72 @@ const Note = ({ lang }: { lang: Lang }) => (
   </Callout>
 );
 
-const NO_REFS = { en: 'A business summary of the fixture; its evidence is in the technical view.', es: 'Un resumen de negocio del producto de prueba; su evidencia está en la vista técnica.' };
+/** CSS that makes the text of the executive view unreadable while it stays in the page, one per plant (each used to pass the old gate). */
+const HIDE_STYLE: Record<string, string> = {
+  'area-hidden-textindent': '.caos-exec p, .caos-exec dd, .caos-exec li > div { text-indent: -10000px; white-space: nowrap; }',
+  'area-hidden-tinyfont': '.caos-exec [data-exec-field] { font-size: 1px !important; line-height: 16px; }',
+  'area-hidden-clippath': '.caos-exec [data-exec-field] { clip-path: inset(0 0 100% 0); }',
+  'area-hidden-filler': '.caos-exec [data-exec-field] { opacity: 0; }',
+};
+const HIDE_ES = '.caos-exec p, .caos-exec dd, .caos-exec span, .caos-exec strong { color: transparent !important; }';
 
-/** Ways to leave text in the page that a reader cannot read, one per plant (each used to pass the gate). */
-export const HIDE_TEXT: Record<string, CSSProperties> = {
-  'area-hidden-textindent': { textIndent: -10000, whiteSpace: 'nowrap' },
-  'area-hidden-tinyfont': { fontSize: 1, lineHeight: '16px' },
-  'area-hidden-clippath': { clipPath: 'inset(0 0 100% 0)' },
+/** The text a plant writes into a rendered field, bypassing the component's own validation (the gate must catch it on the page). */
+const WORDS31 = Array.from({ length: 31 }, (_, i) => `word${i}`).join(' ');
+const DOM_PLANT: Record<string, Record<'en' | 'es', string>> = {
+  'exec-long-sentence': { en: `${WORDS31}.`, es: `${WORDS31}.` },
+  'exec-es-only-long': { en: 'A short vision for the English reader.', es: `${WORDS31}.` },
+  'exec-citation-inline': { en: 'Admissions rose (Smith et al., 2019).', es: 'Los ingresos subieron (Smith et al., 2019).' },
+  'exec-equation-text': { en: 'Admissions follow $x = y$.', es: 'Los ingresos siguen $x = y$.' },
 };
 
-const stat = (v: string, unit: BiText, source: BiText) => <Stat value={v} unit={unit} source={source} />;
-const SRC = { en: 'the gate self-test', es: 'la autoprueba del verificador' };
+/** The data file of the fixture, with the defect of a data plant. */
+function executiveDataFor(plant: string) {
+  const d = JSON.parse(JSON.stringify(executiveData));
+  if (plant === 'exec-invalid-data') {
+    delete d.why_now.figure;
+    d.tagline = 'an extra field';
+  }
+  if (plant === 'exec-outcomes-two') d.outcomes.splice(2, 1);
+  if (plant === 'exec-dialogue-six') d.dialogue = Array.from({ length: 6 }, () => d.dialogue[0]);
+  if (plant === 'exec-four-cs-present') d.four_cs = ['A', 'B', 'C', 'D'].map((c) => ({ c: { en: c, es: c }, exec_problem: { en: 'It ties to the problem.', es: 'Se ata al problema.' } }));
+  return d;
+}
 
-// ------------------------------------------------------------------------------------------------------ Introduction
-function Executive({ lang, plant }: { lang: Lang; plant: string }) {
-  const rows = [
-    { cap: { en: 'Simulate', es: 'Simular' }, out: { en: 'Faster answers', es: 'Respuestas más rápidas' }, v: '40', unit: { en: 'percent faster', es: 'por ciento más rápido' } },
-    { cap: { en: 'Compare', es: 'Comparar' }, out: { en: 'Fewer reviews', es: 'Menos revisiones' }, v: '3', unit: { en: 'reviews saved', es: 'revisiones ahorradas' } },
-    { cap: { en: 'Explain', es: 'Explicar' }, out: { en: 'Trusted numbers', es: 'Cifras confiables' }, v: '100', unit: { en: 'percent traceable', es: 'por ciento trazable' } },
-  ].slice(0, plant === 'floor-outcomes-two' ? 2 : 3);
-  const four = [
-    { en: 'Every figure shown can be traced to its source, which answers the audit question.', es: 'Cada cifra mostrada se rastrea hasta su fuente, lo que responde la pregunta de auditoría.' },
-    { en: 'A change is checked before release, which answers the question of risk.', es: 'Un cambio se verifica antes de publicarse, lo que responde la pregunta de riesgo.' },
-    { en: 'The product is small and fast, which answers the question of cost.', es: 'El producto es pequeño y rápido, lo que responde la pregunta de costo.' },
-    { en: 'Limits are stated openly, which answers the question of trust.', es: 'Los límites se declaran abiertamente, lo que responde la pregunta de confianza.' },
-  ].slice(0, plant === 'floor-positioning-three' ? 3 : 4);
-  const qa = [
-    { q: { en: 'What does it cost to adopt?', es: '¿Cuánto cuesta adoptarlo?' }, a: { en: 'Nothing: it is a test product with no customers and no price.', es: 'Nada: es un producto de prueba sin clientes ni precio.' } },
-    { q: { en: 'How do we know the numbers hold?', es: '¿Cómo sabemos que las cifras se sostienen?' }, a: { en: 'The gate measures every page before release, and its own plants prove it can fail.', es: 'El verificador mide cada página antes de publicar, y sus propias plantas prueban que puede fallar.' } },
-    { q: { en: 'What is it not?', es: '¿Qué no es?' }, a: { en: 'It is not a forecast and it serves no real decision.', es: 'No es un pronóstico y no sirve a ninguna decisión real.' } },
-  ].slice(0, plant === 'floor-credibility-two' ? 2 : 3);
+/** The executive view of the fixture: the shell's ExecutiveView on the fixture data file, plus the plants of the gate's executive check. */
+function ExecutiveFixture({ lang, plant }: { lang: Lang; plant: string }) {
+  const box = useRef<HTMLDivElement | null>(null);
+  const injected = DOM_PLANT[plant];
+  useEffect(() => {
+    // write the plant into the vision of the rendered view once it is on the page
+    const el = box.current?.querySelector('[data-exec-field="vision"]');
+    if (el && injected) el.textContent = injected[lang];
+  }, [injected, lang]);
+  if (plant === 'exec-old-areas') {
+    // the four areas of shell 0.11, composed by hand: they are not an executive view
+    return (
+      <>
+        <DocSection title={{ en: 'The initiative', es: 'La iniciativa' }} area="initiative" noRefsReason={{ en: 'A business summary of the fixture.', es: 'Un resumen de negocio del producto de prueba.' }}>
+          <Paras lang={lang} tag={pick({ en: 'initiative', es: 'iniciativa' }, lang)} n={1} />
+        </DocSection>
+        <DocSection title={{ en: 'The outcomes', es: 'Los resultados' }} area="outcomes" noRefsReason={{ en: 'A business summary of the fixture.', es: 'Un resumen de negocio del producto de prueba.' }}>
+          <Paras lang={lang} tag={pick({ en: 'outcomes', es: 'resultados' }, lang)} n={1} />
+        </DocSection>
+      </>
+    );
+  }
+  const css = HIDE_STYLE[plant] ?? (plant === 'floor-exec-transparent-es' && lang === 'es' ? HIDE_ES : undefined);
   return (
-    <>
-      <DocSection title={{ en: 'The initiative', es: 'La iniciativa' }} area="initiative" refs={REFS}>
-        {plant === 'area-hidden-filler' ? (
-          <>
-            {/* the text and the statement are in the page, and a reader cannot see either: transparent, and off-screen */}
-            <p style={{ opacity: 0 }}>{para(lang, pick({ en: 'initiative', es: 'iniciativa' }, lang), 1)}</p>
-            <p style={{ position: 'absolute', left: -10000, top: 0, width: 400 }}>{stat('12', { en: 'minutes per release', es: 'minutos por publicación' }, SRC)}</p>
-          </>
-        ) : (
-          // the dense paragraph of the area-hidden-* plants is in the page and a reader cannot read it (glyphs painted outside, cut away, or a 1 px font)
-          <p style={HIDE_TEXT[plant] ?? (plant === 'floor-exec-transparent-es' && lang === 'es' ? { color: 'transparent' } : undefined)}>{para(lang, pick({ en: 'initiative', es: 'iniciativa' }, lang), 1)}</p>
-        )}
-        {plant !== 'floor-initiative-nostat' && plant !== 'area-hidden-filler' && (
-          <p>
-            {pick({ en: 'A decision maker who owns a release pipeline gains ', es: 'Quien decide sobre una cadena de publicación gana ' }, lang)}
-            {plant === 'floor-stat-hidden-unit' ? (
-              // the unit and the source are attributes only: the reader sees "12"
-              <span data-stat="" data-stat-unit="minutes" data-stat-source="survey">
-                12
-              </span>
-            ) : (
-              stat('12', { en: 'minutes per release', es: 'minutos por publicación' }, SRC)
-            )}
-            .
-          </p>
-        )}
-        {plant === 'floor-exec-equation' && <Equation tex="R_0 = \frac{\beta}{\gamma}" caption={pick({ en: 'A planted equation.', es: 'Una ecuación plantada.' }, lang)} />}
-      </DocSection>
-      <DocSection title={{ en: 'The outcomes', es: 'Los resultados' }} area="outcomes" noRefsReason={NO_REFS}>
-        <p>{para(lang, pick({ en: 'outcomes', es: 'resultados' }, lang), 1)}</p>
-        {plant === 'legit-outcomes-list' ? (
-          <ul>
-            {rows.map((r) => (
-              <li key={r.v}>
-                {pick(r.cap, lang)}: {pick(r.out, lang)}, {stat(r.v, r.unit, SRC)}
-              </li>
-            ))}
-          </ul>
-        ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>{pick({ en: 'Capability', es: 'Capacidad' }, lang)}</th>
-              <th>{pick({ en: 'Outcome', es: 'Resultado' }, lang)}</th>
-              <th>{pick({ en: 'Proof', es: 'Prueba' }, lang)}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.v}>
-                <td>{pick(r.cap, lang)}</td>
-                <td>{pick(r.out, lang)}</td>
-                <td>{stat(r.v, r.unit, SRC)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        )}
-      </DocSection>
-      <DocSection title={{ en: 'The positioning', es: 'El posicionamiento' }} area="positioning" noRefsReason={NO_REFS}>
-        <ul>
-          {four.map((f, i) => (
-            <li key={i}>{pick(f, lang)}</li>
-          ))}
-        </ul>
-      </DocSection>
-      <DocSection title={{ en: 'The credibility', es: 'La credibilidad' }} area="credibility" noRefsReason={NO_REFS}>
-        {qa.map((x, i) => (
-          <Question key={i} question={pick(x.q, lang)} answer={<p>{pick(x.a, lang)}</p>} />
-        ))}
-        <Callout variant="honest" title={pick({ en: 'Honest limit', es: 'Límite honesto' }, lang)}>
-          {pick({ en: 'This view is written about a test product; none of its numbers is a customer result.', es: 'Esta vista trata de un producto de prueba; ninguna de sus cifras es un resultado de cliente.' }, lang)}
-        </Callout>
-      </DocSection>
-    </>
+    <div ref={box}>
+      {css && <style>{css}</style>}
+      <ExecutiveView data={executiveDataFor(plant)} base="/" />
+      {plant === 'exec-fifth-section' && (
+        <DocSection title={{ en: 'A fifth section', es: 'Una quinta sección' }} noRefsReason={{ en: 'A planted section that cites nothing.', es: 'Una sección plantada que no cita nada.' }}>
+          <Paras lang={lang} tag="fifth" n={1} />
+        </DocSection>
+      )}
+      {plant === 'exec-stranger-text' && <p>{pick({ en: 'A paragraph a product placed beside the executive view.', es: 'Un párrafo que un producto puso junto a la vista ejecutiva.' }, lang)}</p>}
+      {plant === 'floor-exec-equation' && <Equation tex="R_0 = \frac{\beta}{\gamma}" caption={pick({ en: 'A planted equation.', es: 'Una ecuación plantada.' }, lang)} />}
+    </div>
   );
 }
 
@@ -309,14 +270,15 @@ function Technical({ lang, plant }: { lang: Lang; plant: string }) {
 function Introduction({ lang, plant }: { lang: Lang; plant: string }) {
   if (plant === 'floor-no-executive') return <Technical lang={lang} plant={plant} />;
   const tabs = [
-    { id: 'executive', label: pick({ en: 'Executive', es: 'Ejecutiva' }, lang), content: <Executive lang={lang} plant={plant} /> },
+    { id: 'executive', label: pick({ en: 'Executive', es: 'Ejecutiva' }, lang), content: <ExecutiveFixture lang={lang} plant={plant} /> },
     { id: 'technical', label: pick({ en: 'Technical', es: 'Técnica' }, lang), content: <Technical lang={lang} plant={plant} /> },
   ];
   const views = (
     <Tabs
       ariaLabel={pick({ en: 'Views of the introduction', es: 'Vistas de la introducción' }, lang)}
       tabs={plant === 'floor-exec-second' ? [tabs[1], tabs[0]] : tabs}
-      initial={plant === 'floor-exec-not-default' ? 'technical' : undefined}
+      // refs-mid needs a references block in the open view, and only the technical view cites works
+      initial={plant === 'floor-exec-not-default' || plant === 'refs-mid' ? 'technical' : undefined}
     />
   );
   // the math section above the views: it shows in the executive view too

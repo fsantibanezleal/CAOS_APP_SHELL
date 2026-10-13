@@ -87,6 +87,10 @@ Plants: `unavailable-unexplained`, `unavailable-short`, `unavailable-punct`, `un
 `unavailable-sronly`, `unavailable-fontsize`, `unavailable-clippath`, `unavailable-textindent`, `unavailable-tinyfont`,
 `unavailable-collapsed-chart`, `unavailable-invisible-chart`.
 
+The executive view of the Introduction is checked whole (`docs/06_executive-view.md`; plants `exec-*`): the shell's
+`ExecutiveView` on a valid `content/executive.json`, first and default, its writing limits on the rendered text in both
+languages, its illustrations inline, loaded, token-coloured, labelled inside their viewBox, and nothing placed beside it.
+
 The content checks of the documentation pages use the same reader-visibility rule: a paragraph, glossary item,
 statement, question, row or item counts only when it is rendered, opaque, inside the page and not clipped, and on the
 text rendered, with the glyph test above (plants `area-hidden-filler`, `area-hidden-textindent`, `area-hidden-tinyfont`,
@@ -97,7 +101,7 @@ sees its unit and its source (in the rendered text), not when they are attribute
 ## The gate proves itself (G15)
 
 `npm run test:gate` builds the fixture product (`test/gate-fixture`), runs the gate on it clean in the full matrix
-(every check must pass), and once per planted defect (the check that owns it must fail with its own message): 95
+(every check must pass), and once per planted defect (the check that owns it must fail with its own message): 107
 plants, one per check and per distinct trap, then the legitimate pages that the gate once failed
-(`legit-outcomes-list`, `legit-engine-subtabs`, `legit-method-view-tabs`), which must pass every check in both languages.
+(`legit-engine-subtabs`, `legit-method-view-tabs`), which must pass every check in both languages.
 A check without a plant is a check that can agree with a broken app.
