@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { THEME_BOOT_SCRIPT } from '../../dist/keys.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
-export const ROUTES = ['introduction', 'methodology', 'implementation', 'experiments', 'benchmark'];
+export const ROUTES = ['app', 'introduction', 'methodology', 'implementation', 'experiments', 'benchmark'];
 
 function page(plant) {
   return `<!doctype html>
@@ -52,7 +52,7 @@ export async function buildFixture(outDir) {
   writeFileSync(join(outDir, 'data', 'artifact.json'), JSON.stringify({ cases: 3 }));
   // the three illustrations of the executive view, as a product's site serves them
   mkdirSync(join(outDir, 'executive'), { recursive: true });
-  for (const f of ['initiative', 'problem', 'solution']) cpSync(join(here, 'executive', `${f}.svg`), join(outDir, 'executive', `${f}.svg`));
+  for (const f of ['pain', 'situation', 'proposal']) cpSync(join(here, 'executive', `${f}.svg`), join(outDir, 'executive', `${f}.svg`));
 }
 
 export function makePlant(cleanDir, plantDir, plant) {
@@ -69,13 +69,13 @@ export function makePlant(cleanDir, plantDir, plant) {
   if (plant === 'deeplink') rmSync(join(plantDir, 'methodology'), { recursive: true, force: true });
   // the plants of the executive view that are defects of an illustration file
   const svg = (name, edit) => writeFileSync(join(plantDir, 'executive', `${name}.svg`), edit(readFileSync(join(plantDir, 'executive', `${name}.svg`), 'utf8')));
-  if (plant === 'exec-illustration-missing') rmSync(join(plantDir, 'executive', 'solution.svg'));
-  if (plant === 'exec-illustration-colour') svg('initiative', (x) => x.replaceAll('var(--color-accent)', '#1f77b4'));
-  if (plant === 'exec-illustration-chart') svg('problem', (x) => x.replace('<svg ', '<svg data-chart="true" '));
+  if (plant === 'exec-illustration-missing') rmSync(join(plantDir, 'executive', 'proposal.svg'));
+  if (plant === 'exec-illustration-colour') svg('pain', (x) => x.replaceAll('var(--color-fg)', '#1f77b4'));
+  if (plant === 'exec-illustration-chart') svg('situation', (x) => x.replace('<svg ', '<svg data-chart="true" '));
   if (plant === 'exec-illustration-label-outside') {
     const extra = (lang, text) => `  <text data-lang="${lang}" x="440" y="40" font-size="15" fill="var(--color-fg)">${text}</text>
 `;
-    svg('initiative', (x) => x.replace('</svg>', `${extra('en', 'Past the edge of the drawing')}${extra('es', 'Fuera del borde del dibujo')}</svg>`));
+    svg('pain', (x) => x.replace('</svg>', `${extra('en', 'Past the edge of the drawing')}${extra('es', 'Fuera del borde del dibujo')}</svg>`));
   }
   if (plant === 'fallback-json') writeFileSync(join(plantDir, 'data', 'artifact.json'), readFileSync(join(plantDir, 'index.html')));
   return plantDir;

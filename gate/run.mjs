@@ -37,7 +37,7 @@ export const DEFAULTS = {
   sizes: '390x844,768x1024,1280x800,1600x900,2560x1440',
   themes: 'light,dark',
   langs: 'en,es',
-  workbench: '/',
+  workbench: '/app',
   idleMs: 3000,
   settleMs: 15000,
   textFloor: 400,
@@ -84,6 +84,7 @@ export async function runGate(o) {
   const sizes = String(opt.sizes).split(',').map((s) => s.trim().split('x').map(Number));
   const themes = String(opt.themes).split(',').map((s) => s.trim());
   const langs = String(opt.langs).split(',').map((s) => s.trim());
+  const workbenchRoute = String(opt.workbench).split(',')[0].trim() || '/app';
   const workbenchRoutes = new Set(String(opt.workbench).split(',').map((s) => s.trim()).filter(Boolean));
   const primarySize = sizes.find(([w]) => w >= opt.viewportMinWidth) ?? sizes[0];
   const shotsDir = join(opt.out, 'shots');
@@ -240,11 +241,35 @@ export async function runGate(o) {
         await ctx.close();
         return finish();
       }
-      if (why) fail('G7', { route: '/' }, `the App route never settled: ${why}`);
+      if (why) fail('G7', { route: '/' }, `the landing route never settled: ${why}`);
       if (!routes) {
         const hrefs = await page.$$eval('header nav a[href]', (as) => as.map((a) => a.href));
-        routes = [...new Set(['/', ...hrefs.map(routeOf).filter(Boolean)])];
+        routes = [...new Set(hrefs.map(routeOf).filter(Boolean))];
       }
+      sink.splice(0);
+      await ctx.close();
+    }
+
+    // ---- The landing (shell 0.13.0): the root opens the Introduction on its executive view; an old App link with a query string reaches the App.
+    {
+      const ctx = await openContext(primarySize, themes[0], langs[0]);
+      const { page, sink } = await newPage(ctx);
+      await page.goto(urlFor('/'), { waitUntil: 'load', timeout: 30000 }).catch(() => undefined);
+      await settle(page);
+      const at = { route: '/', mode: 'landing' };
+      if (routeOf(page.url()) !== '/introduction') {
+        fail('G4', at, `the root opened ${routeOf(page.url()) ?? page.url()}, not the Introduction; every product lands on the Introduction (Landing of the shell on the root path)`);
+      } else {
+        const landed = await page.evaluate(() => window.__caosGate.docPage());
+        if (!landed || landed.view !== 'executive' || !landed.executive || landed.executive.count !== 1) fail('G4', at, `the root opened the Introduction on the "${landed?.view ?? 'none'}" view; the landing opens its executive view`);
+      }
+      const old = await page.goto(`${urlFor('/')}?gate=landing#frag`, { waitUntil: 'load', timeout: 30000 }).catch(() => undefined);
+      await settle(page);
+      const u = new URL(page.url());
+      if (routeOf(page.url()) !== workbenchRoute || u.searchParams.get('gate') !== 'landing' || u.hash !== '#frag') {
+        fail('G4', { route: '/', mode: 'landing' }, `an old App link /?gate=landing#frag reached ${routeOf(page.url())}${u.search}${u.hash}; it must reach ${workbenchRoute} with its query string and hash kept (Landing keeps the query string and the hash)`);
+      }
+      void old;
       sink.splice(0);
       await ctx.close();
     }
@@ -281,14 +306,14 @@ export async function runGate(o) {
             }
             if (id.theme !== theme) fail('G2', at, `asked for the ${theme} theme through ${THEME_STORAGE_KEY}; the document has data-theme=${id.theme}`);
             if (!String(id.lang ?? '').startsWith(lang)) fail('G2', at, `asked for ${lang} through ${LANG_STORAGE_KEY}; <html lang> is ${id.lang}`);
-            if (route !== '/' && id.activeHref && routeOf(id.activeHref) !== route) fail('G4', at, `loaded directly, the page shows route ${routeOf(id.activeHref)}`);
+            if (id.activeHref && routeOf(id.activeHref) !== route) fail('G4', at, `loaded directly, the page shows route ${routeOf(id.activeHref)}`);
 
             // ADR-0017 2.1: the documentation floors are measured once per language, at the primary size and first theme
             const docFloors = size === primarySize && theme === themes[0] && DOC_ROUTES.includes(route);
             const walkState = { tested: new Set(), keyedViews: 0, controls: 0, tablists: 0, doc: docFloors ? [] : null };
             await processState(page, sink, { ...at, trail: '' }, { route, isWorkbench, primary, idle: idleHere, first: true, size, w, h, theme, lang, walkState, contrast });
 
-            if (primary && route !== '/') {
+            if (primary) {
               // G4: the trailing-slash form a static host serves for a materialised route.
               const slash = `${urlFor(route)}/`;
               const r2 = await page.goto(slash, { waitUntil: 'load', timeout: 30000 }).catch((e) => e);
@@ -324,8 +349,8 @@ export async function runGate(o) {
 
           if (primary) {
             // ADR-0071 rule 9 / G5: every header route reached by a real pointer click from the App route.
-            for (const route of routes.filter((r) => r !== '/')) {
-              await page.goto(urlFor('/'), { waitUntil: 'load', timeout: 30000 }).catch(() => undefined);
+            for (const route of routes.filter((r) => r !== workbenchRoute)) {
+              await page.goto(urlFor(workbenchRoute), { waitUntil: 'load', timeout: 30000 }).catch(() => undefined);
               await settle(page);
               const link = page.locator('header nav a[href]');
               const hrefs = await link.evaluateAll((as) => as.map((a) => a.href));
@@ -751,5 +776,5 @@ export function captureIndex(report, captures) {
 }
 
 function slug(route) {
-  return route === '/' ? 'app' : route.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '');
+  return route === '/' ? 'landing' : route.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '');
 }
