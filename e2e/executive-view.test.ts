@@ -18,9 +18,19 @@ before(async () => {
     stdin: {
       contents: `
         import React from 'react'; import { createRoot } from 'react-dom/client';
-        import { ExecutiveView, useLangStore } from './src/index';
+        import { DocPage, ExecutiveView, Tabs, useLangStore } from './src/index';
         import data from './test/gate-fixture/executive/executive.json';
-        function App() { return <div className="page-body prose caos-doc"><ExecutiveView data={data} /></div>; }
+        // the composition every product uses (an Introduction: the page, its two views, the executive one first)
+        function App() {
+          return (
+            <DocPage title={{ en: 'Introduction', es: 'Introducción' }} lede="The executive view first, then the technical view.">
+              <Tabs tabs={[
+                { id: 'executive', label: 'Executive view', content: <ExecutiveView data={data} /> },
+                { id: 'technical', label: 'Technical view', content: <p>Technical view.</p> },
+              ]} />
+            </DocPage>
+          );
+        }
         createRoot(document.getElementById('root')).render(<App />);
         window.__setLang = (l) => useLangStore.getState().setLang(l);
       `,
@@ -111,6 +121,23 @@ test('the executive view fits 390, 1280 and 1600 px in both themes and both lang
       }
     }
   }
+});
+
+test('a source note with a long URL wraps inside the column at 390 px (BL-053)', async () => {
+  const page = await browser.newPage({ viewport: { width: 390, height: 900 } });
+  await page.goto(address);
+  await page.waitForSelector('[data-executive-view] .caos-exec-notes li');
+  const m = await page.evaluate(`(() => {
+    const ol = document.querySelector('[data-executive-view] .caos-exec-notes');
+    const li = document.createElement('li');
+    li.textContent = 'https://www.cmfchile.cl/portal/principal/613/articles-' + 'x'.repeat(120) + '.pdf';
+    ol.appendChild(li);
+    const de = document.documentElement;
+    return { scrollW: de.scrollWidth, innerW: window.innerWidth, noteW: li.getBoundingClientRect().right };
+  })()`) as { scrollW: number; innerW: number; noteW: number };
+  assert.ok(m.scrollW <= m.innerW, `the page scrolls sideways (${m.scrollW} > ${m.innerW}) with a long URL in a source note`);
+  assert.ok(m.noteW <= m.innerW, `the note ends at ${m.noteW} px past ${m.innerW}`);
+  await page.close();
 });
 
 test('an invalid data file shows its error in the browser and no section', async () => {

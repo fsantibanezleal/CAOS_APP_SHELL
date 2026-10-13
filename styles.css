@@ -746,5 +746,5 @@ svg.lucide { flex: none; }
 .caos-exec-pending { margin: 0; padding: 0.8rem 1rem; border: 1px dashed var(--color-border); border-radius: var(--radius-md); color: var(--color-fg-subtle); }
 .caos-exec-notes-wrap { border-top: 1px solid var(--color-border); padding-top: 0.75rem; }
 .caos-exec-notes-title { margin: 0 0 0.35rem; font-size: var(--text-sm); color: var(--color-fg-faint); }
-.caos-exec-notes { margin: 0; padding-left: 1.4rem; font-size: var(--text-sm); color: var(--color-fg-subtle); }
+.caos-exec-notes { margin: 0; padding-left: 1.4rem; font-size: var(--text-sm); color: var(--color-fg-subtle); overflow-wrap: anywhere; }
 .caos-exec-error { padding: 1rem 1.25rem; border: 1px solid var(--color-bad); border-radius: var(--radius-md); }
