@@ -503,6 +503,9 @@ export function installLib() {
     docBound = page;
     const seen = (el) => readable(el, page, 4, 4);
     const lede = page.querySelector('.lede');
+    // the document column: the page body without its padding; the lede and the executive view take all of it (Felipe, 2026-10-13)
+    const pageStyle = getComputedStyle(page);
+    const columnWidth = Math.round(page.clientWidth - parseFloat(pageStyle.paddingLeft) - parseFloat(pageStyle.paddingRight));
     const panels = [...page.querySelectorAll('[role="tabpanel"]')].filter(visible);
     // a tab list inside a section belongs to that section: its panels are not topics, and it does not make its topic a branch
     const inSection = (el) => Boolean(el.closest('[data-doc-section]'));
@@ -614,7 +617,7 @@ export function installLib() {
       };
     });
     const selected = outerTabs.find((t) => t.getAttribute('aria-selected') === 'true');
-    // The executive view (shell 0.12.0): what the ExecutiveView shows, for executiveFailures of gate/areas.mjs.
+    // The executive view (shell 0.13.0): what the ExecutiveView shows in this state (one sub-tab = one section), for executiveFailures of gate/areas.mjs.
     const execRoots = [...page.querySelectorAll('[data-executive-view]')].filter(visible);
     const executive = (() => {
       if (!execRoots.length) return { count: 0 };
@@ -660,17 +663,31 @@ export function installLib() {
         return info;
       });
       const sections = [...root.querySelectorAll('[data-exec-section]')].map((sec) => {
-        const pending = sec.querySelector('[data-exec-pending]');
+        const key = sec.querySelector('[data-exec-key-message]');
         return {
           n: Number(sec.getAttribute('data-exec-section')),
-          title: textOf(sec.querySelector('h2') || sec),
-          question: textOf(sec.querySelector('[data-exec-question]') || sec),
-          pending: pending && seen(pending) ? 1 : 0,
-          pendingText: pending ? textOf(pending) : '',
-          pendingState: pending ? pending.getAttribute('data-state') : null,
-          rows: [...sec.querySelectorAll('[data-exec-c]')].filter(seen).length,
+          title: (sec.getAttribute('aria-label') || '').trim(),
+          // the key message line comes first in the section, and a reader can read it
+          keyFirst: Boolean(key) && sec.firstElementChild === key,
+          keyMessage: key && seen(key) ? textOf(key) : '',
         };
       });
+      // the rows each part of the view shows in this state (the floors), counted once per kind
+      const items = {};
+      for (const el of root.querySelectorAll('[data-exec-item]')) if (seen(el)) items[el.getAttribute('data-exec-item')] = (items[el.getAttribute('data-exec-item')] ?? 0) + 1;
+      const landingEl = root.querySelector('[data-exec-landing]');
+      const landing = {
+        present: Boolean(landingEl && seen(landingEl)),
+        title: landingEl ? textOf(landingEl.querySelector('[data-exec-field="title"]') || landingEl).slice(0, 80) : '',
+        statement: landingEl ? textOf(landingEl.querySelector('[data-exec-field="key_statement"]') || landingEl).slice(0, 80) : '',
+      };
+      // the 4 C's a reader sees in the proposal: the name, the definition and what each means for the proposal
+      const cs = [...root.querySelectorAll('[data-exec-c]')]
+        .filter(seen)
+        .map((li) => ({ name: textOf(li.querySelector('[data-exec-cname]') || li), def: textOf(li.querySelector('[data-exec-cdef]') || li), applies: textOf(li.querySelector('[data-exec-field$=".applies"]') || li.querySelector('span') || li) }));
+      const links = [...root.querySelectorAll('[data-exec-links] a')].map((a) => ({ kind: a.getAttribute('data-exec-link'), text: textOf(a), href: a.getAttribute('href') }));
+      // the sub-tabs of the view: their labels (all of them, shown or not), and the one selected
+      const tabEls = [...root.querySelectorAll('[data-exec-tabs] [role="tab"]')];
       const panelOpen = outerPanel ? outerPanel.contains(root) : true;
       const execOpen = selected && (selected.getAttribute('data-tab') || tabLabel(selected)) === 'executive';
       const area = execOpen && outerPanel ? outerPanel : null;
@@ -691,15 +708,40 @@ export function installLib() {
         docSectionTitles: docSections.map((e) => textOf(e.querySelector('h2') || e).slice(0, 40)),
         strangers,
         sections,
+        landing,
+        items,
+        cs,
+        links,
         fields: [...root.querySelectorAll('[data-exec-field]')].map((e) => ({ path: e.getAttribute('data-exec-field'), text: textOf(e), readable: seen(e) })),
-        notes: root.querySelectorAll('[data-exec-notes] > li').length,
-        figures: root.querySelectorAll('.caos-exec-cite').length,
+        // the blocks of this state narrower than the document column (an illustration may stay centred inside its figure)
+        narrow: [...root.querySelectorAll('.subtabs, .caos-exec-notes-wrap, [data-exec-section], [data-exec-section] > *')]
+          .filter((e) => visible(e))
+          .map((e) => [`${e.tagName.toLowerCase()}${e.className && typeof e.className === 'string' ? '.' + e.className.split(' ')[0] : ''}`, Math.round(e.getBoundingClientRect().width)])
+          .filter(([, w]) => w < columnWidth - 2)
+          .map(([name, w]) => `${name} ${w}px`),
+        column: columnWidth,
+        // everything the view prints in this state, for the check that no rubric label or question is on the page
+        text: textOf(root),
+        tabs: tabEls.map(tabLabel),
+        activeTab: tabEls.findIndex((t) => t.getAttribute('aria-selected') === 'true'),
+        // each source note: the link it holds (its target and its text) and the text beside the link
+        notes: [...root.querySelectorAll('[data-exec-notes] > li')].map((li) => {
+          const a = li.querySelector('a');
+          const link = a && seen(a) ? textOf(a) : '';
+          const note = li.querySelector('[data-exec-source-note]');
+          const rest = note ? textOf(note) : textOf(li).replace(link, '').trim();
+          return { href: a ? a.getAttribute('href') : null, title: link, note: rest };
+        }),
+        // the figures this state shows: the notes they point at (the same figure seen in two states counts once)
+        cites: [...root.querySelectorAll('.caos-exec-cite a')].map((a) => a.getAttribute('href')),
         illustrations,
       };
     })();
     const inView = (sel) => (outerPanel ? [...outerPanel.querySelectorAll(sel)] : [...page.querySelectorAll(sel)]).filter(seen);
     return {
       ledeWords: lede && visible(lede) ? wordsOf(lede).words : 0,
+      ledeWidth: lede && visible(lede) ? Math.round(lede.getBoundingClientRect().width) : 0,
+      columnWidth,
       waiver: page.getAttribute('data-floor-waiver'),
       topics,
       views: outerTabs.map((t) => t.getAttribute('data-tab') || tabLabel(t)),

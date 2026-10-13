@@ -4,7 +4,8 @@
 
 export { AppShell } from './shell/AppShell';
 export type { ShellConfig, ShellRoute } from './shell/AppShell';
-export { STANDARD_ROUTES } from './shell/routes';
+export { APP_ROUTE, LANDING_ROUTE, STANDARD_ROUTES } from './shell/routes';
+export { Landing } from './shell/Landing';
 export { WorkbenchShell } from './shell/WorkbenchShell';
 export { FocusShell } from './shell/FocusShell';
 export type { FocusShellProps } from './shell/FocusShell';

@@ -1,99 +1,557 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/fsantibanezleal/CAOS_APP_SHELL/blob/main/src/content/executive.schema.json",
-  "title": "CAOS executive view data, version 1.0.0",
-  "description": "The one data file a CAOS product fills for the executive view of its Introduction (content/executive.json). Every text is { en, es }; nothing outside these fields is allowed. The writing limits (30 words per sentence, an answer of at most 2 sentences, one sentence for initiative, vision, statement, exec_problem and caption, no equation, no inline citation), the four_cs rule (absent until FOUR_CS names the 4 C's) and the sources-by-field rule are checked by validateExecutive in executive.ts, on top of this structure.",
+  "title": "CAOS executive view data, version 2.0.0",
+  "description": "The one data file a CAOS product fills for the executive view of its Introduction (content/executive.json): the industry's problem framed for a decision maker, general and never tied to a client or written as a pitch. Every text is { en, es }; nothing outside these fields is allowed. The floors are minimum and maximum counts of rows (minItems, maxItems). The writing limits (30 words per sentence, one sentence for key messages, captions, actions and the like, two for the key statement, at least 25 words in a paragraph, no equation, no inline citation, no promotional or client-bound wording), the 4 C's rule (exactly the 4 C's of FOUR_CS, in order, each c equal to its name), the owners that are roles of the current situation, the weights of the causes and the sources-by-id rules (every citation names a source, every source is cited, a source is an https link whose title and note cite no file) are checked by validateExecutive in executive.ts, on top of this structure.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["executive", "organisation", "initiative", "why_now", "vision", "outcomes", "dialogue", "illustrations", "sources"],
+  "required": [
+    "title",
+    "key_statement",
+    "headline_figures",
+    "pain",
+    "context",
+    "situation",
+    "trends",
+    "proposal",
+    "illustrations",
+    "sources"
+  ],
   "properties": {
-    "executive": { "$ref": "#/$defs/text", "description": "One C-suite role, never a list." },
-    "organisation": { "$ref": "#/$defs/text", "description": "One industry and one context, never several regions." },
-    "initiative": { "$ref": "#/$defs/text", "description": "One sentence: what that executive owns and must achieve." },
-    "why_now": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["figure", "deadline"],
-      "properties": {
-        "figure": { "$ref": "#/$defs/figure" },
-        "deadline": { "$ref": "#/$defs/text", "description": "One date or deadline, for example 'by 1 December 2026'." }
+    "title": {
+      "$ref": "#/$defs/text",
+      "description": "The problem's title: the industry's problem, not a product name."
+    },
+    "key_statement": {
+      "$ref": "#/$defs/text",
+      "description": "One or two sentences naming the pain and the direction proposed."
+    },
+    "headline_figures": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 3,
+      "description": "Two or three headline figures, each a short heading, one figure and its linked source.",
+      "items": {
+        "$ref": "#/$defs/figure"
       }
     },
-    "vision": { "$ref": "#/$defs/text", "description": "One sentence: what changes for the executive's business. Comes first in section 2." },
-    "outcomes": {
-      "type": "array",
-      "minItems": 3,
-      "maxItems": 5,
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["capability", "outcome", "proof"],
-        "properties": {
-          "capability": { "$ref": "#/$defs/text", "description": "What the product does, in plain words." },
-          "outcome": { "$ref": "#/$defs/text", "description": "The business result, non-technical." },
-          "proof": {
+    "pain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key_message",
+        "paragraphs",
+        "bearers",
+        "figures",
+        "causes"
+      ],
+      "properties": {
+        "key_message": {
+          "$ref": "#/$defs/text",
+          "description": "One line: what a reader who stops here takes away."
+        },
+        "paragraphs": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 3,
+          "description": "Two paragraphs (at least 25 words each): what goes wrong, for whom, how big.",
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "bearers": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 5,
+          "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["value", "unit", "statement"],
+            "required": [
+              "who",
+              "cost",
+              "measure"
+            ],
             "properties": {
-              "value": { "$ref": "#/$defs/text" },
-              "unit": { "$ref": "#/$defs/text" },
-              "statement": { "$ref": "#/$defs/text", "description": "A one-line statement of the proof point." }
+              "who": {
+                "$ref": "#/$defs/text",
+                "description": "Who bears it."
+              },
+              "cost": {
+                "$ref": "#/$defs/text",
+                "description": "The cost in money, time, risk or harm."
+              },
+              "measure": {
+                "$ref": "#/$defs/text",
+                "description": "How it is measured."
+              }
+            }
+          }
+        },
+        "figures": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 4,
+          "description": "At least two sourced industry figures.",
+          "items": {
+            "$ref": "#/$defs/figure"
+          }
+        },
+        "causes": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 5,
+          "description": "Three to five non-overlapping branches, weighted by size.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "cause",
+              "weight"
+            ],
+            "properties": {
+              "cause": {
+                "$ref": "#/$defs/text",
+                "description": "One branch of the problem; branches do not overlap."
+              },
+              "weight": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "The size of the branch as a percent of the whole; the weights add to at most 100."
+              }
             }
           }
         }
       }
     },
-    "four_cs": {
-      "type": "array",
-      "minItems": 4,
-      "maxItems": 4,
-      "description": "Exactly 4 rows in the owner's order. Absent while FOUR_CS is empty; required, with c equal to the name, once it holds 4 names.",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["c", "exec_problem"],
-        "properties": {
-          "c": { "$ref": "#/$defs/text" },
-          "exec_problem": { "$ref": "#/$defs/text", "description": "One sentence tying the C to this executive's problem." }
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key_message",
+        "paragraphs",
+        "setting",
+        "forces",
+        "evidence"
+      ],
+      "properties": {
+        "key_message": {
+          "$ref": "#/$defs/text",
+          "description": "One line: what a reader who stops here takes away."
+        },
+        "paragraphs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "description": "One or two paragraphs (at least 25 words each).",
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "setting": {
+          "$ref": "#/$defs/text",
+          "description": "The class of organisations, rules, data and technology the problem lives in."
+        },
+        "forces": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "force",
+              "direction"
+            ],
+            "properties": {
+              "force": {
+                "$ref": "#/$defs/text",
+                "description": "A force that keeps the pain going."
+              },
+              "direction": {
+                "$ref": "#/$defs/direction"
+              }
+            }
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "description": "At least one sourced rule or figure.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "statement",
+              "source"
+            ],
+            "properties": {
+              "statement": {
+                "$ref": "#/$defs/text",
+                "description": "One sourced rule or figure."
+              },
+              "source": {
+                "$ref": "#/$defs/sourceId"
+              }
+            }
+          }
         }
       }
     },
-    "dialogue": {
-      "type": "array",
-      "minItems": 3,
-      "maxItems": 5,
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["question", "answer"],
-        "properties": {
-          "question": { "$ref": "#/$defs/text", "description": "A business question that executive asks." },
-          "answer": { "$ref": "#/$defs/text", "description": "At most 2 sentences." }
+    "situation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key_message",
+        "roles",
+        "interaction",
+        "state_of_the_art",
+        "status"
+      ],
+      "properties": {
+        "key_message": {
+          "$ref": "#/$defs/text",
+          "description": "One line: what a reader who stops here takes away."
+        },
+        "roles": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "role",
+              "decides",
+              "needs"
+            ],
+            "properties": {
+              "role": {
+                "$ref": "#/$defs/text",
+                "description": "A role involved; a family of roles, never a person or an organisation."
+              },
+              "decides": {
+                "$ref": "#/$defs/text",
+                "description": "What it decides."
+              },
+              "needs": {
+                "$ref": "#/$defs/text",
+                "description": "What it needs."
+              }
+            }
+          }
+        },
+        "interaction": {
+          "$ref": "#/$defs/text",
+          "description": "One sentence on how the roles interact."
+        },
+        "state_of_the_art": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "approach",
+              "achieves",
+              "falls_short",
+              "source"
+            ],
+            "properties": {
+              "approach": {
+                "$ref": "#/$defs/text",
+                "description": "An approach in use, described fairly."
+              },
+              "achieves": {
+                "$ref": "#/$defs/text",
+                "description": "What it achieves."
+              },
+              "falls_short": {
+                "$ref": "#/$defs/text",
+                "description": "Where it falls short."
+              },
+              "source": {
+                "$ref": "#/$defs/sourceId"
+              }
+            }
+          }
+        },
+        "status": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "heading",
+            "value",
+            "unit",
+            "date",
+            "source"
+          ],
+          "properties": {
+            "heading": {
+              "$ref": "#/$defs/text"
+            },
+            "value": {
+              "$ref": "#/$defs/text"
+            },
+            "unit": {
+              "$ref": "#/$defs/text"
+            },
+            "date": {
+              "$ref": "#/$defs/text",
+              "description": "The date of the figure."
+            },
+            "source": {
+              "$ref": "#/$defs/sourceId"
+            }
+          },
+          "description": "One sourced status figure with its date."
+        }
+      }
+    },
+    "trends": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key_message",
+        "items"
+      ],
+      "properties": {
+        "key_message": {
+          "$ref": "#/$defs/text",
+          "description": "One line: what a reader who stops here takes away."
+        },
+        "items": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "trend",
+              "kind",
+              "direction",
+              "horizon",
+              "signal",
+              "effect",
+              "confidence"
+            ],
+            "properties": {
+              "trend": {
+                "$ref": "#/$defs/text"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "regulatory",
+                  "technological",
+                  "market",
+                  "practice"
+                ]
+              },
+              "direction": {
+                "$ref": "#/$defs/direction"
+              },
+              "horizon": {
+                "type": "string",
+                "enum": [
+                  "now",
+                  "two_years",
+                  "ten_years"
+                ]
+              },
+              "signal": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "statement",
+                  "source"
+                ],
+                "properties": {
+                  "statement": {
+                    "$ref": "#/$defs/text",
+                    "description": "The sourced signal."
+                  },
+                  "source": {
+                    "$ref": "#/$defs/sourceId"
+                  }
+                }
+              },
+              "effect": {
+                "$ref": "#/$defs/text",
+                "description": "Its effect on the roles of the current situation."
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "proposal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key_message",
+        "paragraphs",
+        "four_cs",
+        "actions",
+        "risks",
+        "unknowns"
+      ],
+      "properties": {
+        "key_message": {
+          "$ref": "#/$defs/text",
+          "description": "One line: what a reader who stops here takes away."
+        },
+        "paragraphs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "description": "The approach at the level of the problem, tied to its causes (at least 25 words each).",
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "four_cs": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "description": "Required: exactly 4 rows, the 4 C's of FOUR_CS in order (Choice, Context, Cost, Control), each c equal to the name in both languages.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "c",
+              "applies"
+            ],
+            "properties": {
+              "c": {
+                "$ref": "#/$defs/text",
+                "description": "The C's name."
+              },
+              "applies": {
+                "$ref": "#/$defs/text",
+                "description": "One sentence: what this C means for the proposal."
+              }
+            }
+          }
+        },
+        "actions": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 6,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "action",
+              "owner",
+              "horizon",
+              "check"
+            ],
+            "properties": {
+              "action": {
+                "$ref": "#/$defs/text"
+              },
+              "owner": {
+                "$ref": "#/$defs/text",
+                "description": "A role of the current situation, written as there."
+              },
+              "horizon": {
+                "$ref": "#/$defs/text"
+              },
+              "check": {
+                "$ref": "#/$defs/text",
+                "description": "How success is checked."
+              }
+            }
+          }
+        },
+        "risks": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "unknowns": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "handoff": {
+          "$ref": "#/$defs/text",
+          "description": "Optional: one closing line on the part of the problem the work explores."
         }
       }
     },
     "illustrations": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["initiative", "problem", "solution"],
+      "required": [
+        "pain",
+        "situation",
+        "proposal"
+      ],
       "properties": {
-        "initiative": { "$ref": "#/$defs/illustration" },
-        "problem": { "$ref": "#/$defs/illustration" },
-        "solution": { "$ref": "#/$defs/illustration" }
+        "pain": {
+          "$ref": "#/$defs/illustration"
+        },
+        "situation": {
+          "$ref": "#/$defs/illustration"
+        },
+        "proposal": {
+          "$ref": "#/$defs/illustration"
+        }
       }
     },
     "sources": {
       "type": "array",
       "minItems": 1,
-      "description": "The source of every figure (why_now.figure and each outcomes[i].proof), by field path; shown as numbered notes, never inline.",
+      "description": "The sources, each a link; the notes are numbered in the order of first use. Every figure and every state-of-the-art or trend claim names one by id.",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["field", "source"],
+        "required": [
+          "id",
+          "title",
+          "url"
+        ],
         "properties": {
-          "field": { "type": "string", "minLength": 1 },
-          "source": { "$ref": "#/$defs/text" }
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$",
+            "x-pattern-message": "must be lower case letters, digits and hyphens",
+            "description": "The id the figures and claims cite."
+          },
+          "title": {
+            "$ref": "#/$defs/text",
+            "description": "The publication, in plain words."
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^https://[^\\s]+$",
+            "x-pattern-message": "must be an https:// link (the page or document itself, no other scheme, no spaces)",
+            "description": "The https link to the page or document."
+          },
+          "note": {
+            "$ref": "#/$defs/text",
+            "description": "Optional, at most one sentence, for example a page number. Never a file name or number."
+          }
         }
       }
     }
@@ -102,39 +560,99 @@
     "text": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["en", "es"],
+      "required": [
+        "en",
+        "es"
+      ],
       "properties": {
-        "en": { "type": "string", "minLength": 1 },
-        "es": { "type": "string", "minLength": 1 }
+        "en": {
+          "type": "string",
+          "minLength": 1
+        },
+        "es": {
+          "type": "string",
+          "minLength": 1
+        }
       }
+    },
+    "sourceId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The id of an entry of sources."
+    },
+    "direction": {
+      "type": "string",
+      "enum": [
+        "rising",
+        "easing",
+        "steady"
+      ],
+      "description": "Where the force or the trend is heading."
     },
     "figure": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["value", "unit"],
+      "required": [
+        "heading",
+        "value",
+        "unit",
+        "source"
+      ],
       "properties": {
-        "value": { "$ref": "#/$defs/text" },
-        "unit": { "$ref": "#/$defs/text" }
+        "heading": {
+          "$ref": "#/$defs/text",
+          "description": "A short heading."
+        },
+        "value": {
+          "$ref": "#/$defs/text"
+        },
+        "unit": {
+          "$ref": "#/$defs/text"
+        },
+        "source": {
+          "$ref": "#/$defs/sourceId"
+        }
       }
     },
     "illustration": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["file", "caption"],
+      "required": [
+        "file",
+        "caption"
+      ],
       "properties": {
         "file": {
           "description": "The inline SVG: one path, or one path per language.",
           "anyOf": [
-            { "type": "string", "minLength": 1 },
+            {
+              "type": "string",
+              "minLength": 1
+            },
             {
               "type": "object",
               "additionalProperties": false,
-              "required": ["en", "es"],
-              "properties": { "en": { "type": "string", "minLength": 1 }, "es": { "type": "string", "minLength": 1 } }
+              "required": [
+                "en",
+                "es"
+              ],
+              "properties": {
+                "en": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "es": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
             }
           ]
         },
-        "caption": { "$ref": "#/$defs/text", "description": "One sentence saying what the reader should take from the illustration." }
+        "caption": {
+          "$ref": "#/$defs/text",
+          "description": "One sentence saying what the reader should take from the illustration."
+        }
       }
     }
   }
