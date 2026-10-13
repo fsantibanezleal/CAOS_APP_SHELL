@@ -90,7 +90,7 @@
   /* layout */
   --maxw: 1200px;          /* the document width (ADR-0017 s1) */
   --maxw-wide: 100%;       /* the workbench and surface width (ADR-0071 rule 2) */
-  --measure: 70ch;         /* the narrow column (.measure) and the lede */
+  --measure: 70ch;         /* the narrow column (.measure) */
   --measure-text: 78ch;    /* the longest line of a text block inside a document */
   --header-h: 56px;
   --rail-w: clamp(248px, 19vw, 340px);
@@ -345,7 +345,8 @@ code, kbd { font-family: var(--font-mono); }
 .measure { max-width: var(--measure); }
 .page-head { border-bottom: 1px solid var(--color-border); padding-bottom: 1rem; margin-bottom: 1.25rem; }
 .page-head h1 { font-size: var(--text-2xl); margin: 0 0 0.4rem; }
-.lede { color: var(--color-fg-subtle); font-size: var(--text-lg); margin: 0; max-width: var(--measure); }
+/* the lede of a page takes the full width of the document column (Felipe, 2026-10-13); only captions keep a measure */
+.lede { color: var(--color-fg-subtle); font-size: var(--text-lg); margin: 0; max-width: none; }
 .caos-doc-section { margin-block: 1.75rem; }
 /* The references of a page or open tab: one block at its end (ADR-0017 s4). */
 .caos-doc-references { margin-top: 2rem; padding-top: 0.4rem; border-top: 1px solid var(--color-border); }
@@ -719,20 +720,39 @@ svg.lucide { flex: none; }
 /* The executive view (shell 0.12.0, conventions/problem-context-first.md): four sections in order, three inline illustrations,
    numbered source notes. The product fills content/executive.json; it never styles this view. Illustrations are inline SVG
    coloured with the theme tokens; a drawing carrying both languages shows the labels of the displayed one. */
-.caos-exec { display: flex; flex-direction: column; gap: 2rem; min-width: 0; }
-.caos-exec-section { min-width: 0; padding-top: 1.25rem; border-top: 1px solid var(--color-border); }
-.caos-exec-section:first-child { border-top: 0; padding-top: 0; }
-.caos-exec-section > h2 { margin-block: 0 0.15rem; }
-.caos-exec-question { margin: 0 0 1rem; font-size: var(--text-sm); color: var(--color-fg-faint); font-style: italic; }
-.caos-exec-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 0.75rem 1.5rem; margin: 0 0 1rem; }
-.caos-exec-facts dt, .caos-exec-label { display: block; font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-fg-faint); font-weight: 650; }
-.caos-exec-facts dd { margin: 0.1rem 0 0; font-weight: 600; overflow-wrap: anywhere; }
-.caos-exec-initiative, .caos-exec-vision { font-size: var(--text-lg); line-height: 1.45; margin: 0 0 1rem; }
-.caos-exec-whynow { margin: 1rem 0; overflow-wrap: anywhere; }
-.caos-exec-whynow .caos-exec-label { display: block; margin-bottom: 0.15rem; }
+.caos-exec { display: flex; flex-direction: column; gap: 1.5rem; min-width: 0; }
+/* the landing block above the sub-tabs: the title, the key statement, the headline figures */
+.caos-exec-landing { min-width: 0; }
+.caos-exec-title { margin: 0 0 0.35rem; font-size: var(--text-xl); }
+.caos-exec-statement { margin: 0 0 1rem; font-size: var(--text-lg); line-height: 1.45; }
+.caos-exec-headline, .caos-exec-figures { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 0.75rem; }
+.caos-exec-figures { margin-block: 1rem; }
+.caos-exec-figure { min-width: 0; padding: 0.7rem 1rem; background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow-wrap: anywhere; }
+.caos-exec-label { display: inline-block; font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-fg-faint); font-weight: 650; }
+.caos-exec-figure > .caos-exec-label { display: block; margin-bottom: 0.1rem; }
 .caos-exec-value { font-size: var(--text-xl); font-variant-numeric: tabular-nums; color: var(--color-accent); }
 .caos-exec-sep { color: var(--color-fg-faint); }
 .caos-exec-cite { margin-left: 0.15rem; font-size: var(--text-xs); }
+/* a sub-tab: the key message line first, then the supporting content, all at the full width of the column */
+.caos-exec-tabs { min-width: 0; }
+.caos-exec-section { min-width: 0; }
+.caos-exec-key { margin: 0 0 1rem; font-size: var(--text-lg); line-height: 1.45; font-weight: 600; }
+.caos-exec-paragraph { margin: 0 0 0.75rem; }
+.caos-exec-sub { margin: 1.25rem 0 0.5rem; font-size: var(--text-md); }
+.caos-exec-setting, .caos-exec-interaction, .caos-exec-status, .caos-exec-handoff { margin: 0.75rem 0; overflow-wrap: anywhere; }
+.caos-exec-cards, .caos-exec-cs, .caos-exec-actions, .caos-exec-causes, .caos-exec-evidence, .caos-exec-list { list-style: none; margin: 0; padding: 0; }
+.caos-exec-cards, .caos-exec-cs { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.9rem; }
+.caos-exec-actions, .caos-exec-causes { display: flex; flex-direction: column; gap: 0.7rem; }
+.caos-exec-card { min-width: 0; padding: 0.8rem 1rem; background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); display: flex; flex-direction: column; gap: 0.5rem; overflow-wrap: anywhere; }
+.caos-exec-list li, .caos-exec-evidence li { margin-block: 0.35rem; overflow-wrap: anywhere; }
+.caos-exec-list, .caos-exec-evidence { list-style: disc; padding-left: 1.3rem; }
+.caos-exec-badges { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.caos-exec-badge { align-self: flex-start; padding: 0.1rem 0.5rem; font-size: var(--text-xs); border: 1px solid var(--color-border); border-radius: 999px; color: var(--color-fg-subtle); }
+.caos-exec-cause { min-width: 0; overflow-wrap: anywhere; }
+.caos-exec-cause-head { display: flex; justify-content: space-between; gap: 1rem; }
+.caos-exec-bar { height: 0.45rem; margin-top: 0.3rem; background: var(--color-surface-2); border-radius: 999px; overflow: hidden; }
+.caos-exec-bar > span { display: block; height: 100%; background: var(--color-accent); }
+.caos-exec-cdef { font-size: var(--text-xs); line-height: 1.4; color: var(--color-fg-faint); }
 .caos-exec-fig { margin: 1.25rem 0; }
 .caos-exec-art { width: 100%; max-width: 640px; margin-inline: auto; }
 .caos-exec-art > svg { display: block; width: 100%; height: auto; }
@@ -740,11 +760,10 @@ svg.lucide { flex: none; }
 .caos-exec-fig svg text { font-family: var(--font-sans); }
 .caos-exec-fig[data-lang="en"] [data-lang="es"], .caos-exec-fig[data-lang="es"] [data-lang="en"] { display: none; }
 .caos-exec-fig-error { margin: 0 auto; max-width: 640px; padding: 1rem; border: 1px solid var(--color-bad); border-radius: var(--radius-md); color: var(--color-fg); overflow-wrap: anywhere; }
-.caos-exec-outcomes, .caos-exec-cs { list-style: none; margin: 1.25rem 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.9rem; }
-.caos-exec-outcome, .caos-exec-cs > li { min-width: 0; padding: 0.8rem 1rem; background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); display: flex; flex-direction: column; gap: 0.6rem; overflow-wrap: anywhere; }
-.caos-exec-proof { margin-top: auto; }
-.caos-exec-pending { margin: 0; padding: 0.8rem 1rem; border: 1px dashed var(--color-border); border-radius: var(--radius-md); color: var(--color-fg-subtle); }
+/* below the sub-tabs: the numbered linked sources, then the onward links */
 .caos-exec-notes-wrap { border-top: 1px solid var(--color-border); padding-top: 0.75rem; }
 .caos-exec-notes-title { margin: 0 0 0.35rem; font-size: var(--text-sm); color: var(--color-fg-faint); }
 .caos-exec-notes { margin: 0; padding-left: 1.4rem; font-size: var(--text-sm); color: var(--color-fg-subtle); overflow-wrap: anywhere; }
+.caos-exec-links { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; padding-top: 0.25rem; }
+.caos-exec-link { font-weight: 600; }
 .caos-exec-error { padding: 1rem 1.25rem; border: 1px solid var(--color-bad); border-radius: var(--radius-md); }
