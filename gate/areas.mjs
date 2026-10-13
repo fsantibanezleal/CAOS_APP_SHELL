@@ -80,13 +80,10 @@ const A = (en, es, requires, extra = {}) => ({ what: { en, es }, requires, ...ex
 export const PAGES = {
   '/introduction': {
     name: 'Introduction',
-    // two top-level topics: the executive view first (the default), then the technical view
+    // two top-level topics: the executive view first (the default), then the technical view. The executive view has no
+    // areas: it is the shell's ExecutiveView, checked by executiveFailures below (0.12.0, problem-context-first.md).
     views: ['executive', 'technical'],
     areas: {
-      initiative: A('the initiative an executive owns, named by role and industry, and the quantified reason to act now', 'la iniciativa que un ejecutivo tiene a su cargo, nombrada por rol e industria, y la razón cuantificada para actuar ahora', { dense: 1, stats: 1 }, { view: 'executive' }),
-      outcomes: A('the transformation story: the vision first, then each capability tied to a business outcome with a quantified proof point', 'la historia de transformación: primero la visión, luego cada capacidad atada a un resultado de negocio con una prueba cuantificada', { dense: 1, rows: 3, rowsNoStat: 0 }, { view: 'executive' }),
-      positioning: A('the value story: four value points, each tied back to the problem of that executive', 'la historia de valor: cuatro puntos de valor, cada uno atado al problema de ese ejecutivo', { items: 4, thinItems: 0 }, { view: 'executive' }),
-      credibility: A('delivery and credibility: the business questions that executive would ask, each answered plainly with the honest limits', 'entrega y credibilidad: las preguntas de negocio que haría ese ejecutivo, cada una respondida con claridad y con los límites honestos', { qa: 3, honest: 1 }, { view: 'executive' }),
       problem: A('the industrial or scientific problem, with the concrete equipment, setting and who it serves', 'el problema industrial o científico, con el equipo concreto, el contexto y a quién sirve', { dense: 2 }, { view: 'technical' }),
       principles: A('the physics or the domain principles the product rests on', 'la física o los principios del dominio en que se apoya el producto', { dense: 2 }, { view: 'technical' }),
       math: A('the governing mathematics', 'la matemática que gobierna', { equations: 1, glossary: 10 }, { view: 'technical' }),
@@ -168,6 +165,131 @@ export const waivable = (route) => [
 ];
 /** The executive view of the Introduction is the decision maker's page: none of its areas, and not the view, can be waived. */
 export const NOT_WAIVABLE_NOTE = 'the executive view of the Introduction cannot be waived';
+/** What a waiver may not name: the executive view and the four areas it replaced (0.12.0). */
+export const EXECUTIVE_FLOORS = ['executive', 'executive-view', 'initiative', 'outcomes', 'positioning', 'credibility'];
+
+// ------------------------------------------------------------------------------------------------ the executive view
+// The executive view of the Introduction is the shell's ExecutiveView fed by the product's content/executive.json
+// (conventions/problem-context-first.md). Its structure is `src/content/executive.schema.json`; its writing limits are
+// here AND in `src/content/executive.ts` (test/executive.test.ts keeps the two equal): the gate measures the rendered
+// page, the component validates the data.
+export const EXEC_SCHEMA_VERSION = '1.0.0';
+export const EXEC_LIMITS = {
+  maxWords: 30,
+  maxAnswerSentences: 2,
+  equation: /\$|\\\(|\\\[|\\[a-zA-Z]+/,
+  citations: [/\(\s*Source/i, /\[\d+\]/, /\(\s*ECB/, /\(\w[^()]*\d{4}\)/],
+  minLabelPx: 9,
+};
+/** The four sections of the view: title and rubric question (Felipe's rubric, verbatim). */
+export const EXEC_SECTIONS = [
+  { title: { en: 'Industry & Exec Tailoring', es: 'Industria y foco ejecutivo' }, question: { en: 'Built for a C-suite exec?', es: '¿Pensado para un ejecutivo de primer nivel?' } },
+  { title: { en: 'AI Transformation Story', es: 'Historia de transformación con IA' }, question: { en: 'Outcomes, not a feature tour', es: 'Resultados, no un recorrido de funciones' } },
+  { title: { en: '4Cs Positioning', es: 'Posicionamiento 4C' }, question: { en: 'Value story, not features dump', es: 'Historia de valor, no lista de funciones' } },
+  { title: { en: 'Delivery & Credibility', es: 'Entrega y credibilidad' }, question: { en: 'Trust them in front of a CxO?', es: '¿Confiaría en ellos frente a un ejecutivo?' } },
+];
+/** The illustrations in the order of the page and the section each sits in. */
+export const EXEC_ILLUSTRATIONS = [
+  { name: 'initiative', section: 1 },
+  { name: 'problem', section: 1 },
+  { name: 'solution', section: 2 },
+];
+export const EXEC_PENDING = { en: "Pending: the 4 C's are defined by the product owner", es: 'Pendiente: las 4 C las define el responsable del producto' };
+
+/** How many sentences a field of the view may hold: one for the single-sentence fields, two for an answer, no limit otherwise. */
+export const execSentenceLimit = (path) =>
+  /^(initiative|vision)$|^outcomes\[\d+\]\.proof\.statement$|^four_cs\[\d+\]\.exec_problem$|^illustrations\.\w+\.caption$/.test(path)
+    ? 1
+    : /^dialogue\[\d+\]\.answer$/.test(path)
+      ? EXEC_LIMITS.maxAnswerSentences
+      : undefined;
+
+const sentencesOf = (text) =>
+  text
+    .split(/(?<=[.?!])\s+/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+const wordsIn = (text) => text.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
+
+/**
+ * The problems of the executive view in one language, from what the page showed (`G.docPage().executive` of
+ * gate/inpage.mjs). Pure. `facts` is null or {count: 0} when the page renders no ExecutiveView.
+ * @returns {string[]} one text per problem
+ */
+export function executiveFailures(facts, lang) {
+  const L = lang.toUpperCase();
+  const out = [];
+  const bad = (m) => out.push(`Introduction, executive view (${L}): ${m}`);
+  if (!facts || facts.count === 0) {
+    bad("no ExecutiveView ([data-executive-view]); the executive view is the shell's ExecutiveView fed by content/executive.json (docs/06_executive-view.md)");
+    return out;
+  }
+  if (facts.count > 1) bad(`${facts.count} ExecutiveView elements; exactly 1 is required`);
+  if (facts.schema !== EXEC_SCHEMA_VERSION) bad(`the view declares schema "${facts.schema ?? 'none'}", expected "${EXEC_SCHEMA_VERSION}"`);
+  if (facts.valid !== 'true') {
+    bad(`the data file is not valid in the page: ${String(facts.errors || 'no reason given').slice(0, 400)}`);
+    return out;
+  }
+  if (facts.docSections > 0) bad(`${facts.docSections} DocSection(s) placed in the executive view (${facts.docSectionTitles.join(', ')}); the view has exactly its four sections and takes none`);
+  if (facts.strangers.length > 0) bad(`${facts.strangers.length} block(s) beside the ExecutiveView (${facts.strangers.slice(0, 3).map((x) => `"${x}"`).join(', ')}); the view is the whole of the executive view`);
+  if (!facts.inOpenView) bad('the ExecutiveView is not in the open executive view');
+  // the four sections, in order, with their titles and questions
+  if (facts.sections.length !== 4) bad(`${facts.sections.length} section(s), exactly 4 are required`);
+  EXEC_SECTIONS.forEach((def, i) => {
+    const got = facts.sections[i];
+    if (!got) return;
+    if (got.n !== i + 1) bad(`section ${i + 1} is out of order (it declares ${got.n})`);
+    if (got.title !== def.title[lang]) bad(`section ${i + 1} is titled "${got.title}", expected "${def.title[lang]}"`);
+    if (got.question !== def.question[lang]) bad(`section ${i + 1} asks "${got.question}", expected "${def.question[lang]}"`);
+  });
+  const s3 = facts.sections[2];
+  if (s3) {
+    if (s3.pending === 1 && s3.rows === 0) {
+      if (s3.pendingText !== EXEC_PENDING[lang]) bad(`section 3 declares the pending state "${s3.pendingText}", expected "${EXEC_PENDING[lang]}"`);
+      if (s3.pendingState !== 'unavailable') bad('section 3 is pending without data-state="unavailable"');
+    } else if (s3.rows !== 4) bad(`section 3 holds ${s3.rows} row(s) of the 4 C's, exactly 4 are required (or the pending state)`);
+  }
+  // the writing limits, on the text a reader sees
+  const unreadable = [];
+  for (const f of facts.fields) {
+    if (!f.readable) {
+      unreadable.push(f.path);
+      continue;
+    }
+    const sentences = sentencesOf(f.text);
+    for (const s of sentences) {
+      const n = wordsIn(s);
+      if (n > EXEC_LIMITS.maxWords) bad(`field "${f.path}": a sentence of ${n} words; the limit is ${EXEC_LIMITS.maxWords}`);
+    }
+    const max = execSentenceLimit(f.path);
+    if (max !== undefined && sentences.length > max) bad(`field "${f.path}": ${sentences.length} sentences; the limit is ${max}`);
+    if (EXEC_LIMITS.equation.test(f.text)) bad(`field "${f.path}": holds an equation or a TeX marker`);
+    if (EXEC_LIMITS.citations.some((re) => re.test(f.text))) bad(`field "${f.path}": holds an inline citation (sources are numbered notes)`);
+  }
+  if (unreadable.length > 0) bad(`${unreadable.length} field(s) are in the page and a reader cannot read them: ${unreadable.slice(0, 4).join(', ')}`);
+  if (facts.notes !== facts.figures) bad(`${facts.notes} numbered source note(s) for ${facts.figures} figure(s)`);
+  // the three illustrations, in their places
+  const names = facts.illustrations.map((x) => x.name);
+  if (names.join() !== EXEC_ILLUSTRATIONS.map((x) => x.name).join()) bad(`the illustrations are [${names.join(', ')}], expected [initiative, problem, solution] in that order`);
+  for (const ill of facts.illustrations) {
+    const want = EXEC_ILLUSTRATIONS.find((x) => x.name === ill.name);
+    const name = `illustration "${ill.name}"`;
+    if (want && ill.section !== want.section) bad(`${name} sits in section ${ill.section}, it belongs in section ${want.section}`);
+    if (ill.state === 'error') {
+      bad(`${name}: the file "${ill.file}" did not load (${ill.why})`);
+      continue;
+    }
+    if (!ill.svg) bad(`${name} is not an inline SVG`);
+    if (ill.img > 0) bad(`${name} is drawn through an img tag; it must be inline so it reads the theme`);
+    if (ill.chart > 0) bad(`${name} declares a chart (data-chart); the executive illustrations are drawings, not charts`);
+    if (ill.literal.length > 0) bad(`${name} uses literal colour(s) ${ill.literal.slice(0, 4).join(', ')}; colour only with var(--...) theme tokens, none or currentColor`);
+    if (ill.outside.length > 0) bad(`${name}: label(s) outside the viewBox: ${ill.outside.slice(0, 3).map((x) => `"${x}"`).join(', ')}`);
+    if (ill.labels === 0) bad(`${name} carries no label in this language`);
+    if (ill.small.length > 0) bad(`${name}: label(s) smaller than ${EXEC_LIMITS.minLabelPx}px as rendered: ${ill.small.slice(0, 3).join(', ')}`);
+    if (!ill.caption) bad(`${name} has no caption under it`);
+  }
+  return [...new Set(out)];
+}
 
 /** Parses `data-floor-waiver` ("floor: reason; floor: reason") into entries. */
 export function parseWaivers(attr) {
@@ -232,7 +354,7 @@ export function docFloorFailures({ route, lang, states, expectedTopics }) {
   const waivers = entries.map((w) => ({ ...w, valid: ok.has(w.floor) && reasonOk(w.reason) }));
   for (const w of entries) {
     if (!ok.has(w.floor)) {
-      const exec = P.areas[w.floor]?.view === 'executive';
+      const exec = route === '/introduction' && EXECUTIVE_FLOORS.includes(w.floor);
       bad('', `${NAME} (${L}): the waiver for "${w.floor}" is refused: ${exec ? NOT_WAIVABLE_NOTE : `it names no floor of this page (${[...ok].join(', ')})`}`);
     } else if (!reasonOk(w.reason)) {
       const s = reasonStats(w.reason);
@@ -246,6 +368,7 @@ export function docFloorFailures({ route, lang, states, expectedTopics }) {
   const sections = new Map();
   const figures = new Set();
   const equations = new Set();
+  const execMessages = new Set();
   for (const st of states) {
     for (const t of st.topics) topics.set(t.key, t.label);
     const ordinal = new Map();
@@ -259,11 +382,16 @@ export function docFloorFailures({ route, lang, states, expectedTopics }) {
       for (const f of st.figures) figures.add(`${st.topics.map((t) => t.key).join('|')}::${f}`);
       for (const e of st.equations) equations.add(`${st.topics.map((t) => t.key).join('|')}::${e}`);
     }
+    if (route === '/introduction' && st.view !== 'executive' && st.executive && st.executive.count > 0) {
+      bad('', `${NAME} (${L}): the ExecutiveView sits in the "${st.view ?? 'none'}" view; it belongs to the executive view`);
+    }
     if (route === '/introduction' && st.view === 'executive') {
+      for (const m of executiveFailures(st.executive, lang)) execMessages.add(m);
       if (st.viewEquations > 0) bad(st.topics[0]?.label ?? '', `${NAME}, executive view (${L}): ${st.viewEquations} equation(s); the executive view holds no equation`);
       if (st.viewGlossaries > 0) bad(st.topics[0]?.label ?? '', `${NAME}, executive view (${L}): ${st.viewGlossaries} symbol glossary(ies); the executive view holds none`);
     }
   }
+  for (const m of execMessages) bad('', m);
   const seen = [...sections.values()].map(mergeSections);
   const tname = (label) => (label ? `topic "${label}"` : 'the page');
 

@@ -715,3 +715,36 @@ svg.lucide { flex: none; }
 [data-arch-lang="es"] .l-es { display: inline; }
 .caos-architecture-diagram > svg { display: block; width: 100%; height: auto; max-width: none; }
 .caos-arch-toggle { margin: 0 0 8px; font-size: 12px; padding: 5px 10px; color: var(--color-fg); background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--radius-sm); cursor: pointer; }
+
+/* The executive view (shell 0.12.0, conventions/problem-context-first.md): four sections in order, three inline illustrations,
+   numbered source notes. The product fills content/executive.json; it never styles this view. Illustrations are inline SVG
+   coloured with the theme tokens; a drawing carrying both languages shows the labels of the displayed one. */
+.caos-exec { display: flex; flex-direction: column; gap: 2rem; min-width: 0; }
+.caos-exec-section { min-width: 0; padding-top: 1.25rem; border-top: 1px solid var(--color-border); }
+.caos-exec-section:first-child { border-top: 0; padding-top: 0; }
+.caos-exec-section > h2 { margin-block: 0 0.15rem; }
+.caos-exec-question { margin: 0 0 1rem; font-size: var(--text-sm); color: var(--color-fg-faint); font-style: italic; }
+.caos-exec-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 0.75rem 1.5rem; margin: 0 0 1rem; }
+.caos-exec-facts dt, .caos-exec-label { display: block; font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-fg-faint); font-weight: 650; }
+.caos-exec-facts dd { margin: 0.1rem 0 0; font-weight: 600; overflow-wrap: anywhere; }
+.caos-exec-initiative, .caos-exec-vision { font-size: var(--text-lg); line-height: 1.45; margin: 0 0 1rem; }
+.caos-exec-whynow { margin: 1rem 0; overflow-wrap: anywhere; }
+.caos-exec-whynow .caos-exec-label { display: block; margin-bottom: 0.15rem; }
+.caos-exec-value { font-size: var(--text-xl); font-variant-numeric: tabular-nums; color: var(--color-accent); }
+.caos-exec-sep { color: var(--color-fg-faint); }
+.caos-exec-cite { margin-left: 0.15rem; font-size: var(--text-xs); }
+.caos-exec-fig { margin: 1.25rem 0; }
+.caos-exec-art { width: 100%; max-width: 640px; margin-inline: auto; }
+.caos-exec-art > svg { display: block; width: 100%; height: auto; }
+.caos-exec-art-wait { aspect-ratio: 8 / 5; background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.caos-exec-fig svg text { font-family: var(--font-sans); }
+.caos-exec-fig[data-lang="en"] [data-lang="es"], .caos-exec-fig[data-lang="es"] [data-lang="en"] { display: none; }
+.caos-exec-fig-error { margin: 0 auto; max-width: 640px; padding: 1rem; border: 1px solid var(--color-bad); border-radius: var(--radius-md); color: var(--color-fg); overflow-wrap: anywhere; }
+.caos-exec-outcomes, .caos-exec-cs { list-style: none; margin: 1.25rem 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.9rem; }
+.caos-exec-outcome, .caos-exec-cs > li { min-width: 0; padding: 0.8rem 1rem; background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); display: flex; flex-direction: column; gap: 0.6rem; overflow-wrap: anywhere; }
+.caos-exec-proof { margin-top: auto; }
+.caos-exec-pending { margin: 0; padding: 0.8rem 1rem; border: 1px dashed var(--color-border); border-radius: var(--radius-md); color: var(--color-fg-subtle); }
+.caos-exec-notes-wrap { border-top: 1px solid var(--color-border); padding-top: 0.75rem; }
+.caos-exec-notes-title { margin: 0 0 0.35rem; font-size: var(--text-sm); color: var(--color-fg-faint); }
+.caos-exec-notes { margin: 0; padding-left: 1.4rem; font-size: var(--text-sm); color: var(--color-fg-subtle); }
+.caos-exec-error { padding: 1rem 1.25rem; border: 1px solid var(--color-bad); border-radius: var(--radius-md); }
