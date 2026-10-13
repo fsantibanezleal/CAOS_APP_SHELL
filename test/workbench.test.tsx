@@ -145,7 +145,7 @@ test('STANDARD_ROUTES are the six product routes in order', async () => {
   const { STANDARD_ROUTES } = await import('../src/shell/routes.ts');
   assert.deepEqual(
     STANDARD_ROUTES.map((r) => r.path),
-    ['/', '/introduction', '/methodology', '/implementation', '/experiments', '/benchmark'],
+    ['/introduction', '/app', '/methodology', '/implementation', '/experiments', '/benchmark'],
   );
 });
 

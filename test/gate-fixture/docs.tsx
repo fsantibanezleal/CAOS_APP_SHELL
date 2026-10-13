@@ -4,6 +4,7 @@
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import { Callout, DocSection, Equation, ExecutiveView, Figure, Glossary, SubTabs, Tabs, pick, type BiText } from '../../src/index';
 import executiveData from './executive/executive.json';
+import { SECTION_QUESTIONS, SECTION_TITLES } from '../../src/content/executive';
 
 type Lang = 'en' | 'es';
 const REFS = ['km1927', 'hethcote2000'];
@@ -105,6 +106,11 @@ const HIDE_STYLE: Record<string, string> = {
   'area-hidden-tinyfont': '.caos-exec [data-exec-field] { font-size: 1px !important; line-height: 16px; }',
   'area-hidden-clippath': '.caos-exec [data-exec-field] { clip-path: inset(0 0 100% 0); }',
   'area-hidden-filler': '.caos-exec [data-exec-field] { opacity: 0; }',
+  // the lede held to a narrow measure, and the executive view held to a fraction of the column (Felipe, 2026-10-13)
+  'lede-narrow': '.lede { max-width: 40ch; }',
+  'exec-narrow': '.caos-exec { max-width: 40rem; }',
+  // sub-tabs 2 to 4 cannot be reached: the gate's walk never opens them
+  'exec-tab-unreachable': '.caos-exec [data-exec-tabs] [role="tab"]:not(.active) { display: none; }',
 };
 const HIDE_ES = '.caos-exec p, .caos-exec dd, .caos-exec span, .caos-exec strong { color: transparent !important; }';
 
@@ -115,6 +121,17 @@ const DOM_PLANT: Record<string, Record<'en' | 'es', string>> = {
   'exec-es-only-long': { en: 'A short vision for the English reader.', es: `${WORDS31}.` },
   'exec-citation-inline': { en: 'Admissions rose (Smith et al., 2019).', es: 'Los ingresos subieron (Smith et al., 2019).' },
   'exec-equation-text': { en: 'Admissions follow $x = y$.', es: 'Los ingresos siguen $x = y$.' },
+  // promotional or client-bound wording (Felipe, 2026-10-13): one plant per word, written into the vision of the rendered view
+  'exec-promo-our-client': { en: 'Our client cuts agency hours in every ward.', es: 'Una red reduce las horas de agencia en cada sala.' },
+  'exec-promo-nuestro-cliente': { en: 'A network cuts agency hours in every ward.', es: 'Nuestro cliente reduce las horas de agencia en cada sala.' },
+  'exec-promo-contact-us': { en: 'Contact us to see the ward forecast.', es: 'Una red ve el pronóstico por sala.' },
+  'exec-promo-contactenos': { en: 'A network sees the ward forecast.', es: 'Contáctenos para ver el pronóstico por sala.' },
+  'exec-promo-buy': { en: 'Buy the forecast before winter.', es: 'Una red ve el pronóstico antes del invierno.' },
+  'exec-promo-comprar': { en: 'A network sees the forecast before winter.', es: 'Hay que comprar el pronóstico antes del invierno.' },
+  'exec-promo-price': { en: 'The price falls as wards join.', es: 'Una red suma salas.' },
+  'exec-promo-precio': { en: 'A network adds wards.', es: 'El precio baja a medida que se suman salas.' },
+  'exec-promo-offer': { en: 'The offer ends in December.', es: 'La red termina en diciembre.' },
+  'exec-promo-oferta': { en: 'The network ends in December.', es: 'La oferta termina en diciembre.' },
 };
 
 /** The data file of the fixture, with the defect of a data plant. */
@@ -127,6 +144,9 @@ function executiveDataFor(plant: string) {
   if (plant === 'exec-outcomes-two') d.outcomes.splice(2, 1);
   if (plant === 'exec-dialogue-six') d.dialogue = Array.from({ length: 6 }, () => d.dialogue[0]);
   if (plant === 'exec-four-cs-present') d.four_cs = ['A', 'B', 'C', 'D'].map((c) => ({ c: { en: c, es: c }, exec_problem: { en: 'It ties to the problem.', es: 'Se ata al problema.' } }));
+  if (plant === 'exec-source-no-url') delete d.sources[0].url;
+  if (plant === 'exec-source-http') d.sources[0].url = 'http://example.org/report';
+  if (plant === 'exec-source-file-citation') d.sources[0].note = { en: 'Report file 2026080375, section 2', es: 'Informe archivo 2026080375, sección 2' };
   return d;
 }
 
@@ -135,10 +155,39 @@ function ExecutiveFixture({ lang, plant }: { lang: Lang; plant: string }) {
   const box = useRef<HTMLDivElement | null>(null);
   const injected = DOM_PLANT[plant];
   useEffect(() => {
-    // write the plant into the vision of the rendered view once it is on the page
-    const el = box.current?.querySelector('[data-exec-field="vision"]');
-    if (el && injected) el.textContent = injected[lang];
-  }, [injected, lang]);
+    // write the plant into the vision of the rendered view whenever it is on the page (the vision sits in a sub-tab that is
+    // rendered only while it is open), and a source note as prose, the way the 0.12.0 data wrote it: no link
+    const apply = () => {
+      const el = box.current?.querySelector('[data-exec-field="vision"]');
+      if (el && injected && el.textContent !== injected[lang]) el.textContent = injected[lang];
+      const note = box.current?.querySelector('[data-exec-notes] > li');
+      const prose = lang === 'en' ? 'Stability report, section 2, page 14, file 2026080375.' : 'Informe de estabilidad, sección 2, página 14, archivo 2026080375.';
+      if (note && plant === 'exec-note-no-link' && note.textContent !== prose) note.textContent = prose;
+    };
+    apply();
+    if (!box.current) return undefined;
+    const watch = new MutationObserver(apply);
+    watch.observe(box.current, { childList: true, subtree: true });
+    return () => watch.disconnect();
+  }, [injected, lang, plant]);
+  if (plant === 'exec-sections-stacked') {
+    // the four sections stacked in one scroll, the way shell 0.12.0 showed them: they are not sub-tabs
+    return (
+      <div className="caos-exec" data-executive-view="" data-executive-schema="2.0.0" data-executive-valid="true">
+        {[1, 2, 3, 4].map((n) => (
+          <section key={n} className="caos-exec-section" data-exec-section={n}>
+            <h2>{pick(SECTION_TITLES[n - 1], lang)}</h2>
+            <p className="caos-exec-question" data-exec-question="">
+              {pick(SECTION_QUESTIONS[n - 1], lang)}
+            </p>
+          </section>
+        ))}
+        <aside>
+          <ol data-exec-notes="" />
+        </aside>
+      </div>
+    );
+  }
   if (plant === 'exec-old-areas') {
     // the four areas of shell 0.11, composed by hand: they are not an executive view
     return (

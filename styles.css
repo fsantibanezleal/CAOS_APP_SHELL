@@ -90,7 +90,7 @@
   /* layout */
   --maxw: 1200px;          /* the document width (ADR-0017 s1) */
   --maxw-wide: 100%;       /* the workbench and surface width (ADR-0071 rule 2) */
-  --measure: 70ch;         /* the narrow column (.measure) and the lede */
+  --measure: 70ch;         /* the narrow column (.measure) */
   --measure-text: 78ch;    /* the longest line of a text block inside a document */
   --header-h: 56px;
   --rail-w: clamp(248px, 19vw, 340px);
@@ -345,7 +345,8 @@ code, kbd { font-family: var(--font-mono); }
 .measure { max-width: var(--measure); }
 .page-head { border-bottom: 1px solid var(--color-border); padding-bottom: 1rem; margin-bottom: 1.25rem; }
 .page-head h1 { font-size: var(--text-2xl); margin: 0 0 0.4rem; }
-.lede { color: var(--color-fg-subtle); font-size: var(--text-lg); margin: 0; max-width: var(--measure); }
+/* the lede of a page takes the full width of the document column (Felipe, 2026-10-13); only captions keep a measure */
+.lede { color: var(--color-fg-subtle); font-size: var(--text-lg); margin: 0; max-width: none; }
 .caos-doc-section { margin-block: 1.75rem; }
 /* The references of a page or open tab: one block at its end (ADR-0017 s4). */
 .caos-doc-references { margin-top: 2rem; padding-top: 0.4rem; border-top: 1px solid var(--color-border); }
@@ -744,6 +745,7 @@ svg.lucide { flex: none; }
 .caos-exec-outcome, .caos-exec-cs > li { min-width: 0; padding: 0.8rem 1rem; background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); display: flex; flex-direction: column; gap: 0.6rem; overflow-wrap: anywhere; }
 .caos-exec-proof { margin-top: auto; }
 .caos-exec-pending { margin: 0; padding: 0.8rem 1rem; border: 1px dashed var(--color-border); border-radius: var(--radius-md); color: var(--color-fg-subtle); }
+.caos-exec-tabs { min-width: 0; }
 .caos-exec-notes-wrap { border-top: 1px solid var(--color-border); padding-top: 0.75rem; }
 .caos-exec-notes-title { margin: 0 0 0.35rem; font-size: var(--text-sm); color: var(--color-fg-faint); }
 .caos-exec-notes { margin: 0; padding-left: 1.4rem; font-size: var(--text-sm); color: var(--color-fg-subtle); overflow-wrap: anywhere; }

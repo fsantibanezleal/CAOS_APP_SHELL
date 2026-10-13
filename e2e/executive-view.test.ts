@@ -6,8 +6,9 @@ import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 import { chromium, type Browser } from '@playwright/test';
 
-// The executive view (shell 0.12.0): the four sections and the three inline illustrations fit the column at phone and
-// desktop widths, in both themes and both languages, and every label stays inside its drawing, also in a wide font.
+// The executive view (shell 0.13.0): the four sections are sub-tabs; each one and the three inline illustrations fit the column
+// at phone and desktop widths, in both themes and both languages, every label stays inside its drawing, also in a wide font,
+// and the sub-tabs are reachable by keyboard.
 
 let browser: Browser, server: Server, address: string;
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -87,39 +88,114 @@ test('the executive view fits 390, 1280 and 1600 px in both themes and both lang
           await page.evaluate((t) => document.documentElement.setAttribute('data-theme', t), theme);
           if (wide) await page.addStyleTag({ content: WIDE });
           await page.waitForSelector('[data-executive-view] figure svg');
-          await page.waitForFunction(() => document.querySelectorAll('[data-exec-illustration] svg').length === 3);
-          const m = await page.evaluate(`(() => {
-            const de = document.documentElement;
-            const view = document.querySelector('[data-executive-view]');
-            const figures = [...document.querySelectorAll('[data-exec-illustration]')].map((f) => {
-              const svg = f.querySelector('svg');
-              const vb = svg.viewBox.baseVal;
-              const r = svg.getBoundingClientRect();
-              const bad = [];
-              for (const t of svg.querySelectorAll('text')) {
-                if (getComputedStyle(t).display === 'none') continue;
-                const b = t.getBBox();
-                if (b.x < vb.x - 1 || b.y < vb.y - 1 || b.x + b.width > vb.x + vb.width + 1 || b.y + b.height > vb.y + vb.height + 1) bad.push(t.textContent);
-              }
-              const visible = [...svg.querySelectorAll('text')].filter((t) => getComputedStyle(t).display !== 'none').map((t) => t.getAttribute('data-lang'));
-              return { name: f.getAttribute('data-exec-illustration'), w: r.width, h: r.height, col: view.getBoundingClientRect().width, bad, langs: [...new Set(visible)], img: f.querySelectorAll('img').length };
-            });
-            return { scrollW: de.scrollWidth, innerW: window.innerWidth, valid: view.getAttribute('data-executive-valid'), sections: view.querySelectorAll('[data-exec-section]').length, figures };
-          })()`) as { scrollW: number; innerW: number; valid: string; sections: number; figures: Array<{ name: string; w: number; h: number; col: number; bad: string[]; langs: string[]; img: number }> };
-          assert.equal(m.valid, 'true', where);
-          assert.equal(m.sections, 4, where);
-          assert.ok(m.scrollW <= m.innerW, `${where}: the page scrolls sideways (${m.scrollW} > ${m.innerW})`);
-          assert.deepEqual(m.figures.map((f) => f.name), ['initiative', 'problem', 'solution'], where);
-          for (const f of m.figures) {
-            assert.deepEqual(f.bad, [], `${where}: ${f.name} has labels outside its drawing`);
-            assert.ok(f.w <= f.col + 1 && f.w > 200, `${where}: ${f.name} is ${f.w}px in a ${f.col}px column`);
-            assert.deepEqual(f.langs, [lang], `${where}: ${f.name} shows labels of ${f.langs.join(',')}`);
-            assert.equal(f.img, 0, `${where}: an img tag`);
+          const seen: string[] = [];
+          // the four sections are the four sub-tabs: visit each and measure what it shows
+          for (let tab = 0; tab < 4; tab += 1) {
+            const where2 = `${where}, sub-tab ${tab + 1}`;
+            if (tab > 0) await page.locator('[data-exec-tabs] [role="tab"]').nth(tab).click();
+            const expected = [2, 1, 0, 0][tab];
+            await page.waitForFunction((n) => document.querySelectorAll('[data-exec-illustration] svg').length === n, expected);
+            const m = await page.evaluate(`(() => {
+              const de = document.documentElement;
+              const view = document.querySelector('[data-executive-view]');
+              const figures = [...document.querySelectorAll('[data-exec-illustration]')].map((f) => {
+                const svg = f.querySelector('svg');
+                const vb = svg.viewBox.baseVal;
+                const r = svg.getBoundingClientRect();
+                const bad = [];
+                for (const t of svg.querySelectorAll('text')) {
+                  if (getComputedStyle(t).display === 'none') continue;
+                  const b = t.getBBox();
+                  if (b.x < vb.x - 1 || b.y < vb.y - 1 || b.x + b.width > vb.x + vb.width + 1 || b.y + b.height > vb.y + vb.height + 1) bad.push(t.textContent);
+                }
+                const visible = [...svg.querySelectorAll('text')].filter((t) => getComputedStyle(t).display !== 'none').map((t) => t.getAttribute('data-lang'));
+                return { name: f.getAttribute('data-exec-illustration'), w: r.width, h: r.height, col: view.getBoundingClientRect().width, bad, langs: [...new Set(visible)], img: f.querySelectorAll('img').length };
+              });
+              const notes = [...view.querySelectorAll('[data-exec-notes] > li')].map((li) => { const a = li.querySelector('a'); const r = li.getBoundingClientRect(); return { href: a ? a.getAttribute('href') : null, w: r.width, h: r.height, right: r.right }; });
+              return { scrollW: de.scrollWidth, innerW: window.innerWidth, valid: view.getAttribute('data-executive-valid'), sections: [...view.querySelectorAll('[data-exec-section]')].map((s) => Number(s.getAttribute('data-exec-section'))), tabs: [...view.querySelectorAll('[data-exec-tabs] [role="tab"]')].map((t) => t.getAttribute('aria-selected')), notes, figures };
+            })()`) as { scrollW: number; innerW: number; valid: string; sections: number[]; tabs: string[]; notes: Array<{ href: string | null; w: number; h: number; right: number }>; figures: Array<{ name: string; w: number; h: number; col: number; bad: string[]; langs: string[]; img: number }> };
+            assert.equal(m.valid, 'true', where2);
+            assert.deepEqual(m.sections, [tab + 1], `${where2}: one section at a time, in its own sub-tab`);
+            assert.deepEqual(m.tabs, [0, 1, 2, 3].map((i) => String(i === tab)), `${where2}: the selected sub-tab`);
+            assert.ok(m.scrollW <= m.innerW, `${where2}: the page scrolls sideways (${m.scrollW} > ${m.innerW})`);
+            assert.equal(m.notes.length, 4, `${where2}: the source notes stay visible`);
+            for (const n of m.notes) assert.ok(n.href?.startsWith('https://') && n.h > 0 && n.right <= m.innerW, `${where2}: a source note is a visible https link inside the column`);
+            for (const f of m.figures) {
+              seen.push(f.name);
+              assert.deepEqual(f.bad, [], `${where2}: ${f.name} has labels outside its drawing`);
+              assert.ok(f.w <= f.col + 1 && f.w > 200, `${where2}: ${f.name} is ${f.w}px in a ${f.col}px column`);
+              assert.deepEqual(f.langs, [lang], `${where2}: ${f.name} shows labels of ${f.langs.join(',')}`);
+              assert.equal(f.img, 0, `${where2}: an img tag`);
+            }
           }
+          assert.deepEqual(seen, ['initiative', 'problem', 'solution'], where);
           await page.close();
         }
       }
     }
+  }
+});
+
+test('the four sub-tabs are reachable by keyboard and the source notes stay visible', async () => {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await page.goto(address);
+  await page.waitForSelector('[data-exec-tabs] [role="tab"]');
+  const tabs = page.locator('[data-exec-tabs] [role="tab"]');
+  assert.equal(await tabs.count(), 4);
+  const selected = async () => page.evaluate(() => [...document.querySelectorAll('[data-exec-tabs] [role="tab"]')].findIndex((t) => t.getAttribute('aria-selected') === 'true'));
+  const section = async () => page.evaluate(() => [...document.querySelectorAll('[data-exec-section]')].map((s) => s.getAttribute('data-exec-section')).join(','));
+  assert.equal(await selected(), 0);
+  await tabs.nth(0).focus();
+  const steps: Array<[string, number]> = [['ArrowRight', 1], ['ArrowRight', 2], ['ArrowRight', 3], ['ArrowRight', 0], ['End', 3], ['Home', 0], ['ArrowLeft', 3]];
+  for (const [key, want] of steps) {
+    await page.keyboard.press(key);
+    assert.equal(await selected(), want, `${key} selects sub-tab ${want + 1}`);
+    assert.equal(await section(), String(want + 1), `${key} shows section ${want + 1} alone`);
+    assert.equal(await page.locator('[data-exec-notes] > li a[href^="https://"]').count(), 4, `${key}: the notes are still there`);
+  }
+  // the rendered tab row is one row (ADR-0071 rule 4) at the narrowest width
+  await page.setViewportSize({ width: 390, height: 900 });
+  const rows = await page.evaluate(() => {
+    const tops = [...document.querySelectorAll('[data-exec-tabs] [role="tab"]')].map((t) => Math.round(t.getBoundingClientRect().top)).filter((v, i, a) => a.indexOf(v) === i);
+    return tops.length;
+  });
+  assert.equal(rows, 1, 'the sub-tab row is one row at 390 px');
+  await page.close();
+});
+
+test('the lede and every part of the executive view take the full width of the document column at 1280 and 1600 px', async () => {
+  for (const width of [1280, 1600]) {
+    const page = await browser.newPage({ viewport: { width, height: 900 } });
+    await page.goto(address);
+    await page.waitForSelector('[data-executive-view] figure svg');
+    const read = `(() => {
+      const pb = document.querySelector('.page-body');
+      const cs = getComputedStyle(pb);
+      const column = pb.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      const w = (el) => Math.round(el.getBoundingClientRect().width);
+      const lede = document.querySelector('.page-head .lede');
+      const view = document.querySelector('[data-executive-view]');
+      const parts = [['.subtabs', view.querySelector('.subtabs')], ['notes', view.querySelector('.caos-exec-notes-wrap')]];
+      const section = view.querySelector('[data-exec-section]');
+      if (section) {
+        parts.push(['section ' + section.getAttribute('data-exec-section'), section]);
+        for (const child of section.children) parts.push(['section ' + section.getAttribute('data-exec-section') + ' > ' + child.tagName.toLowerCase() + '.' + String(child.className).split(' ')[0], child]);
+      }
+      return { column, lede: w(lede), parts: parts.filter(([, e]) => e).map(([name, e]) => [name, w(e)]) };
+    })()`;
+    const first = (await page.evaluate(read)) as { column: number; lede: number; parts: Array<[string, number]> };
+    assert.ok(first.lede >= first.column - 1, `${width}px: the lede is ${first.lede}px in a ${first.column}px column`);
+    const seen: string[] = [];
+    for (let tab = 0; tab < 4; tab += 1) {
+      if (tab > 0) await page.locator('[data-exec-tabs] [role="tab"]').nth(tab).click();
+      const m = (await page.evaluate(read)) as { column: number; lede: number; parts: Array<[string, number]> };
+      for (const [name, got] of m.parts) {
+        seen.push(name);
+        assert.ok(got >= m.column - 1, `${width}px, sub-tab ${tab + 1}: ${name} is ${got}px in a ${m.column}px column`);
+      }
+    }
+    assert.ok(seen.some((n) => n.includes('dl.')) && seen.some((n) => n.includes('ul.')) && seen.some((n) => n.includes('figure.')), `${width}px: the facts, the outcomes and the figures were measured`);
+    await page.close();
   }
 });
 
@@ -130,7 +206,10 @@ test('a source note with a long URL wraps inside the column at 390 px (BL-053)',
   const m = await page.evaluate(`(() => {
     const ol = document.querySelector('[data-executive-view] .caos-exec-notes');
     const li = document.createElement('li');
-    li.textContent = 'https://www.cmfchile.cl/portal/principal/613/articles-' + 'x'.repeat(120) + '.pdf';
+    const a = document.createElement('a');
+    a.href = 'https://www.cmfchile.cl/portal/principal/613/articles-' + 'x'.repeat(120) + '.pdf';
+    a.textContent = a.href;
+    li.appendChild(a);
     ol.appendChild(li);
     const de = document.documentElement;
     return { scrollW: de.scrollWidth, innerW: window.innerWidth, noteW: li.getBoundingClientRect().right };

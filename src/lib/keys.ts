@@ -18,4 +18,4 @@ export const THEME_BOOT_SCRIPT =
   "catch(e){document.documentElement.dataset.theme='dark'}})();";
 
 /** The six standard routes, for build scripts that run without React (route materialisation, the gate). */
-export { STANDARD_ROUTES } from '../shell/routes';
+export { APP_ROUTE, LANDING_ROUTE, STANDARD_ROUTES } from '../shell/routes';

@@ -7,12 +7,13 @@ import schema from './executive.schema.json';
  * sources by field) are here. `gate/areas.mjs` keeps the same limits for the rendered page; a unit test keeps them equal.
  */
 
-export const EXECUTIVE_SCHEMA_VERSION = '1.0.0';
+export const EXECUTIVE_SCHEMA_VERSION = '2.0.0';
 
 /**
- * The names of the 4 C's, in the order of the 4Cs Positioning section. EMPTY ON PURPOSE: the names and the order are
- * Felipe's to give (problem-context-first.md, open item). While it is empty `four_cs` must be absent from every data
- * file and section 3 renders its declared pending state; once it holds 4 names `four_cs` is required in that order.
+ * The names of the 4 C's, in the order of the 4Cs Positioning section. EMPTY ON PURPOSE: the names, their order and their
+ * place in the view are being redefined from research (the section structure comes in a follow-up of shell 0.13.0). While
+ * it is empty `four_cs` must be absent from every data file and section 3 renders its declared pending state; once it
+ * holds 4 names `four_cs` is required in that order.
  */
 export const FOUR_CS: readonly string[] = [];
 
@@ -26,6 +27,10 @@ export const EXEC_LIMITS = {
   citations: [/\(\s*Source/i, /\[\d+\]/, /\(\s*ECB/, /\(\w[^()]*\d{4}\)/],
   /** The smallest rendered size of an illustration label, in CSS pixels (the gate reads it from the drawing). */
   minLabelPx: 9,
+  /** A source that cites a file name or number in place of its link (a `.pdf` is allowed only beside a written-out https link). */
+  fileCitations: [/\bfile\s*\d/i, /\barchivo\s*\d/i, /\.pdf\b/i, /\bPublished on\b/i],
+  /** Promotional or client-bound wording (the view is general: never a client, never a pitch; Felipe 2026-10-13). Whole words, either case. */
+  promotional: [/\bour\s+clients?\b/i, /\bnuestros?\s+clientes?\b/i, /\bcontact\s+us\b/i, /\bcontáctenos\b/i, /\bbuy\b/i, /\bcomprar\b/i, /\bprices?\b/i, /\bprecios?\b/i, /\boffers?\b/i, /\bofertas?\b/i],
 } as const;
 
 export interface BiTextValue {
@@ -46,6 +51,15 @@ export interface ExecutiveIllustration {
   file: string | BiTextValue;
   caption: BiTextValue;
 }
+export interface ExecutiveSource {
+  field: string;
+  /** The publication, in plain words. */
+  title: BiTextValue;
+  /** The page or document itself: an https link. */
+  url: string;
+  /** At most one sentence (for example a page number). */
+  note?: BiTextValue;
+}
 export interface ExecutiveData {
   executive: BiTextValue;
   organisation: BiTextValue;
@@ -56,7 +70,7 @@ export interface ExecutiveData {
   four_cs?: Array<{ c: BiTextValue; exec_problem: BiTextValue }>;
   dialogue: Array<{ question: BiTextValue; answer: BiTextValue }>;
   illustrations: { initiative: ExecutiveIllustration; problem: ExecutiveIllustration; solution: ExecutiveIllustration };
-  sources: Array<{ field: string; source: BiTextValue }>;
+  sources: ExecutiveSource[];
 }
 
 export interface ExecutiveProblem {
@@ -92,7 +106,7 @@ function resolve(node: Node): Node {
   return { ...(ROOT.$defs as Node)[name], ...(node.description ? { description: node.description } : {}) };
 }
 
-/** Validates `value` against `node`; the supported keywords are type, properties, required, additionalProperties: false, items, minItems, maxItems, minLength, anyOf and $ref. */
+/** Validates `value` against `node`; the supported keywords are type, properties, required, additionalProperties: false, items, minItems, maxItems, minLength, pattern (with x-pattern-message), anyOf and $ref. */
 function check(value: unknown, rawNode: Node, path: string, out: ExecutiveProblem[]): void {
   const node = resolve(rawNode);
   if (node.anyOf) {
@@ -111,6 +125,8 @@ function check(value: unknown, rawNode: Node, path: string, out: ExecutiveProble
   }
   if (node.type === 'string' && typeof value === 'string' && node.minLength && value.trim().length < node.minLength) {
     out.push({ path, message: 'must not be empty' });
+  } else if (node.type === 'string' && typeof value === 'string' && node.pattern && !new RegExp(node.pattern).test(value)) {
+    out.push({ path, message: (node['x-pattern-message'] as string | undefined) ?? `must match ${node.pattern}` });
   }
   if (node.type === 'array') {
     const list = value as unknown[];
@@ -132,7 +148,7 @@ function check(value: unknown, rawNode: Node, path: string, out: ExecutiveProble
 }
 
 // ------------------------------------------------------------------------------------------- the rules on top
-/** Every text field with its path and what it may hold; `sources` are exempt (a source may cite). */
+/** Every text field with its path and what it may hold; `sources` have their own rules (`sourceTextProblems`: a source may cite). */
 function textFields(d: ExecutiveData): Array<{ path: string; text: BiTextValue; sentences?: number }> {
   const out: Array<{ path: string; text: BiTextValue; sentences?: number }> = [
     { path: 'executive', text: d.executive },
@@ -171,6 +187,32 @@ export function writingProblems(text: string, maxSentences?: number): string[] {
   }
   if (EXEC_LIMITS.equation.test(text)) out.push('holds an equation or a TeX marker; the executive view holds none');
   if (EXEC_LIMITS.citations.some((re) => re.test(text))) out.push('holds an inline citation; give the source in "sources"');
+  for (const re of EXEC_LIMITS.promotional) {
+    const m = re.exec(text);
+    if (m) out.push(`holds promotional or client-bound wording ("${m[0]}"); the executive view is general, never a client, never a pitch`);
+  }
+  return out;
+}
+
+/**
+ * The problems with the title or the note of one source: a sentence over the word limit, more than `maxSentences`
+ * sentences, and a citation of a file name or number in place of the link. An inline citation is allowed here (a source
+ * names a publication). `gate/areas.mjs` execSourceTextProblems keeps the same rules for the rendered note.
+ */
+export function sourceTextProblems(text: string, maxSentences?: number): string[] {
+  const out: string[] = [];
+  const sentences = sentencesOf(text);
+  for (const sentence of sentences) {
+    const n = wordsIn(sentence);
+    if (n > EXEC_LIMITS.maxWords) out.push(`a sentence of ${n} words; the limit is ${EXEC_LIMITS.maxWords}`);
+  }
+  if (maxSentences !== undefined && sentences.length > maxSentences) out.push(maxSentences === 1 ? `must be one sentence, has ${sentences.length}` : `has ${sentences.length} sentences; the limit is ${maxSentences}`);
+  const written = /https?:\/\//i.test(text);
+  for (const re of EXEC_LIMITS.fileCitations) {
+    if (re.source.includes('pdf') && written) continue;
+    const m = re.exec(text);
+    if (m) out.push(`cites a file name or number in place of the link ("${m[0]}"); give the publication as the title and its https link as the url`);
+  }
   return out;
 }
 
@@ -219,25 +261,33 @@ export function validateExecutive(data: unknown, opts: { fourCs?: readonly strin
     else if (seen.has(s.field)) out.push({ path: `sources[${i}].field`, message: `"${s.field}" already has a source` });
     seen.add(s.field);
   });
+  // a source is a link: its title and note stay within the writing limits and cite no file
+  full.sources.forEach((src, i) => {
+    for (const lang of ['en', 'es'] as const) {
+      for (const m of sourceTextProblems(src.title[lang])) out.push({ path: `sources[${i}].title.${lang}`, message: m });
+      if (src.note) for (const m of sourceTextProblems(src.note[lang], 1)) out.push({ path: `sources[${i}].note.${lang}`, message: m });
+    }
+  });
   const missing = wanted.filter((f) => !seen.has(f));
   if (missing.length > 0) out.push({ path: 'sources', message: `no source for ${missing.join(', ')}` });
   return out;
 }
 
-export const SECTION_TITLES: Array<{ en: string; es: string }> = [
-  { en: 'Industry & Exec Tailoring', es: 'Industria y foco ejecutivo' },
-  { en: 'AI Transformation Story', es: 'Historia de transformación con IA' },
-  { en: '4Cs Positioning', es: 'Posicionamiento 4C' },
-  { en: 'Delivery & Credibility', es: 'Entrega y credibilidad' },
+/**
+ * The ONE definition of the sections of the view: how many there are, their ids, their titles and the rubric question under
+ * each (Felipe's rubric, verbatim). The view renders one sub-tab per entry, the gate reads the same list (`gate/areas.mjs`
+ * EXEC_SECTIONS keeps a copy that a unit test holds equal). The section structure is being redefined from research: change
+ * the list here, and only here, when it is.
+ */
+export const EXEC_SECTION_DEFS: ReadonlyArray<{ id: string; title: BiTextValue; question: BiTextValue }> = [
+  { id: 'industry', title: { en: 'Industry & Exec Tailoring', es: 'Industria y foco ejecutivo' }, question: { en: 'Built for a C-suite exec?', es: '¿Pensado para un ejecutivo de primer nivel?' } },
+  { id: 'transformation', title: { en: 'AI Transformation Story', es: 'Historia de transformación con IA' }, question: { en: 'Outcomes, not a feature tour', es: 'Resultados, no un recorrido de funciones' } },
+  { id: 'positioning', title: { en: '4Cs Positioning', es: 'Posicionamiento 4C' }, question: { en: 'Value story, not features dump', es: 'Historia de valor, no lista de funciones' } },
+  { id: 'credibility', title: { en: 'Delivery & Credibility', es: 'Entrega y credibilidad' }, question: { en: 'Trust them in front of a CxO?', es: '¿Confiaría en ellos frente a un ejecutivo?' } },
 ];
-
-/** The rubric question under each title (Felipe's rubric, verbatim). */
-export const SECTION_QUESTIONS: Array<{ en: string; es: string }> = [
-  { en: 'Built for a C-suite exec?', es: '¿Pensado para un ejecutivo de primer nivel?' },
-  { en: 'Outcomes, not a feature tour', es: 'Resultados, no un recorrido de funciones' },
-  { en: 'Value story, not features dump', es: 'Historia de valor, no lista de funciones' },
-  { en: 'Trust them in front of a CxO?', es: '¿Confiaría en ellos frente a un ejecutivo?' },
-];
+export const SECTION_TITLES: Array<{ en: string; es: string }> = EXEC_SECTION_DEFS.map((d) => d.title);
+/** The rubric question under each title. */
+export const SECTION_QUESTIONS: Array<{ en: string; es: string }> = EXEC_SECTION_DEFS.map((d) => d.question);
 
 /** The declared state of section 3 while FOUR_CS is empty. */
 export const PENDING_FOUR_CS: BiTextValue = {

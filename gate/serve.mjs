@@ -56,8 +56,11 @@ export function servePages(dir, basePath = '/', port = 0) {
       }
     };
     let path;
+    let search = '';
     try {
-      path = decodeURIComponent(new URL(req.url ?? '/', 'http://x').pathname);
+      const u = new URL(req.url ?? '/', 'http://x');
+      path = decodeURIComponent(u.pathname);
+      search = u.search;
     } catch {
       return missing();
     }
@@ -76,7 +79,8 @@ export function servePages(dir, basePath = '/', port = 0) {
         const index = join(file, 'index.html');
         if (!existsSync(index)) return missing();
         if (!path.endsWith('/')) {
-          res.writeHead(301, { Location: `${path}/` });
+          // the query string survives the redirect, as a Pages host keeps it (an old link /app?case=B2 must reach its case)
+          res.writeHead(301, { Location: `${path}/${search}` });
           return res.end();
         }
         return send(200, index);
