@@ -6,6 +6,7 @@ import { deflateSync } from 'node:zlib';
 import { after, before, test } from 'node:test';
 import { decodePng, paintedBox, unionArea } from '../gate/png.mjs';
 import { servePages } from '../gate/serve.mjs';
+import { ANIMATION_MAX_SECONDS, analyseSvgAnimation, animationFailures } from '../gate/areas.mjs';
 
 /** The gate's own building blocks, without a browser: the Pages-faithful server and the pixel arithmetic of G6. */
 
@@ -96,4 +97,44 @@ test('the local server answers as GitHub Pages does (G4 runs against what will b
   assert.equal(missing.status, 404, 'no SPA fallback: a missing artifact is a 404');
   assert.equal(await missing.text(), '<p>not found</p>');
   assert.equal((await get('/../secret')).status, 404);
+});
+
+test('an animated SVG is found, measured and checked for its reduced-motion block', () => {
+  const svg = (inner: string, style = '') => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">${style ? `<style>${style}</style>` : ''}${inner}</svg>`;
+  const still = analyseSvgAnimation(svg('<rect/>'));
+  assert.equal(still.animated, false, 'a still is not animated');
+  assert.deepEqual(animationFailures(still, 'pain'), []);
+  const good = analyseSvgAnimation(svg('<rect class="a"/>', '@keyframes grow { from { opacity: 0 } to { opacity: 1 } } .a { animation: grow 4s ease-out infinite; } @media (prefers-reduced-motion: reduce) { .a { animation: none; opacity: 1; } }'));
+  assert.deepEqual([good.animated, good.css, good.smil, good.reducedBlock, good.neutralises, good.seconds], [true, true, false, true, true, 4]);
+  assert.deepEqual(animationFailures(good, 'pain'), []);
+  const noBlock = analyseSvgAnimation(svg('<rect class="a"/>', '@keyframes grow { to { opacity: 1 } } .a { animation: grow 4s; }'));
+  assert.match(animationFailures(noBlock, 'pain').join('|'), /illustration "pain" is animated and has no @media \(prefers-reduced-motion: reduce\) block/);
+  const idle = analyseSvgAnimation(svg('<rect class="a"/>', '@keyframes grow { to { opacity: 1 } } .a { animation: grow 4s; } @media (prefers-reduced-motion: reduce) { .a { opacity: 1; } }'));
+  assert.match(animationFailures(idle, 'pain').join('|'), /does not stop its CSS animation/);
+  const smil = analyseSvgAnimation(svg('<rect><animate attributeName="width" from="1" to="9" dur="4s" begin="1s" fill="freeze"/></rect>', '@media (prefers-reduced-motion: reduce) { rect { width: 9px; } }'));
+  assert.deepEqual([smil.animated, smil.css, smil.smil, smil.reducedBlock, smil.seconds], [true, false, true, true, 5]);
+  assert.deepEqual(animationFailures(smil, 'situation'), [], 'a SMIL animation needs the block, not animation: none');
+  const long = analyseSvgAnimation(svg('<rect class="a"/>', '.a { animation: grow 8s 3s infinite; } @keyframes grow { to { opacity: 1 } } @media (prefers-reduced-motion: reduce) { .a { animation: none; } }'));
+  assert.equal(long.seconds, 11);
+  assert.match(animationFailures(long, 'pain').join('|'), new RegExp(`plays for 11 s; the limit is ${ANIMATION_MAX_SECONDS} s`));
+  const ms = analyseSvgAnimation(svg('<rect class="a"/>', '.a { animation-name: grow; animation-duration: 2500ms; } @keyframes grow { to { opacity: 1 } } @media (prefers-reduced-motion: reduce) { .a { animation-name: none; } }'));
+  assert.equal(ms.seconds, 2.5);
+  assert.deepEqual(animationFailures(ms, 'pain'), []);
+  assert.equal(ANIMATION_MAX_SECONDS, 10);
+});
+
+test('a finite count of cycles plays that many times and an over-long play is refused', () => {
+  const svg = (style: string, inner = '<rect class="a"/>') => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><style>${style}</style>${inner}</svg>`;
+  const block = '@media (prefers-reduced-motion: reduce) { .a { animation: none; } }';
+  const five = analyseSvgAnimation(svg(`@keyframes g { to { opacity: 1 } } .a { animation: g 4s ease 5; } ${block}`));
+  assert.equal(five.seconds, 20);
+  assert.match(animationFailures(five, 'pain').join('|'), /plays for 20 s; the limit is 10 s/);
+  const count = analyseSvgAnimation(svg(`@keyframes g { to { opacity: 1 } } .a { animation-name: g; animation-duration: 4s; animation-iteration-count: 3; } ${block}`));
+  assert.equal(count.seconds, 12);
+  const loop = analyseSvgAnimation(svg(`@keyframes g { to { opacity: 1 } } .a { animation: g 4s infinite; } ${block}`));
+  assert.equal(loop.seconds, 4, 'a loop counts one cycle');
+  const smil = analyseSvgAnimation(svg('@media (prefers-reduced-motion: reduce) { rect { width: 9px; } }', '<rect><animate attributeName="width" dur="4s" repeatCount="3"/></rect>'));
+  assert.equal(smil.seconds, 12);
+  const once = analyseSvgAnimation(svg(`@keyframes g { to { opacity: 1 } } .a { animation: g 4s ease 1; } ${block}`));
+  assert.equal(once.seconds, 4);
 });

@@ -517,12 +517,12 @@ svg.lucide { flex: none; }
 .caos-wb-rail-panel { display: flex; flex-direction: column; gap: 0.8rem; min-height: 0; }
 /* A labelled control in the rail stacks its text above it; a knob's head keeps its own row, the value at the right
    (until 0.9.3 this rule outranked `.caos-knob-head` and stacked every knob, a line per knob; CAOS_APP_SHELL#77). */
-.caos-wb-rail label:not(.caos-knob-head) { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.8rem; color: var(--color-fg-subtle); }
-.caos-wb-rail .select, .caos-wb-rail .range { width: 100%; }
+.caos-wb-rail label:not(.caos-knob-head), .caos-focus-rail label:not(.caos-knob-head) { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.8rem; color: var(--color-fg-subtle); }
+.caos-wb-rail .select, .caos-wb-rail .range, .caos-focus-rail .select, .caos-focus-rail .range { width: 100%; }
 /* The variants wrap in the rail instead of scrolling. */
-.caos-wb-rail .caos-variant-bar { margin-bottom: 0; }
-.caos-wb-rail .caos-chip-row { flex-wrap: wrap; overflow: visible; }
-.caos-wb-rail .caos-variant-note { font-size: 0.8rem; }
+.caos-wb-rail .caos-variant-bar, .caos-focus-rail .caos-variant-bar { margin-bottom: 0; }
+.caos-wb-rail .caos-chip-row, .caos-focus-rail .caos-chip-row { flex-wrap: wrap; overflow: visible; }
+.caos-wb-rail .caos-variant-note, .caos-focus-rail .caos-variant-note { font-size: 0.8rem; }
 .caos-wb-main { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
 
 /* CaseWorkbench: ONE row of at most six question groups; the open panel takes the height the row leaves and owns its
@@ -767,3 +767,63 @@ svg.lucide { flex: none; }
 .caos-exec-links { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; padding-top: 0.25rem; }
 .caos-exec-link { font-weight: 600; }
 .caos-exec-error { padding: 1rem 1.25rem; border: 1px solid var(--color-bad); border-radius: var(--radius-md); }
+
+/* == flip cards and the card deck (shell 0.14.0) ================================================================== */
+
+/* A flip card: two faces stacked in one cell (the card is as tall as its back, so a row of cards keeps one height), the
+   inner box turns on the Y axis. The hidden face leaves the accessibility tree and the tab order through `visibility`
+   (switched after the turn on the way out, at once on the way in) and `aria-hidden`; its content stays in the markup.
+   Theme tokens only. Under reduced motion the faces swap without the turn. */
+.caos-flip { position: relative; display: flex; min-width: 0; width: 100%; perspective: 1100px; }
+.caos-flip-inner { display: grid; flex: 1 1 auto; min-width: 0; transform-style: preserve-3d; transition: transform 0.45s ease; }
+.caos-flip[data-flip-open="true"] > .caos-flip-inner { transform: rotateY(180deg); }
+.caos-flip-face { grid-area: 1 / 1; min-width: 0; display: flex; flex-direction: column; background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow-wrap: anywhere; backface-visibility: hidden; -webkit-backface-visibility: hidden; transition: visibility 0s linear 0s; }
+.caos-flip-back { transform: rotateY(180deg); visibility: hidden; padding: 0.8rem 1rem; gap: 0.5rem; transition: visibility 0s linear 0.45s; }
+.caos-flip[data-flip-open="true"] > .caos-flip-inner > .caos-flip-front { visibility: hidden; transition-delay: 0.45s; }
+.caos-flip[data-flip-open="true"] > .caos-flip-inner > .caos-flip-back { visibility: visible; transition-delay: 0s; }
+.caos-flip-toggle { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.caos-flip-front > .caos-flip-toggle { flex: 1 1 auto; padding: 0.8rem 1rem; font-weight: 650; border-radius: var(--radius-md); }
+.caos-flip-front:hover { border-color: var(--color-accent); }
+.caos-flip-title { min-width: 0; }
+.caos-flip-icon { flex: none; color: var(--color-fg-faint); }
+.caos-flip-return { flex: none; font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 650; color: var(--color-fg-faint); }
+.caos-flip-return-title { min-width: 0; }
+.caos-flip-content { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .caos-flip-inner { transform: none !important; transition: none !important; }
+  .caos-flip-back { transform: none !important; }
+  .caos-flip-face { transition: none !important; }
+}
+
+/* The card deck: a row of cards, or a carousel that pages through them (one window of as many cards as fit, at least
+   one; the page and the panel never scroll sideways). Entering cards slide in; reduced motion removes it. */
+.caos-deck { display: flex; flex-direction: column; gap: 0.6rem; min-width: 0; }
+.caos-deck-track { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.9rem; min-width: 0; touch-action: pan-y; }
+.caos-deck[data-deck-mode="carousel"] > .caos-deck-track { grid-template-columns: repeat(var(--deck-per, 1), minmax(0, 1fr)); }
+.caos-deck-card { min-width: 0; display: flex; }
+.caos-deck-card[hidden] { display: none; }
+.caos-card { flex: 1 1 auto; min-width: 0; padding: 0.8rem 1rem; background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--radius-md); display: flex; flex-direction: column; gap: 0.5rem; overflow-wrap: anywhere; }
+.caos-deck-bar { display: flex; align-items: center; justify-content: center; gap: 0.75rem; }
+.caos-deck-btn { display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; padding: 0; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-surface); color: var(--color-fg); cursor: pointer; }
+.caos-deck-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.caos-deck-btn[aria-disabled="true"] { opacity: 0.4; cursor: default; }
+.caos-deck-btn[aria-disabled="true"]:hover { border-color: var(--color-border); color: var(--color-fg); }
+.caos-deck-position { min-width: 6.5rem; text-align: center; font-size: var(--text-sm); color: var(--color-fg-subtle); font-variant-numeric: tabular-nums; }
+@keyframes caos-deck-in { from { opacity: 0; transform: translateX(0.75rem); } to { opacity: 1; transform: none; } }
+.caos-deck[data-deck-moved] .caos-deck-card { animation: caos-deck-in 0.28s ease-out; }
+@media (prefers-reduced-motion: reduce) { .caos-deck-card { animation: none !important; } }
+
+/* Flip cards inside the executive view keep the width of the plain cards they replace. */
+.caos-exec .caos-exec-cs.caos-deck-track { grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); }
+.caos-exec .caos-deck[data-deck-mode="carousel"] > .caos-exec-cs.caos-deck-track { grid-template-columns: repeat(var(--deck-per, 1), minmax(0, 1fr)); }
+
+/* == Focus mode for the App (shell 0.14.0, ADR-0070) ================================================================== */
+
+/* The stage is the open group; the label overlay (heading and line) sits above it, so the group starts below the label. */
+.caos-focus-instrument > .caos-cw-focus { position: absolute; inset: 0; padding: 4.6rem 0.9rem 0.9rem; }
+.caos-focus-instrument > .caos-cw-focus > .tabs { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
+.caos-focus-rail-body { display: flex; flex-direction: column; gap: var(--space-3); padding: 0.85rem; min-width: 0; }
+.caos-focus-enter { align-self: flex-start; }
+@media (max-width: 900px) {
+  .caos-focus-instrument > .caos-cw-focus { padding: 6.6rem 0.5rem 0.5rem; }
+}

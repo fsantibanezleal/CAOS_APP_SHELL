@@ -15,9 +15,25 @@ test('focus shell gives the stage, HUD, return and rail distinct landmarks', () 
     exitLabel: 'Return to workbench',
     stageLabel: 'Process stage',
   }));
-  assert.match(html, /<main class="caos-focus-shell">/);
+  assert.match(html, /<main class="caos-focus-shell"[^>]*>/);
   assert.match(html, /<section class="caos-focus-stage" aria-label="Process stage">/);
-  assert.match(html, /<aside class="caos-focus-rail">/);
+  assert.match(html, /<aside class="caos-focus-rail"[^>]*>/);
   assert.match(html, /42 %/);
   assert.match(html, /Return to workbench/);
+});
+
+test('focus shell marks itself, its rail and its exit so the gate and the App can find them', () => {
+  const html = renderToStaticMarkup(createElement(FocusShell, {
+    stage: createElement('div'),
+    rail: createElement('div'),
+    title: 'Case',
+    description: 'View',
+    hud: [],
+    onExit: () => {},
+    exitLabel: 'Back to the App',
+    stageLabel: 'Stage',
+  }));
+  assert.match(html, /<main class="caos-focus-shell" data-focus-shell="">/);
+  assert.match(html, /<aside class="caos-focus-rail" data-rail="">/);
+  assert.match(html, /<button type="button" data-focus-exit="">Back to the App<\/button>/);
 });

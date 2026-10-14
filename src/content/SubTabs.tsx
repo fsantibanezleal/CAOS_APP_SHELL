@@ -1,4 +1,5 @@
-import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useContext, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { ViewMemoryContext, memoryKey } from '../lib/viewMemory';
 import { PanelBoundary } from '../lib/PanelBoundary';
 import { useOverflowFade } from '../lib/overflow';
 import { DocRefsScope } from './Cite';
@@ -28,7 +29,12 @@ export interface SubTabsProps {
 export function SubTabs({ tabs, initial, value, onChange, ariaLabel, orientation = 'horizontal' }: SubTabsProps) {
   const baseId = useId();
   const first = tabs[0]?.id ?? '';
-  const [own, setOwn] = useState<string>(initial ?? first);
+  const memory = useContext(ViewMemoryContext);
+  const mkey = memoryKey('subtabs', ariaLabel, tabs.map((t) => t.id));
+  const [own, setOwn] = useState<string>(() => {
+    const kept = memory?.get(mkey);
+    return kept && tabs.some((t) => t.id === kept) ? kept : (initial ?? first);
+  });
   const active = value ?? own;
   const vertical = orientation === 'vertical';
   const rowRef = useRef<HTMLDivElement | null>(null);
@@ -39,6 +45,7 @@ export function SubTabs({ tabs, initial, value, onChange, ariaLabel, orientation
 
   function select(id: string) {
     if (value === undefined) setOwn(id);
+    memory?.set(mkey, id);
     onChange?.(id);
   }
 

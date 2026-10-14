@@ -38,13 +38,16 @@ CAOS_Fragmenta's deploy gate).
 | G12 sticky lists | at the end of a long section, the active vertical sub-tab is out of view |
 | G13 contrast | a visible text under WCAG AA (4.5:1; 3:1 for large text) against the colour behind it, at the primary size in both themes, in the first language and, on the documentation routes, in every language; disabled controls are exempt, colour transitions are finished first |
 | G14 captures | (always written) `index.html` in the output folder shows every capture, grouped by route, the failure list and the failure captures first |
+| G16 flip cards, card decks | a flip card with a title or a back over the limit (8 and 40 words in English, 10 and 50 in Spanish); a face that is not a real button with `aria-expanded` and `aria-controls`, that does not take focus, or that Enter does not turn (and Space does not turn back), with keyboard focus not on the face that shows; a hidden face in the accessibility tree or holding a control the keyboard reaches; a carousel whose box, track or cards go past the page, that scrolls the page sideways, that hides a card and shows no controls, or whose next button does not reach every card; an opened back with no visible content; a hidden face that keeps a control the keyboard reaches (`aria-hidden` alone does not count); the text of a turned card is measured for contrast (G13) |
+| G17 animated drawings | an animated SVG (an inline figure, an `img` of an SVG file or an executive illustration) without a `@media (prefers-reduced-motion: reduce)` block, whose block does not stop its CSS animation, that plays for more than 10 seconds (a finite count of cycles multiplies the play), or that is still moving with reduced motion emulated |
+| G18 Focus mode | by clicking, from the App's last group and the last sub-view of a group that has sub-views: the Focus control does not open Focus mode, Focus shows another case, group or sub-view than the one asked for (in Focus or after the return), Tab leaves the Focus frame into the App behind it, the page holds a `main` inside a `main`, the URL does not hold `?focus=1` and the case, the page scrolls, the rail scrolls (1280 px and more), a tab row wraps, the stage covers less than half the viewport (1280 px and more), the exit control (the button for one case, Escape for the next) is out of reach or does not return to the App on the same case and group. With `--require-focus`, an App without a Focus control |
 | ADR-0071, ADR-0017 | the document scrolls at 1280 px and above when the route is the viewport; the rail scrolls; prose off-centre; a bibliography outside the end-of-page references block (`.reference-list`); a references block with content after it (it must be the last block of the page or open tab); a section that declares `refs` while its page or tab shows no references block; an equation without a caption; a section without references or a reason; and the required areas of the documentation pages (below) |
 
 ## Options
 
 `--base-path`, `--routes`, `--workbench` (the routes with the case workbench, default `/app`; pass `''` for a product whose
 App is a `SurfacePage`), `--sizes`, `--themes`, `--langs`, `--case-sample`, `--single-case`, `--idle-ms`, `--settle-ms`,
-`--text-floor`, `--instrument-min`, `--stage-fill-min`, `--stage-floor` (the least height in pixels a filling card's drawing keeps, 140), `--wide-font-sizes`, `--no-wide-font`, `--out`. Exit 1 on any
+`--text-floor`, `--instrument-min`, `--stage-fill-min`, `--stage-floor` (the least height in pixels a filling card's drawing keeps, 140), `--wide-font-sizes`, `--no-wide-font`, `--require-focus` (fail an App without a Focus control, G18), `--out`. Exit 1 on any
 failure, 2 on misuse. The report (`gate-report.json`) lists every failure, the number of states and captures, and the
 smallest margins against the G6 floors, and every waiver a documentation page declared (`waivers`).
 
@@ -101,7 +104,7 @@ sees its unit and its source (in the rendered text), not when they are attribute
 ## The gate proves itself (G15)
 
 `npm run test:gate` builds the fixture product (`test/gate-fixture`), runs the gate on it clean in the full matrix
-(every check must pass), and once per planted defect (the check that owns it must fail with its own message): 107
+(every check must pass), and once per planted defect (the check that owns it must fail with its own message): 171
 plants, one per check and per distinct trap, then the legitimate pages that the gate once failed
 (`legit-engine-subtabs`, `legit-method-view-tabs`), which must pass every check in both languages.
 A check without a plant is a check that can agree with a broken app.

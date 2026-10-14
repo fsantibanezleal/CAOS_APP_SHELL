@@ -70,7 +70,7 @@ test('the five sections are five sub-tabs, the first selected, each opening with
 test('each sub-tab shows its supporting content at the floors of the structure', () => {
   const pain = render(fixture, 'en', 1);
   assert.equal(count(pain, /data-exec-item="pain\.paragraphs"/g), 2);
-  assert.equal(count(pain, /data-exec-item="pain\.bearers"/g), 3);
+  assert.equal(count(pain, /data-exec-item="pain\.bearers"/g), 5, 'the fixture holds five bearers, a carousel (shell 0.14.0)');
   assert.equal(count(pain, /data-exec-item="pain\.figures"/g), 2);
   assert.equal(count(pain, /data-exec-item="pain\.causes"/g), 3);
   assert.match(pain, /data-exec-weight="45"[^>]*>.*?45%/s, 'a cause with its weight');
@@ -173,8 +173,7 @@ test('two onward links under the sources: the technical view and the App', () =>
 
 test('an invalid data file renders an error state with the field paths and no section', () => {
   const bad = clone();
-  bad.pain.bearers.pop();
-  bad.pain.bearers.pop();
+  while (bad.pain.bearers.length > 2) bad.pain.bearers.pop();
   bad.tagline = 'x';
   const html = render(bad);
   assert.match(html, /data-executive-valid="false"/);
@@ -203,7 +202,7 @@ test('an invalid data file renders an error state with the field paths and no se
 test("the proposal shows each of the 4 C's with its name, its definition and what it means for the proposal, in both languages", () => {
   for (const lang of ['en', 'es'] as const) {
     const html = render(fixture, lang, 5);
-    const cs = html.slice(at(html, 'class="caos-exec-cs"'), at(html, 'caos-exec-actions'));
+    const cs = html.slice(at(html, 'caos-exec-cs'), at(html, 'caos-exec-actions'));
     assert.equal(count(cs, /data-exec-c="/g), 4);
     let last = -1;
     FOUR_CS.forEach((c, i) => {
@@ -211,7 +210,7 @@ test("the proposal shows each of the 4 C's with its name, its definition and wha
       assert.ok(row > last, `${lang}: C ${i + 1} follows C ${i}`);
       last = row;
       const item = cs.slice(row, i < 3 ? at(cs, `data-exec-c="${i + 1}"`) : undefined);
-      assert.match(item, new RegExp(`data-exec-cname="">${c.name[lang]}</strong>`));
+      assert.match(item, new RegExp(`data-exec-cname="">${c.name[lang]}</span>`));
       assert.match(item, new RegExp(`class="caos-exec-cdef"[^>]*data-exec-cdef="">${c.definition[lang].replace(/[.]/g, '\\.')}</small>`));
       assert.ok(item.includes(fixture.proposal.four_cs[i].applies[lang]), `${lang}: what C ${i + 1} means for the proposal`);
       assert.ok(item.indexOf(c.name[lang]) < item.indexOf(c.definition[lang]) && item.indexOf(c.definition[lang]) < item.indexOf(fixture.proposal.four_cs[i].applies[lang]), 'name, definition, then the application');
