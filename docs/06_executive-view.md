@@ -144,8 +144,9 @@ The standard each meets:
 
 Every product lands on the Introduction, whose executive view is its first and default view (Felipe, 2026-10-13: "the shell and
 the apps must land at the Introduction, executive view"). The shell exports `Landing`, `LANDING_ROUTE` (`/introduction`),
-`APP_ROUTE` (`/app`) and `STANDARD_ROUTES` in the new order (Introduction, App, Methodology, Implementation, Experiments,
-Benchmark). A product that moves from 0.12 changes its router by hand, once:
+`APP_ROUTE` (`/app`) and `STANDARD_ROUTES` always in the order App, Introduction, Methodology, Implementation,
+Experiments, Benchmark: the App stays the leftmost tab and the landing never moves it (0.13.0 had put the Introduction
+first; 0.13.1 restores the App, Felipe 2026-10-13). A product that moves from 0.12 changes its router by hand, once:
 
 ```tsx
 <Route path="/" element={<Landing />} />

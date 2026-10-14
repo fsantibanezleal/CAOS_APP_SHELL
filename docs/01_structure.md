@@ -30,12 +30,12 @@ routes, version, build, licence, visibility, architecture and footer provenance 
 |---|---|---|---|
 | Workbench | `CaseWorkbench` (on `WorkbenchLayout`) | the App route of a product about cases: one case at a time, its variants, its parameters | a rail (`--rail-w`) beside the instrument; the instrument holds at most six question groups and takes at least half the viewport (ADR-0071 rule 8) |
 | Surface | `SurfacePage` | an App that is not one case's: a hub, an explorer, a console | a head (title, lede, actions), one row of at most six views, the open view filling the rest and scrolling inside |
-| Document | `DocPage` and `DocSection` | Introduction, Methodology, Implementation, Experiments, Benchmark | a centred column of `--maxw` (1200 px), or `wide` with a vertical sub-tab list; text blocks take the full column, captions keep a `--measure-text` (78ch) line, and the references close the page or open tab |
+| Document | `DocPage` and `DocSection` | Introduction, Methodology, Implementation, Experiments, Benchmark | the full width of the page (`--maxw-wide`), the Introduction included (0.13.1; the centred 1200 px column is gone); text blocks take the full column, captions keep a `--measure-text` (78ch) line, and the references close the page or open tab |
 
 Two special frames sit beside these: `FocusShell` (a full-viewport scenario, ADR-0070) and `WorkbenchShell` (an
 authenticated console with a sidebar and a phone bottom bar).
 
-The six standard routes are `STANDARD_ROUTES`: the App (`/`) and the five documentation routes, in that order. The
+The six standard routes are `STANDARD_ROUTES`, always in this order: the App (`/app`, the leftmost tab), the Introduction (`/introduction`, where the product lands), Methodology, Implementation, Experiments and Benchmark. The
 header, the router and the gate read the same list.
 
 ## Viewport and breakpoints
