@@ -124,7 +124,8 @@ test('DocSection declares its references (listed once at the end of the page) an
       </DocPage>
     </CitationsProvider>,
   );
-  assert.match(out, /class="page-body prose caos-doc"/);
+  // every documentation route is full width, the Introduction included (0.13.1)
+  assert.match(out, /class="page-body wide prose caos-doc"/);
   assert.match(out, /data-refs="1"/);
   assert.doesNotMatch(out, /class="th-refs"/);
   assert.match(out, /data-no-refs-reason="missing"/);
@@ -145,7 +146,7 @@ test('STANDARD_ROUTES are the six product routes in order', async () => {
   const { STANDARD_ROUTES } = await import('../src/shell/routes.ts');
   assert.deepEqual(
     STANDARD_ROUTES.map((r) => r.path),
-    ['/introduction', '/app', '/methodology', '/implementation', '/experiments', '/benchmark'],
+    ['/app', '/introduction', '/methodology', '/implementation', '/experiments', '/benchmark'],
   );
 });
 
