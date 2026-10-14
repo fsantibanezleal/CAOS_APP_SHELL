@@ -204,6 +204,17 @@ const PLANTS = [
   { id: 'focus-page-scroll', check: 'G18', re: /Focus mode of case c-\w+: the page scrolls/, opts: { routes: '/app' } },
   { id: 'focus-no-exit', check: 'G18', re: /Focus mode of case c-\w+: the exit control could not be used/, opts: { routes: '/app' } },
   { id: 'focus-missing', check: 'G18', re: /the App offers no Focus control/, opts: { routes: '/app', requireFocus: true } },
+  // the review of 0.14.0 (CAOS_MANAGE wip/app-shell/review-shell-0-14-0-2026-10-14.md): the misses of G16 to G18, Focus isolation, and the executive checks kept at their strength
+  { id: 'flip-content-never-shows', check: 'G16', re: /flip card "[^"]+": the back shows no content after it turns/, opts: { routes: '/introduction' } },
+  { id: 'flip-hidden-focusable', check: 'G16', re: /flip card "[^"]+": the hidden (face|back) holds a control the keyboard reaches/, opts: { routes: '/introduction' } },
+  { id: 'carousel-no-controls', check: 'G16', re: /card deck "[^"]+": card \d+ of \d+ cannot be reached/, opts: { routes: '/introduction' } },
+  { id: 'anim-img-no-block', check: 'G17', re: /illustration "figure \d+" is animated and has no @media \(prefers-reduced-motion: reduce\) block/, opts: { routes: '/introduction' } },
+  { id: 'focus-drops-group', check: 'G18', re: /Focus mode of case c-\w+ shows group model, the App had \w+/, opts: { routes: '/app' } },
+  { id: 'focus-drops-subview', check: 'G18', re: /Focus mode of case c-\w+ shows sub-view \w+, the App had \w+/, opts: { routes: '/app' } },
+  { id: 'focus-not-isolated', check: 'G18', re: /Focus mode of case c-\w+: Tab leaves the Focus frame/, opts: { routes: '/app' } },
+  { id: 'focus-nested-main', check: 'G18', re: /Focus mode of case c-\w+: the page holds a main inside a main/, opts: { routes: '/app' } },
+  { id: 'exec-deck-hidden-cards', check: 'ADR-0017.2', re: /executive view \(EN\): the proposal holds 1 row\(s\) of the 4 C's, exactly 4 are required/, opts: { routes: '/introduction' } },
+  { id: 'exec-flip-content-hidden', check: 'ADR-0017.2', re: /executive view \(EN\): \d+ field\(s\) are in the page and a reader cannot read them/, opts: { routes: '/introduction' } },
 ];
 
 /** Legitimate pages that the gate once failed (ADR-0017 2.1 allows them): each must pass every check, in both languages. */

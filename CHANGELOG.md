@@ -37,6 +37,13 @@ card groups now flip. The gate gains G16, G17 and G18.
   fails an App without a Focus control. 13 plants prove them. The executive-view checks read the back of a flip card and the cards
   a carousel hides, so the floors, the 4 C's and the writing limits still apply to them.
 
+### Fixed (review of 0.14.0)
+
+- The executive-view checks of the gate are back at their 0.13.1 strength: a flip card's back is read with the card turned, hidden 4 C's and hidden bearers' details fail ADR-0017.2 again; only a card the carousel's window hides is exempt.
+- Focus mode makes the page behind it inert and no longer nests a `main` in the App's `main` (`FocusShell` takes `landmark={false}`).
+- G16 checks that an opened back shows content, that a hidden face keeps no reachable control and that a carousel without controls hides no card; G17 analyses `img` SVG figures and multiplies finite iteration counts; G18 starts from the last group and sub-view, compares both, keeps Tab in the frame and refuses a nested `main`; 10 plants.
+- The carousel's focus guard moves focus to the toggle of the face that shows.
+
 ### Changed
 
 - The fixture product's executive view holds five bearers (a carousel) and an animated `pain` illustration.

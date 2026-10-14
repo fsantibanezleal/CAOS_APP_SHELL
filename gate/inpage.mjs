@@ -622,6 +622,20 @@ export function installLib() {
     const executive = (() => {
       if (!execRoots.length) return { count: 0 };
       const root = execRoots[0];
+      // A card the carousel's window hides (`hidden` on its item) is out of sight by design: G16 walks the carousel and fails one it
+      // cannot reach. Any other card that is not seen is not shown, as before 0.14.0.
+      const hiddenByDeck = (el) => {
+        const li = el.closest('[data-deck-card]');
+        return Boolean(li) && li.hidden && Boolean(li.closest('[data-deck-mode="carousel"]'));
+      };
+      // The back of a flip card is content the reader gets by turning the card: read every field with the cards turned too (the
+      // same `seen` and `innerText` as for any text), and call a field readable when it is seen in either face.
+      const turned = new Map();
+      withFlipsTurned(() => {
+        for (const e of root.querySelectorAll('[data-exec-field], [data-exec-cdef]')) turned.set(e, { text: textOf(e), seen: seen(e) });
+      });
+      const fullText = (e) => textOf(e) || (turned.get(e) ? turned.get(e).text : '');
+      const isSeen = (e) => seen(e) || Boolean(turned.get(e) && turned.get(e).seen);
       const isTok = (v) => {
         const x = String(v || '').trim().toLowerCase();
         return !x || ['none', 'currentcolor', 'transparent', 'inherit', 'initial', 'unset', 'context-fill', 'context-stroke'].includes(x) || x.startsWith('var(--') || x.startsWith('url(');
@@ -675,9 +689,7 @@ export function installLib() {
       // the rows each part of the view shows in this state (the floors), counted once per kind
       const items = {};
       // a card of a carousel counts although the window hides it (G16 proves every card can be reached); a flip card counts whole
-      for (const el of root.querySelectorAll('[data-exec-item]')) if (seen(el) || el.closest('[data-card-deck]')) items[el.getAttribute('data-exec-item')] = (items[el.getAttribute('data-exec-item')] ?? 0) + 1;
-      // the text of a flip card's back is in the page though the face shows: read from the markup, the way the search of the browser does not
-      const rawOf = (el) => (el.textContent || '').trim().replace(/\s+/g, ' ');
+      for (const el of root.querySelectorAll('[data-exec-item]')) if (seen(el) || hiddenByDeck(el)) items[el.getAttribute('data-exec-item')] = (items[el.getAttribute('data-exec-item')] ?? 0) + 1;
       const landingEl = root.querySelector('[data-exec-landing]');
       const landing = {
         present: Boolean(landingEl && seen(landingEl)),
@@ -686,8 +698,8 @@ export function installLib() {
       };
       // the 4 C's a reader sees in the proposal: the name, the definition and what each means for the proposal
       const cs = [...root.querySelectorAll('[data-exec-c]')]
-        .filter((li) => seen(li) || li.closest('[data-card-deck]'))
-        .map((li) => ({ name: rawOf(li.querySelector('[data-exec-cname]') || li), def: rawOf(li.querySelector('[data-exec-cdef]') || li), applies: rawOf(li.querySelector('[data-exec-field$=".applies"]') || li.querySelector('span') || li) }));
+        .filter((li) => seen(li) || hiddenByDeck(li))
+        .map((li) => ({ name: textOf(li.querySelector('[data-exec-cname]') || li), def: fullText(li.querySelector('[data-exec-cdef]') || li), applies: fullText(li.querySelector('[data-exec-field$=".applies"]') || li.querySelector('span') || li) }));
       const links = [...root.querySelectorAll('[data-exec-links] a')].map((a) => ({ kind: a.getAttribute('data-exec-link'), text: textOf(a), href: a.getAttribute('href') }));
       // the sub-tabs of the view: their labels (all of them, shown or not), and the one selected
       const tabEls = [...root.querySelectorAll('[data-exec-tabs] [role="tab"]')];
@@ -715,7 +727,7 @@ export function installLib() {
         items,
         cs,
         links,
-        fields: [...root.querySelectorAll('[data-exec-field]')].map((e) => ({ path: e.getAttribute('data-exec-field'), text: e.closest('[data-flip-back]') ? rawOf(e) : textOf(e), readable: seen(e) || Boolean(e.closest('[data-flip-card]')) })),
+        fields: [...root.querySelectorAll('[data-exec-field]')].map((e) => ({ path: e.getAttribute('data-exec-field'), text: fullText(e), readable: isSeen(e) || hiddenByDeck(e) })),
         // the blocks of this state narrower than the document column (an illustration may stay centred inside its figure)
         narrow: [...root.querySelectorAll('.subtabs, .caos-exec-notes-wrap, [data-exec-section], [data-exec-section] > *')]
           .filter((e) => visible(e))
@@ -724,7 +736,7 @@ export function installLib() {
           .map(([name, w]) => `${name} ${w}px`),
         column: columnWidth,
         // everything the view prints in this state, for the check that no rubric label or question is on the page
-        text: `${textOf(root)} ${[...root.querySelectorAll('[data-flip-content]')].map(rawOf).join(' ')}`,
+        text: `${textOf(root)} ${[...turned.entries()].filter(([e]) => e.closest('[data-flip-back]')).map(([, v]) => v.text).join(' ')}`,
         tabs: tabEls.map(tabLabel),
         activeTab: tabEls.findIndex((t) => t.getAttribute('aria-selected') === 'true'),
         // each source note: the link it holds (its target and its text) and the text beside the link
@@ -912,11 +924,35 @@ export function installLib() {
     return { checked, unreachable: out.slice(0, 8), unreachableCount: out.length };
   };
 
+  /**
+   * Runs `fn` with every closed flip card turned (and no transition, so the faces are settled), then turns them back. The gate
+   * reads a back with the same measures it uses for any text; a back the card can never show stays unreadable.
+   */
+  const withFlipsTurned = (fn) => {
+    const cards = [...document.querySelectorAll('[data-flip-card][data-flip-open="false"]')];
+    if (cards.length === 0) return fn();
+    const st = document.createElement('style');
+    st.textContent = '.caos-flip, .caos-flip * { transition: none !important; }';
+    document.head.append(st);
+    for (const c of cards) c.setAttribute('data-flip-open', 'true');
+    try {
+      return fn();
+    } finally {
+      for (const c of cards) c.setAttribute('data-flip-open', 'false');
+      st.remove();
+    }
+  };
   // ---- G16: flip cards and card decks (shell 0.14.0)
   const inTree = (el) => {
     // reachable by assistive technology and by the keyboard: rendered, and no ancestor hides it or makes it inert
     if (!el.checkVisibility({ checkVisibilityCSS: true })) return false;
     for (let e = el; e; e = e.parentElement) if (e.getAttribute('aria-hidden') === 'true' || e.hasAttribute('inert') || e.hidden) return false;
+    return true;
+  };
+  /** A control a keyboard or a pointer can reach: rendered, no `inert` ancestor. `aria-hidden` does not take a control out of the tab order. */
+  const reachable = (el) => {
+    if (!el.checkVisibility({ checkVisibilityCSS: true })) return false;
+    for (let e = el; e; e = e.parentElement) if (e.hasAttribute('inert')) return false;
     return true;
   };
   const countWords = (t) => String(t || '').split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
@@ -942,7 +978,8 @@ export function installLib() {
         buttons: toggles.length > 0 && toggles.every((t) => t.tagName === 'BUTTON'),
         wired: owned,
         hiddenInTree: Boolean(hiddenFace) && inTree(hiddenFace),
-        hiddenFocusable: [...exposed].some(inTree),
+        hiddenFocusable: [...exposed].some(reachable),
+        contentShown: (() => { const c = card.querySelector('[data-flip-content]'); if (!c || !c.checkVisibility({ checkVisibilityCSS: true })) return false; const r = c.getBoundingClientRect(); return r.height > 0 && r.width > 0; })(),
         deck: Array.from(document.querySelectorAll('[data-card-deck]')).findIndex((d) => d.contains(card)),
       };
     });
@@ -961,7 +998,7 @@ export function installLib() {
         total: lis.length,
         visible: lis.map((li, i) => (li.checkVisibility({ checkVisibilityCSS: true }) ? i : -1)).filter((i) => i >= 0),
         flip: deck.hasAttribute('data-deck-flip'),
-        controls: Boolean(next && prev),
+        controls: Boolean(next && prev) && next.checkVisibility({ checkVisibilityCSS: true }) && prev.checkVisibility({ checkVisibilityCSS: true }),
         atEnd: next ? next.getAttribute('aria-disabled') === 'true' : true,
         atStart: prev ? prev.getAttribute('aria-disabled') === 'true' : true,
         sideways: Math.max(deck.scrollWidth - deck.clientWidth, track ? track.scrollWidth - track.clientWidth : 0) > 1 || box.right > vw + 1 || outside.length > 0 || (track ? track.getBoundingClientRect().right > box.right + 1 : false),
@@ -985,6 +1022,9 @@ export function installLib() {
     return { items };
   };
 
+  /** The documentation figures drawn by an `img` of an SVG file: their sources (the runner fetches and analyses them). */
+  G.figureImages = () => [...document.querySelectorAll('figure img')].filter((i) => /\.svg(\?|#|$)/i.test(i.getAttribute('src') || '')).map((i, k) => ({ name: `figure ${k + 1}`, src: i.currentSrc || i.src }));
+
   // ---- G18: Focus mode for the App (shell 0.14.0)
   /** The App or Focus mode as the reader meets it: which one, the case and the group, the URL, the page and the rail. */
   G.focusFacts = () => {
@@ -1002,6 +1042,8 @@ export function installLib() {
       caseId: stage ? stage.getAttribute('data-case') : null,
       group: shell ? (stage ? stage.getAttribute('data-focus-group') : null) : panel ? panel.getAttribute('data-panel') : null,
       search: location.search,
+      subview: (() => { const t = document.querySelector('[data-case-workbench] .subtab.active'); return t ? t.getAttribute('data-tab') : null; })(),
+      nestedMain: document.querySelectorAll('main').length > 1 || Boolean(document.querySelector('main main')),
       vw: window.innerWidth,
       vh: window.innerHeight,
       docW: document.documentElement.scrollWidth,

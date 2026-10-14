@@ -120,7 +120,7 @@ export function CardDeck({ cards, flip = false, carouselAbove = 4, ariaLabel, cl
     const root = rootRef.current;
     const a = document.activeElement as HTMLElement | null;
     if (!root || !a || !root.contains(a) || a.checkVisibility?.({ checkVisibilityCSS: true }) !== false) return;
-    (root.querySelector('[data-deck-card]:not([hidden]) button') as HTMLElement | null)?.focus({ preventScroll: true });
+    (root.querySelector('[data-deck-card]:not([hidden]) [data-flip-card][data-flip-open="false"] [data-flip-toggle="front"], [data-deck-card]:not([hidden]) [data-flip-card][data-flip-open="true"] [data-flip-toggle="back"]') as HTMLElement | null ?? (root.querySelector('[data-deck-next]') as HTMLElement | null))?.focus({ preventScroll: true });
   }, [win.start, win.end]);
 
   function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {

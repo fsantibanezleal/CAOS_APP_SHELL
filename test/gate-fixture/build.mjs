@@ -75,6 +75,11 @@ export function makePlant(cleanDir, plantDir, plant) {
   if (plant === 'anim-no-reduced') svg('pain', (x) => x.replace(/@media \(prefers-reduced-motion: reduce\)\s*\{[\s\S]*?\}\s*\}/, ''));
   if (plant === 'anim-keeps-moving') svg('pain', (x) => x.replace('animation: none;', 'animation-play-state: running;'));
   if (plant === 'anim-too-long') svg('pain', (x) => x.replaceAll(' 4s ', ' 11s '));
+  // the plants of the review fixes: an animated img drawing without its block, and CSS that hides what a flip card holds
+  if (plant === 'anim-img-no-block') writeFileSync(join(plantDir, 'animated-figure.svg'), '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100"><style>@keyframes grow { from { opacity: 0.2; } to { opacity: 1; } } .a { animation: grow 3s ease-in-out infinite; }</style><rect class="a" x="20" y="20" width="160" height="60" fill="#888"/></svg>');
+  const css = (extra) => writeFileSync(join(plantDir, 'assets', 'app.css'), readFileSync(join(plantDir, 'assets', 'app.css'), 'utf8') + '\n' + extra);
+  if (plant === 'exec-deck-hidden-cards') css('.caos-exec-cs > [data-deck-card]:nth-child(n+2) { display: none !important; }');
+  if (plant === 'exec-flip-content-hidden') css('.caos-flip-content { display: none !important; }');
   if (plant === 'exec-illustration-colour') svg('pain', (x) => x.replaceAll('var(--color-fg)', '#1f77b4'));
   if (plant === 'exec-illustration-chart') svg('situation', (x) => x.replace('<svg ', '<svg data-chart="true" '));
   if (plant === 'exec-illustration-label-outside') {

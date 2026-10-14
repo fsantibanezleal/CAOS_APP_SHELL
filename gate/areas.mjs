@@ -664,20 +664,25 @@ export function analyseSvgAnimation(text) {
   const neutralises = Boolean(block && /animation(-name)?\s*:\s*none/i.test(block[1]));
   let maxDur = 0;
   let maxDelay = 0;
+  let maxCount = 1;
   const outsideReduced = css.replace(/@media[^{]*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\}\s*\}/gi, '');
   // the shorthand `animation: name 8s 3s infinite`: the first time is the duration, the second the delay
   for (const m of outsideReduced.matchAll(/(?:^|[;{\s])animation\s*:\s*([^;}]+)/gi)) {
     const times = [...m[1].matchAll(/(\d*\.?\d+)(ms|s)\b/gi)].map((t) => seconds(t[0]));
     maxDur = Math.max(maxDur, times[0] ?? 0);
     maxDelay = Math.max(maxDelay, times[1] ?? 0);
+    // a finite count of cycles plays that many times (infinite counts one)
+    if (!/infinite/i.test(m[1])) maxCount = Math.max(maxCount, Number((/(?:^|\s)(\d*\.?\d+)(?=\s|$)/.exec(m[1].replace(/(\d*\.?\d+)(ms|s)/gi, ' ')) ?? [])[1] ?? 1));
   }
+  for (const m of outsideReduced.matchAll(/(?:^|[;{\s])animation-iteration-count\s*:\s*([^;}]+)/gi)) if (!/infinite/i.test(m[1])) maxCount = Math.max(maxCount, Number(m[1].split(',')[0]) || 1);
   for (const m of outsideReduced.matchAll(/(?:^|[;{\s])animation-duration\s*:\s*([^;}]+)/gi)) maxDur = Math.max(maxDur, seconds(m[1].split(',')[0]));
   for (const m of outsideReduced.matchAll(/(?:^|[;{\s])animation-delay\s*:\s*([^;}]+)/gi)) maxDelay = Math.max(maxDelay, seconds(m[1].split(',')[0]));
   // the longest duration with the longest delay: a safe bound (the rules of the file are not matched to their elements)
-  let longest = maxDur + maxDelay;
+  let longest = maxDur * maxCount + maxDelay;
   for (const m of smilEls) {
     const attr = (n) => new RegExp(`\\s${n}="([^"]*)"`, 'i').exec(m[2])?.[1];
-    longest = Math.max(longest, seconds(attr('dur')) + seconds(attr('begin')));
+    const reps = Number(attr('repeatCount')) || 1;
+    longest = Math.max(longest, seconds(attr('dur')) * reps + seconds(attr('begin')));
   }
   return { animated: cssAnimated || smil, css: cssAnimated, smil, reducedBlock, neutralises, seconds: Math.round(longest * 1000) / 1000 };
 }

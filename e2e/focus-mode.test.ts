@@ -20,6 +20,8 @@ before(async () => {
       window.__changes = (window.__changes ?? 0);
       return (
         <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+          <header><a id="bg-head" href="#top">header link</a></header>
+          <main id="app-main" style={{ flex: '1 1 auto', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <CaseWorkbench
             caseId={caseId}
             cases={{ cases: CASES, selectedId: caseId, onSelect: setCaseId, layout: 'select', deepLink: true }}
@@ -40,6 +42,8 @@ before(async () => {
             ]}
             context={{ content: <p>CONTEXT</p> }}
           />
+          </main>
+          <footer><a id="bg-foot" href="#top">footer link</a></footer>
         </div>
       );
     }
@@ -134,4 +138,25 @@ test('Focus never scrolls the page and the stage keeps one tab row, at phone and
       }
     }
   }
+});
+
+test('Focus mode makes the page behind it inert, keeps the keyboard in its frame and holds one main', async () => {
+  const page = await h.browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await page.goto(h.address);
+  await page.waitForSelector('[data-focus-enter]');
+  await page.locator('[data-focus-enter]').click();
+  assert.equal(await page.locator('main').count(), 1, 'one main landmark');
+  assert.equal(await page.evaluate(() => document.querySelector('main main') === null), true, 'no main inside a main');
+  assert.equal(await page.evaluate(() => document.getElementById('bg-head')!.closest('[inert]') !== null && document.getElementById('bg-foot')!.closest('[inert]') !== null), true, 'the header and the footer are inert');
+  const seen = new Set<string>();
+  for (let i = 0; i < 16; i += 1) {
+    await page.keyboard.press('Tab');
+    seen.add(await page.evaluate(() => { const a = document.activeElement as HTMLElement; return a.closest('[data-focus-shell]') ? 'in' : a.id || a.tagName; }));
+  }
+  seen.delete('BODY');
+  assert.deepEqual([...seen], ['in'], 'Tab stays inside the Focus frame');
+  await page.keyboard.press('Escape');
+  assert.equal(await page.evaluate(() => document.querySelectorAll('[inert]').length), 0, 'nothing stays inert after the return');
+  assert.equal(await page.evaluate(() => { document.getElementById('bg-head')!.focus(); return document.activeElement!.id; }), 'bg-head', 'the page is reachable again');
+  await page.close();
 });

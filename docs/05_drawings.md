@@ -113,7 +113,7 @@ Measure in a `Stage` (its render prop passes the real width and height); size ev
 A documentation figure or an executive illustration may be an animated SVG (CSS keyframes or SMIL inside the file) where it explains
 a change, a flow or a sequence. The same rules bind it as the executive illustrations (`docs/06_executive-view.md`): a gentle loop or
 a single play of at most ten seconds, theme tokens, labels that do not move, and a `@media (prefers-reduced-motion: reduce)` block
-in the file that shows the static final frame. The gate (G17) checks every `figure svg` of the page.
+in the file that shows the static final frame. The gate (G17) checks every `figure svg` of the page and fetches and analyses every `figure img` of an SVG file. Use CSS keyframes in a documentation figure: the shell pauses SMIL only in the executive view's illustrations, so a SMIL animation in a figure would keep moving under reduced motion and fail G17.
 
 ## The `data-chart` contract
 

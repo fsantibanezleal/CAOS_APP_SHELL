@@ -123,6 +123,61 @@ function flipPlant(plant: string): (() => void) | undefined {
     document.head.append(style);
     return () => style.remove();
   }
+  if (plant === 'flip-content-never-shows') {
+    // the back turns and shows nothing
+    const style = document.createElement('style');
+    style.textContent = '.caos-flip-content { display: none !important; }';
+    document.head.append(style);
+    return () => style.remove();
+  }
+  if (plant === 'flip-hidden-focusable') {
+    // the closed back keeps aria-hidden but is neither inert nor hidden: a keyboard still lands on its button
+    const style = document.createElement('style');
+    style.textContent = '[data-flip-back] { visibility: visible !important; }';
+    document.head.append(style);
+    const stop = plantDom(() => {
+      for (const b of document.querySelectorAll('[data-flip-back][inert]')) b.removeAttribute('inert');
+    });
+    return () => {
+      stop();
+      style.remove();
+    };
+  }
+  if (plant === 'carousel-no-controls') {
+    // the carousel hides card 5 and draws no controls
+    const style = document.createElement('style');
+    style.textContent = '.caos-deck-bar { display: none !important; }';
+    document.head.append(style);
+    return () => style.remove();
+  }
+  if (plant === 'anim-img-no-block') {
+    // a documentation figure drawn by an img of an animated SVG with no reduced-motion block
+    return plantDom(() => {
+      const host = document.querySelector('main .page-body');
+      if (host && !host.querySelector('[data-plant-figure]')) {
+        const f = document.createElement('figure');
+        f.setAttribute('data-plant-figure', '');
+        f.innerHTML = '<img src="/animated-figure.svg" alt="An animated figure" width="200" height="100"><figcaption>An animated figure with no reduced-motion block.</figcaption>';
+        host.append(f);
+      }
+    });
+  }
+  if (plant === 'focus-not-isolated') {
+    // the App behind Focus mode stays in the tab order
+    return plantDom(() => {
+      for (const e of document.querySelectorAll('[inert]')) if (!e.closest('[data-focus-shell]') && !e.closest('[data-flip-card]')) e.removeAttribute('inert');
+    });
+  }
+  if (plant === 'focus-nested-main') {
+    return plantDom(() => {
+      const shell = document.querySelector('[data-focus-shell]');
+      if (shell && !shell.querySelector('[data-plant-main]')) {
+        const m = document.createElement('main');
+        m.setAttribute('data-plant-main', '');
+        shell.append(m);
+      }
+    });
+  }
   if (plant === 'carousel-stuck') {
     // the next button does nothing
     return plantDom(() => {
@@ -284,13 +339,13 @@ function PhaseCanvas({ sim, width, height }: { sim: Sim; width: number; height: 
   return <canvas ref={ref} width={width} height={height} style={{ display: 'block' }} />;
 }
 
-function ValidationView({ sim }: { sim: Sim }) {
+function ValidationView({ sim, focusOn }: { sim: Sim; focusOn?: boolean }) {
   const lang = useShellLang();
   const { stateKey } = useWorkbenchState();
   const rows = [10, 30, 60, 90, 120].filter((d) => d < sim.t.length);
   return (
     <SubTabs
-      ariaLabel={pick({ en: 'Validation views', es: 'Vistas de validación' }, lang)}
+      ariaLabel={pick({ en: 'Validation views', es: 'Vistas de validación' }, lang) + (PLANT === 'focus-drops-subview' && focusOn ? ' ' : '')}
       tabs={[
         {
           id: 'phase',
@@ -536,6 +591,7 @@ function Workbench() {
   const [scale, setScale] = useState(1);
   const [horizon, setHorizon] = useState('120');
   const [tick, setTick] = useState(0);
+  const [focusOn, setFocusOn] = useState(false);
   // The case list arrives asynchronously, as a product's index does: the deep link must survive that (G9).
   const [caseList, setCaseList] = useState<typeof CASES>([]);
   useEffect(() => {
@@ -552,6 +608,7 @@ function Workbench() {
   const controls = PLANT === 'dead-knob' ? { horizon } : { scale, horizon };
   const shownCase = PLANT === 'wrong-case' ? CASES[(idx + 1) % CASES.length].id : caseId;
 
+  useEffect(() => flipPlant(PLANT), []);
   useEffect(() => {
     if (PLANT === 'case-only' && caseId === 'c-high') console.error('planted: the high-contact case fails');
   }, [caseId]);
@@ -650,9 +707,10 @@ function Workbench() {
         rail={rail}
         groups={[
           { id: 'model', label: { en: 'Model', es: 'Modelo' }, content: <ModelView sim={sim} /> },
-          { id: 'validation', label: { en: 'Validation', es: 'Validación' }, content: <ValidationView sim={sim} /> },
+          { id: 'validation', label: { en: 'Validation', es: 'Validación' }, content: <ValidationView sim={sim} focusOn={focusOn} /> },
           { id: 'pending', label: { en: 'Pending', es: 'Pendiente' }, content: <PendingView /> },
         ]}
+        group={PLANT === 'focus-drops-group' && focusOn ? 'model' : undefined}
         compare={{ content: <CompareView peaks={peaks} /> }}
         focus={
           PLANT === 'focus-missing'
@@ -660,6 +718,7 @@ function Workbench() {
             : {
                 // the plant that loses the case: opening Focus puts the first case back
                 onChange: (on) => {
+                  setFocusOn(on);
                   if (PLANT === 'focus-loses-case' && on) {
                     setCaseId(CASES[0].id);
                     const q = new URLSearchParams(window.location.search);

@@ -37,7 +37,7 @@ the values belong to the product, and the sub-tab the reader had open in each ta
 |---|---|
 | URL | `?focus=1` beside `?case=` and `?view=`; a link with all three opens Focus on that case and group (`param` renames `focus`) |
 | Leave | the exit button ("Back to the App" / "Volver a la App") or Escape; the App returns on the same case, group and sub-view, `focus` leaves the URL and keyboard focus returns to the Focus button |
-| Keyboard | on opening, keyboard focus moves to the exit button |
+| Keyboard | on opening, keyboard focus moves to the exit button; the page behind the frame (header, footer, skip link) is `inert` while Focus is open, so Tab stays in the frame, and the frame is a `div` (`FocusShell landmark={false}`), never a second `main` |
 | Callback | `onChange(on)` for a product that records it |
 | Viewport | the page never scrolls, the stage takes at least half of the viewport at 1280 px and more, the rail does not scroll there, one tab row at most |
 
