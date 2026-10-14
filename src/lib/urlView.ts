@@ -9,6 +9,15 @@ export function replaceQueryParam(param: string, value: string): void {
   window.history.replaceState(window.history.state, '', `${window.location.pathname}${next}${window.location.hash}`);
 }
 
+/** Removes one query parameter with replaceState (the counterpart of `replaceQueryParam`). */
+export function removeQueryParam(param: string): void {
+  if (typeof window === 'undefined') return;
+  const p = new URLSearchParams(window.location.search);
+  p.delete(param);
+  const q = p.toString();
+  window.history.replaceState(window.history.state, '', `${window.location.pathname}${q ? `?${q}` : ''}${window.location.hash}`);
+}
+
 /**
  * The open view of a tab row, held in the URL (`?view=` by default) so a reader can share it and a reload keeps it.
  * Returns the id to show and the selector to call. Controlled when `value` is given: the product holds the state and
