@@ -629,3 +629,70 @@ export function docFloorFailures({ route, lang, states, expectedTopics }) {
   }
   return { failures, waivers, topics: topics.size };
 }
+
+// ------------------------------------------------------------------------------------------ flip cards and animation
+// Shell 0.14.0 (CAOS_MANAGE plans/app-shell/0-14-0-plan.md decisions 3 and 4).
+
+/** The limits of a small card, in the interface language; a copy of FLIP_LIMITS of src/content/FlipCard.tsx (test/flipCard.test.tsx keeps them equal). */
+export const FLIP_LIMITS = { title: { en: 8, es: 10 }, back: { en: 40, es: 50 } };
+
+/** The longest an illustration may play: one play, or one cycle of a loop, with its delay, in seconds. */
+export const ANIMATION_MAX_SECONDS = 10;
+
+const seconds = (v) => {
+  const m = /^\s*(\d*\.?\d+)\s*(ms|s)?\s*$/i.exec(String(v ?? ''));
+  return m ? Number(m[1]) / (m[2]?.toLowerCase() === 'ms' ? 1000 : 1) : 0;
+};
+
+/**
+ * What an SVG file says about its animation: `css` (keyframes or an `animation` declaration), `smil` (animate, animateTransform,
+ * animateMotion, set), whether it carries a `@media (prefers-reduced-motion: reduce)` block, whether that block stops the CSS
+ * animation (`animation: none` or `animation-name: none`), and the longest cycle with its longest delay, in seconds (a loop counts one
+ * cycle; an indefinite or absent duration counts as zero).
+ */
+export function analyseSvgAnimation(text) {
+  const src = String(text ?? '');
+  const styles = [...src.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1]).concat([...src.matchAll(/\sstyle="([^"]*)"/gi)].map((m) => m[1]));
+  const css = styles.join('\n');
+  const smilEls = [...src.matchAll(/<(animate|animateTransform|animateMotion|set)\b([^>]*)>/gi)];
+  const hasKeyframes = /@keyframes/i.test(css);
+  const hasAnimationDecl = /(^|[;{\s])animation(-name)?\s*:\s*(?!none\b)[^;}]+/i.test(css.replace(/@media[^{]*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\}\s*\}/gi, ''));
+  const cssAnimated = hasKeyframes || hasAnimationDecl;
+  const smil = smilEls.length > 0;
+  const block = /@media\s*\(\s*prefers-reduced-motion\s*:\s*reduce\s*\)\s*\{([\s\S]*?\}\s*)\}/i.exec(css);
+  const reducedBlock = Boolean(block);
+  const neutralises = Boolean(block && /animation(-name)?\s*:\s*none/i.test(block[1]));
+  let maxDur = 0;
+  let maxDelay = 0;
+  let maxCount = 1;
+  const outsideReduced = css.replace(/@media[^{]*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\}\s*\}/gi, '');
+  // the shorthand `animation: name 8s 3s infinite`: the first time is the duration, the second the delay
+  for (const m of outsideReduced.matchAll(/(?:^|[;{\s])animation\s*:\s*([^;}]+)/gi)) {
+    const times = [...m[1].matchAll(/(\d*\.?\d+)(ms|s)\b/gi)].map((t) => seconds(t[0]));
+    maxDur = Math.max(maxDur, times[0] ?? 0);
+    maxDelay = Math.max(maxDelay, times[1] ?? 0);
+    // a finite count of cycles plays that many times (infinite counts one)
+    if (!/infinite/i.test(m[1])) maxCount = Math.max(maxCount, Number((/(?:^|\s)(\d*\.?\d+)(?=\s|$)/.exec(m[1].replace(/(\d*\.?\d+)(ms|s)/gi, ' ')) ?? [])[1] ?? 1));
+  }
+  for (const m of outsideReduced.matchAll(/(?:^|[;{\s])animation-iteration-count\s*:\s*([^;}]+)/gi)) if (!/infinite/i.test(m[1])) maxCount = Math.max(maxCount, Number(m[1].split(',')[0]) || 1);
+  for (const m of outsideReduced.matchAll(/(?:^|[;{\s])animation-duration\s*:\s*([^;}]+)/gi)) maxDur = Math.max(maxDur, seconds(m[1].split(',')[0]));
+  for (const m of outsideReduced.matchAll(/(?:^|[;{\s])animation-delay\s*:\s*([^;}]+)/gi)) maxDelay = Math.max(maxDelay, seconds(m[1].split(',')[0]));
+  // the longest duration with the longest delay: a safe bound (the rules of the file are not matched to their elements)
+  let longest = maxDur * maxCount + maxDelay;
+  for (const m of smilEls) {
+    const attr = (n) => new RegExp(`\\s${n}="([^"]*)"`, 'i').exec(m[2])?.[1];
+    const reps = Number(attr('repeatCount')) || 1;
+    longest = Math.max(longest, seconds(attr('dur')) * reps + seconds(attr('begin')));
+  }
+  return { animated: cssAnimated || smil, css: cssAnimated, smil, reducedBlock, neutralises, seconds: Math.round(longest * 1000) / 1000 };
+}
+
+/** The problems of one illustration's animation (empty for a still); `name` is how the page calls it. */
+export function animationFailures(a, name) {
+  if (!a || !a.animated) return [];
+  const out = [];
+  if (!a.reducedBlock) out.push(`illustration "${name}" is animated and has no @media (prefers-reduced-motion: reduce) block that shows its static final frame`);
+  else if (a.css && !a.neutralises) out.push(`illustration "${name}" is animated and its reduced-motion block does not stop its CSS animation (animation: none)`);
+  if (a.seconds > ANIMATION_MAX_SECONDS) out.push(`illustration "${name}" plays for ${Math.round(a.seconds)} s; the limit is ${ANIMATION_MAX_SECONDS} s`);
+  return out;
+}

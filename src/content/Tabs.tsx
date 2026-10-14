@@ -1,4 +1,5 @@
-import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useContext, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { ViewMemoryContext, memoryKey } from '../lib/viewMemory';
 import { PanelBoundary } from '../lib/PanelBoundary';
 import { useOverflowFade } from '../lib/overflow';
 import { DocRefsScope } from './Cite';
@@ -31,7 +32,12 @@ export interface TabsProps {
 export function Tabs({ tabs, initial, value, onChange, ariaLabel }: TabsProps) {
   const baseId = useId();
   const first = tabs[0]?.id ?? '';
-  const [own, setOwn] = useState<string>(initial ?? first);
+  const memory = useContext(ViewMemoryContext);
+  const mkey = memoryKey('tabs', ariaLabel, tabs.map((t) => t.id));
+  const [own, setOwn] = useState<string>(() => {
+    const kept = memory?.get(mkey);
+    return kept && tabs.some((t) => t.id === kept) ? kept : (initial ?? first);
+  });
   const active = value ?? own;
   const rowRef = useRef<HTMLDivElement | null>(null);
   useOverflowFade(rowRef, '.tab.active', [active, tabs.length]);
@@ -41,6 +47,7 @@ export function Tabs({ tabs, initial, value, onChange, ariaLabel }: TabsProps) {
 
   function select(id: string) {
     if (value === undefined) setOwn(id);
+    memory?.set(mkey, id);
     onChange?.(id);
   }
 

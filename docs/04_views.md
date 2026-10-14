@@ -24,6 +24,28 @@ variant comparison, the context write-up); the open group is held in `?view=`. E
 for an earlier selection is overlaid as stale. Everything that loads declares `data-state="loading"` until it is
 ready; the gate waits for that, never for the network.
 
+### Focus mode for the App (`focus`, 0.14.0, ADR-0070)
+
+`CaseWorkbench` takes a `focus` prop (`true`, or a `CaseFocusConfig`). With it, the rail head shows a **Focus** button ("Focus" /
+"Enfocar") under the case picker; pressing it opens the selected case's **open group** in the full viewport through `FocusShell`:
+the stage is that group (its views, sub-tabs and cards, the group row is gone), the rail stays on the right with the same controls
+acting on the same state, and the stage is labelled in place (the case name and the group name, or the `title` and `description` the
+product gives; `hud` lays up to four readouts over the stage). Nothing is rebuilt from scratch: the case, the group, the variant and
+the values belong to the product, and the sub-tab the reader had open in each tab row of the view is kept (`ViewMemoryContext`).
+
+| What | How |
+|---|---|
+| URL | `?focus=1` beside `?case=` and `?view=`; a link with all three opens Focus on that case and group (`param` renames `focus`) |
+| Leave | the exit button ("Back to the App" / "Volver a la App") or Escape; the App returns on the same case, group and sub-view, `focus` leaves the URL and keyboard focus returns to the Focus button |
+| Keyboard | on opening, keyboard focus moves to the exit button; the page behind the frame (header, footer, skip link) is `inert` while Focus is open, so Tab stays in the frame, and the frame is a `div` (`FocusShell landmark={false}`), never a second `main` |
+| Callback | `onChange(on)` for a product that records it |
+| Viewport | the page never scrolls, the stage takes at least half of the viewport at 1280 px and more, the rail does not scroll there, one tab row at most |
+
+A product with a simulation or dynamic scenarios MUST offer it (ADR-0070); `caos-shell-gate --require-focus` fails an App without the
+control. Without `focus` the App renders exactly as before. (The plan of 0.14.0 named `WorkbenchShell` for this; the case, the group
+and the view live in `CaseWorkbench`, the App route, so the control is there. `WorkbenchShell`, the authenticated console frame, is
+unchanged.)
+
 ## The surface (`SurfacePage`)
 
 The App route of a product that is not one case's: a hub, an explorer, a console.
@@ -143,3 +165,37 @@ A page that cannot carry an area or a floor for a stated reason declares a **wai
 | `Knob`, `ChipGroup`, `VariantBar` | registered controls (`data-control`): the gate moves each and requires a view to react | the rail's width; a knob is its label and value on one row over its slider (a long label wraps beside the value); a chip row is one line, and wraps in the rail |
 | `.caos-table` | tabular figures, a sticky header, numbers right-aligned, `.caos-col-text` for words | its rows; cells wrap at 760 px and below |
 | `Callout`, `Figure`, `Equation` | notes, figures with captions, equations with captions | the document's column; a caption keeps its measure |
+
+## Small cards: `FlipCard` and `CardDeck` (0.14.0)
+
+**The rule of use.** A flip card is for a SMALL card (a title of about eight words, a back of about forty) in a place where the reader
+scans the titles first and opens the ones that matter. A long card, a card with badges and a cited signal, or an ordered sequence
+stays plain. The gate fails a flip card over the limit: a title of 8 words in English and 10 in Spanish, a back of 40 words in
+English and 50 in Spanish (the plan's "about eight" and "about forty", with the quarter that Spanish runs longer; the limits are
+`FLIP_LIMITS`).
+
+`FlipCard` (`title`, `label`, `children`; `defaultOpen`, `open`, `onOpenChange`):
+
+- the face shows the title on a real `button` with `aria-expanded` and `aria-controls` naming the back; a click, Enter or Space turns
+  the card, and the back has its own button that turns it back (Escape closes an open card too). Keyboard focus moves to the control
+  of the face that shows and never rests on a hidden one;
+- the back content stays in the markup (search, copy and the gate read it); the hidden face is out of the accessibility tree and the
+  tab order (`aria-hidden` and `inert` at once, `visibility: hidden` after the turn);
+- the face says it turns: a small icon and a visually hidden "Show details" / "Mostrar detalles" (the back says "Hide details" /
+  "Ocultar detalles");
+- `prefers-reduced-motion: reduce` swaps the faces without the turn; theme tokens only; the card is as tall as its back, so a row of
+  cards keeps one height.
+
+`CardDeck` (`cards`, `flip`, `carouselAbove` default 4, `ariaLabel`): a list of cards (`{ title, label, body, attrs }`) plain, or as
+flip cards with `flip`. Up to `carouselAbove` cards they are a **row**; above it a **carousel**: one window of as many cards as fit
+(at least one; `perPageFor`), previous and next buttons, a swipe on touch, the arrow keys, Home and End while it has focus, and a
+position ("2 of 5" / "2 de 5", "1 to 3 of 5" when several show). No autoplay. The carousel pages through its cards (it does not
+scroll a strip), so neither the page nor its panel scrolls sideways (ADR-0071); the cards the window hides are not in sight or in
+the tab order but stay in the markup; reduced motion removes the slide; when every card fits, the controls are not drawn.
+
+```tsx
+<CardDeck flip ariaLabel="Who bears it" cards={bearers.map((b) => ({ id: b.id, title: b.who, label: b.who, body: <p>{b.cost}</p> }))} />
+```
+
+The executive view uses them for `pain.bearers`, `situation.roles`, `situation.state_of_the_art` and `proposal.four_cs`
+(`docs/06_executive-view.md`). A product page may use both under the same rule; the gate (G16) measures them wherever they appear.

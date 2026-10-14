@@ -88,8 +88,7 @@ test('each defect of the data file fails with the path of its field', () => {
   assert.ok(paths(null).includes(''), 'not an object');
   // the message names the rule as well as the path
   const two = clone();
-  two.pain.bearers.pop();
-  two.pain.bearers.pop();
+  while (two.pain.bearers.length > 2) two.pain.bearers.pop();
   const m = validateExecutive(two).find((p) => p.path === 'pain.bearers');
   assert.match(m?.message ?? '', /at least 3/);
   // one illustration file per language is allowed

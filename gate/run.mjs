@@ -23,6 +23,11 @@
 //   G12 sticky lists         a vertical sub-tab list is still in view at the end of a long section
 //   G13 contrast             every visible text at WCAG AA against the colour behind it (primary size, both themes; first language, and every language on a documentation route)
 //   G14 captures index       gate-output/index.html shows every capture by route and mode, the failures first
+//   G16 flip cards, decks    a flip card is a small card (title and back within the limits), a real button that turns with Enter and
+//                            Space, its hidden face out of the accessibility tree; a carousel reaches every card, never scrolls sideways
+//   G17 animated drawings    an animated SVG has its reduced-motion block, plays for 10 s at most and is still under reduced motion
+//   G18 Focus mode           the App's Focus control opens the case's open group in the full viewport and returns to the same case and
+//                            group (by the exit control and by Escape); no page scroll, the rail without scroll, one tab row
 // plus the ADR-0071 and ADR-0017 measures (viewport, one-row tabs, rail without scroll, centred prose, captions,
 // references).
 
@@ -31,7 +36,7 @@ import { join } from 'node:path';
 import { decodePng, paintedBox, unionArea } from './png.mjs';
 import { servePages } from './serve.mjs';
 import { installLib } from './inpage.mjs';
-import { DOC_ROUTES, docFloorFailures } from './areas.mjs';
+import { DOC_ROUTES, FLIP_LIMITS, analyseSvgAnimation, animationFailures, docFloorFailures } from './areas.mjs';
 
 export const DEFAULTS = {
   sizes: '390x844,768x1024,1280x800,1600x900,2560x1440',
@@ -49,6 +54,7 @@ export const DEFAULTS = {
   maxShots: 40,
   wideFont: true,
   wideFontSizes: '390x844,1280x800',
+  requireFocus: false,
 };
 
 /** The wide fallback font of the G10 pass: wider than the Windows and macOS sans fonts; DejaVu Sans is what a Linux
@@ -107,6 +113,7 @@ export async function runGate(o) {
   };
 
   const failures = [];
+  const focusReported = new Set(); // G18: an App without a Focus control is reported once per route and mode
   const waivers = []; // ADR-0017 2.1: every waiver a documentation page declares, with its verdict
   // The smallest measured values against each floor, so a pass shows its margin (and a CI font change that eats it
   // is visible before it fails).
@@ -311,7 +318,7 @@ export async function runGate(o) {
             // ADR-0017 2.1: the documentation floors are measured once per language, at the primary size and first theme
             const docFloors = size === primarySize && theme === themes[0] && DOC_ROUTES.includes(route);
             const walkState = { tested: new Set(), keyedViews: 0, controls: 0, tablists: 0, doc: docFloors ? [] : null };
-            await processState(page, sink, { ...at, trail: '' }, { route, isWorkbench, primary, idle: idleHere, first: true, size, w, h, theme, lang, walkState, contrast });
+            await processState(page, sink, { ...at, trail: '' }, { route, isWorkbench, primary, idle: idleHere, interact: idleHere, first: true, size, w, h, theme, lang, walkState, contrast });
 
             if (primary) {
               // G4: the trailing-slash form a static host serves for a materialised route.
@@ -331,10 +338,10 @@ export async function runGate(o) {
               sink.splice(0);
             }
 
-            const leaves = await walkTabs(page, sink, { ...at }, [], new Set(), { route, isWorkbench, primary, idle: primary, size, w, h, theme, lang, walkState, contrast });
+            const leaves = await walkTabs(page, sink, { ...at }, [], new Set(), { route, isWorkbench, primary, idle: primary, interact: idleHere, size, w, h, theme, lang, walkState, contrast });
             if (walkState.doc) docResult(at, lang, walkState.doc, Math.max(1, leaves));
 
-            if (isWorkbench) await walkCases(page, sink, at, { route, isWorkbench, primary, size, w, h, theme, lang, walkState, contrast });
+            if (isWorkbench) await walkCases(page, sink, at, { route, isWorkbench, primary, interact: idleHere, size, w, h, theme, lang, walkState, contrast });
 
             if (primary && isWorkbench) {
               const f = await page.evaluate(() => window.__caosGate.facts());
@@ -483,6 +490,9 @@ export async function runGate(o) {
     for (const m of await page.evaluate(() => window.__caosGate.scrolls())) fail('G5', where, m);
     const reach = await page.evaluate(() => window.__caosGate.reach());
     if (reach.unreachableCount) fail('G5', where, `${reach.unreachableCount} control(s) not reachable by the pointer: ${reach.unreachable.join('; ')}`);
+
+    await cardChecks(page, where, s);
+    if (s.primary) await animationChecks(page, where);
 
     if (s.primary && s.isWorkbench && s.walkState) await reactivity(page, sink, where, s);
     drain(sink, where);
@@ -650,6 +660,7 @@ export async function runGate(o) {
         if (shownCase !== caseId) fail('G9', where, `asked for case ${caseId}; the workbench shows ${shownCase}`);
         await processState(page, sink, where, { ...s, first: false, idle: false });
         if (s.primary) await walkTabs(page, sink, where, [], new Set(), { ...s, idle: false });
+        await focusVisit(page, sink, where, s, caseId, pickedIndex(pick, caseId), total);
       }
       if (s.primary && pick.length) {
         // A deep link selects the case it names (G9).
@@ -665,6 +676,251 @@ export async function runGate(o) {
       }
     }
     if (total === 0 && !opt.singleCase) fail('G9', at, 'the workbench offers no case ([data-control="case"]); declare --single-case if it has one');
+  }
+
+  // ---------------------------------------------------------------------------------------------------- G16, G17, G18
+  function pickedIndex(list, id) {
+    return list.indexOf(id);
+  }
+  function idleAnimations(page) {
+    return page.waitForFunction('document.getAnimations().filter((a) => a.transitionProperty === "transform" || a.transitionProperty === "visibility" || a.animationName === "caos-deck-in").length === 0', undefined, { timeout: 3000 }).catch(() => undefined);
+  }
+
+  /** G16: the flip cards and the card decks of the state (facts), and, in the first theme and language, their interactions. */
+  async function cardChecks(page, where, s) {
+    const f = await page.evaluate(() => window.__caosGate.cards());
+    if (f.cards.length === 0 && f.decks.length === 0) return;
+    for (const c of f.cards) {
+      const tl = FLIP_LIMITS.title[f.lang];
+      const bl = FLIP_LIMITS.back[f.lang];
+      if (c.titleWords > tl) fail('G16', where, `flip card "${c.label}": a title of ${c.titleWords} words; the limit is ${tl} (${f.lang}); a flip card is a small card, a long one stays plain`);
+      if (c.backWords > bl) fail('G16', where, `flip card "${c.label}": a back of ${c.backWords} words; the limit is ${bl} (${f.lang}); a flip card is a small card, a long one stays plain`);
+      if (!c.buttons || !c.wired) fail('G16', where, `flip card "${c.label}": its faces are not real buttons with aria-expanded and aria-controls naming the back`);
+      if (c.hiddenInTree) fail('G16', where, `flip card "${c.label}": the hidden ${c.open ? 'face' : 'back'} is in the accessibility tree (aria-hidden, inert or visibility must take it out)`);
+      else if (c.hiddenFocusable) fail('G16', where, `flip card "${c.label}": the hidden ${c.open ? 'face' : 'back'} holds a control the keyboard reaches`);
+    }
+    for (const d of f.decks) {
+      if (d.sideways) fail('G16', where, `card deck "${d.label}": the carousel scrolls sideways (${d.outside} card(s) past its box, the deck or its track wider than the page); it must page, never scroll`);
+      if (d.docW > d.vw + 1) fail('G16', where, `card deck "${d.label}": the page is ${d.docW}px wide in a ${d.vw}px viewport`);
+      if (d.mode === 'carousel' && d.visible.length === 0) fail('G16', where, `card deck "${d.label}": the carousel shows no card`);
+      if (d.mode === 'carousel' && !d.controls) {
+        for (let k = 0; k < d.total; k += 1) if (!d.visible.includes(k)) fail('G16', where, `card deck "${d.label}": card ${k + 1} of ${d.total} cannot be reached: the carousel hides it and shows no previous and next controls`);
+      }
+    }
+    if (!s.interact) return;
+    try {
+      // a carousel pages through every card with its next button
+      for (const d of f.decks) {
+        if (d.mode !== 'carousel' || !d.controls) continue;
+        const deck = page.locator('[data-card-deck]').nth(d.index);
+        const reached = new Set(d.visible);
+        let st = d;
+        let guard = 0;
+        while (!st.atStart && guard < d.total + 2) {
+          await deck.locator('[data-deck-prev]').click({ timeout: 4000 });
+          st = (await page.evaluate(() => window.__caosGate.cards())).decks[d.index];
+          guard += 1;
+        }
+        for (const i of st.visible) reached.add(i);
+        guard = 0;
+        while (!st.atEnd && guard < d.total + 1) {
+          await deck.locator('[data-deck-next]').click({ timeout: 4000 });
+          await idleAnimations(page);
+          st = (await page.evaluate(() => window.__caosGate.cards())).decks[d.index];
+          for (const i of st.visible) reached.add(i);
+          if (st.sideways) fail('G16', where, `card deck "${d.label}": the carousel scrolls sideways after the next button (${st.outside} card(s) past its box)`);
+          guard += 1;
+        }
+        for (let k = 0; k < d.total; k += 1) if (!reached.has(k)) fail('G16', where, `card deck "${d.label}": card ${k + 1} of ${d.total} cannot be reached with the next button`);
+        guard = 0;
+        while (!st.atStart && guard < d.total + 2) {
+          await deck.locator('[data-deck-prev]').click({ timeout: 4000 }).catch(() => undefined);
+          st = (await page.evaluate(() => window.__caosGate.cards())).decks[d.index];
+          guard += 1;
+        }
+      }
+      // one flip card of each deck (and the loose ones): the face takes focus, Enter turns it, focus follows, Space turns it back
+      const f2 = await page.evaluate(() => window.__caosGate.cards());
+      const done = new Set();
+      for (const c of f2.cards) {
+        if (!c.shown || c.open || done.has(c.deck)) continue;
+        done.add(c.deck);
+        const card = page.locator('[data-flip-card]').nth(c.index);
+        const toggle = card.locator('[data-flip-toggle="front"]');
+        const focused = await toggle.evaluate((el) => { el.focus(); return document.activeElement === el; }).catch(() => false);
+        if (!focused) {
+          fail('G16', where, `flip card "${c.label}" does not turn with the keyboard: its face cannot take focus (it is not a button)`);
+          continue;
+        }
+        await page.keyboard.press('Enter');
+        await idleAnimations(page);
+        const after = (await page.evaluate(() => window.__caosGate.cards())).cards[c.index];
+        if (!after || !after.open) {
+          fail('G16', where, `flip card "${c.label}" does not turn with the keyboard: Enter on its face left it closed`);
+          continue;
+        }
+        const active = await page.evaluate(() => { const a = document.activeElement; return { visible: Boolean(a) && a.checkVisibility({ checkVisibilityCSS: true }), inCard: Boolean(a) && Boolean(a.closest('[data-flip-card]')) }; });
+        if (!active.visible || !active.inCard) fail('G16', where, `flip card "${c.label}": after Enter, keyboard focus is not on a control of the face that shows`);
+        if (after.hiddenInTree) fail('G16', where, `flip card "${c.label}": the hidden face is in the accessibility tree while the back shows`);
+        if (!after.contentShown) fail('G16', where, `flip card "${c.label}": the back shows no content after it turns (its content has no visible box)`);
+        if (s.contrast) for (const m of await page.evaluate(() => window.__caosGate.contrast())) fail('G13', where, `${m} (a flip card turned)`);
+        if (!done.has('shot')) {
+          done.add('shot');
+          await saveShot(page, `flipcard_open_${slug(s.route)}_${s.w}x${s.h}_${s.theme}_${s.lang}.png`);
+        }
+        await page.keyboard.press('Space');
+        await idleAnimations(page);
+        const closed = (await page.evaluate(() => window.__caosGate.cards())).cards[c.index];
+        if (!closed || closed.open) fail('G16', where, `flip card "${c.label}" does not turn back with the keyboard: Space on its back left it open`);
+      }
+    } catch (e) {
+      fail('G16', where, `a flip card or a card deck could not be used: ${e.message.split('\n')[0]}`);
+    }
+  }
+
+  /** G17: every animated SVG of the state has its reduced-motion block, plays for ten seconds at most and stands still under reduced motion. */
+  async function animationChecks(page, where) {
+    const a = await page.evaluate(() => window.__caosGate.animations());
+    const animated = [];
+    for (const it of a.items) {
+      const analysis = analyseSvgAnimation(it.svg);
+      for (const m of animationFailures(analysis, it.name)) fail('G17', where, m);
+      if (analysis.animated) animated.push(it.name);
+    }
+    // a figure drawn by an img of an SVG file: the file is analysed (an img takes no page style, so its own block is what counts)
+    const imgs = await page.evaluate(() => window.__caosGate.figureImages());
+    for (const im of imgs) {
+      const text = await page.evaluate(async (u) => { try { return await (await fetch(u)).text(); } catch (e) { return ''; } }, im.src);
+      for (const m of animationFailures(analyseSvgAnimation(text), im.name)) fail('G17', where, m);
+    }
+    if (animated.length === 0) return;
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    try {
+      await page.waitForTimeout(250);
+      const b = await page.evaluate(() => window.__caosGate.animations());
+      for (const it of b.items) {
+        if (!animated.includes(it.name)) continue;
+        if (it.runningCss > 0 || it.runningSmil) fail('G17', where, `illustration "${it.name}" keeps moving under reduced motion (${it.runningCss} CSS animation(s) running${it.smil ? `, SMIL ${it.runningSmil ? 'playing' : 'paused'}` : ''})`);
+      }
+    } finally {
+      await page.emulateMedia({ reducedMotion: null });
+    }
+  }
+
+  /**
+   * G18: Focus mode of the cases, by clicking. The App is put on its last group, and on the last sub-view of a group that has
+   * sub-views (the first group is where the walk leaves it, so a Focus that fell back to the first would go unseen); Focus must
+   * open on that case, group and sub-view, keep the keyboard inside its frame, hold one landmark and return to the same place.
+   */
+  async function focusVisit(page, sink, where, s, caseId, index, total) {
+    const enter = page.locator('[data-focus-enter]').filter({ visible: true }).first();
+    if ((await enter.count()) === 0) {
+      if (opt.requireFocus && !focusReported.has(`${s.route} ${where.mode}`)) {
+        focusReported.add(`${s.route} ${where.mode}`);
+        fail('G18', { ...where, trail: `case ${caseId} > Focus` }, 'the App offers no Focus control ([data-focus-enter]): ADR-0070 requires a visible control in the App that opens the selected case in focus mode');
+      }
+      return;
+    }
+    const tabs = page.locator('[data-case-workbench] [role="tablist"]').first().locator('[role="tab"]');
+    const n = await tabs.count();
+    const targets = n > 1 ? [n - 1] : [0];
+    if (s.primary && n > 2) {
+      // and the first group that holds sub-views
+      for (let i = 0; i < n - 1; i += 1) {
+        await tabs.nth(i).click({ timeout: 4000 }).catch(() => undefined);
+        await settle(page);
+        if ((await page.locator('[data-case-workbench] .subtablist').count()) > 0) {
+          targets.push(i);
+          break;
+        }
+      }
+    }
+    for (const [k, t] of targets.entries()) {
+      await tabs.nth(t).click({ timeout: 4000 }).catch(() => undefined);
+      await settle(page);
+      const subs = page.locator('[data-case-workbench] .subtablist [role="tab"]');
+      const sn = await subs.count();
+      if (sn > 1) {
+        await subs.nth(sn - 1).click({ timeout: 4000 }).catch(() => undefined);
+        await settle(page);
+      }
+      await focusVisitOne(page, sink, where, s, caseId, index + k, total, enter);
+    }
+    await tabs.nth(0).click({ timeout: 4000 }).catch(() => undefined);
+    await settle(page);
+  }
+
+  async function focusVisitOne(page, sink, where, s, caseId, index, total, enter) {
+    const at = { ...where, trail: `case ${caseId} > Focus` };
+    const facts = () => page.evaluate(() => window.__caosGate.focusFacts());
+    const label = `Focus mode of case ${caseId}`;
+    const before = await facts();
+    try {
+      await enter.evaluate((el) => window.__caosGate.bringEl(el)).catch(() => undefined);
+      await enter.click({ timeout: 5000 });
+    } catch (e) {
+      fail('G18', at, `${label}: the Focus control could not be clicked: ${e.message.split('\n')[0]}`);
+      return;
+    }
+    const why = await settle(page);
+    if (why) fail('G18', at, `${label}: never settled: ${why}`);
+    const f = await facts();
+    if (!f.focus) {
+      fail('G18', at, `${label}: the Focus control did not open Focus mode`);
+      return;
+    }
+    if (f.caseId !== caseId) fail('G18', at, `${label} shows case ${f.caseId}`);
+    if (f.group !== before.group) fail('G18', at, `${label} shows group ${f.group}, the App had ${before.group}`);
+    if (f.subview !== before.subview) fail('G18', at, `${label} shows sub-view ${f.subview}, the App had ${before.subview}`);
+    const q = new URLSearchParams(f.search);
+    if (q.get('focus') !== '1' || (total > 1 && q.get('case') !== caseId)) fail('G18', at, `${label}: the URL (${f.search || 'no query'}) does not hold ?focus=1 and the case`);
+    if (f.docW > f.vw + 1 || f.docH > f.vh + 1) fail('G18', at, `${label}: the page scrolls (the document is ${f.docW}x${f.docH}px in a ${f.vw}x${f.vh}px viewport); Focus mode is the viewport`);
+    if (f.nestedMain) fail('G18', at, `${label}: the page holds a main inside a main (the Focus frame must not be a second landmark inside the App's main)`);
+    // the keyboard stays in the Focus frame: the App behind it is out of the tab order
+    const strayed = [];
+    for (let i = 0; i < 14; i += 1) {
+      await page.keyboard.press('Tab');
+      const where2 = await page.evaluate(() => { const a = document.activeElement; return !a || a === document.body || a.closest('[data-focus-shell]') ? '' : (a.getAttribute('aria-label') || a.textContent || a.tagName).trim().slice(0, 30); });
+      if (where2) strayed.push(where2);
+    }
+    if (strayed.length) fail('G18', at, `${label}: Tab leaves the Focus frame (focus reached ${[...new Set(strayed)].slice(0, 4).map((x) => `"${x}"`).join(', ')} of the App behind it; make the rest of the page inert)`);
+    const big = s.w >= opt.viewportMinWidth;
+    if (big && f.rail && f.rail.scroll > f.rail.client + 1) fail('G18', at, `${label}: the rail scrolls (${f.rail.scroll}px of content in ${f.rail.client}px)`);
+    if (f.tabRows.some((r) => r > 1)) fail('G18', at, `${label}: a tab row wraps onto ${Math.max(...f.tabRows)} rows`);
+    if (big && f.share < opt.instrumentMin) fail('G18', at, `${label}: the stage covers ${(100 * f.share).toFixed(1)}% of the viewport (floor ${(100 * opt.instrumentMin).toFixed(0)}%)`);
+    if (f.exitInside === false) fail('G18', at, `${label}: the exit control is outside the viewport`);
+    for (const m of await page.evaluate(() => window.__caosGate.drawingText())) fail('G10', at, m);
+    if (s.contrast) for (const m of await page.evaluate(() => window.__caosGate.contrast())) fail('G13', at, m);
+    if (index === 0) await saveShot(page, `focus_${slug(s.route)}_${s.w}x${s.h}_${s.theme}_${s.lang}.png`);
+    // leave: the exit control for one case, Escape for the next, so both ways are walked
+    const byButton = index % 2 === 0;
+    let left = true;
+    if (byButton) {
+      try {
+        await page.locator('[data-focus-exit]').first().click({ timeout: 3000 });
+      } catch (e) {
+        fail('G18', at, `${label}: the exit control could not be used: ${e.message.split('\n')[0]}`);
+        left = false;
+      }
+    } else {
+      await page.keyboard.press('Escape');
+    }
+    if (!left) await page.keyboard.press('Escape');
+    const why2 = await settle(page);
+    if (why2) fail('G18', at, `${label}: never settled after leaving: ${why2}`);
+    const g = await facts();
+    if (g.focus) {
+      fail('G18', at, `${label}: ${byButton && left ? 'the exit control' : 'Escape'} does not return to the App`);
+      await page.goto(`${urlFor(s.route)}?case=${encodeURIComponent(caseId)}`, { waitUntil: 'load', timeout: 30000 }).catch(() => undefined);
+      await settle(page);
+    } else {
+      if (!g.app) fail('G18', at, `${label}: back from Focus mode there is no App on the page`);
+      if (g.caseId !== caseId) fail('G18', at, `${label}: back in the App on case ${g.caseId}, it was left on case ${caseId}`);
+      if (g.group !== before.group) fail('G18', at, `${label}: back in the App on group ${g.group}, it was left on group ${before.group}`);
+      if (g.subview !== before.subview) fail('G18', at, `${label}: back in the App on sub-view ${g.subview}, it was left on sub-view ${before.subview}`);
+      if (new URLSearchParams(g.search).has('focus')) fail('G18', at, `${label}: the URL still holds ?focus after the return`);
+    }
+    drain(sink, at);
   }
 
   async function workbenchKey(page) {
