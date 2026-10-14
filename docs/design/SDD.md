@@ -89,12 +89,12 @@ it is re-exported.
 | `src/lib/viewMemory.ts` | `ViewMemoryContext`, `memoryKey` | 12 | workbench |
 | `src/shell/AppShell.tsx` | `ShellRoute`, `ShellConfig`, `AppShell` | 270 | frame-and-navigation |
 | `src/shell/ArchitectureModal.tsx` | `ArchTab`, `ArchitectureConfig`, `validateArchitectureConfig`, `ArchitectureModal` | 196 | architecture-modal |
-| `src/shell/FocusShell.tsx` | `FocusShellProps`, `FocusShell` | 31 | frame-and-navigation |
+| `src/shell/FocusShell.tsx` | `FocusShellProps`, `FocusShell` | 37 | frame-and-navigation |
 | `src/shell/LanguageToggle.tsx` | `LanguageToggle` | 16 | theme-and-language |
 | `src/shell/routes.ts` | `STANDARD_ROUTES` | 22 | frame-and-navigation |
 | `src/shell/ThemeToggle.tsx` | `ThemeToggle` | 17 | theme-and-language |
 | `src/shell/WorkbenchShell.tsx` | `WorkbenchRoute`, `WorkbenchShellProps`, `WorkbenchShell` | 85 | frame-and-navigation |
-| `src/workbench/CaseWorkbench.tsx` | `WorkbenchGroup`, `CaseWorkbenchProps`, `MAX_WORKBENCH_GROUPS`, `CaseWorkbench` | 247 | workbench |
+| `src/workbench/CaseWorkbench.tsx` | `WorkbenchGroup`, `CaseWorkbenchProps`, `MAX_WORKBENCH_GROUPS`, `CaseWorkbench` | 267 | workbench |
 | `src/workbench/focus.ts` | `FOCUS_TEXT`, `FOCUS_PARAM`, `CaseFocusConfig` | 26 | workbench |
 | `src/workbench/Controls.tsx` | `KnobProps`, `Knob`, `ChipOption`, `ChipGroupProps`, `ChipGroup` | 97 | controls-and-readouts |
 | `src/workbench/LaneBadge.tsx` | `Lane`, `LaneBadge` | 37 | workbench |
@@ -120,9 +120,9 @@ it is re-exported.
 
 | Other source | Lines |
 |---|---|
-| `gate/run.mjs` | 981 |
-| `gate/inpage.mjs` | 1374 |
-| `gate/areas.mjs` | 693 |
+| `gate/run.mjs` | 1036 |
+| `gate/inpage.mjs` | 1416 |
+| `gate/areas.mjs` | 698 |
 | `gate/png.mjs` | 149 |
 | `gate/serve.mjs` | 101 |
 | `bin/caos-shell-gate.mjs` | 74 |
@@ -135,17 +135,17 @@ Requirements per area (counted from the nine files at the time of writing; `scri
 |---|---|---|
 | documents | SHD | 85 |
 | frame-and-navigation | SHF | 30 |
-| workbench | SHW | 35 |
+| workbench | SHW | 36 |
 | charts | SHC | 29 |
 | controls-and-readouts | SHK | 12 |
 | numbers-and-units | SHN | 9 |
 | theme-and-language | SHT | 10 |
 | architecture-modal | SHA | 4 |
-| gate | SHG | 48 |
-| total | | 262 |
+| gate | SHG | 55 |
+| total | | 270 |
 
 Tests that verify them: 27 unit files in `test/` (node test runner) and the gate self-test `test/gate-selftest.mjs`, 18 browser files in `e2e/`
-(Playwright Chromium), and 171 plants in `PLANTS` of `test/gate-selftest.mjs` (and 3 legitimate pages in `LEGIT`). The coverage is shown by the report that
+(Playwright Chromium), and 181 plants in `PLANTS` of `test/gate-selftest.mjs` (and 3 legitimate pages in `LEGIT`). The coverage is shown by the report that
 delivered this document, not duplicated here.
 
 ## Technology and versions

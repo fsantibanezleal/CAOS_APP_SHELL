@@ -703,6 +703,9 @@ export async function runGate(o) {
       if (d.sideways) fail('G16', where, `card deck "${d.label}": the carousel scrolls sideways (${d.outside} card(s) past its box, the deck or its track wider than the page); it must page, never scroll`);
       if (d.docW > d.vw + 1) fail('G16', where, `card deck "${d.label}": the page is ${d.docW}px wide in a ${d.vw}px viewport`);
       if (d.mode === 'carousel' && d.visible.length === 0) fail('G16', where, `card deck "${d.label}": the carousel shows no card`);
+      if (d.mode === 'carousel' && !d.controls) {
+        for (let k = 0; k < d.total; k += 1) if (!d.visible.includes(k)) fail('G16', where, `card deck "${d.label}": card ${k + 1} of ${d.total} cannot be reached: the carousel hides it and shows no previous and next controls`);
+      }
     }
     if (!s.interact) return;
     try {
@@ -759,6 +762,7 @@ export async function runGate(o) {
         const active = await page.evaluate(() => { const a = document.activeElement; return { visible: Boolean(a) && a.checkVisibility({ checkVisibilityCSS: true }), inCard: Boolean(a) && Boolean(a.closest('[data-flip-card]')) }; });
         if (!active.visible || !active.inCard) fail('G16', where, `flip card "${c.label}": after Enter, keyboard focus is not on a control of the face that shows`);
         if (after.hiddenInTree) fail('G16', where, `flip card "${c.label}": the hidden face is in the accessibility tree while the back shows`);
+        if (!after.contentShown) fail('G16', where, `flip card "${c.label}": the back shows no content after it turns (its content has no visible box)`);
         if (s.contrast) for (const m of await page.evaluate(() => window.__caosGate.contrast())) fail('G13', where, `${m} (a flip card turned)`);
         if (!done.has('shot')) {
           done.add('shot');
@@ -783,6 +787,12 @@ export async function runGate(o) {
       for (const m of animationFailures(analysis, it.name)) fail('G17', where, m);
       if (analysis.animated) animated.push(it.name);
     }
+    // a figure drawn by an img of an SVG file: the file is analysed (an img takes no page style, so its own block is what counts)
+    const imgs = await page.evaluate(() => window.__caosGate.figureImages());
+    for (const im of imgs) {
+      const text = await page.evaluate(async (u) => { try { return await (await fetch(u)).text(); } catch (e) { return ''; } }, im.src);
+      for (const m of animationFailures(analyseSvgAnimation(text), im.name)) fail('G17', where, m);
+    }
     if (animated.length === 0) return;
     await page.emulateMedia({ reducedMotion: 'reduce' });
     try {
@@ -797,17 +807,51 @@ export async function runGate(o) {
     }
   }
 
-  /** G18: Focus mode of one case, by clicking: it opens on that case and group, measures like the App, and returns to the same place. */
+  /**
+   * G18: Focus mode of the cases, by clicking. The App is put on its last group, and on the last sub-view of a group that has
+   * sub-views (the first group is where the walk leaves it, so a Focus that fell back to the first would go unseen); Focus must
+   * open on that case, group and sub-view, keep the keyboard inside its frame, hold one landmark and return to the same place.
+   */
   async function focusVisit(page, sink, where, s, caseId, index, total) {
-    const at = { ...where, trail: `case ${caseId} > Focus` };
     const enter = page.locator('[data-focus-enter]').filter({ visible: true }).first();
     if ((await enter.count()) === 0) {
       if (opt.requireFocus && !focusReported.has(`${s.route} ${where.mode}`)) {
         focusReported.add(`${s.route} ${where.mode}`);
-        fail('G18', at, 'the App offers no Focus control ([data-focus-enter]): ADR-0070 requires a visible control in the App that opens the selected case in focus mode');
+        fail('G18', { ...where, trail: `case ${caseId} > Focus` }, 'the App offers no Focus control ([data-focus-enter]): ADR-0070 requires a visible control in the App that opens the selected case in focus mode');
       }
       return;
     }
+    const tabs = page.locator('[data-case-workbench] [role="tablist"]').first().locator('[role="tab"]');
+    const n = await tabs.count();
+    const targets = n > 1 ? [n - 1] : [0];
+    if (s.primary && n > 2) {
+      // and the first group that holds sub-views
+      for (let i = 0; i < n - 1; i += 1) {
+        await tabs.nth(i).click({ timeout: 4000 }).catch(() => undefined);
+        await settle(page);
+        if ((await page.locator('[data-case-workbench] .subtablist').count()) > 0) {
+          targets.push(i);
+          break;
+        }
+      }
+    }
+    for (const [k, t] of targets.entries()) {
+      await tabs.nth(t).click({ timeout: 4000 }).catch(() => undefined);
+      await settle(page);
+      const subs = page.locator('[data-case-workbench] .subtablist [role="tab"]');
+      const sn = await subs.count();
+      if (sn > 1) {
+        await subs.nth(sn - 1).click({ timeout: 4000 }).catch(() => undefined);
+        await settle(page);
+      }
+      await focusVisitOne(page, sink, where, s, caseId, index + k, total, enter);
+    }
+    await tabs.nth(0).click({ timeout: 4000 }).catch(() => undefined);
+    await settle(page);
+  }
+
+  async function focusVisitOne(page, sink, where, s, caseId, index, total, enter) {
+    const at = { ...where, trail: `case ${caseId} > Focus` };
     const facts = () => page.evaluate(() => window.__caosGate.focusFacts());
     const label = `Focus mode of case ${caseId}`;
     const before = await facts();
@@ -827,9 +871,19 @@ export async function runGate(o) {
     }
     if (f.caseId !== caseId) fail('G18', at, `${label} shows case ${f.caseId}`);
     if (f.group !== before.group) fail('G18', at, `${label} shows group ${f.group}, the App had ${before.group}`);
+    if (f.subview !== before.subview) fail('G18', at, `${label} shows sub-view ${f.subview}, the App had ${before.subview}`);
     const q = new URLSearchParams(f.search);
     if (q.get('focus') !== '1' || (total > 1 && q.get('case') !== caseId)) fail('G18', at, `${label}: the URL (${f.search || 'no query'}) does not hold ?focus=1 and the case`);
     if (f.docW > f.vw + 1 || f.docH > f.vh + 1) fail('G18', at, `${label}: the page scrolls (the document is ${f.docW}x${f.docH}px in a ${f.vw}x${f.vh}px viewport); Focus mode is the viewport`);
+    if (f.nestedMain) fail('G18', at, `${label}: the page holds a main inside a main (the Focus frame must not be a second landmark inside the App's main)`);
+    // the keyboard stays in the Focus frame: the App behind it is out of the tab order
+    const strayed = [];
+    for (let i = 0; i < 14; i += 1) {
+      await page.keyboard.press('Tab');
+      const where2 = await page.evaluate(() => { const a = document.activeElement; return !a || a === document.body || a.closest('[data-focus-shell]') ? '' : (a.getAttribute('aria-label') || a.textContent || a.tagName).trim().slice(0, 30); });
+      if (where2) strayed.push(where2);
+    }
+    if (strayed.length) fail('G18', at, `${label}: Tab leaves the Focus frame (focus reached ${[...new Set(strayed)].slice(0, 4).map((x) => `"${x}"`).join(', ')} of the App behind it; make the rest of the page inert)`);
     const big = s.w >= opt.viewportMinWidth;
     if (big && f.rail && f.rail.scroll > f.rail.client + 1) fail('G18', at, `${label}: the rail scrolls (${f.rail.scroll}px of content in ${f.rail.client}px)`);
     if (f.tabRows.some((r) => r > 1)) fail('G18', at, `${label}: a tab row wraps onto ${Math.max(...f.tabRows)} rows`);
@@ -863,6 +917,7 @@ export async function runGate(o) {
       if (!g.app) fail('G18', at, `${label}: back from Focus mode there is no App on the page`);
       if (g.caseId !== caseId) fail('G18', at, `${label}: back in the App on case ${g.caseId}, it was left on case ${caseId}`);
       if (g.group !== before.group) fail('G18', at, `${label}: back in the App on group ${g.group}, it was left on group ${before.group}`);
+      if (g.subview !== before.subview) fail('G18', at, `${label}: back in the App on sub-view ${g.subview}, it was left on sub-view ${before.subview}`);
       if (new URLSearchParams(g.search).has('focus')) fail('G18', at, `${label}: the URL still holds ?focus after the return`);
     }
     drain(sink, at);

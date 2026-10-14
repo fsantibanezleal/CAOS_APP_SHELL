@@ -124,6 +124,25 @@ export function CaseWorkbench(props: CaseWorkbenchProps) {
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [showFocus, setFocus]);
+  // The page behind the focus frame (the header, the footer, the skip link, whatever else is not on the way to the frame) is inert
+  // while Focus is open: no Tab into it, nothing of it in the accessibility tree.
+  useEffect(() => {
+    if (!showFocus) return undefined;
+    const frame = document.querySelector('[data-focus-shell]');
+    if (!frame) return undefined;
+    const made: Element[] = [];
+    for (let node: Element | null = frame; node && node !== document.body; node = node.parentElement) {
+      for (const sib of Array.from(node.parentElement?.children ?? [])) {
+        if (sib !== node && !sib.hasAttribute('inert') && sib.tagName !== 'SCRIPT' && sib.tagName !== 'STYLE') {
+          sib.setAttribute('inert', '');
+          made.push(sib);
+        }
+      }
+    }
+    return () => {
+      for (const el of made) el.removeAttribute('inert');
+    };
+  }, [showFocus]);
   // Keyboard focus follows the reader: to the exit control when Focus opens, back to the Focus control when it closes.
   useEffect(() => {
     if (turned.current === 'in' && showFocus) document.querySelector<HTMLElement>('[data-focus-exit]')?.focus();
@@ -205,6 +224,7 @@ export function CaseWorkbench(props: CaseWorkbenchProps) {
             onExit={() => setFocus(false)}
             exitLabel={FOCUS_TEXT.exit[lang]}
             stageLabel={FOCUS_TEXT.stage[lang]}
+            landmark={false}
             stage={
               <div className="caos-cw caos-cw-focus" {...instrumentData} data-focus-group={open?.id} data-instrument="">
                 <div className="tabs">

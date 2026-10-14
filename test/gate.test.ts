@@ -122,3 +122,19 @@ test('an animated SVG is found, measured and checked for its reduced-motion bloc
   assert.deepEqual(animationFailures(ms, 'pain'), []);
   assert.equal(ANIMATION_MAX_SECONDS, 10);
 });
+
+test('a finite count of cycles plays that many times and an over-long play is refused', () => {
+  const svg = (style: string, inner = '<rect class="a"/>') => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><style>${style}</style>${inner}</svg>`;
+  const block = '@media (prefers-reduced-motion: reduce) { .a { animation: none; } }';
+  const five = analyseSvgAnimation(svg(`@keyframes g { to { opacity: 1 } } .a { animation: g 4s ease 5; } ${block}`));
+  assert.equal(five.seconds, 20);
+  assert.match(animationFailures(five, 'pain').join('|'), /plays for 20 s; the limit is 10 s/);
+  const count = analyseSvgAnimation(svg(`@keyframes g { to { opacity: 1 } } .a { animation-name: g; animation-duration: 4s; animation-iteration-count: 3; } ${block}`));
+  assert.equal(count.seconds, 12);
+  const loop = analyseSvgAnimation(svg(`@keyframes g { to { opacity: 1 } } .a { animation: g 4s infinite; } ${block}`));
+  assert.equal(loop.seconds, 4, 'a loop counts one cycle');
+  const smil = analyseSvgAnimation(svg('@media (prefers-reduced-motion: reduce) { rect { width: 9px; } }', '<rect><animate attributeName="width" dur="4s" repeatCount="3"/></rect>'));
+  assert.equal(smil.seconds, 12);
+  const once = analyseSvgAnimation(svg(`@keyframes g { to { opacity: 1 } } .a { animation: g 4s ease 1; } ${block}`));
+  assert.equal(once.seconds, 4);
+});
