@@ -190,6 +190,20 @@ const PLANTS = [
   { id: 'exec-illustration-chart', check: 'ADR-0017.2', re: /illustration "situation" declares a chart \(data-chart\)/, opts: { routes: '/introduction' } },
   { id: 'exec-illustration-label-outside', check: 'ADR-0017.2', re: /illustration "pain": label\(s\) outside the viewBox: "Past the edge of the drawing"/, opts: { routes: '/introduction' } },
   { id: 'exec-illustration-missing', check: 'ADR-0017.2', re: /illustration "proposal": the file "executive\/proposal\.svg" did not load/, opts: { routes: '/introduction' } },
+  // shell 0.14.0: flip cards, the card carousel, animated illustrations and Focus mode for the App (G16, G17, G18)
+  { id: 'flip-back-long', check: 'G16', re: /flip card "[^"]+": a back of \d+ words; the limit is 40/, opts: { routes: '/introduction' } },
+  { id: 'flip-title-long', check: 'G16', re: /flip card "[^"]+": a title of \d+ words; the limit is 8/, opts: { routes: '/introduction' } },
+  { id: 'flip-no-keyboard', check: 'G16', re: /flip card "[^"]+" does not turn with the keyboard/, opts: { routes: '/introduction' } },
+  { id: 'flip-hidden-face', check: 'G16', re: /flip card "[^"]+": the hidden (face|back) is in the accessibility tree/, opts: { routes: '/introduction' } },
+  { id: 'carousel-sideways', check: 'G16', re: /card deck "[^"]+": the carousel scrolls sideways/, opts: { routes: '/introduction' } },
+  { id: 'carousel-stuck', check: 'G16', re: /card deck "[^"]+": card \d+ of \d+ cannot be reached/, opts: { routes: '/introduction' } },
+  { id: 'anim-no-reduced', check: 'G17', re: /illustration "pain" is animated and has no @media \(prefers-reduced-motion: reduce\) block/, opts: { routes: '/introduction' } },
+  { id: 'anim-keeps-moving', check: 'G17', re: /illustration "pain" keeps moving under reduced motion/, opts: { routes: '/introduction' } },
+  { id: 'anim-too-long', check: 'G17', re: /illustration "pain" plays for 14 s; the limit is 10 s/, opts: { routes: '/introduction' } },
+  { id: 'focus-loses-case', check: 'G18', re: /Focus mode of case c-\w+ shows case c-low/, opts: { routes: '/app' } },
+  { id: 'focus-page-scroll', check: 'G18', re: /Focus mode of case c-\w+: the page scrolls/, opts: { routes: '/app' } },
+  { id: 'focus-no-exit', check: 'G18', re: /Focus mode of case c-\w+: the exit control could not be used/, opts: { routes: '/app' } },
+  { id: 'focus-missing', check: 'G18', re: /the App offers no Focus control/, opts: { routes: '/app', requireFocus: true } },
 ];
 
 /** Legitimate pages that the gate once failed (ADR-0017 2.1 allows them): each must pass every check, in both languages. */

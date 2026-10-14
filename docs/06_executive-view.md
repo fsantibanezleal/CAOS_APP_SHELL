@@ -113,6 +113,19 @@ with subsections: never one long scroll. Every sub-tab is reachable by keyboard 
 well when entered directly. The view and the lede of the page take the full width of the document column (ADR-0017 1.2); only an
 illustration may stay centred at its natural size inside its figure. The gate measures both.
 
+## Flip cards and the carousel (0.14.0)
+
+Four card groups of the view are SMALL cards the reader scans by title and opens when one matters, so they are flip cards
+(`FlipCard`, `CardDeck`; `docs/04_views.md`): `pain.bearers` (the face is `who`; the back is the cost and the measure),
+`situation.roles` (`role`; what it decides and needs), `situation.state_of_the_art` (`approach`; what it achieves, where it falls
+short and its source mark) and `proposal.four_cs` (the C's name; its definition and what it means for the proposal). The other three
+stay plain, because a flip would hide what they are for: `context.forces` (a one-line card), `trends.items` (a card with badges and
+a cited signal) and `proposal.actions` (an ordered sequence). A group of four cards or fewer is a row; a group of five is a
+carousel at the widths where five cards do not fit (previous and next, swipe, arrow keys, "2 of 5"; every card reachable by keyboard).
+The writing limits above still apply to every field; a flip card's title is at most 8 words (10 in Spanish) and its back at most 40
+(50 in Spanish), which the data limits (one sentence per field, 30 words) keep for a bearer, a role, an approach or a C. The text of
+a back is in the page while the face shows: the gate reads it for the floors, the 4 C's and the writing limits.
+
 ## The illustrations (high quality, never graphs)
 
 Felipe, 2026-10-12: "i need high quality diagrams, not graphs, illustrations of the initiative, the problem, the proposed
@@ -139,6 +152,26 @@ The standard each meets:
 - One caption sentence under each, saying what the reader should take from it.
 - The pain and the proposal illustrations share the same setting and layout, so the change is visible between them.
 - No `data-chart`. Whether a drawing reads as a scene and not as a chart in disguise is the reviewer's judgement.
+
+### Animated illustrations (0.14.0)
+
+Felipe, 2026-10-13: "in the intro promote the use of animation, not only static illustration." The standard promotes an animated
+scene **where the illustration explains a change, a flow or a sequence** (the pain growing, the roles handing work over, the
+proposal's before and after); a still remains right for a single state. An animated illustration is still an SVG file:
+
+- the animation lives inside the file: CSS keyframes (a `<style>` with `@keyframes` and `animation`) or SMIL (`animate`,
+  `animateTransform`, `animateMotion`, `set`); no script, and an animation that writes a link or an event handler is removed;
+- a gentle loop or a single play of **at most ten seconds** (one cycle with its longest delay); the labels never move or fade, so
+  they stay readable in every frame; animate shapes, strokes and positions, and wrap a group (`<g class="a"><g transform=...>`)
+  before giving it a CSS `transform`, which replaces the group's own;
+- theme tokens, labels in both languages, as above;
+- **a `@media (prefers-reduced-motion: reduce)` block inside the file that shows the static final frame**: for CSS keyframes the
+  block sets `animation: none` and the final values (`opacity: 1`, the end position); the shell pauses a SMIL animation at its last
+  frame itself, and the block still has to be there. Under reduced motion nothing in the drawing moves.
+
+The gate (G17) fails an animated illustration without the block, with a block that does not stop the CSS animation, that plays for
+more than ten seconds, or that is still moving when the page is run with reduced motion emulated. The template's guard script runs
+the same analysis (`analyseSvgAnimation`, `animationFailures` of `gate/areas.mjs`).
 
 ## The landing
 
@@ -186,7 +219,8 @@ floor on the rendered rows; the 4 C's with their names and definitions; the writ
 on the rendered text; that no rubric label or question is printed; that no section, text or equation sits beside the view; that
 the fields are readable; the numbered source notes, each a link; the two onward links; the full width of the view and of the
 lede; and for each illustration its place, its caption, that it is inline, loaded, token-coloured, free of `data-chart`, and that
-every label sits inside its `viewBox` and is not too small. It also keeps the older checks: the contrast of the text, and the
+every label sits inside its `viewBox` and is not too small; for the flip groups and the carousel, G16 (`docs/07_gate.md`); for an animated
+illustration, G17. It also keeps the older checks: the contrast of the text, and the
 labels of the drawing against each other, in the wide font.
 
 The view cannot be waived, as a whole or in part: a `floorWaivers` entry naming it is refused.

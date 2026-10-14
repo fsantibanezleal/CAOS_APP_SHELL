@@ -70,6 +70,11 @@ export function makePlant(cleanDir, plantDir, plant) {
   // the plants of the executive view that are defects of an illustration file
   const svg = (name, edit) => writeFileSync(join(plantDir, 'executive', `${name}.svg`), edit(readFileSync(join(plantDir, 'executive', `${name}.svg`), 'utf8')));
   if (plant === 'exec-illustration-missing') rmSync(join(plantDir, 'executive', 'proposal.svg'));
+  // the plants of the animated illustration (shell 0.14.0): the file loses its reduced-motion block, keeps a block that stops
+  // nothing, or plays for longer than the limit
+  if (plant === 'anim-no-reduced') svg('pain', (x) => x.replace(/@media \(prefers-reduced-motion: reduce\)\s*\{[\s\S]*?\}\s*\}/, ''));
+  if (plant === 'anim-keeps-moving') svg('pain', (x) => x.replace('animation: none;', 'animation-play-state: running;'));
+  if (plant === 'anim-too-long') svg('pain', (x) => x.replaceAll(' 4s ', ' 11s '));
   if (plant === 'exec-illustration-colour') svg('pain', (x) => x.replaceAll('var(--color-fg)', '#1f77b4'));
   if (plant === 'exec-illustration-chart') svg('situation', (x) => x.replace('<svg ', '<svg data-chart="true" '));
   if (plant === 'exec-illustration-label-outside') {

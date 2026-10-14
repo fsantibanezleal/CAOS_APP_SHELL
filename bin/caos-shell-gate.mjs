@@ -15,12 +15,13 @@
 //   --single-case                the workbench has one case and no case control
 //   --idle-ms 3000  --settle-ms 15000  --text-floor 400  --instrument-min 0.5  --stage-fill-min 0.3  --stage-floor 140
 //   --wide-font-sizes 390x844,1280x800   the sizes of the wide-font pass (G10); --no-wide-font skips it
+//   --require-focus              fail an App without a Focus control (G18; ADR-0070 requires one in a product with simulations)
 //   --out gate-output            report (gate-report.json), screenshots (shots/) and the capture index (index.html)
 // Needs `playwright` in the consuming project (optional peer dependency). Exit 1 on any failure, 2 on misuse.
 
 import { runGate } from '../gate/run.mjs';
 
-const FLAGS = new Set(['single-case', 'no-wide-font']);
+const FLAGS = new Set(['single-case', 'no-wide-font', 'require-focus']);
 const args = {};
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i += 1) {
@@ -44,6 +45,7 @@ const options = {
   langs: args.langs,
   caseSample: args['case-sample'],
   singleCase: args['single-case'] === true,
+  requireFocus: args['require-focus'] === true,
   idleMs: num('idle-ms'),
   settleMs: num('settle-ms'),
   textFloor: num('text-floor'),

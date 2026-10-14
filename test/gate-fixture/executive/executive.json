@@ -111,6 +111,34 @@
           "en": "Spend on agency staff each quarter",
           "es": "Gasto en personal de agencia cada trimestre"
         }
+      },
+      {
+        "who": {
+          "en": "Emergency departments",
+          "es": "Los servicios de urgencia"
+        },
+        "cost": {
+          "en": "Longer waits and patients leaving before they are seen",
+          "es": "Esperas más largas y pacientes que se van sin atención"
+        },
+        "measure": {
+          "en": "Share of patients who leave unseen",
+          "es": "Proporción de pacientes que se van sin atención"
+        }
+      },
+      {
+        "who": {
+          "en": "Agency and bank staff",
+          "es": "Personal de agencia y de reemplazo"
+        },
+        "cost": {
+          "en": "Irregular hours and short-notice calls to cover gaps",
+          "es": "Horarios irregulares y llamados de último minuto para cubrir vacíos"
+        },
+        "measure": {
+          "en": "Shifts covered with under one day of notice",
+          "es": "Turnos cubiertos con menos de un día de aviso"
+        }
       }
     ],
     "figures": [

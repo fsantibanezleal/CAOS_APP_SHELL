@@ -71,10 +71,15 @@ export { EXECUTIVE_SCHEMA_VERSION, FOUR_CS, validateExecutive } from './content/
 export type { ExecutiveData, ExecutiveProblem } from './content/executive';
 export { Question } from './content/Question';
 export type { QuestionProps } from './content/Question';
+// Flip cards and the card carousel (0.14.0): a small card that shows its title and turns to its content; a list of cards as a row or a carousel.
+export { FlipCard, FLIP_LIMITS, FLIP_TEXT } from './content/FlipCard';
+export type { FlipCardProps } from './content/FlipCard';
+export { CardDeck, DECK_TEXT, deckPosition, deckWindow, perPageFor } from './content/CardDeck';
+export type { CardDeckProps, DeckCard } from './content/CardDeck';
 // The surface route type (0.8.0): a tab App that fills the viewport; its open view is held in the URL.
 export { SurfacePage } from './content/SurfacePage';
 export type { SurfacePageProps } from './content/SurfacePage';
-export { useUrlView, viewParamOf, replaceQueryParam } from './lib/urlView';
+export { useUrlView, viewParamOf, replaceQueryParam, removeQueryParam } from './lib/urlView';
 export { BREAKPOINTS } from './lib/breakpoints';
 
 // Drawings without uPlot (0.8.0): the categorical chart and the text kit every drawing measures its labels with.
@@ -88,6 +93,9 @@ export { WorkbenchLayout } from './workbench/WorkbenchLayout';
 export type { RailSection, WorkbenchLayoutProps } from './workbench/WorkbenchLayout';
 export { CaseWorkbench, MAX_WORKBENCH_GROUPS } from './workbench/CaseWorkbench';
 export type { CaseWorkbenchProps, WorkbenchGroup } from './workbench/CaseWorkbench';
+// Focus mode for the App (0.14.0): the words, the URL parameter and the product's say over it.
+export { FOCUS_PARAM, FOCUS_TEXT } from './workbench/focus';
+export type { CaseFocusConfig } from './workbench/focus';
 export { VariantBar } from './workbench/VariantBar';
 export type { VariantBarProps, VariantDef } from './workbench/VariantBar';
 export { LaneBadge } from './workbench/LaneBadge';
