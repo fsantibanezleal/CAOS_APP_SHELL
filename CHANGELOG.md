@@ -1,3 +1,17 @@
+## [0.13.001] - 2026-10-13
+
+### Fixed
+
+- `STANDARD_ROUTES` is again App, Introduction, Methodology, Implementation, Experiments, Benchmark: the App is the leftmost
+  tab, always (Felipe, 2026-10-13). 0.13.0 had put the Introduction first when the landing moved to it; the landing is
+  unchanged (the root and unknown paths open the Introduction's executive view through `Landing`) and no longer moves
+  the tabs. A product on 0.13.0 needs no change beyond the version: its header reads the order from `STANDARD_ROUTES`.
+- Every documentation route takes the full width of the page, the Introduction included (Felipe, 2026-10-13: the
+  Introduction did not use the full width while Methodology, Implementation, Experiments and Benchmark did): `DocPage`
+  always renders the wide document layout; its `wide` prop is kept for compatibility and changes nothing.
+- The order test (`test/workbench.test.tsx`), the navigation end-to-end test (`e2e/landing.test.ts`), requirement SHF-011
+  and the docs (`docs/01_structure.md`, `docs/06_executive-view.md`) state the order.
+
 ## [0.13.000] - 2026-10-13
 
 ### Changed

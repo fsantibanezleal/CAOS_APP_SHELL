@@ -5,9 +5,10 @@ import { DocRefsScope, useRefsScope } from './Cite';
 
 /**
  * A documentation route (Introduction, Methodology, Implementation, Experiments, Benchmark): the page head with
- * its title and lede, then sections. `wide` for a route with a sub-tab rail (ADR-0071 rule 2, amended
- * 2026-09-04); a single prose column keeps the reading width and is centred (ADR-0017 §1). Text takes the full width
- * of the column, and the references of its sections are listed once at the end of the page (ADR-0017 §4).
+ * its title and lede, then sections. Every documentation route takes the full width of the page, the Introduction
+ * included (Felipe, 2026-10-13: the Introduction did not use the full width while Methodology, Implementation,
+ * Experiments and Benchmark did; 0.13.1). `wide` is kept for compatibility and changes nothing. Text takes the full
+ * width of the column, and the references of its sections are listed once at the end of the page (ADR-0017 section 4).
  */
 /**
  * The areas a section may declare, per documentation route (ADR-0017 section 2.1). The gate's table (`gate/areas.mjs`)
@@ -24,6 +25,7 @@ export const DOC_AREAS = {
 export interface DocPageProps {
   title: BiText;
   lede: ReactNode;
+  /** Kept for compatibility (0.13.1): every documentation route is full width, so this changes nothing. */
   wide?: boolean;
   /**
    * The required areas this page cannot carry, each with the reason (ADR-0017 section 2.1): rendered as
@@ -34,11 +36,11 @@ export interface DocPageProps {
   children: ReactNode;
 }
 
-export function DocPage({ title, lede, wide, floorWaivers, children }: DocPageProps) {
+export function DocPage({ title, lede, floorWaivers, children }: DocPageProps) {
   const lang = useShellLang();
   const waivers = (floorWaivers ?? []).map((w) => `${w.floor}: ${pick(w.reason, lang)}`).join('; ');
   return (
-    <div className={wide ? 'page-body wide prose caos-doc' : 'page-body prose caos-doc'} data-doc-page="" data-floor-waiver={waivers || undefined}>
+    <div className="page-body wide prose caos-doc" data-doc-page="" data-floor-waiver={waivers || undefined}>
       <div className="page-head">
         <h1>{pick(title, lang)}</h1>
         <p className="lede">{lede}</p>
