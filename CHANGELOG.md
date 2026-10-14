@@ -1,4 +1,4 @@
-## [Unreleased] - 0.14.0
+## [0.14.000] - 2026-10-14
 
 Flip cards, the card carousel, animated illustrations and Focus mode for the App (CAOS_MANAGE `plans/app-shell/0-14-0-plan.md`,
 backlog BL-060 to BL-063). Additive: a product that changes nothing renders as before, except that the executive view's four
