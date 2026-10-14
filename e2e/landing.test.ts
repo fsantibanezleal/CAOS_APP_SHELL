@@ -117,12 +117,12 @@ test('an old App URL with ?case= still reaches the case on the App route', async
   await page.close();
 });
 
-test('the navigation lists the Introduction first, then the App, then the other pages', async () => {
+test('the navigation lists the App first, then the Introduction, then the other pages, and the root lands on the Introduction', async () => {
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   await page.goto(address);
   await page.waitForSelector('header nav a');
   const hrefs = await page.$$eval('header nav a', (as) => as.map((a) => new URL((a as HTMLAnchorElement).href).pathname));
-  assert.deepEqual(hrefs, ['/introduction', '/app', '/methodology', '/implementation', '/experiments', '/benchmark']);
+  assert.deepEqual(hrefs, ['/app', '/introduction', '/methodology', '/implementation', '/experiments', '/benchmark']);
   const active = await page.$$eval('header nav a.active', (as) => as.map((a) => (a.textContent ?? '').trim()));
   assert.deepEqual(active, ['Introduction']);
   await page.close();
