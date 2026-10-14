@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { Link, useInRouterContext } from 'react-router';
 import { useShellLang } from '../lib/lang';
 import type { Lang } from '../lib/lang';
@@ -16,6 +16,7 @@ import {
   type ExecutiveFigure,
   type ExecutiveIllustration,
 } from './executive';
+import { CardDeck } from './CardDeck';
 import { SubTabs } from './SubTabs';
 
 /** The words the view itself writes (the product writes none of them). */
@@ -90,6 +91,10 @@ export function cleanSvg(text: string): string | null {
   const root = doc.documentElement;
   if (!root || root.localName !== 'svg' || doc.querySelector('parsererror')) return null;
   for (const bad of Array.from(doc.querySelectorAll('script, foreignObject'))) bad.remove();
+  // an animation may play (SMIL, CSS keyframes), but it may not write a link or an event handler
+  for (const anim of Array.from(doc.querySelectorAll('animate, set'))) {
+    if (/^(xlink:)?href$|^on/i.test(anim.getAttribute('attributeName') ?? '')) anim.remove();
+  }
   for (const el of Array.from(doc.querySelectorAll('*'))) {
     for (const attr of Array.from(el.attributes)) {
       if (/^on/i.test(attr.name) || (/^(xlink:)?href$/i.test(attr.name) && /^\s*javascript:/i.test(attr.value))) el.removeAttribute(attr.name);
@@ -102,12 +107,51 @@ export function cleanSvg(text: string): string | null {
   return new XMLSerializer().serializeToString(root);
 }
 
+/** The time, in seconds, at which the last SMIL animation of the drawing has played (its static final frame). */
+function smilEnd(svg: SVGSVGElement): number {
+  const secs = (v: string | null) => {
+    const m = /^\s*(\d*\.?\d+)\s*(ms|s)?\s*$/.exec(v ?? '');
+    return m ? Number(m[1]) / (m[2] === 'ms' ? 1000 : 1) : 0;
+  };
+  let end = 0;
+  for (const a of Array.from(svg.querySelectorAll('animate, animateTransform, animateMotion, set'))) {
+    end = Math.max(end, secs(a.getAttribute('begin')) + secs(a.getAttribute('dur')));
+  }
+  return end;
+}
+
+/**
+ * Under `prefers-reduced-motion: reduce` an animated illustration is still. CSS keyframes are the file's own business (its
+ * `@media (prefers-reduced-motion: reduce)` block shows the final frame; the gate fails a file without it); SMIL cannot be
+ * stopped by CSS, so the shell pauses it at its last frame here, and plays it again if the preference changes.
+ */
+function useStillSmil(host: RefObject<HTMLDivElement | null>, svg: string | null) {
+  useEffect(() => {
+    const el = host.current?.querySelector('svg');
+    if (!svg || !el || typeof matchMedia === 'undefined' || !el.querySelector('animate, animateTransform, animateMotion, set')) return undefined;
+    const mq = matchMedia('(prefers-reduced-motion: reduce)');
+    const apply = () => {
+      if (mq.matches) {
+        el.setCurrentTime(smilEnd(el));
+        el.pauseAnimations();
+      } else {
+        el.unpauseAnimations();
+      }
+    };
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, [host, svg]);
+}
+
 type Loaded = { status: 'loading' } | { status: 'ready'; svg: string } | { status: 'error'; why: string };
 
 function Illustration({ name, spec, base, lang }: { name: string; spec: ExecutiveIllustration; base: string; lang: Lang }) {
   const file = typeof spec.file === 'string' ? spec.file : spec.file[lang];
   const url = /^([a-z]+:)?\/\//i.test(file) || file.startsWith('/') ? file : `${base}${file}`;
   const [loaded, setLoaded] = useState<Loaded>({ status: 'loading' });
+  const art = useRef<HTMLDivElement | null>(null);
+  useStillSmil(art, loaded.status === 'ready' ? loaded.svg : null);
   useEffect(() => {
     let live = true;
     setLoaded({ status: 'loading' });
@@ -137,7 +181,7 @@ function Illustration({ name, spec, base, lang }: { name: string; spec: Executiv
       data-state={loaded.status === 'ready' ? undefined : loaded.status}
     >
       {loaded.status === 'ready' ? (
-        <div className="caos-exec-art" dangerouslySetInnerHTML={{ __html: loaded.svg }} />
+        <div className="caos-exec-art" ref={art} dangerouslySetInnerHTML={{ __html: loaded.svg }} />
       ) : loaded.status === 'error' ? (
         <p className="caos-exec-fig-error" role="alert">
           {t(UI.missing, lang)}: <code>{file}</code> ({loaded.why})
@@ -272,19 +316,27 @@ export function ExecutiveViewBody({ data, base = '/', lang: forced, open = 1, on
         ))}
       </ul>
       <h3 className="caos-exec-sub">{t(UI.bearers, lang)}</h3>
-      <ul className="caos-exec-cards">
-        {d.pain.bearers.map((b, i) => (
-          <li key={i} className="caos-exec-card" data-exec-item="pain.bearers">
-            <strong>{field(`pain.bearers[${i}].who`, b.who)}</strong>
-            <div>
-              <Label>{t(UI.cost, lang)}</Label> {field(`pain.bearers[${i}].cost`, b.cost)}
-            </div>
-            <div>
-              <Label>{t(UI.measure, lang)}</Label> {field(`pain.bearers[${i}].measure`, b.measure)}
-            </div>
-          </li>
-        ))}
-      </ul>
+      <CardDeck
+        flip
+        ariaLabel={t(UI.bearers, lang)}
+        className="caos-exec-cards"
+        cards={d.pain.bearers.map((b, i) => ({
+          id: i,
+          title: field(`pain.bearers[${i}].who`, b.who),
+          label: t(b.who, lang),
+          attrs: { 'data-exec-item': 'pain.bearers' },
+          body: (
+            <>
+              <div>
+                <Label>{t(UI.cost, lang)}</Label> {field(`pain.bearers[${i}].cost`, b.cost)}
+              </div>
+              <div>
+                <Label>{t(UI.measure, lang)}</Label> {field(`pain.bearers[${i}].measure`, b.measure)}
+              </div>
+            </>
+          ),
+        }))}
+      />
       <h3 className="caos-exec-sub">{t(UI.causes, lang)}</h3>
       <ul className="caos-exec-causes">
         {d.pain.causes.map((c, i) => (
@@ -327,38 +379,54 @@ export function ExecutiveViewBody({ data, base = '/', lang: forced, open = 1, on
     // 3. the current situation
     <Section key="situation" n={3} lang={lang} keyMessage={d.situation.key_message} keyPath="situation.key_message">
       <h3 className="caos-exec-sub">{t(UI.roles, lang)}</h3>
-      <ul className="caos-exec-cards">
-        {d.situation.roles.map((r, i) => (
-          <li key={i} className="caos-exec-card" data-exec-item="situation.roles">
-            <strong>{field(`situation.roles[${i}].role`, r.role)}</strong>
-            <div>
-              <Label>{t(UI.decides, lang)}</Label> {field(`situation.roles[${i}].decides`, r.decides)}
-            </div>
-            <div>
-              <Label>{t(UI.needs, lang)}</Label> {field(`situation.roles[${i}].needs`, r.needs)}
-            </div>
-          </li>
-        ))}
-      </ul>
+      <CardDeck
+        flip
+        ariaLabel={t(UI.roles, lang)}
+        className="caos-exec-cards"
+        cards={d.situation.roles.map((r, i) => ({
+          id: i,
+          title: field(`situation.roles[${i}].role`, r.role),
+          label: t(r.role, lang),
+          attrs: { 'data-exec-item': 'situation.roles' },
+          body: (
+            <>
+              <div>
+                <Label>{t(UI.decides, lang)}</Label> {field(`situation.roles[${i}].decides`, r.decides)}
+              </div>
+              <div>
+                <Label>{t(UI.needs, lang)}</Label> {field(`situation.roles[${i}].needs`, r.needs)}
+              </div>
+            </>
+          ),
+        }))}
+      />
       <p className="caos-exec-interaction">{field('situation.interaction', d.situation.interaction)}</p>
       {art('situation')}
       <h3 className="caos-exec-sub">{t(UI.sota, lang)}</h3>
-      <ul className="caos-exec-cards">
-        {d.situation.state_of_the_art.map((a, i) => (
-          <li key={i} className="caos-exec-card" data-exec-item="situation.state_of_the_art">
-            <strong>
-              {field(`situation.state_of_the_art[${i}].approach`, a.approach)}
-              <Cite id={a.source} />
-            </strong>
-            <div>
-              <Label>{t(UI.achieves, lang)}</Label> {field(`situation.state_of_the_art[${i}].achieves`, a.achieves)}
-            </div>
-            <div>
-              <Label>{t(UI.fallsShort, lang)}</Label> {field(`situation.state_of_the_art[${i}].falls_short`, a.falls_short)}
-            </div>
-          </li>
-        ))}
-      </ul>
+      <CardDeck
+        flip
+        ariaLabel={t(UI.sota, lang)}
+        className="caos-exec-cards"
+        cards={d.situation.state_of_the_art.map((a, i) => ({
+          id: i,
+          title: field(`situation.state_of_the_art[${i}].approach`, a.approach),
+          label: t(a.approach, lang),
+          attrs: { 'data-exec-item': 'situation.state_of_the_art' },
+          body: (
+            <>
+              <div>
+                <Label>{t(UI.achieves, lang)}</Label> {field(`situation.state_of_the_art[${i}].achieves`, a.achieves)}
+              </div>
+              <div>
+                <Label>{t(UI.fallsShort, lang)}</Label> {field(`situation.state_of_the_art[${i}].falls_short`, a.falls_short)}
+              </div>
+              <div>
+                <Label>{t(UI.source, lang)}</Label> <Cite id={a.source} />
+              </div>
+            </>
+          ),
+        }))}
+      />
       <p className="caos-exec-status" data-exec-item="situation.status">
         <Label>{field('situation.status.heading', d.situation.status.heading)}</Label>{' '}
         <strong className="caos-exec-value" data-exec-field="situation.status.value">
@@ -398,19 +466,29 @@ export function ExecutiveViewBody({ data, base = '/', lang: forced, open = 1, on
       <Paragraphs list={d.proposal.paragraphs} path="proposal.paragraphs" />
       {art('proposal')}
       <h3 className="caos-exec-sub">{t(UI.fourCs, lang)}</h3>
-      <ul className="caos-exec-cs">
-        {d.proposal.four_cs.map((r, i) => (
-          <li key={i} className="caos-exec-card" data-exec-c={i} data-exec-item="proposal.four_cs">
-            <strong data-exec-field={`proposal.four_cs[${i}].c`} data-exec-cname="">
+      <CardDeck
+        flip
+        ariaLabel={t(UI.fourCs, lang)}
+        className="caos-exec-cs"
+        cards={d.proposal.four_cs.map((r, i) => ({
+          id: i,
+          title: (
+            <span data-exec-field={`proposal.four_cs[${i}].c`} data-exec-cname="">
               {t(FOUR_CS[i].name, lang)}
-            </strong>
-            <small className="caos-exec-cdef" data-exec-cdef="">
-              {t(FOUR_CS[i].definition, lang)}
-            </small>
-            <span>{field(`proposal.four_cs[${i}].applies`, r.applies)}</span>
-          </li>
-        ))}
-      </ul>
+            </span>
+          ),
+          label: t(FOUR_CS[i].name, lang),
+          attrs: { 'data-exec-c': i, 'data-exec-item': 'proposal.four_cs' },
+          body: (
+            <>
+              <small className="caos-exec-cdef" data-exec-cdef="">
+                {t(FOUR_CS[i].definition, lang)}
+              </small>
+              <span>{field(`proposal.four_cs[${i}].applies`, r.applies)}</span>
+            </>
+          ),
+        }))}
+      />
       <h3 className="caos-exec-sub">{t(UI.actions, lang)}</h3>
       <ol className="caos-exec-actions">
         {d.proposal.actions.map((a, i) => (

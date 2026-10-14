@@ -87,6 +87,14 @@ const config: ShellConfig = {
   `fitLabel`, `niceTicks`) and declares `data-chart` ([docs/05](docs/05_drawings.md)).
 - **Views in the URL:** `CaseWorkbench` and `SurfacePage` hold the open view in `?view=` (and the case selector the
   case in `?case=`), so a view can be shared and survives a reload.
+- **Focus mode for the App (0.14.0):** `<CaseWorkbench focus />` adds a Focus button to the rail head that opens the
+  selected case's open group in the full viewport (`FocusShell`: the stage is the view, the rail stays), keeps `?focus=1`
+  beside `?case=` and `?view=`, and returns with Escape or the exit button to the same case, group and sub-view; a product with
+  a simulation must offer it (ADR-0070, `caos-shell-gate --require-focus`). See [docs/04](docs/04_views.md).
+- **Small cards and animation (0.14.0):** `FlipCard` and `CardDeck` for SMALL cards the reader scans by title (a flip card
+  shows its title and turns to its content; a deck is a row up to four cards and a carousel above), used by the executive
+  view for its bearers, roles, approaches and 4 C's; an executive illustration may be an animated SVG with a
+  `prefers-reduced-motion` block ([docs/04](docs/04_views.md), [docs/06](docs/06_executive-view.md)).
 - **Icons:** lucide icons are sized by where they sit (`svg.lucide`); pass no `size` ([docs/06](docs/06_icons-and-numbers.md)).
 - **Numbers:** `formatNumber(value, lang, opts)` or `useFormat()`; never `toFixed` in a view. A magnitude below 1e-4
   is written in scientific notation (a p-value of 1e-200 is `1E-200`, not two hundred zeros); give `digits`, not
@@ -130,7 +138,7 @@ const config: ShellConfig = {
 `ChipGroup`, `Stage`, `useStageSize`, `makeStateKey`, `isStale`, `useWorkbenchState`,
 `WorkbenchStateContext`, `pick`; since 0.8.0 `SurfacePage`, `useUrlView`, `viewParamOf`, `replaceQueryParam`,
 `BREAKPOINTS`, `BarChart`, `textWidth`, `widestLabel`, `fitLabel`, `niceTicks`, `niceStep`, `fontFamily`,
-`formatTicks`, `NBSP`, `SCIENTIFIC_BELOW`, the type `ShellColorToken`; since 0.9.0 `ViewsRow`. Separate entries:
+`formatTicks`, `NBSP`, `SCIENTIFIC_BELOW`, the type `ShellColorToken`; since 0.9.0 `ViewsRow`. Since 0.14.0 `FlipCard`, `CardDeck` (with `FLIP_LIMITS`, `FLIP_TEXT`, `DECK_TEXT`, `perPageFor`, `deckWindow`, `deckPosition`), the `focus` prop of `CaseWorkbench` (`CaseFocusConfig`, `FOCUS_TEXT`, `FOCUS_PARAM`) and `removeQueryParam`. Separate entries:
 `/chart` (`UPlotChart` with `x.log`, `parity`, `onPick`; `drawMarks`, `tickSteps`, `repeatedLabels`, `seriesStyle`,
 `sortOrder`, `parityRange`), `/keys` (the storage keys, no React), `/styles.css`, `/chart.css`,
 `/reserved-classes.json`. Bin: `caos-shell-gate`.
