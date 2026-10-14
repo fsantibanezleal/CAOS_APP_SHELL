@@ -32,8 +32,8 @@ routes, version, build, licence, visibility, architecture and footer provenance 
 | Surface | `SurfacePage` | an App that is not one case's: a hub, an explorer, a console | a head (title, lede, actions), one row of at most six views, the open view filling the rest and scrolling inside |
 | Document | `DocPage` and `DocSection` | Introduction, Methodology, Implementation, Experiments, Benchmark | the full width of the page (`--maxw-wide`), the Introduction included (0.13.1; the centred 1200 px column is gone); text blocks take the full column, captions keep a `--measure-text` (78ch) line, and the references close the page or open tab |
 
-Two special frames sit beside these: `FocusShell` (a full-viewport scenario, ADR-0070) and `WorkbenchShell` (an
-authenticated console with a sidebar and a phone bottom bar).
+Two special frames sit beside these: `FocusShell` (a full-viewport scenario, ADR-0070; the App reaches it through `CaseWorkbench`'s
+`focus`, 0.14.0, `docs/04_views.md`) and `WorkbenchShell` (an authenticated console with a sidebar and a phone bottom bar).
 
 The six standard routes are `STANDARD_ROUTES`, always in this order: the App (`/app`, the leftmost tab), the Introduction (`/introduction`, where the product lands), Methodology, Implementation, Experiments and Benchmark. The
 header, the router and the gate read the same list.

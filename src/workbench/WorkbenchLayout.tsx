@@ -28,14 +28,11 @@ function isSections(rail: ReactNode | RailSection[]): rail is RailSection[] {
 }
 
 /**
- * The App route of a CAOS product: a sized control rail beside the instrument, on the full viewport.
- *
- * Renders `.page-body.wide.caos-wb`: no reading-width cap (a workbench is not prose, ADR-0071 rule 2),
- * `min-width: 0` down the tree so no row pushes the page wider than the screen (rule 3), a rail with an
- * explicit width that never scrolls (rule 6), and an instrument marked `data-instrument` so the measured gate
- * can check that it covers at least half of the viewport (rule 8). Pair with `ShellConfig.contain`.
+ * The inside of the control rail: the pickers above the rail (`railHead`), then the rail as one node or as sections shown
+ * one at a time. `WorkbenchLayout` puts it in its `aside`, and Focus mode (`CaseWorkbench` with `focus`) puts the same
+ * rail in the focus frame, so the controls are the ones the reader had.
  */
-export function WorkbenchLayout({ rail, railHead, children, railLabel, className }: WorkbenchLayoutProps) {
+export function RailBody({ rail, railHead, railLabel }: Pick<WorkbenchLayoutProps, 'rail' | 'railHead' | 'railLabel'>) {
   const lang = useShellLang();
   const sections = isSections(rail) ? rail : null;
   const [active, setActive] = useState(sections?.[0]?.id ?? '');
@@ -59,43 +56,61 @@ export function WorkbenchLayout({ rail, railHead, children, railLabel, className
   }
 
   return (
+    <>
+      {railHead && <div className="caos-wb-rail-head">{railHead}</div>}
+      {sections ? (
+        <>
+          <div className="caos-wb-rail-sections" role="tablist" aria-label={label} ref={rowRef}>
+            {sections.map((s, idx) => (
+              <button
+                key={s.id}
+                type="button"
+                role="tab"
+                id={`${baseId}-rs-${s.id}`}
+                aria-selected={s.id === current?.id}
+                aria-controls={`${baseId}-rp-${s.id}`}
+                tabIndex={s.id === current?.id ? 0 : -1}
+                className={s.id === current?.id ? 'chip on' : 'chip'}
+                onClick={() => setActive(s.id)}
+                onKeyDown={(e) => onKeyDown(e, idx)}
+              >
+                {pick(s.label, lang)}
+              </button>
+            ))}
+          </div>
+          {current && (
+            <div
+              className="caos-wb-rail-panel"
+              role="tabpanel"
+              id={`${baseId}-rp-${current.id}`}
+              aria-labelledby={`${baseId}-rs-${current.id}`}
+            >
+              {current.content}
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="caos-wb-rail-panel">{rail as ReactNode}</div>
+      )}
+    </>
+  );
+}
+
+/**
+ * The App route of a CAOS product: a sized control rail beside the instrument, on the full viewport.
+ *
+ * Renders `.page-body.wide.caos-wb`: no reading-width cap (a workbench is not prose, ADR-0071 rule 2),
+ * `min-width: 0` down the tree so no row pushes the page wider than the screen (rule 3), a rail with an
+ * explicit width that never scrolls (rule 6), and an instrument marked `data-instrument` so the measured gate
+ * can check that it covers at least half of the viewport (rule 8). Pair with `ShellConfig.contain`.
+ */
+export function WorkbenchLayout({ rail, railHead, children, railLabel, className }: WorkbenchLayoutProps) {
+  const lang = useShellLang();
+  const label = pick(railLabel ?? { en: 'Controls', es: 'Controles' }, lang);
+  return (
     <div className={['page-body', 'wide', 'caos-wb', className].filter(Boolean).join(' ')} data-workbench="">
       <aside className="caos-wb-rail" aria-label={label} data-rail="">
-        {railHead && <div className="caos-wb-rail-head">{railHead}</div>}
-        {sections ? (
-          <>
-            <div className="caos-wb-rail-sections" role="tablist" aria-label={label} ref={rowRef}>
-              {sections.map((s, idx) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  role="tab"
-                  id={`${baseId}-rs-${s.id}`}
-                  aria-selected={s.id === current?.id}
-                  aria-controls={`${baseId}-rp-${s.id}`}
-                  tabIndex={s.id === current?.id ? 0 : -1}
-                  className={s.id === current?.id ? 'chip on' : 'chip'}
-                  onClick={() => setActive(s.id)}
-                  onKeyDown={(e) => onKeyDown(e, idx)}
-                >
-                  {pick(s.label, lang)}
-                </button>
-              ))}
-            </div>
-            {current && (
-              <div
-                className="caos-wb-rail-panel"
-                role="tabpanel"
-                id={`${baseId}-rp-${current.id}`}
-                aria-labelledby={`${baseId}-rs-${current.id}`}
-              >
-                {current.content}
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="caos-wb-rail-panel">{rail as ReactNode}</div>
-        )}
+        <RailBody rail={rail} railHead={railHead} railLabel={railLabel} />
       </aside>
       <section className="caos-wb-main" data-instrument="">
         {children}

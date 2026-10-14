@@ -43,6 +43,100 @@ const STAGE_FLOOR_NOTE = {
   es: Array.from({ length: 20 }, (_, i) => `Línea ${i + 1} de una nota larga que piden los requisitos.`).join('\n'),
 };
 
+/**
+ * Plants of shell 0.14.0 that damage the rendered page: `mutate` is idempotent and runs now and after every change of the
+ * document (a sub-tab switch, a language switch), so the defect is there whenever the gate looks.
+ */
+function plantDom(mutate: () => void): () => void {
+  mutate();
+  const observer = new MutationObserver(() => {
+    observer.disconnect();
+    mutate();
+    observer.observe(document.body, { subtree: true, childList: true, attributes: true });
+  });
+  observer.observe(document.body, { subtree: true, childList: true, attributes: true });
+  return () => observer.disconnect();
+}
+const WORDS = 'one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty';
+function flipPlant(plant: string): (() => void) | undefined {
+  if (plant === 'flip-back-long') {
+    // a back far over the limit of forty words
+    return plantDom(() => {
+      for (const c of document.querySelectorAll('[data-flip-content]')) {
+        if (!c.querySelector('[data-plant]')) {
+          const x = document.createElement('p');
+          x.setAttribute('data-plant', '');
+          x.textContent = `${WORDS} ${WORDS} ${WORDS}`;
+          c.append(x);
+        }
+      }
+    });
+  }
+  if (plant === 'flip-title-long') {
+    return plantDom(() => {
+      for (const t of document.querySelectorAll('[data-flip-title]')) {
+        if (!t.querySelector('[data-plant]')) {
+          const x = document.createElement('span');
+          x.setAttribute('data-plant', '');
+          x.textContent = ` ${WORDS}`;
+          t.append(x);
+        }
+      }
+    });
+  }
+  if (plant === 'flip-no-keyboard') {
+    // the face is a div that looks like the button and takes no focus and no key
+    return plantDom(() => {
+      for (const b of document.querySelectorAll('button[data-flip-toggle="front"]')) {
+        const d = document.createElement('div');
+        d.className = b.className;
+        d.setAttribute('data-flip-toggle', 'front');
+        d.setAttribute('aria-expanded', 'false');
+        d.innerHTML = b.innerHTML;
+        d.addEventListener('click', () => undefined);
+        b.replaceWith(d);
+      }
+    });
+  }
+  if (plant === 'flip-hidden-face') {
+    // the closed back stays in sight, in the tab order and in the accessibility tree
+    const style = document.createElement('style');
+    style.textContent = '[data-flip-back], [data-flip-front], .caos-flip-back { visibility: visible !important; }';
+    document.head.append(style);
+    const stop = plantDom(() => {
+      for (const b of document.querySelectorAll('[data-flip-back]')) {
+        b.removeAttribute('aria-hidden');
+        b.removeAttribute('inert');
+      }
+    });
+    return () => {
+      stop();
+      style.remove();
+    };
+  }
+  if (plant === 'carousel-sideways') {
+    // the cards stay side by side at a width of their own: the carousel pushes past its box and the page
+    const style = document.createElement('style');
+    style.textContent =
+      '[data-card-deck] > [data-deck-track] { display: flex !important; width: max-content !important; }' +
+      '[data-card-deck] [data-deck-card], [data-card-deck] [data-deck-card][hidden] { display: flex !important; flex: none; width: 420px; }';
+    document.head.append(style);
+    return () => style.remove();
+  }
+  if (plant === 'carousel-stuck') {
+    // the next button does nothing
+    return plantDom(() => {
+      for (const b of document.querySelectorAll('[data-deck-next]')) {
+        if (!b.hasAttribute('data-plant')) {
+          b.setAttribute('data-plant', '');
+          b.addEventListener('click', (e) => e.stopPropagation(), true);
+        }
+      }
+    });
+  }
+  return undefined;
+}
+
 // ---------------------------------------------------------------------------------------------- the model (SIR)
 interface Sim {
   t: number[];
@@ -462,6 +556,27 @@ function Workbench() {
     if (PLANT === 'case-only' && caseId === 'c-high') console.error('planted: the high-contact case fails');
   }, [caseId]);
   useEffect(() => {
+    if (PLANT === 'focus-page-scroll') {
+      // Focus mode lets the document scroll behind the stage
+      const t = setInterval(() => {
+        const on = /[?&]focus=1/.test(window.location.search);
+        const want = on ? '300vh' : '';
+        if (document.body.style.minHeight !== want) document.body.style.minHeight = want;
+      }, 50);
+      return () => {
+        clearInterval(t);
+        document.body.style.minHeight = '';
+      };
+    }
+    if (PLANT === 'focus-no-exit') {
+      const style = document.createElement('style');
+      style.textContent = '[data-focus-exit] { display: none !important; }';
+      document.head.append(style);
+      return () => style.remove();
+    }
+    return undefined;
+  }, []);
+  useEffect(() => {
     if (PLANT !== 'raf-loop') return;
     let id = 0;
     const loop = () => {
@@ -539,6 +654,21 @@ function Workbench() {
           { id: 'pending', label: { en: 'Pending', es: 'Pendiente' }, content: <PendingView /> },
         ]}
         compare={{ content: <CompareView peaks={peaks} /> }}
+        focus={
+          PLANT === 'focus-missing'
+            ? undefined
+            : {
+                // the plant that loses the case: opening Focus puts the first case back
+                onChange: (on) => {
+                  if (PLANT === 'focus-loses-case' && on) {
+                    setCaseId(CASES[0].id);
+                    const q = new URLSearchParams(window.location.search);
+                    q.set('case', CASES[0].id);
+                    window.history.replaceState(window.history.state, '', `${window.location.pathname}?${q.toString()}`);
+                  }
+                },
+              }
+        }
         context={{
           content: (
             <>
@@ -587,6 +717,7 @@ function Doc({ id }: { id: string }) {
     }
     return undefined;
   }, [id, lang]);
+  useEffect(() => (id === 'introduction' ? flipPlant(PLANT) : undefined), [id]);
   useEffect(() => {
     if (PLANT === 'console' && id === 'methodology') console.error('planted: the methodology page fails');
     if (id !== 'benchmark') return;

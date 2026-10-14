@@ -1,3 +1,46 @@
+## [Unreleased] - 0.14.0
+
+Flip cards, the card carousel, animated illustrations and Focus mode for the App (CAOS_MANAGE `plans/app-shell/0-14-0-plan.md`,
+backlog BL-060 to BL-063). Additive: a product that changes nothing renders as before, except that the executive view's four
+card groups now flip. The gate gains G16, G17 and G18.
+
+### Added
+
+- `FlipCard` (exported): a small card whose face shows its title and whose back shows its content after a click, Enter or Space,
+  and back again. A real button carries `aria-expanded` and `aria-controls` on each face; keyboard focus moves to the face that
+  shows; the hidden face is out of the accessibility tree and the tab order (`aria-hidden` and `inert`) while its content stays in
+  the markup; Escape closes; `prefers-reduced-motion: reduce` swaps the faces without the turn; theme tokens only; the face says it
+  turns (an icon and a hidden "Show details" / "Mostrar detalles"). The rule of use: SMALL cards only (a title of at most 8 words
+  in English and 10 in Spanish, a back of at most 40 and 50), where the reader scans the titles and opens the ones that matter.
+- `CardDeck` (exported): a list of cards plain, as flip cards (`flip`), as a row up to `carouselAbove` cards (default 4) and as a
+  carousel above it: as many cards as fit (at least one), previous and next buttons, swipe on touch, arrow keys, Home and End, a
+  position ("2 of 5" / "2 de 5"), no autoplay, every card reachable by keyboard, never a sideways scroll of the page or its panel;
+  reduced motion removes the slide. With `FLIP_LIMITS`, `FLIP_TEXT`, `DECK_TEXT`, `perPageFor`, `deckWindow` and `deckPosition`.
+- The executive view shows `pain.bearers`, `situation.roles`, `situation.state_of_the_art` and `proposal.four_cs` as flip cards
+  (a row of four or fewer, a carousel of five); `context.forces`, `trends.items` and `proposal.actions` stay plain. The data
+  contract (`executive.schema.json` 2.0.0) is unchanged.
+- Animated illustrations: an executive illustration (or any figure) may be an SVG with CSS keyframes or SMIL inside the file, a
+  gentle loop or a single play of at most ten seconds, theme tokens, labels that stay put, and a `@media (prefers-reduced-motion:
+  reduce)` block that shows the static final frame. The shell pauses a SMIL animation at its last frame under reduced motion, and
+  `cleanSvg` removes an animation that writes a link or an event handler. `analyseSvgAnimation` and `animationFailures` (in
+  `gate/areas.mjs`) are the analysis the template's guard script reuses.
+- Focus mode for the App: `CaseWorkbench` takes `focus` (`true` or `CaseFocusConfig`). A Focus button in the rail head opens the
+  selected case's open group in the full viewport through `FocusShell` (the stage is the view, the rail stays), holds `?focus=1`
+  beside `?case=` and `?view=`, and returns with Escape or the exit button to the same case, group and sub-view (the open sub-tab of
+  each tab row is kept across the frame change). `removeQueryParam`, `FOCUS_TEXT` and `FOCUS_PARAM` are exported; `FocusShell`
+  marks `data-focus-shell`, `data-rail` and `data-focus-exit`. The plan named `WorkbenchShell`; the case, group and view live in
+  `CaseWorkbench`, so the control is there, and `WorkbenchShell` is unchanged. `WorkbenchLayout` exports its rail body as `RailBody`.
+- The gate: G16 (flip cards and card decks: the size limits, real buttons, Enter and Space, focus, the hidden face out of the
+  accessibility tree, the carousel reaching every card without a sideways scroll), G17 (animated drawings: the reduced-motion block,
+  ten seconds at most, still under emulated reduced motion) and G18 (Focus mode, entered by clicking for every case and left by the
+  exit control and by Escape: the same case and group, no page scroll, the rail without scroll, one tab row); `--require-focus`
+  fails an App without a Focus control. 13 plants prove them. The executive-view checks read the back of a flip card and the cards
+  a carousel hides, so the floors, the 4 C's and the writing limits still apply to them.
+
+### Changed
+
+- The fixture product's executive view holds five bearers (a carousel) and an animated `pain` illustration.
+
 ## [0.13.001] - 2026-10-13
 
 ### Fixed
