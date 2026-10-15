@@ -17,6 +17,10 @@
 - Gate G18 now fails both: a stage control under the Focus chrome (the stage label, the HUD or the Focus actions) and a Focus
   control inside the Focus frame (SHG-056). The self-test plants `focus-chrome-covers` and `focus-enter-inside` prove it, and the
   clean fixture now has a Focus title that wraps at 1280px, so every clean run walks the wrapping path.
+- The repository's CI base-integrity guard judged a tracked `.env` wrongly both ways: a real `.env` passed whenever a root
+  `.env.example` was tracked, and a tree whose only example file is nested failed. The step now reads `git ls-files` once and
+  tests it on here-strings (`git ls-files | grep -q` also fails at random under pipefail, as the products' CI found); any `.env`
+  other than an `.example` file fails. `test/ciGuards.test.ts` runs the step itself on planted trees (red on the old step).
 
 ## [0.14.002] - 2026-10-15
 
