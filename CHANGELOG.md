@@ -6,8 +6,8 @@
   one line. A value is a run of characters without breaking whitespace in one text node (U+00A0 and U+202F do not end it), 2 to 16
   characters long once the sentence's own punctuation is stripped from its ends, with a digit, at most 4 letters and no other
   character than digits, signs, separators, currency signs and `% ‰ × °`: `35%`, `0,96`, `US$1.2bn`, `2026-10-15`, `-3,2pp`,
-  `ADR-0071`. The probe `window.__caosGate.brokenValues()` reads each value's `Range` and counts the groups of its client rects by
-  top; a value on more than one line fails as `"35%" breaks across 3 lines (<element>)`, also when it is longer than its container,
+  `ADR-0071`. The probe `window.__caosGate.brokenValues()` cuts each value into segments right after a hyphen, a dash or a slash,
+  reads each segment's `Range` and counts the groups of its client rects by top; a segment on more than one line fails the value as `"35%" breaks across 3 lines (<element>)`, also when it is longer than its container,
   and runs in every route, size, theme and language, in the wide-font pass and in Focus mode. Why: shell 0.14.2 fixed a share that
   broke into "3", "5", "%" at 390px on every product's executive view, and none of G5 to G10 saw it, because the pieces are neither
   clipped nor outside their box. Not read: a value split across elements (`<b>35</b>%`), SVG text (G10), canvas text, `code`, `pre`,
