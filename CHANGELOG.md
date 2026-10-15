@@ -1,3 +1,26 @@
+## [0.15.000] - 2026-10-15
+
+### Added
+
+- Gate check G19, values whole (SHG-057, BL-066). In every measured state, a short value written in the page's text must sit on
+  one line. A value is a run of characters without breaking whitespace in one text node (U+00A0 and U+202F do not end it), 2 to 16
+  characters long once the sentence's own punctuation is stripped from its ends, with a digit, at most 4 letters and no other
+  character than digits, signs, separators, currency signs and `% ‰ × °`: `35%`, `0,96`, `US$1.2bn`, `2026-10-15`, `-3,2pp`,
+  `ADR-0071`. The probe `window.__caosGate.brokenValues()` reads each value's `Range` and counts the groups of its client rects by
+  top; a value on more than one line fails as `"35%" breaks across 3 lines (<element>)`, also when it is longer than its container,
+  and runs in every route, size, theme and language, in the wide-font pass and in Focus mode. Why: shell 0.14.2 fixed a share that
+  broke into "3", "5", "%" at 390px on every product's executive view, and none of G5 to G10 saw it, because the pieces are neither
+  clipped nor outside their box. Not read: a value split across elements (`<b>35</b>%`), SVG text (G10), canvas text, `code`, `pre`,
+  `kbd`, `samp`, KaTeX, `translate="no"` and `aria-hidden` content; `12 %` with a regular space is two runs and may wrap. The
+  self-test plant `value-broken` reproduces the pre-0.14.2 row (a shrinking flex value with `overflow-wrap: anywhere`) and the
+  clean fixture passes in every state.
+- Adopting 0.15.0: a product may meet new G19 failures it did not have under 0.14.x. Each names the value and the element: a number,
+  percentage, amount or unit that a narrow container, a flex row that lets the value shrink, or `overflow-wrap: anywhere` on a
+  parent cuts into pieces. Give the value `white-space: nowrap` (and `flex: none` in a flex row), or write it with U+00A0 between
+  the number and its unit where the unit may wrap away, and with U+2011 (the non-breaking hyphen) inside a page range, a date or an
+  identifier. The gate's own fixture does the last for its citation's pages (`599‑653` broke at the hyphen at 390px in Spanish
+  in the wide-font pass). No shell component or stylesheet changed in this release.
+
 ## [0.14.003] - 2026-10-15
 
 ### Fixed
