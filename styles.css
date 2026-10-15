@@ -754,6 +754,8 @@ svg.lucide { flex: none; }
 .caos-exec-badge { align-self: flex-start; padding: 0.1rem 0.5rem; font-size: var(--text-xs); border: 1px solid var(--color-border); border-radius: 999px; color: var(--color-fg-subtle); }
 .caos-exec-cause { min-width: 0; overflow-wrap: anywhere; }
 .caos-exec-cause-head { display: flex; justify-content: space-between; gap: 1rem; }
+/* the cause's share stays whole: the row lets its label wrap anywhere, and the squeezed value broke into "3", "5", "%" at 390px */
+.caos-exec-cause-head > .caos-exec-value { flex: none; white-space: nowrap; overflow-wrap: normal; }
 .caos-exec-bar { height: 0.45rem; margin-top: 0.3rem; background: var(--color-surface-2); border-radius: 999px; overflow: hidden; }
 .caos-exec-bar > span { display: block; height: 100%; background: var(--color-accent); }
 .caos-exec-cdef { font-size: var(--text-xs); line-height: 1.4; color: var(--color-fg-faint); }
