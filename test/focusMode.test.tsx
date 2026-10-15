@@ -47,3 +47,36 @@ test('the App renders in the App frame while focus is off (the stage is the tab 
   assert.match(html, /data-focus-enter=""/);
   assert.doesNotMatch(html, /data-focus-shell/);
 });
+
+test('the Focus control shares the case select row, so the rail head is no taller with it (shell 0.14.1)', () => {
+  // on a row of its own it added 37px to the rail head, and rails with little slack scrolled (ADR-0071 rule 6)
+  const html = bench(true);
+  const row = html.indexOf('class="cs-select-row"');
+  assert.ok(row > 0, 'the select sits in a row with the control');
+  const select = html.indexOf('<select', row);
+  const enter = html.indexOf('data-focus-enter', row);
+  const rowEnd = html.indexOf('</div>', enter);
+  assert.ok(select > row && enter > select && rowEnd > enter, 'the select first, then the control, inside that one row');
+  assert.equal((html.match(/data-focus-enter=""/g) ?? []).length, 1, 'one control, not a second one in the rail head');
+});
+
+test('with case chips, or with no case picker, the Focus control keeps a row of its own in the rail head', () => {
+  const chips = renderToStaticMarkup(
+    <CaseWorkbench
+      caseId="c1"
+      cases={{ cases: [{ id: 'c1', name: 'First' }], selectedId: 'c1', onSelect: () => undefined, layout: 'chips' }}
+      groups={[{ id: 'model', label: { en: 'Model', es: 'Modelo' }, content: <p>MODEL</p> }]}
+      context={{ content: <p>CONTEXT</p> }}
+      focus
+    />,
+  );
+  assert.doesNotMatch(chips, /cs-select-row/);
+  assert.equal((chips.match(/data-focus-enter=""/g) ?? []).length, 1);
+  assert.ok(chips.indexOf('data-focus-enter') > chips.lastIndexOf('cs-chips'), 'after the chips');
+  const none = renderToStaticMarkup(
+    <CaseWorkbench caseId="c1" groups={[{ id: 'model', label: { en: 'Model', es: 'Modelo' }, content: <p>MODEL</p> }]}
+      context={{ content: <p>CONTEXT</p> }} focus />,
+  );
+  assert.equal((none.match(/data-focus-enter=""/g) ?? []).length, 1);
+  assert.doesNotMatch(none, /cs-select-row/);
+});

@@ -174,13 +174,6 @@ export function CaseWorkbench(props: CaseWorkbenchProps) {
   }
   // The open group: the product's when controlled, else the one the URL names (`?view=`), else the first.
   const [openGroup, selectGroup] = useUrlView(tabs.map((t) => t.id), viewParamOf(deepLinkView), group, onGroupChange);
-  const pickers =
-    cases || variants ? (
-      <>
-        {cases && <CaseSelector lang={lang} {...cases} />}
-        {variants && <VariantBar {...variants} />}
-      </>
-    ) : null;
   const enter = focusCfg && (
     <button
       ref={enterRef}
@@ -195,11 +188,21 @@ export function CaseWorkbench(props: CaseWorkbenchProps) {
       <span>{FOCUS_TEXT.enter[lang]}</span>
     </button>
   );
+  // the Focus button sits on the case select's row when there is one (shell 0.14.1: on a row of its own it added 37px to the rail
+  // head, and a rail with little slack, as two of Contraste's, scrolled: ADR-0071 rule 6); otherwise on its own row as before
+  const besideSelect = Boolean(cases && (cases.layout ?? 'chips') === 'select');
+  const pickers =
+    cases || variants ? (
+      <>
+        {cases && <CaseSelector lang={lang} {...cases} accessory={besideSelect ? enter : cases.accessory} />}
+        {variants && <VariantBar {...variants} />}
+      </>
+    ) : null;
   const railHead =
     pickers || enter ? (
       <>
         {pickers}
-        {enter}
+        {besideSelect ? null : enter}
       </>
     ) : null;
   const instrumentData = {
