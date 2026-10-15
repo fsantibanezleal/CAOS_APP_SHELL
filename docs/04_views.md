@@ -27,7 +27,8 @@ ready; the gate waits for that, never for the network.
 ### Focus mode for the App (`focus`, 0.14.0, ADR-0070)
 
 `CaseWorkbench` takes a `focus` prop (`true`, or a `CaseFocusConfig`). With it, the rail head shows a **Focus** button ("Focus" /
-"Enfocar") under the case picker; pressing it opens the selected case's **open group** in the full viewport through `FocusShell`:
+"Enfocar") on the case select's row (the select shrinks to make room, so the rail head is no taller; with case chips or no case
+picker the button keeps a row of its own); pressing it opens the selected case's **open group** in the full viewport through `FocusShell`:
 the stage is that group (its views, sub-tabs and cards, the group row is gone), the rail stays on the right with the same controls
 acting on the same state, and the stage is labelled in place (the case name and the group name, or the `title` and `description` the
 product gives; `hud` lays up to four readouts over the stage). Nothing is rebuilt from scratch: the case, the group, the variant and

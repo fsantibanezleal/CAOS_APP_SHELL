@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useEffect, useId, useRef } from 'react';
 import type { Lang } from '../lib/lang';
 import {
@@ -85,6 +86,9 @@ export interface CaseSelectorProps {
    * category structure is preserved either way; only the height changes.
    */
   layout?: 'chips' | 'select';
+  /** A control that sits on the select's row, after it (the workbench's Focus button, shell 0.14.1): the select shrinks to make
+   * room, so the selector is no taller with it. With `layout: 'chips'` it gets a row of its own, after the chips. */
+  accessory?: ReactNode;
 }
 
 /**
@@ -147,6 +151,26 @@ export function CaseSelector(props: CaseSelectorProps) {
   const groups = groupByCategory(visible);
   const modified = cases.find((c) => c.id === modifiedFromId) ?? null;
 
+  const select = (
+    <select
+      data-control="case"
+      className="select cs-select"
+      aria-label={ariaLabel ?? 'Case selector'}
+      value={selectedId}
+      onChange={(e) => onSelect(e.target.value)}
+    >
+      {groups.map((g) => (
+        <optgroup key={g.category || '_'} label={g.category || ' '}>
+          {g.cases.map((c) => (
+            <option key={c.id} value={c.id} disabled={c.disabled} title={caseTooltip(c) || undefined}>
+              {c.name}
+            </option>
+          ))}
+        </optgroup>
+      ))}
+    </select>
+  );
+
   return (
     <div className={`cs${className ? ` ${className}` : ''}`} role="group" aria-label={ariaLabel ?? 'Case selector'}>
       {source && lanes.length > 1 && (
@@ -173,25 +197,7 @@ export function CaseSelector(props: CaseSelectorProps) {
         <p className="cs-locked banner">{lockedNote ?? t.lockedNote}</p>
       )}
 
-      {layout === 'select' && (
-        <select
-          data-control="case"
-          className="select cs-select"
-          aria-label={ariaLabel ?? 'Case selector'}
-          value={selectedId}
-          onChange={(e) => onSelect(e.target.value)}
-        >
-          {groups.map((g) => (
-            <optgroup key={g.category || '_'} label={g.category || ' '}>
-              {g.cases.map((c) => (
-                <option key={c.id} value={c.id} disabled={c.disabled} title={caseTooltip(c) || undefined}>
-                  {c.name}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
-      )}
+      {layout === 'select' && (props.accessory ? <div className="cs-select-row">{select}{props.accessory}</div> : select)}
 
       {layout === 'chips' && groups.map((g) => (
         <div key={g.category || '_'} className="cs-group" role="group" aria-label={g.category || undefined} data-control="case">
@@ -222,6 +228,7 @@ export function CaseSelector(props: CaseSelectorProps) {
           </div>
         </div>
       ))}
+      {layout === 'chips' && props.accessory}
 
       {modified && (
         <div className="cs-modified">
