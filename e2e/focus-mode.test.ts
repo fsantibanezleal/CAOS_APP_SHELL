@@ -14,6 +14,11 @@ before(async () => {
     import { CaseWorkbench, SubTabs, Knob, useLangStore, useThemeStore } from './src/index';
     window.__setLang = (l) => useLangStore.getState().setLang(l);
     const CASES = [{ id: 'c-low', name: 'Low' }, { id: 'c-mid', name: 'Mid' }, { id: 'c-high', name: 'High' }];
+    // a title that wraps to two or three lines in the stage label (Contraste C10 at 1280px, shell 0.14.3)
+    const LONG_TITLE = {
+      en: 'Portfolio credit capital: ASRF, Vasicek fit, copula MC with a long tail and a second line of context',
+      es: 'Capital de credito de cartera: ASRF, ajuste Vasicek, copula MC con cola larga y una segunda linea de contexto',
+    };
     function App() {
       const [caseId, setCaseId] = useState(new URLSearchParams(location.search).get('case') ?? 'c-low');
       const [scale, setScale] = useState(1);
@@ -26,7 +31,11 @@ before(async () => {
             caseId={caseId}
             cases={{ cases: CASES, selectedId: caseId, onSelect: setCaseId, layout: 'select', deepLink: true }}
             controls={{ scale }}
-            focus={{ onChange: (on) => { window.__focusEvents = [...(window.__focusEvents ?? []), on]; } }}
+            focus={{
+              title: new URLSearchParams(location.search).get('short') ? undefined : LONG_TITLE,
+              hud: new URLSearchParams(location.search).get('hud') ? [{ label: { en: 'Alpha', es: 'Alfa' }, value: '1' }, { label: { en: 'Beta', es: 'Beta' }, value: '2' }] : undefined,
+              onChange: (on) => { window.__focusEvents = [...(window.__focusEvents ?? []), on]; },
+            }}
             rail={<Knob id="scale" label={{ en: 'Scale', es: 'Escala' }} value={scale} min={0.5} max={2} step={0.1} onChange={setScale} />}
             groups={[
               { id: 'model', label: { en: 'Model', es: 'Modelo' }, content: <p data-probe="model">MODEL {caseId} {scale}</p> },
@@ -159,4 +168,101 @@ test('Focus mode makes the page behind it inert, keeps the keyboard in its frame
   assert.equal(await page.evaluate(() => document.querySelectorAll('[inert]').length), 0, 'nothing stays inert after the return');
   assert.equal(await page.evaluate(() => { document.getElementById('bg-head')!.focus(); return document.activeElement!.id; }), 'bg-head', 'the page is reachable again');
   await page.close();
+});
+
+const CLEAR_JS = () => {
+  const stage = document.querySelector('.caos-focus-stage') as HTMLElement;
+  const label = document.querySelector('.caos-focus-label') as HTMLElement;
+  const lb = label.getBoundingClientRect();
+  const controls = [...stage.querySelectorAll('.caos-focus-instrument [role="tab"], .caos-focus-instrument button')].filter((e) => {
+    const r = e.getBoundingClientRect();
+    return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden';
+  });
+  const hits = controls.filter((e) => {
+    const r = e.getBoundingClientRect();
+    return r.left < lb.right - 1 && r.right > lb.left + 1 && r.top < lb.bottom - 1 && r.bottom > lb.top + 1;
+  }).map((e) => e.textContent);
+  const lowest = Math.min(...controls.map((e) => e.getBoundingClientRect().top));
+  const exit = document.querySelector('[data-focus-exit]') as HTMLElement;
+  const er = exit.getBoundingClientRect();
+  return {
+    n: controls.length, hits, labelBottom: lb.bottom, firstControlTop: lowest,
+    labelHeight: lb.height,
+    exitIn: er.right <= innerWidth && er.bottom <= innerHeight && er.width > 0,
+    h: document.documentElement.scrollHeight <= innerHeight + 1,
+    clearTop: stage.style.getPropertyValue('--caos-focus-clear-top'),
+  };
+};
+
+test('a wrapping Focus title never covers the stage controls, at phone, tablet and desktop, in both languages', async () => {
+  for (const width of [390, 768, 1280]) {
+    for (const lang of ['en', 'es']) {
+      const page = await h.browser.newPage({ viewport: { width, height: width < 800 ? 844 : 800 } });
+      await page.addInitScript(`try { localStorage.setItem('caos.lang', '${lang}'); } catch (e) {}`);
+      await page.goto(`${h.address}/?view=validation&focus=1`);
+      await page.waitForSelector('[data-focus-shell] [role="tab"]');
+      const m = await page.evaluate(CLEAR_JS);
+      const where = `${width}px ${lang}`;
+      assert.ok(m.n >= 2, `${where}: the stage has controls (${m.n})`);
+      assert.ok(width === 768 || m.labelHeight > 70, `${where}: the title wraps (label ${m.labelHeight}px high)`);
+      assert.deepEqual(m.hits, [], `${where}: the label covers no control`);
+      assert.ok(m.labelBottom <= m.firstControlTop, `${where}: the label (${m.labelBottom}) ends above the first control (${m.firstControlTop})`);
+      assert.ok(m.exitIn, `${where}: the exit control is inside the viewport`);
+      assert.ok(m.h, `${where}: the page does not scroll`);
+      await page.close();
+    }
+  }
+});
+
+test('the clearance follows a language change and a resize inside Focus, and a one-line title keeps the old clearance', async () => {
+  const page = await h.browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await page.goto(`${h.address}/?view=validation&focus=1`);
+  await page.waitForSelector('[data-focus-shell] [role="tab"]');
+  const before = await page.evaluate(CLEAR_JS);
+  assert.deepEqual(before.hits, []);
+  await page.evaluate(() => (window as unknown as { __setLang: (l: string) => void }).__setLang('es'));
+  await page.waitForFunction(() => document.querySelector('.caos-focus-label strong')?.textContent?.startsWith('Capital'));
+  await page.waitForTimeout(150);
+  const es = await page.evaluate(CLEAR_JS);
+  assert.deepEqual(es.hits, [], 'after the switch to Spanish the label still covers nothing');
+  assert.ok(es.labelBottom <= es.firstControlTop, 'and the clearance followed the new text');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForTimeout(150);
+  const narrow = await page.evaluate(CLEAR_JS);
+  assert.deepEqual(narrow.hits, [], 'after a resize to a phone the label still covers nothing');
+  assert.ok(narrow.labelBottom <= narrow.firstControlTop);
+  await page.close();
+  const one = await h.browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await one.goto(`${h.address}/?view=validation&focus=1&short=1`);
+  await one.waitForSelector('[data-focus-shell] [role="tab"]');
+  const s = await one.evaluate(CLEAR_JS);
+  assert.deepEqual(s.hits, []);
+  assert.ok(s.firstControlTop <= 4.6 * 16 + 12, `a one-line title keeps the old clearance (first control at ${s.firstControlTop}px; was 73.6px)`);
+  await one.close();
+});
+
+test('the HUD follows the wrapped label on a desktop and the stage clears it at the bottom on a phone', async () => {
+  for (const width of [1280, 390]) {
+    const page = await h.browser.newPage({ viewport: { width, height: width < 800 ? 844 : 800 } });
+    await page.goto(`${h.address}/?view=validation&focus=1&hud=1`);
+    await page.waitForSelector('[data-focus-shell] [role="tab"]');
+    const m = await page.evaluate(`(() => {
+      const lb = document.querySelector('.caos-focus-label').getBoundingClientRect();
+      const tiles = [...document.querySelectorAll('.caos-focus-hud > div')].map((e) => e.getBoundingClientRect());
+      const controls = [...document.querySelectorAll('.caos-focus-instrument [role="tab"], .caos-focus-instrument button')].map((e) => e.getBoundingClientRect()).filter((b) => b.width > 0);
+      const hit = (a, b) => a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;
+      return {
+        labelBottom: lb.bottom,
+        hudTop: Math.min(...tiles.map((t) => t.top)),
+        tileOnLabel: tiles.some((t) => hit(t, lb)),
+        tileOnControl: tiles.some((t) => controls.some((c) => hit(t, c))),
+        clearBottom: document.querySelector('.caos-focus-stage').style.getPropertyValue('--caos-focus-clear-bottom'),
+      };
+    })()`) as { labelBottom: number; hudTop: number; tileOnLabel: boolean; tileOnControl: boolean; clearBottom: string };
+    assert.equal(m.tileOnLabel, false, `${width}px: no HUD tile on the label`);
+    assert.equal(m.tileOnControl, false, `${width}px: no HUD tile on a stage control`);
+    if (width > 900) assert.ok(m.hudTop >= m.labelBottom, `${width}px: the HUD starts below the label (${m.hudTop} vs ${m.labelBottom})`);
+    else assert.match(m.clearBottom, /^\d+px$/, `${width}px: the stage clears the bottom HUD`);
+    await page.close();
+  }
 });

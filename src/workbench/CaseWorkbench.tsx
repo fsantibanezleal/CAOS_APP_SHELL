@@ -198,6 +198,14 @@ export function CaseWorkbench(props: CaseWorkbenchProps) {
         {variants && <VariantBar {...variants} />}
       </>
     ) : null;
+  // inside Focus the same pickers, never the Focus control (it would open the mode the reader is already in; shell 0.14.3)
+  const focusPickers =
+    cases || variants ? (
+      <>
+        {cases && <CaseSelector lang={lang} {...cases} accessory={cases.accessory} />}
+        {variants && <VariantBar {...variants} />}
+      </>
+    ) : null;
   const railHead =
     pickers || enter ? (
       <>
@@ -243,7 +251,7 @@ export function CaseWorkbench(props: CaseWorkbenchProps) {
             }
             rail={
               <div className="caos-focus-rail-body">
-                <RailBody rail={rail ?? null} railHead={pickers} railLabel={railLabel} />
+                <RailBody rail={rail ?? null} railHead={focusPickers} railLabel={railLabel} />
               </div>
             }
           />
