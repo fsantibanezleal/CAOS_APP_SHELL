@@ -21,6 +21,12 @@
   line break and passes (the fixture's citation pages `599-653` break at the hyphen at 390px in Spanish and pass); only a break inside
   a segment between those places fails. No shell component or stylesheet changed in this release.
 
+### Fixed
+
+- `e2e/animated-illustration.test.ts` waits (at most 3 s) for the paused final frame of the SMIL illustration before it measures
+  the bar: the shell pauses SMIL at its last frame in an effect and the frame is sampled later, and a slow CI runner read the bar
+  at its first frame (80px of 640px). Test only; the component is unchanged.
+
 ## [0.14.003] - 2026-10-15
 
 ### Fixed
