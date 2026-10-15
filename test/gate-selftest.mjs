@@ -203,6 +203,8 @@ const PLANTS = [
   { id: 'focus-loses-case', check: 'G18', re: /Focus mode of case c-\w+ shows case c-low/, opts: { routes: '/app' } },
   { id: 'focus-page-scroll', check: 'G18', re: /Focus mode of case c-\w+: the page scrolls/, opts: { routes: '/app' } },
   { id: 'focus-no-exit', check: 'G18', re: /Focus mode of case c-\w+: the exit control could not be used/, opts: { routes: '/app' } },
+  { id: 'focus-chrome-covers', check: 'G18', re: /Focus mode of case c-\w+: the stage label covers the control/, opts: { routes: '/app' } },
+  { id: 'focus-enter-inside', check: 'G18', re: /Focus mode of case c-\w+: the Focus control shows inside Focus mode/, opts: { routes: '/app' } },
   { id: 'focus-missing', check: 'G18', re: /the App offers no Focus control/, opts: { routes: '/app', requireFocus: true } },
   // the review of 0.14.0 (CAOS_MANAGE wip/app-shell/review-shell-0-14-0-2026-10-14.md): the misses of G16 to G18, Focus isolation, and the executive checks kept at their strength
   { id: 'flip-content-never-shows', check: 'G16', re: /flip card "[^"]+": the back shows no content after it turns/, opts: { routes: '/introduction' } },

@@ -672,7 +672,7 @@ svg.lucide { flex: none; }
 .caos-focus-label { position: absolute; top: 14px; left: 14px; max-width: min(46ch,calc(100% - 230px)); display: grid; gap: 4px; padding: 10px 12px; pointer-events: none; }
 .caos-focus-label strong { font-size: 0.96rem; line-height: 1.2; }
 .caos-focus-label span { font-size: 0.78rem; line-height: 1.4; color: var(--color-fg-subtle); }
-.caos-focus-hud { position: absolute; left: 14px; top: 104px; display: grid; gap: 6px; pointer-events: none; }
+.caos-focus-hud { position: absolute; left: 14px; top: calc(var(--caos-focus-label-bottom, 96px) + 8px); display: grid; gap: 6px; pointer-events: none; }
 .caos-focus-hud > div { display: grid; gap: 1px; padding: 7px 10px; min-width: 120px; }
 .caos-focus-hud strong { font: 700 1rem var(--font-mono,monospace); }
 .caos-focus-hud span { color: var(--color-fg-subtle); font-size: 0.61rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; }
@@ -825,11 +825,15 @@ svg.lucide { flex: none; }
 
 /* == Focus mode for the App (shell 0.14.0, ADR-0070) ================================================================== */
 
-/* The stage is the open group; the label overlay (heading and line) sits above it, so the group starts below the label. */
-.caos-focus-instrument > .caos-cw-focus { position: absolute; inset: 0; padding: 4.6rem 0.9rem 0.9rem; }
+/* The stage is the open group; the label overlay (heading and line) sits above it, so the group starts below the label.
+   FocusShell measures the overlay chrome and sets, on .caos-focus-stage, three lengths the instrument inherits (shell 0.14.3):
+   --caos-focus-clear-top (stage top to the lowest chrome box in the upper half, plus 8px), --caos-focus-clear-bottom (stage
+   bottom to the highest chrome box in the lower half, plus 8px; unset when none) and --caos-focus-label-bottom (the label's
+   bottom edge). The fallbacks below apply before the first measurement and in a non-browser render. */
+.caos-focus-instrument > .caos-cw-focus { position: absolute; inset: 0; padding: var(--caos-focus-clear-top, 4.6rem) 0.9rem max(0.9rem, var(--caos-focus-clear-bottom, 0px)); }
 .caos-focus-instrument > .caos-cw-focus > .tabs { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
 .caos-focus-rail-body { display: flex; flex-direction: column; gap: var(--space-3); padding: 0.85rem; min-width: 0; }
 .caos-focus-enter { align-self: flex-start; }
 @media (max-width: 900px) {
-  .caos-focus-instrument > .caos-cw-focus { padding: 6.6rem 0.5rem 0.5rem; }
+  .caos-focus-instrument > .caos-cw-focus { padding: var(--caos-focus-clear-top, 6.6rem) 0.5rem max(0.5rem, var(--caos-focus-clear-bottom, 0px)); }
 }

@@ -1036,8 +1036,32 @@ export function installLib() {
     const panel = stage ? stage.querySelector('[role="tabpanel"]') : null;
     const st = document.querySelector('.caos-focus-stage');
     const box = st ? st.getBoundingClientRect() : null;
+    // a stage control the Focus chrome (the label, the HUD tiles, the actions) sits on: more than 1px in both directions
+    const chrome = st
+      ? [
+          ...[...st.querySelectorAll(':scope > .caos-focus-label')].map((e) => [e, 'the stage label']),
+          ...[...st.querySelectorAll(':scope > .caos-focus-hud > div')].map((e) => [e, 'the HUD']),
+          ...[...st.querySelectorAll(':scope > .caos-focus-actions')].map((e) => [e, 'the Focus actions']),
+        ].filter(([e]) => visible(e))
+      : [];
+    const covered = [];
+    const controlSel = '[role="tab"], button, a[href], select, input, textarea, summary, [role="button"], [role="radio"], [role="checkbox"], [role="switch"], [role="slider"]';
+    for (const c of document.querySelectorAll('.caos-focus-instrument')) {
+      for (const el of c.querySelectorAll(controlSel)) {
+        if (covered.length >= 4) break;
+        if (!visible(el)) continue;
+        const r = el.getBoundingClientRect();
+        const hit = chrome.find(([e]) => {
+          const b = e.getBoundingClientRect();
+          return r.left < b.right - 1 && r.right > b.left + 1 && r.top < b.bottom - 1 && r.bottom > b.top + 1;
+        });
+        if (hit) covered.push({ control: (el.getAttribute('aria-label') || el.textContent || el.tagName).trim().replace(/\s+/g, ' ').slice(0, 40), chrome: hit[1] });
+      }
+    }
     return {
       focus: Boolean(shell),
+      covered,
+      enterInside: [...document.querySelectorAll('[data-focus-shell] [data-focus-enter]')].filter(visible).length,
       app: Boolean(document.querySelector('[data-workbench]')),
       caseId: stage ? stage.getAttribute('data-case') : null,
       group: shell ? (stage ? stage.getAttribute('data-focus-group') : null) : panel ? panel.getAttribute('data-panel') : null,
