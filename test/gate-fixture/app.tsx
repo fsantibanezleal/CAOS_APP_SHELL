@@ -777,7 +777,7 @@ function Workbench() {
 // ------------------------------------------------------------------------------------------- the documentation
 const CITATIONS = [
   { id: 'km1927', label: { en: 'Kermack and McKendrick 1927', es: 'Kermack y McKendrick 1927' }, citation: 'Kermack, W. O., McKendrick, A. G. (1927). A contribution to the mathematical theory of epidemics. Proc. R. Soc. Lond. A 115, 700-721.', doi: '10.1098/rspa.1927.0118' },
-  { id: 'hethcote2000', label: 'Hethcote 2000', citation: 'Hethcote, H. W. (2000). The mathematics of infectious diseases. SIAM Review 42(4), 599‑653.', doi: '10.1137/S0036144500371907' },
+  { id: 'hethcote2000', label: 'Hethcote 2000', citation: 'Hethcote, H. W. (2000). The mathematics of infectious diseases. SIAM Review 42(4), 599-653.', doi: '10.1137/S0036144500371907' },
 ];
 
 function Doc({ id }: { id: string }) {
@@ -839,6 +839,7 @@ function Doc({ id }: { id: string }) {
       {PLANT === 'low-contrast' && id === 'introduction' && <p style={{ color: '#9a9a9a' }}>{pick({ en: 'A planted pale line.', es: 'Una línea pálida plantada.' }, lang)}</p>}
       {PLANT === 'label-wide' && id === 'introduction' && <NarrowFontLabel />}
       {PLANT === 'value-broken' && id === 'introduction' && <ShrinkingValueRow />}
+      {PLANT === 'value-broken-range' && id === 'introduction' && <NarrowRange />}
       {PLANT === 'mobile-only' && id === 'introduction' && <div className="fixture-mobile-only">planted narrow-screen block</div>}
       {doc.body}
     </DocPage>
@@ -870,6 +871,12 @@ function ShrinkingValueRow() {
       <span style={{ ...cell, flex: '0 1 auto' }}>35%</span>
     </div>
   );
+}
+
+/** The value-broken-range plant (G19): a page range in a box of 2ch with `overflow-wrap: anywhere`, so the break falls inside
+ * "653" and not only after the hyphen. A break right after the hyphen is natural and passes (the clean fixture's citation). */
+function NarrowRange() {
+  return <div style={{ width: '2ch', overflowWrap: 'anywhere' }}>599-653</div>;
 }
 
 // ---------------------------------------------------------------------------------------------------- the app

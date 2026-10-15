@@ -12,14 +12,14 @@
   broke into "3", "5", "%" at 390px on every product's executive view, and none of G5 to G10 saw it, because the pieces are neither
   clipped nor outside their box. Not read: a value split across elements (`<b>35</b>%`), SVG text (G10), canvas text, `code`, `pre`,
   `kbd`, `samp`, KaTeX, `translate="no"` and `aria-hidden` content; `12 %` with a regular space is two runs and may wrap. The
-  self-test plant `value-broken` reproduces the pre-0.14.2 row (a shrinking flex value with `overflow-wrap: anywhere`) and the
-  clean fixture passes in every state.
+  self-test plant `value-broken` reproduces the pre-0.14.2 row (a shrinking flex value with `overflow-wrap: anywhere`), the plant
+  `value-broken-range` cuts `599-653` inside `653`, and the clean fixture passes in every state.
 - Adopting 0.15.0: a product may meet new G19 failures it did not have under 0.14.x. Each names the value and the element: a number,
   percentage, amount or unit that a narrow container, a flex row that lets the value shrink, or `overflow-wrap: anywhere` on a
   parent cuts into pieces. Give the value `white-space: nowrap` (and `flex: none` in a flex row), or write it with U+00A0 between
-  the number and its unit where the unit may wrap away, and with U+2011 (the non-breaking hyphen) inside a page range, a date or an
-  identifier. The gate's own fixture does the last for its citation's pages (`599‑653` broke at the hyphen at 390px in Spanish
-  in the wide-font pass). No shell component or stylesheet changed in this release.
+  the number and its unit where the unit may wrap away. A break right after a hyphen, a dash or a slash is a normal
+  line break and passes (the fixture's citation pages `599-653` break at the hyphen at 390px in Spanish and pass); only a break inside
+  a segment between those places fails. No shell component or stylesheet changed in this release.
 
 ## [0.14.003] - 2026-10-15
 
