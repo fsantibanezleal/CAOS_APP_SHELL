@@ -168,6 +168,20 @@ function flipPlant(plant: string): (() => void) | undefined {
       for (const e of document.querySelectorAll('[inert]')) if (!e.closest('[data-focus-shell]') && !e.closest('[data-flip-card]')) e.removeAttribute('inert');
     });
   }
+  if (plant === 'focus-enter-inside') {
+    // the Focus control shows inside the Focus frame's rail
+    return plantDom(() => {
+      const rail = document.querySelector('[data-focus-shell] .caos-focus-rail-body');
+      if (rail && !rail.querySelector('[data-focus-enter]')) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'btn caos-focus-enter';
+        b.setAttribute('data-focus-enter', '');
+        b.textContent = 'Focus';
+        rail.prepend(b);
+      }
+    });
+  }
   if (plant === 'focus-nested-main') {
     return plantDom(() => {
       const shell = document.querySelector('[data-focus-shell]');
@@ -625,6 +639,13 @@ function Workbench() {
         document.body.style.minHeight = '';
       };
     }
+    if (PLANT === 'focus-chrome-covers') {
+      // the stage content starts under the Focus label, so the label covers the open group's sub-tab row
+      const style = document.createElement('style');
+      style.textContent = '.caos-focus-instrument > .caos-cw-focus { padding-top: 0.4rem !important; }';
+      document.head.append(style);
+      return () => style.remove();
+    }
     if (PLANT === 'focus-no-exit') {
       const style = document.createElement('style');
       style.textContent = '[data-focus-exit] { display: none !important; }';
@@ -716,6 +737,11 @@ function Workbench() {
           PLANT === 'focus-missing'
             ? undefined
             : {
+                // a title that wraps to two lines in the label at 1280px (shell 0.14.3), so the clean gate run walks the wrapping path
+                title: {
+                  en: 'Epidemic peak under stress: a closed population, SIR fit and three contact scenarios',
+                  es: 'Pico epidémico bajo estrés: una población cerrada, ajuste SIR y tres escenarios de contacto',
+                },
                 // the plant that loses the case: opening Focus puts the first case back
                 onChange: (on) => {
                   setFocusOn(on);
