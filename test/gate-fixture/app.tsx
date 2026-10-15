@@ -777,7 +777,7 @@ function Workbench() {
 // ------------------------------------------------------------------------------------------- the documentation
 const CITATIONS = [
   { id: 'km1927', label: { en: 'Kermack and McKendrick 1927', es: 'Kermack y McKendrick 1927' }, citation: 'Kermack, W. O., McKendrick, A. G. (1927). A contribution to the mathematical theory of epidemics. Proc. R. Soc. Lond. A 115, 700-721.', doi: '10.1098/rspa.1927.0118' },
-  { id: 'hethcote2000', label: 'Hethcote 2000', citation: 'Hethcote, H. W. (2000). The mathematics of infectious diseases. SIAM Review 42(4), 599-653.', doi: '10.1137/S0036144500371907' },
+  { id: 'hethcote2000', label: 'Hethcote 2000', citation: 'Hethcote, H. W. (2000). The mathematics of infectious diseases. SIAM Review 42(4), 599‑653.', doi: '10.1137/S0036144500371907' },
 ];
 
 function Doc({ id }: { id: string }) {
@@ -838,6 +838,7 @@ function Doc({ id }: { id: string }) {
       {PLANT === 'decimal-point' && id === 'introduction' && <p>{pick({ en: 'Integration step: 0.25 days; worst difference 2.7e-08.', es: 'Paso de integración: 0.25 días; peor diferencia 2.7e-08.' }, lang)}</p>}
       {PLANT === 'low-contrast' && id === 'introduction' && <p style={{ color: '#9a9a9a' }}>{pick({ en: 'A planted pale line.', es: 'Una línea pálida plantada.' }, lang)}</p>}
       {PLANT === 'label-wide' && id === 'introduction' && <NarrowFontLabel />}
+      {PLANT === 'value-broken' && id === 'introduction' && <ShrinkingValueRow />}
       {PLANT === 'mobile-only' && id === 'introduction' && <div className="fixture-mobile-only">planted narrow-screen block</div>}
       {doc.body}
     </DocPage>
@@ -856,6 +857,18 @@ function NarrowFontLabel() {
         {label}
       </text>
     </svg>
+  );
+}
+
+/** The value-broken plant (G19), the defect of BL-065 before shell 0.14.2: a flex row whose label and value both shrink
+ * (the value has min-width 0 and overflow-wrap anywhere), in a box narrower than the label, so "35%" is cut into "3", "5", "%". */
+function ShrinkingValueRow() {
+  const cell = { minWidth: 0, overflowWrap: 'anywhere' } as const;
+  return (
+    <div style={{ display: 'flex', gap: 4, width: 90, overflowWrap: 'anywhere' }}>
+      <span style={{ ...cell, flex: '1 1 auto' }}>a cause with a long label that takes the room</span>
+      <span style={{ ...cell, flex: '0 1 auto' }}>35%</span>
+    </div>
   );
 }
 
