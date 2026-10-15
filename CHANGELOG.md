@@ -1,3 +1,12 @@
+## [0.14.002] - 2026-10-15
+
+### Fixed
+
+- The executive view's "Where it comes from" shares stay whole at phone width: the cause row lets its label wrap anywhere, and its
+  squeezed value broke into "3", "5", "%" at 390px (seen on the template's example and on every product's executive view). The value
+  no longer shrinks or wraps (`.caos-exec-cause-head > .caos-exec-value`); `e2e/executive-view.test.ts` counts the line boxes of every
+  visible value at 390px in both languages (it fails without the fix).
+
 ## [0.14.001] - 2026-10-15
 
 ### Fixed
