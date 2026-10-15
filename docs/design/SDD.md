@@ -325,7 +325,7 @@ One paragraph each; the rows are in the area file.
 - Theme and language (SHT). Tokens (`SHELL_TOKENS`, `resolveToken`, `useThemeTokens`), the theme and language stores and toggles, `THEME_BOOT_SCRIPT`, the storage keys, `pick`. Both themes at WCAG AA, English by default. See
   [`features/theme-and-language/requirements.md`](features/theme-and-language/requirements.md).
 - Architecture modal (SHA). `ArchitectureModal` and `validateArchitectureConfig`. The in-app "how it works" dialog (ADR-0058). See [`features/architecture-modal/requirements.md`](features/architecture-modal/requirements.md).
-- The gate (SHG). `caos-shell-gate`, G1 to G18 (G16 flip cards and card decks, G17 animated drawings, G18 Focus mode, 0.14.0) and the ADR checks, and its self-test. See [`features/gate/requirements.md`](features/gate/requirements.md).
+- The gate (SHG). `caos-shell-gate`, G1 to G19 (G16 flip cards and card decks, G17 animated drawings, G18 Focus mode, 0.14.0; G19 values whole, 0.15.0) and the ADR checks, and its self-test. See [`features/gate/requirements.md`](features/gate/requirements.md).
 
 ## Degradation and dependency states
 

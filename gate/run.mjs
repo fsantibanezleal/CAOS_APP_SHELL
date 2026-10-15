@@ -29,6 +29,7 @@
 //   G18 Focus mode           the App's Focus control opens the case's open group in the full viewport and returns to the same case and
 //                            group (by the exit control and by Escape); no page scroll, the rail without scroll, one tab row; no stage
 //                            control under the Focus chrome (label, HUD, actions); no Focus control inside the Focus frame
+//   G19 values whole         a short value (number, percentage, amount, unit) sits on one line in every state
 // plus the ADR-0071 and ADR-0017 measures (viewport, one-row tabs, rail without scroll, centred prose, captions,
 // references).
 
@@ -465,6 +466,7 @@ export async function runGate(o) {
     if (big) for (const c of f.fillStages ?? []) if (c.h < opt.stageFloor) fail('G6', where, `the drawing of ${c.label} keeps ${Math.round(c.h)} px under its note (floor ${opt.stageFloor} px)`);
     for (const m of await page.evaluate(() => window.__caosGate.drawingText())) fail('G10', where, m);
     if (s.lang === 'es') for (const m of await page.evaluate(() => window.__caosGate.decimals())) fail('G11', where, m);
+    for (const m of await page.evaluate(() => window.__caosGate.brokenValues())) fail('G19', where, m);
     if (s.w > 760) for (const m of await page.evaluate(() => window.__caosGate.sticky())) fail('G12', where, m);
     if (s.contrast) for (const m of await page.evaluate(() => window.__caosGate.contrast())) fail('G13', where, m);
     if (f.sectionsWithoutRefs) fail('ADR-0017.4', where, `${f.sectionsWithoutRefs} section(s) end without references or a stated reason`);
@@ -893,6 +895,7 @@ export async function runGate(o) {
     for (const c of f.covered) fail('G18', at, `${label}: ${c.chrome} covers the control "${c.control}" (the stage must clear the Focus chrome)`);
     if (f.enterInside > 0) fail('G18', at, `${label}: the Focus control shows inside Focus mode (it opens the mode the reader is already in)`);
     for (const m of await page.evaluate(() => window.__caosGate.drawingText())) fail('G10', at, m);
+    for (const m of await page.evaluate(() => window.__caosGate.brokenValues())) fail('G19', at, m);
     if (s.contrast) for (const m of await page.evaluate(() => window.__caosGate.contrast())) fail('G13', at, m);
     if (index === 0) await saveShot(page, `focus_${slug(s.route)}_${s.w}x${s.h}_${s.theme}_${s.lang}.png`);
     // leave: the exit control for one case, Escape for the next, so both ways are walked
