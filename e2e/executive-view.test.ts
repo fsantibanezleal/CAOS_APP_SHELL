@@ -219,6 +219,29 @@ test('a source note with a long URL wraps inside the column at 390 px (BL-053)',
   await page.close();
 });
 
+test('every figure of the executive view stays on one line at 390 px, as "35%" in "Where it comes from" (shell 0.14.2)', async () => {
+  // the cause row is a flex row whose label may wrap anywhere; its value must not: it broke into "3", "5", "%" at phone width
+  for (const lang of ['en', 'es']) {
+    const page = await browser.newPage({ viewport: { width: 390, height: 900 } });
+    await page.addInitScript(`try { localStorage.setItem('caos.lang', '${lang}'); } catch (e) {}`);
+    await page.goto(address);
+    await page.waitForSelector('[data-executive-view] .caos-exec-value');
+    const broken = await page.evaluate(() =>
+      [...document.querySelectorAll<HTMLElement>('[data-executive-view] .caos-exec-value')]
+        .filter((el) => el.offsetParent !== null)
+        .map((el) => {
+          // the line boxes of the value's text: one top per line (the box itself may stretch to the row's height)
+          const range = document.createRange();
+          range.selectNodeContents(el);
+          const tops = new Set([...range.getClientRects()].filter((r) => r.width > 0).map((r) => Math.round(r.top)));
+          return { text: el.textContent ?? '', lines: tops.size };
+        })
+        .filter((v) => v.lines > 1));
+    assert.deepEqual(broken, [], `${lang}: values on more than one line: ${JSON.stringify(broken)}`);
+    await page.close();
+  }
+});
+
 test('an invalid data file shows its error in the browser and no section', async () => {
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   await page.route('**/executive-view.js', async (route) => {
