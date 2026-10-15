@@ -67,6 +67,15 @@ test('an animated illustration moves with motion allowed and is still under redu
   await q.waitForSelector('[data-exec-illustration="situation"] svg');
   const smil = (await q.evaluate(running('[data-exec-illustration="situation"]'))) as { smil: boolean };
   assert.equal(smil.smil, false, 'the SMIL illustration is paused under reduced motion');
+  // the shell pauses SMIL at its last frame in an effect, and the paused frame is sampled on a later frame: wait for it (bounded),
+  // then measure; reading at once lost the race on a slow runner (CI 38803492233: the bar still at its first frame, 80px)
+  await q
+    .waitForFunction(() => {
+      const svg = document.querySelector('[data-exec-illustration="situation"] svg');
+      const bar = svg?.querySelector('rect.sm');
+      return Boolean(svg && bar && bar.getBoundingClientRect().width > (0.6 * (svg.getBoundingClientRect().width * 600)) / 800);
+    }, null, { timeout: 3000 })
+    .catch(() => undefined);
   const width = await q.evaluate(() => document.querySelector('[data-exec-illustration="situation"] svg rect.sm')!.getBoundingClientRect().width);
   const full = await q.evaluate(() => document.querySelector('[data-exec-illustration="situation"] svg')!.getBoundingClientRect().width);
   assert.ok(width > 0.6 * (full * 600) / 800, `the paused frame is the final one (bar ${width}px of a ${full}px drawing)`);
