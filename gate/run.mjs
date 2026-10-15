@@ -27,7 +27,8 @@
 //                            Space, its hidden face out of the accessibility tree; a carousel reaches every card, never scrolls sideways
 //   G17 animated drawings    an animated SVG has its reduced-motion block, plays for 10 s at most and is still under reduced motion
 //   G18 Focus mode           the App's Focus control opens the case's open group in the full viewport and returns to the same case and
-//                            group (by the exit control and by Escape); no page scroll, the rail without scroll, one tab row
+//                            group (by the exit control and by Escape); no page scroll, the rail without scroll, one tab row; no stage
+//                            control under the Focus chrome (label, HUD, actions); no Focus control inside the Focus frame
 // plus the ADR-0071 and ADR-0017 measures (viewport, one-row tabs, rail without scroll, centred prose, captions,
 // references).
 
@@ -889,6 +890,8 @@ export async function runGate(o) {
     if (f.tabRows.some((r) => r > 1)) fail('G18', at, `${label}: a tab row wraps onto ${Math.max(...f.tabRows)} rows`);
     if (big && f.share < opt.instrumentMin) fail('G18', at, `${label}: the stage covers ${(100 * f.share).toFixed(1)}% of the viewport (floor ${(100 * opt.instrumentMin).toFixed(0)}%)`);
     if (f.exitInside === false) fail('G18', at, `${label}: the exit control is outside the viewport`);
+    for (const c of f.covered) fail('G18', at, `${label}: ${c.chrome} covers the control "${c.control}" (the stage must clear the Focus chrome)`);
+    if (f.enterInside > 0) fail('G18', at, `${label}: the Focus control shows inside Focus mode (it opens the mode the reader is already in)`);
     for (const m of await page.evaluate(() => window.__caosGate.drawingText())) fail('G10', at, m);
     if (s.contrast) for (const m of await page.evaluate(() => window.__caosGate.contrast())) fail('G13', at, m);
     if (index === 0) await saveShot(page, `focus_${slug(s.route)}_${s.w}x${s.h}_${s.theme}_${s.lang}.png`);

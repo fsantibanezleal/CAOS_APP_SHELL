@@ -1,3 +1,23 @@
+## [0.14.003] - 2026-10-15
+
+### Fixed
+
+- Focus mode: the stage label no longer covers the stage's controls. On Contraste's C10 at 1280px the title ("Portfolio credit
+  capital: ASRF, Vasicek fit, copula MC") wrapped to two lines and the label sat over the open group's sub-tab row, because the
+  stage cleared the label by a fixed 4.6rem (6.6rem under 900px). `FocusShell` now measures its overlay chrome (the label, the HUD
+  tiles, the actions; a layout effect, one `ResizeObserver`, the `resize` event, values written only when they change) and sets
+  three lengths on `.caos-focus-stage`: `--caos-focus-clear-top`, `--caos-focus-clear-bottom` and `--caos-focus-label-bottom`.
+  The `CaseWorkbench` focus stage pads by them (4.6rem and 6.6rem remain the fallbacks before the first measurement and in a
+  non-browser render), the desktop HUD starts under the measured label instead of at a fixed 104px, and under 900px the stage clears
+  a bottom HUD. A product that renders its own instrument in `FocusShell` can use the same properties. No prop changes (SHW-038).
+- Focus mode: the Focus control no longer shows inside Focus. Since 0.14.1 the rail inside the focus frame carried the Focus button
+  beside the case select, a control that opens the mode the reader is already in. The focus frame's rail head is now the case
+  picker and the variant bar without it, in every layout; a product's own `cases.accessory` still shows, and the App's rail head is
+  unchanged (SHW-037).
+- Gate G18 now fails both: a stage control under the Focus chrome (the stage label, the HUD or the Focus actions) and a Focus
+  control inside the Focus frame (SHG-056). The self-test plants `focus-chrome-covers` and `focus-enter-inside` prove it, and the
+  clean fixture now has a Focus title that wraps at 1280px, so every clean run walks the wrapping path.
+
 ## [0.14.002] - 2026-10-15
 
 ### Fixed
