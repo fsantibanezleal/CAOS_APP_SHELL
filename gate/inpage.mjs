@@ -1281,6 +1281,75 @@ export function installLib() {
     return [...new Set(out)].slice(0, 12);
   };
 
+  /**
+   * G19, values whole (BL-065): a short value written in the page's text sits on one line. Shell 0.14.2 fixed a share
+   * "35%" that broke into "3", "5", "%" in a squeezed flex row; no other check sees it, because the pieces are neither
+   * clipped nor outside their box. A short value is a run of characters without breaking whitespace (U+0020, tab, CR,
+   * LF; U+00A0 and U+202F do not end a run) inside one text node, 2 to 16 characters long once the punctuation of the
+   * sentence is stripped from its ends, with a digit, only digits, signs (the hyphens and dashes included), separators,
+   * currency signs, % per mille x and degree signs and at most 4 letters (35%, 0,96, US$1.2bn, 2026-10-15, -3,2pp, 1e-6,
+   * ADR-0071). A value is cut into segments right after a hyphen (U+002D, U+2010, U+2011), an en or em dash and a slash;
+   * a break at those places is a normal line break, so the pieces between them are what must stay whole. A leading sign
+   * stays in the first segment (a lone "-" apart from "3,2" is a broken value). The lines of a segment of 2 or more
+   * characters are the groups of its Range's client rects by top (2px); a segment on more than one line fails the value,
+   * also when it is longer than its container: a segment is never cut into pieces. Two values apart by a regular space
+   * ("12 %") are two runs and may wrap between them. Limits: text nodes only (a value split across elements, <b>35</b>%,
+   * is not read); SVG text is G10's
+   * subject and canvas text cannot be read; code, formulas and anything marked translate="no" are skipped.
+   */
+  G.brokenValues = () => {
+    const out = [];
+    const skip = 'code, pre, kbd, samp, .katex, svg, canvas, textarea, [translate="no"], [aria-hidden="true"], script, style';
+    const runRe = /[^ \t\r\n]+/g;
+    const BREAK_AFTER = '-\u2010\u2011\u2013\u2014/';
+    const strip = /^[()[\]"',;:.]+|[()[\]"',;:.]+$/g;
+    const allowed = /^[\p{Nd}+\-\u2010\u2011\u2013\u2014\u2212\u00b1.,:/'\u00a0\u202f$\u20ac\u00a3\u00a5%\u2030\u00d7\u00b0\p{L}]+$/u;
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    const range = document.createRange();
+    const seen = new Set();
+    for (let n = walker.nextNode(); n && out.length < 12; n = walker.nextNode()) {
+      const text = n.nodeValue || '';
+      if (!/\d/.test(text)) continue;
+      const el = n.parentElement;
+      if (!el || el.closest(skip) || !shown(el)) continue;
+      for (const m of text.matchAll(runRe)) {
+        const run = m[0];
+        if (!/\d/.test(run)) continue;
+        const lead = run.length - run.replace(/^[()[\]"',;:.]+/, '').length;
+        const value = run.replace(strip, '');
+        if (value.length < 2 || value.length > 16 || !/\d/.test(value) || !allowed.test(value)) continue;
+        if ((value.match(/\p{L}/gu) || []).length > 4) continue;
+        const start = m.index + lead;
+        // a break right after a hyphen, a dash or a slash is a normal line break; the segments between them must stay whole.
+        // A leading sign belongs to the first segment (a "-" apart from "3,2" is a broken value).
+        const cuts = [0];
+        for (let i = 1; i < value.length - 1; i += 1) if (BREAK_AFTER.includes(value[i])) cuts.push(i + 1);
+        cuts.push(value.length);
+        let worst = 1;
+        for (let k = 0; k + 1 < cuts.length; k += 1) {
+          if (cuts[k + 1] - cuts[k] < 2) continue;
+          range.setStart(n, start + cuts[k]);
+          range.setEnd(n, start + cuts[k + 1]);
+          const tops = [];
+          for (const r of range.getClientRects()) {
+            if (r.width <= 0.5) continue;
+            if (!tops.some((t) => Math.abs(t - r.top) <= 2)) tops.push(r.top);
+          }
+          worst = Math.max(worst, tops.length);
+        }
+        if (worst > 1) {
+          const msg = `"${value}" breaks across ${worst} lines (${describe(el)})`;
+          if (!seen.has(msg)) {
+            seen.add(msg);
+            out.push(msg);
+            if (out.length >= 12) break;
+          }
+        }
+      }
+    }
+    return out;
+  };
+
   /** The scroll container of an element: the nearest ancestor that scrolls vertically, or the document. */
   const scroller = (el) => {
     for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) {

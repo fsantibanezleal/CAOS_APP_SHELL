@@ -54,6 +54,8 @@ const PLANTS = [
   { id: 'label-overlap', check: 'G10', re: /"first planted label" and "second planted label" overlap/, trail: /validation > table/, opts: { routes: '/app' } },
   { id: 'label-wide', check: 'G10', re: /"a label sized for a narrow font only" is cut/, mode: /wide-font/, opts: { routes: '/app,/introduction', wideFont: true, wideFontSizes: '1280x800' } },
   { id: 'decimal-point', check: 'G11', re: /writes 0\.25 with a decimal point/, also: /writes 2\.7e-08 with a decimal point/, opts: { langs: 'es', routes: '/app,/introduction' } },
+  { id: 'value-broken', check: 'G19', re: /"35%" breaks across \d lines/, opts: { routes: '/app,/introduction' } },
+  { id: 'value-broken-range', check: 'G19', re: /"599-653" breaks across \d lines/, opts: { routes: '/app,/introduction' } },
   { id: 'sticky-off', check: 'G12', re: /active sub-tab .* is out of view/, opts: { routes: '/app,/implementation' } },
   { id: 'refs-mid', check: 'ADR-0017.4', re: /references must be the last block of the page or tab/, opts: { routes: '/app,/introduction' } },
   { id: 'refs-missing', check: 'ADR-0017.4', re: /cite references the page never lists/, opts: { routes: '/app,/introduction' } },
