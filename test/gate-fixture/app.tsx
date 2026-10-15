@@ -838,6 +838,8 @@ function Doc({ id }: { id: string }) {
       {PLANT === 'decimal-point' && id === 'introduction' && <p>{pick({ en: 'Integration step: 0.25 days; worst difference 2.7e-08.', es: 'Paso de integración: 0.25 días; peor diferencia 2.7e-08.' }, lang)}</p>}
       {PLANT === 'low-contrast' && id === 'introduction' && <p style={{ color: '#9a9a9a' }}>{pick({ en: 'A planted pale line.', es: 'Una línea pálida plantada.' }, lang)}</p>}
       {PLANT === 'label-wide' && id === 'introduction' && <NarrowFontLabel />}
+      {PLANT === 'value-broken' && id === 'introduction' && <ShrinkingValueRow />}
+      {PLANT === 'value-broken-range' && id === 'introduction' && <NarrowRange />}
       {PLANT === 'mobile-only' && id === 'introduction' && <div className="fixture-mobile-only">planted narrow-screen block</div>}
       {doc.body}
     </DocPage>
@@ -857,6 +859,24 @@ function NarrowFontLabel() {
       </text>
     </svg>
   );
+}
+
+/** The value-broken plant (G19), the defect of BL-065 before shell 0.14.2: a flex row whose label and value both shrink
+ * (the value has min-width 0 and overflow-wrap anywhere), in a box narrower than the label, so "35%" is cut into "3", "5", "%". */
+function ShrinkingValueRow() {
+  const cell = { minWidth: 0, overflowWrap: 'anywhere' } as const;
+  return (
+    <div style={{ display: 'flex', gap: 4, width: 90, overflowWrap: 'anywhere' }}>
+      <span style={{ ...cell, flex: '1 1 auto' }}>a cause with a long label that takes the room</span>
+      <span style={{ ...cell, flex: '0 1 auto' }}>35%</span>
+    </div>
+  );
+}
+
+/** The value-broken-range plant (G19): a page range in a box of 2ch with `overflow-wrap: anywhere`, so the break falls inside
+ * "653" and not only after the hyphen. A break right after the hyphen is natural and passes (the clean fixture's citation). */
+function NarrowRange() {
+  return <div style={{ width: '2ch', overflowWrap: 'anywhere' }}>599-653</div>;
 }
 
 // ---------------------------------------------------------------------------------------------------- the app
