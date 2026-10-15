@@ -1,3 +1,13 @@
+## [0.14.001] - 2026-10-15
+
+### Fixed
+
+- The Focus control of `CaseWorkbench` sits on the case select's row (`CaseSelector` takes an `accessory`, rendered after the select
+  in one row, the select shrinking to make room), so the rail head is no taller with it. On a row of its own it added 37px to the
+  rail head, and rails with little slack scrolled 6 to 10px (ADR-0071 rule 6: Contraste's C04 and C22, 19 gate failures when it
+  adopted 0.14.0). With case chips, or with no case picker, the control keeps a row of its own, as in 0.14.0. The visible word
+  ("Focus" / "Enfocar") and the accessible name are unchanged (SHW-031).
+
 ## [0.14.000] - 2026-10-14
 
 Flip cards, the card carousel, animated illustrations and Focus mode for the App (CAOS_MANAGE `plans/app-shell/0-14-0-plan.md`,

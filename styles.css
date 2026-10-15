@@ -508,6 +508,10 @@ svg.lucide { flex: none; }
 /* The compact one-of-N case picker (ADR-0071 rule 7): ten cases in four categories cost a 308px chip block, 21% of a
    2560x1440 viewport, and one row as a dropdown. */
 .cs-select { width: 100%; max-width: 460px; }
+/* the select and a control beside it (the workbench's Focus button): one row, the select shrinks, the control keeps its size */
+.cs-select-row { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+.cs-select-row > .cs-select { flex: 1 1 auto; min-width: 0; }
+.cs-select-row > :not(.cs-select) { flex: none; }
 
 /* == 9 workbench ================================================================================================ */
 
