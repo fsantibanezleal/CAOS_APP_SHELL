@@ -80,3 +80,43 @@ test('with case chips, or with no case picker, the Focus control keeps a row of 
   assert.equal((none.match(/data-focus-enter=""/g) ?? []).length, 1);
   assert.doesNotMatch(none, /cs-select-row/);
 });
+
+/** Shell 0.14.3 (SHW-037): inside Focus the rail head shows the pickers without the Focus control. */
+const inFocusMarkup = (layout: 'select' | 'chips' | 'none', accessory?: React.ReactNode) => {
+  const g = globalThis as unknown as { window?: unknown };
+  const had = 'window' in g;
+  const prior = g.window;
+  g.window = { location: { search: '?focus=1' } };
+  try {
+    return renderToStaticMarkup(
+      <CaseWorkbench
+        caseId="c1"
+        cases={layout === 'none' ? undefined : { cases: [{ id: 'c1', name: 'First' }], selectedId: 'c1', onSelect: () => undefined, layout, accessory }}
+        groups={[{ id: 'model', label: { en: 'Model', es: 'Modelo' }, content: <p>MODEL</p> }]}
+        context={{ content: <p>CONTEXT</p> }}
+        focus
+      />,
+    );
+  } finally {
+    if (had) g.window = prior;
+    else delete g.window;
+  }
+};
+
+test('inside Focus the rail head never shows the Focus control: select picker, chips and no picker', () => {
+  for (const layout of ['select', 'chips', 'none'] as const) {
+    const html = inFocusMarkup(layout);
+    assert.match(html, /data-focus-shell=""/, `${layout}: the focus frame is open`);
+    assert.doesNotMatch(html, /data-focus-enter/, `${layout}: no Focus control inside Focus`);
+    assert.match(html, /data-focus-exit=""/, `${layout}: the exit control is there`);
+  }
+});
+
+test('inside Focus a product accessory on the case picker still renders in the focus rail', () => {
+  for (const layout of ['select', 'chips'] as const) {
+    const html = inFocusMarkup(layout, <span data-product-accessory="">ACC</span>);
+    assert.match(html, /data-focus-shell=""/);
+    assert.match(html, /data-product-accessory=""/, `${layout}: the product's own accessory shows in the focus rail`);
+    assert.doesNotMatch(html, /data-focus-enter/);
+  }
+});
