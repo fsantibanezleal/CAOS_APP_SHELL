@@ -18,6 +18,9 @@ const clean = join(work, 'clean');
 const BRAND = 'GateFixture';
 const QUICK = { sizes: '1280x800', themes: 'light', langs: 'en', idleMs: 600, wideFont: false };
 
+/** The options of a product whose App is a surface (shell 0.16.0): the route `/console` of the fixture, walked as the App route. */
+const SURF = { routes: '/console', workbench: '', appRoute: '/console' };
+
 /** One plant per check (and per distinct trap inside a check); `expect` must appear among the failures. */
 const PLANTS = [
   { id: 'landing-app', check: 'G4', re: /the root opened \/, not the Introduction/, opts: { routes: '/introduction' } },
@@ -217,6 +220,23 @@ const PLANTS = [
   { id: 'focus-drops-subview', check: 'G18', re: /Focus mode of case c-\w+ shows sub-view \w+, the App had \w+/, opts: { routes: '/app' } },
   { id: 'focus-not-isolated', check: 'G18', re: /Focus mode of case c-\w+: Tab leaves the Focus frame/, opts: { routes: '/app' } },
   { id: 'focus-nested-main', check: 'G18', re: /Focus mode of case c-\w+: the page holds a main inside a main/, opts: { routes: '/app' } },
+  // shell 0.16.0: G18 on an App that is a surface (SurfacePage focus, TabDef.focus), one plant per failure of the workbench's Focus, with the view in place of the case and the group
+  { id: 'surface-focus-missing', check: 'G18', re: /the surface App \(\/console\) offers no Focus control \(\[data-focus-enter\]\) on any of its 3 view\(s\)/, opts: { ...SURF, requireFocus: true } },
+  { id: 'surface-focus-no-open', check: 'G18', re: /Focus mode of view \w+: the Focus control did not open Focus mode/, opts: SURF },
+  { id: 'surface-focus-loses-view', check: 'G18', re: /Focus mode of view engine shows view runs, the App had engine/, opts: SURF },
+  { id: 'surface-focus-drops-subview', check: 'G18', re: /Focus mode of view engine shows sub-view curves, the App had table/, opts: SURF },
+  { id: 'surface-focus-url-no-view', check: 'G18', re: /Focus mode of view \w+: the URL \(\?focus=1\) does not hold \?focus=1 and the view/, opts: SURF },
+  { id: 'surface-focus-page-scroll', check: 'G18', re: /Focus mode of view \w+: the page scrolls/, opts: SURF },
+  { id: 'surface-focus-rail-scroll', check: 'G18', re: /Focus mode of view engine: the rail scrolls/, opts: SURF },
+  { id: 'surface-focus-tabs-wrap', check: 'G18', re: /Focus mode of view engine: a tab row wraps onto 2 rows/, opts: SURF },
+  { id: 'surface-focus-stage-small', check: 'G18', re: /Focus mode of view \w+: the stage covers \d+\.\d% of the viewport \(floor 50%\)/, opts: SURF },
+  { id: 'surface-focus-no-exit', check: 'G18', re: /Focus mode of view \w+: the exit control could not be used/, opts: SURF },
+  { id: 'surface-focus-chrome-covers', check: 'G18', re: /Focus mode of view engine: the stage label covers the control/, opts: SURF },
+  { id: 'surface-focus-enter-inside', check: 'G18', re: /Focus mode of view engine: the Focus control shows inside Focus mode/, opts: SURF },
+  { id: 'surface-focus-not-isolated', check: 'G18', re: /Focus mode of view \w+: Tab leaves the Focus frame/, opts: SURF },
+  { id: 'surface-focus-nested-main', check: 'G18', re: /Focus mode of view \w+: the page holds a main inside a main/, opts: SURF },
+  { id: 'surface-focus-return-wrong-view', check: 'G18', re: /Focus mode of view engine: back in the App on view overview, it was left on view engine/, opts: SURF },
+  { id: 'surface-focus-url-stays', check: 'G18', re: /Focus mode of view \w+: the URL still holds \?focus after the return/, opts: SURF },
   { id: 'exec-deck-hidden-cards', check: 'ADR-0017.2', re: /executive view \(EN\): the proposal holds 1 row\(s\) of the 4 C's, exactly 4 are required/, opts: { routes: '/introduction' } },
   { id: 'exec-flip-content-hidden', check: 'ADR-0017.2', re: /executive view \(EN\): \d+ field\(s\) are in the page and a reader cannot read them/, opts: { routes: '/introduction' } },
 ];
@@ -255,6 +275,18 @@ test('the clean fixture passes every check in the full matrix (five sizes, both 
   assert.ok(r.captures >= 30, `${r.captures} captures`);
   for (const name of readdirSync(join(work, 'out-clean', 'shots'))) assert.ok(index.includes(`shots/${name}`), `index.html shows ${name}`);
   assert.ok(readdirSync(join(work, 'out-clean', 'shots')).some((n) => n.endsWith('_wide.png')), 'the wide-font pass captured its states');
+});
+
+test('the clean surface App passes every check, G18 included, in both languages and themes at a phone and a desktop size', { timeout: 1_800_000 }, async () => {
+  // the fixture's console as the App route of a product whose App is a SurfacePage: `--workbench ''`, `--app-route`, `--require-focus`
+  const dir = makePlant(clean, join(work, 'plant-surface'), 'surface');
+  const r = await runGate({ ...SURF, requireFocus: true, serve: dir, expectBrand: BRAND, sizes: '390x844,1280x800', idleMs: 600, out: join(work, 'out-surface') });
+  assert.equal(r.failures.length, 0, `the clean surface App failed:\n${show(r)}`);
+  const shots = readdirSync(join(work, 'out-surface', 'shots'));
+  assert.ok(shots.some((n) => n.startsWith('focus_console_1280x800')), 'the Focus frame of the surface was captured');
+  // --app-route defaults to /app: with --workbench '' that route is measured as a surface (here it is the fixture's workbench, which has no surface views)
+  const dflt = await runGate({ ...QUICK, workbench: '', routes: '/app', requireFocus: true, serve: dir, expectBrand: BRAND, out: join(work, 'out-surface-default') });
+  assert.ok(dflt.failures.some((f) => f.check === 'G18' && /the surface App \(\/app\) offers no Focus control/.test(f.message)), `the default App route is /app; failures:\n${show(dflt)}`);
 });
 
 describe('every planted defect fails the check that owns it', { concurrency: 4 }, () => {

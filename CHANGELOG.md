@@ -1,3 +1,50 @@
+## [Unreleased]
+
+### Added
+
+- Focus mode for a `SurfacePage` App (SHF-031 to SHF-035, BL-068, ADR-0070). `SurfacePage` takes `focus?: boolean | SurfaceFocusConfig`
+  (`param`, `onChange`) and each view with a stage takes `TabDef.focus?: boolean | ViewFocusConfig` (`title`, `description`, `hud`,
+  `rail`). While the open view is focusable, a **Focus** button ("Focus" / "Enfocar", named "Open this view in focus mode" / "Abrir
+  esta vista en modo enfoque", new `FOCUS_TEXT.enterViewLabel`) shows at the end of the head's actions, on the heading's row, so it
+  adds no row (measured at 390, 768 and 1280 px); it is absent on a view with no stage. It opens the view in `FocusShell`
+  (`landmark={false}`: one `main`), the view as the stage and its `rail` as the parameter column, the title the view's label unless
+  given, the HUD per view. The URL holds `?focus=1` beside `?view=`; Escape or the exit button return to the same view and sub-view
+  (the view memory `CaseWorkbench` keeps), drop the parameter and return keyboard focus to the Focus button; the page behind is
+  `inert`. A link with `focus=1` for a view with no stage, an unknown view, or no view when the first has no stage opens no Focus and
+  the parameter is removed. A view with no `rail` leaves the stage the whole frame (`FocusShell` `rail` may now be omitted, class
+  `caos-focus-norail`) and keeps its own controls in its body. The frame carries `data-surface-focus`, `data-focus-view` and
+  `data-focus-group`. Why: a console App (CAOS_Neuraxis: Tasks, Investigations, Engine) is a `SurfacePage`, and a surface with a
+  simulation could not meet ADR-0070 on the shell. Without `focus` a surface renders exactly as in 0.15.0.
+- `useFocusMode(config, { enabled, initialAllowed })`, exported with `FocusMode`, `FocusModeConfig` and `FocusModeOptions`: the one
+  Focus behaviour (the URL parameter, Escape, the inert page, keyboard focus in and out, the view memory) that `CaseWorkbench` and
+  `SurfacePage` share; for a product with a frame of its own.
+- Gate: G18 on an App that is a surface (SHG-058 to SHG-062). With `--workbench ''` the gate measures the route of the new option
+  `--app-route` (default `/app`) as a surface: it opens every view of its tab row, enters Focus from each view that offers the control
+  (from its last sub-view; outside the primary mode, from the last such view), and applies the failures it applies to a workbench with
+  the view and sub-view in place of the case and the group: another view or sub-view in Focus or after the return, a URL in Focus that
+  does not hold `?focus=1` and the view, a `?focus` left in the URL after the return, a page or a rail that scrolls, a tab row that
+  wraps, a stage under half the viewport, a stage control under the Focus chrome, a Focus control inside the frame, an exit control that
+  does not work, Tab leaving the frame, a `main` inside a `main`, and a Focus control that does not open Focus. With
+  `--require-focus` a surface none of whose views offers the control fails with "the surface App (/console) offers no Focus control
+  ([data-focus-enter]) on any of its 3 view(s)". The fixture gains the route `/console` (a surface with a view with no stage, a view with a
+  rail, a HUD and sub-views, and a view with no rail), a clean run of it at 390 and 1280 px in both languages and themes, and sixteen
+  plants `surface-focus-*`.
+
+### Changed
+
+- `CaseWorkbench` keeps its Focus behaviour in `useFocusMode`, no longer in its own state and effects. Its DOM, its URL behaviour and
+  its tests and plants are unchanged. `FocusShell`'s `rail` prop is optional (a rail is still rendered when one is given).
+  `window.__caosGate.focusFacts()` reads a surface App's instrument as well as a workbench's.
+
+### Migration
+
+- A product whose App is a `SurfacePage` and that has a simulation or a dynamic scenario (ADR-0070): set `focus` on the `SurfacePage`
+  and `focus` on each view with a stage (a simulation, a drawing, a live run; not a list or a form); move that view's controls into its
+  `focus.rail` (they stay in its body when it has no rail; the view's content renders in both places, so the product shows the control
+  in the body only outside Focus, as the fixture's engine view does); give the surface a `title` or `actions` for a head that stays when
+  the view changes; then run the gate with `--workbench '' --require-focus` (and `--app-route` when the App route is not `/app`). A
+  surface App with no simulation changes nothing; a product whose App is a `CaseWorkbench` changes nothing.
+
 ## [0.15.000] - 2026-10-15
 
 ### Added

@@ -9,13 +9,15 @@
 // Options:
 //   --base-path /Repo/           the site's base path with --serve (a project page); default /
 //   --routes /,/methodology      the routes; default: read from the header navigation
-//   --workbench /app             the routes that carry the case workbench; default /app
+//   --workbench /app             the routes that carry the case workbench; default /app; '' for a product whose App is a SurfacePage
+//   --app-route /app             the App route measured as a surface when --workbench is '' (G18 walks its views' Focus mode); default /app
 //   --sizes 390x844,...,2560x1440  --themes light,dark  --langs en,es
 //   --case-sample id1,id2        cases walked outside the primary mode; default the first and the last
 //   --single-case                the workbench has one case and no case control
 //   --idle-ms 3000  --settle-ms 15000  --text-floor 400  --instrument-min 0.5  --stage-fill-min 0.3  --stage-floor 140
 //   --wide-font-sizes 390x844,1280x800   the sizes of the wide-font pass (G10); --no-wide-font skips it
-//   --require-focus              fail an App without a Focus control (G18; ADR-0070 requires one in a product with simulations)
+//   --require-focus              fail an App without a Focus control (G18; ADR-0070 requires one in a product with simulations); on a surface
+//                                App, one with no view that offers it
 //   --out gate-output            report (gate-report.json), screenshots (shots/) and the capture index (index.html)
 // Needs `playwright` in the consuming project (optional peer dependency). Exit 1 on any failure, 2 on misuse.
 
@@ -40,6 +42,7 @@ const options = {
   expectBrand: args['expect-brand'],
   routes: args.routes,
   workbench: args.workbench,
+  appRoute: args['app-route'],
   sizes: args.sizes,
   themes: args.themes,
   langs: args.langs,

@@ -29,6 +29,8 @@
 //   G18 Focus mode           the App's Focus control opens the case's open group in the full viewport and returns to the same case and
 //                            group (by the exit control and by Escape); no page scroll, the rail without scroll, one tab row; no stage
 //                            control under the Focus chrome (label, HUD, actions); no Focus control inside the Focus frame
+//                            on a surface App (--workbench '', --app-route; 0.16.0) the same for the views of its tab row: another view or
+//                            sub-view in Focus or after the return, no ?focus=1 and view in the URL, no view that offers the control
 //   G19 values whole         a short value (number, percentage, amount, unit) sits on one line in every state
 // plus the ADR-0071 and ADR-0017 measures (viewport, one-row tabs, rail without scroll, centred prose, captions,
 // references).
@@ -45,6 +47,7 @@ export const DEFAULTS = {
   themes: 'light,dark',
   langs: 'en,es',
   workbench: '/app',
+  appRoute: '/app',
   idleMs: 3000,
   settleMs: 15000,
   textFloor: 400,
@@ -93,6 +96,8 @@ export async function runGate(o) {
   const themes = String(opt.themes).split(',').map((s) => s.trim());
   const langs = String(opt.langs).split(',').map((s) => s.trim());
   const workbenchRoute = String(opt.workbench).split(',')[0].trim() || '/app';
+  // the App route of a product whose App is a surface (`--workbench ''`): G18 measures its Focus mode (shell 0.16.0)
+  const appRoute = String(opt.appRoute ?? '').trim() || '/app';
   const workbenchRoutes = new Set(String(opt.workbench).split(',').map((s) => s.trim()).filter(Boolean));
   const primarySize = sizes.find(([w]) => w >= opt.viewportMinWidth) ?? sizes[0];
   const shotsDir = join(opt.out, 'shots');
@@ -344,6 +349,7 @@ export async function runGate(o) {
             if (walkState.doc) docResult(at, lang, walkState.doc, Math.max(1, leaves));
 
             if (isWorkbench) await walkCases(page, sink, at, { route, isWorkbench, primary, interact: idleHere, size, w, h, theme, lang, walkState, contrast });
+            else if (workbenchRoutes.size === 0 && route === appRoute) await surfaceFocusWalk(page, sink, at, { route, isWorkbench, primary, interact: idleHere, size, w, h, theme, lang, walkState, contrast });
 
             if (primary && isWorkbench) {
               const f = await page.evaluate(() => window.__caosGate.facts());
@@ -847,16 +853,18 @@ export async function runGate(o) {
         await subs.nth(sn - 1).click({ timeout: 4000 }).catch(() => undefined);
         await settle(page);
       }
-      await focusVisitOne(page, sink, where, s, caseId, index + k, total, enter);
+      await focusVisitOne(page, sink, where, s, { kind: 'case', id: caseId, total }, index + k, enter);
     }
     await tabs.nth(0).click({ timeout: 4000 }).catch(() => undefined);
     await settle(page);
   }
 
-  async function focusVisitOne(page, sink, where, s, caseId, index, total, enter) {
-    const at = { ...where, trail: `case ${caseId} > Focus` };
+  async function focusVisitOne(page, sink, where, s, subject, index, enter) {
+    const isView = subject.kind === 'view';
+    const caseId = subject.id;
+    const at = { ...where, trail: `${subject.kind} ${subject.id} > Focus` };
     const facts = () => page.evaluate(() => window.__caosGate.focusFacts());
-    const label = `Focus mode of case ${caseId}`;
+    const label = `Focus mode of ${subject.kind} ${subject.id}`;
     const before = await facts();
     try {
       await enter.evaluate((el) => window.__caosGate.bringEl(el)).catch(() => undefined);
@@ -872,11 +880,15 @@ export async function runGate(o) {
       fail('G18', at, `${label}: the Focus control did not open Focus mode`);
       return;
     }
-    if (f.caseId !== caseId) fail('G18', at, `${label} shows case ${f.caseId}`);
-    if (f.group !== before.group) fail('G18', at, `${label} shows group ${f.group}, the App had ${before.group}`);
+    if (!isView && f.caseId !== caseId) fail('G18', at, `${label} shows case ${f.caseId}`);
+    if (f.group !== before.group) fail('G18', at, `${label} shows ${isView ? 'view' : 'group'} ${f.group}, the App had ${before.group}`);
     if (f.subview !== before.subview) fail('G18', at, `${label} shows sub-view ${f.subview}, the App had ${before.subview}`);
     const q = new URLSearchParams(f.search);
-    if (q.get('focus') !== '1' || (total > 1 && q.get('case') !== caseId)) fail('G18', at, `${label}: the URL (${f.search || 'no query'}) does not hold ?focus=1 and the case`);
+    if (isView) {
+      // the view the App held in its URL stays there (a surface that keeps its view out of the URL has none to keep)
+      const held = new URLSearchParams(before.search).get('view');
+      if (q.get('focus') !== '1' || (held !== null && q.get('view') !== held)) fail('G18', at, `${label}: the URL (${f.search || 'no query'}) does not hold ?focus=1 and the view`);
+    } else if (q.get('focus') !== '1' || (subject.total > 1 && q.get('case') !== caseId)) fail('G18', at, `${label}: the URL (${f.search || 'no query'}) does not hold ?focus=1 and the case`);
     if (f.docW > f.vw + 1 || f.docH > f.vh + 1) fail('G18', at, `${label}: the page scrolls (the document is ${f.docW}x${f.docH}px in a ${f.vw}x${f.vh}px viewport); Focus mode is the viewport`);
     if (f.nestedMain) fail('G18', at, `${label}: the page holds a main inside a main (the Focus frame must not be a second landmark inside the App's main)`);
     // the keyboard stays in the Focus frame: the App behind it is out of the tab order
@@ -917,16 +929,58 @@ export async function runGate(o) {
     const g = await facts();
     if (g.focus) {
       fail('G18', at, `${label}: ${byButton && left ? 'the exit control' : 'Escape'} does not return to the App`);
-      await page.goto(`${urlFor(s.route)}?case=${encodeURIComponent(caseId)}`, { waitUntil: 'load', timeout: 30000 }).catch(() => undefined);
+      await page.goto(`${urlFor(s.route)}?${isView ? 'view' : 'case'}=${encodeURIComponent(caseId)}`, { waitUntil: 'load', timeout: 30000 }).catch(() => undefined);
       await settle(page);
     } else {
       if (!g.app) fail('G18', at, `${label}: back from Focus mode there is no App on the page`);
-      if (g.caseId !== caseId) fail('G18', at, `${label}: back in the App on case ${g.caseId}, it was left on case ${caseId}`);
-      if (g.group !== before.group) fail('G18', at, `${label}: back in the App on group ${g.group}, it was left on group ${before.group}`);
+      if (!isView && g.caseId !== caseId) fail('G18', at, `${label}: back in the App on case ${g.caseId}, it was left on case ${caseId}`);
+      if (g.group !== before.group) fail('G18', at, `${label}: back in the App on ${isView ? 'view' : 'group'} ${g.group}, it was left on ${isView ? 'view' : 'group'} ${before.group}`);
       if (g.subview !== before.subview) fail('G18', at, `${label}: back in the App on sub-view ${g.subview}, it was left on sub-view ${before.subview}`);
       if (new URLSearchParams(g.search).has('focus')) fail('G18', at, `${label}: the URL still holds ?focus after the return`);
     }
     drain(sink, at);
+  }
+
+  /**
+   * G18 on an App that is a surface (`--workbench ''`, the App route `--app-route`, shell 0.16.0): every view of the surface's tab row is
+   * opened; each one that offers the Focus control is entered from its last sub-view (the first view is where the walk leaves the
+   * App, so a Focus that fell back to it would go unseen; outside the primary mode, the last focusable view only). The same failures as
+   * for a workbench apply, with the view in place of the case and the group.
+   */
+  async function surfaceFocusWalk(page, sink, at, s) {
+    const rowTabs = page.locator('[data-surface] > .caos-surface-body > .tabs > [role="tablist"] > [role="tab"]');
+    const n = await rowTabs.count();
+    const focusable = [];
+    for (let i = 0; i < n; i += 1) {
+      await rowTabs.nth(i).click({ timeout: 4000 }).catch(() => undefined);
+      await settle(page);
+      if ((await page.locator('[data-focus-enter]').filter({ visible: true }).count()) > 0) {
+        focusable.push({ index: i, id: (await page.evaluate(() => window.__caosGate.focusFacts())).group });
+      }
+    }
+    if (focusable.length === 0) {
+      if (opt.requireFocus) {
+        fail('G18', { ...at, trail: 'surface > Focus' }, `the surface App (${at.route}) offers no Focus control ([data-focus-enter]) on any of its ${n} view(s): ADR-0070 requires a visible control on every view with a stage that opens it in focus mode (set TabDef.focus on the view and focus on the SurfacePage)`);
+      }
+      if (n > 0) await rowTabs.nth(0).click({ timeout: 4000 }).catch(() => undefined);
+      await settle(page);
+      return;
+    }
+    const targets = s.primary ? focusable : focusable.slice(-1);
+    for (const [k, v] of targets.entries()) {
+      await rowTabs.nth(v.index).click({ timeout: 4000 }).catch(() => undefined);
+      await settle(page);
+      const subs = page.locator('[data-surface] .subtablist [role="tab"]');
+      const sn = await subs.count();
+      if (sn > 1) {
+        await subs.nth(sn - 1).click({ timeout: 4000 }).catch(() => undefined);
+        await settle(page);
+      }
+      const enter = page.locator('[data-focus-enter]').filter({ visible: true }).first();
+      await focusVisitOne(page, sink, at, s, { kind: 'view', id: v.id }, k, enter);
+    }
+    await rowTabs.nth(0).click({ timeout: 4000 }).catch(() => undefined);
+    await settle(page);
   }
 
   async function workbenchKey(page) {
