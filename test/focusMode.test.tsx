@@ -134,3 +134,15 @@ test('inside Focus a product accessory on the case picker still renders in the f
     assert.doesNotMatch(html, /data-focus-enter/);
   }
 });
+
+test('the case select is the native select on top of an aria-hidden display of the selected name (shell 0.17.0, the consumer trial)', () => {
+  const html = bench(true);
+  const wrap = html.indexOf('class="cs-select-wrap"');
+  assert.ok(wrap > 0, 'a wrap');
+  const display = html.indexOf('class="cs-select-display"', wrap);
+  const select = html.indexOf('<select', wrap);
+  assert.ok(display > wrap && select > display, 'the display first, the native select after it (on top)');
+  assert.match(html.slice(display, select), /aria-hidden="true"[^>]*><span class="cs-select-text">First<\/span>/, 'the display is hidden from assistive tools and holds the selected name');
+  assert.match(html.slice(select, html.indexOf('</select>', select)), /aria-label="Case selector"/, 'the select keeps its accessible name');
+  assert.doesNotMatch(html.slice(display, select), /cs-select-display-2/, 'one line until some name needs two (measured in the browser)');
+});

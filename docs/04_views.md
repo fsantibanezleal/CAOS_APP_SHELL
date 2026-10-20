@@ -17,6 +17,13 @@ The App route of a product about cases, the whole route in one component:
 />
 ```
 
+With `layout: 'select'` the case picker shows the selected case's name in a display of up to two wrapped lines, with the native `select` kept in
+place on top of it, transparent (since 0.17.0): the keyboard, the screen reader (the select keeps its accessible name and value; the display is
+`aria-hidden`) and the native list are the select's own, and a name of 200 to 310 px reads whole in a rail that leaves 181 px. The second line is
+reserved only when some case of the list needs it at the current width (measured once per width, so every case has the same height and the
+rail head never moves when the reader switches cases); a list whose names all fit keeps one line. A name that needs a third line is cut and
+the gate fails it (G5): shorten the name or put the detail in the case's `tooltip`. The rail of Focus mode shows the same select.
+
 The rail holds, in order, the case picker, the variants and the product's parameters (`Knob`, `ChipGroup`) and live
 values (`Readout`, `Gauge`, `Verdict`). The instrument holds at most six groups (the product's question groups, the
 variant comparison, the context write-up); the open group is held in `?view=`. Each view is a `PlotCard` with its

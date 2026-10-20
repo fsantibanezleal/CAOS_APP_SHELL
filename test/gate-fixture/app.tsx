@@ -68,19 +68,18 @@ function plantDom(mutate: () => void): () => void {
 }
 const WORDS = 'one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty';
 function flipPlant(plant: string): (() => void) | undefined {
-  // review of 0.17.0 (M1, M2): a case select whose text fits the content box by 2px but ends under the native arrow (`select-arrow`),
-  // and the select of the Focus rail made too narrow for its text (`select-focus-rail`)
-  if (plant === 'select-arrow' || plant === 'select-focus-rail') {
+  // review of 0.17.0 (M1): a select of the product's own (a plain select, without the shell's display) whose text fits its content box by 2px
+  // but ends under the native arrow
+  if (plant === 'select-arrow') {
     return plantDom(() => {
-      const where = plant === 'select-arrow' ? '[data-rail] select[data-control="case"]' : '[data-focus-shell] select[data-control="case"]';
-      for (const sel of document.querySelectorAll<HTMLSelectElement>(where)) {
+      for (const sel of document.querySelectorAll<HTMLSelectElement>('[data-rail] select[data-plant-select]')) {
         const cs = getComputedStyle(sel);
         const ctx = document.createElement('canvas').getContext('2d')!;
         ctx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
         const text = (sel.selectedOptions[0]?.textContent ?? '').trim();
         const box = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
         sel.style.maxWidth = 'none';
-        sel.style.width = plant === 'select-focus-rail' ? '64px' : `${ctx.measureText(text).width + box + 2}px`;
+        sel.style.width = `${ctx.measureText(text).width + box + 2}px`;
       }
     });
   }
@@ -636,10 +635,18 @@ function Workbench() {
   // The case list arrives asynchronously, as a product's index does: the deep link must survive that (G9).
   const [caseList, setCaseList] = useState<typeof CASES>([]);
   useEffect(() => {
-    // the plant that cuts the select (BL-074, G5): the first case's name is far wider than the rail's select
-    const t = setTimeout(() => setCaseList(PLANT === 'select-cut' ? CASES.map((c, i) => (i === 0 ? { ...c, name: 'A planted case name far too long for the rail select to show whole' } : c)) : CASES), 60);
+    const t = setTimeout(() => setCaseList(CASES), 60);
     return () => clearTimeout(t);
   }, []);
+  // The names of the case select. Plants: a name past the two lines the shell's display holds (`select-cut`, and `select-focus-rail` only while Focus
+  // is open, so the App is clean and the Focus rail is cut); `legit-select-two-lines` is a long name that fits them (the trial's Contraste name).
+  const LONG_NAME = 'A planted case name far too long for the rail select to show whole, and then a good deal longer than that, so that two lines are not enough to hold it either';
+  const shownCases = caseList.map((c, i) => {
+    if (i !== 0) return c;
+    if (PLANT === 'select-cut' || (PLANT === 'select-focus-rail' && focusOn)) return { ...c, name: LONG_NAME };
+    if (PLANT === 'legit-select-two-lines') return { ...c, name: 'Corporate PD across 1 to 5 year horizons (planned)' };
+    return c;
+  });
   const idx = Math.max(0, CASES.findIndex((c) => c.id === caseId));
   const beta = CASES[idx].beta * scale * (variant === 'stress' ? 1.3 : 1);
   const sim = useMemo(() => simulate(beta, Number(horizon)), [beta, horizon]);
@@ -742,6 +749,11 @@ function Workbench() {
         {PLANT === 'truncated' && (
           <span style={{ display: 'block', width: 90, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>A planted label too long to read</span>
         )}
+        {PLANT === 'select-arrow' && (
+          <select className="select" data-plant-select="" aria-label="Planted select">
+            <option>Low contact</option>
+          </select>
+        )}
         {PLANT === 'mutation-loop' && <span>{tick}</span>}
         <LiveValues sim={sim} />
       </>
@@ -750,7 +762,7 @@ function Workbench() {
   return (
       <CaseWorkbench
         caseId={shownCase}
-        cases={{ cases: caseList, selectedId: caseId, onSelect: setCaseId, layout: 'select', deepLink: true }}
+        cases={{ cases: shownCases, selectedId: caseId, onSelect: setCaseId, layout: 'select', deepLink: true }}
         controls={controls}
         variants={PLANT === 'no-controls' ? undefined : { variants: VARIANTS, activeId: variant, onSelect: setVariant, lane: 'live' }}
         rail={rail}
