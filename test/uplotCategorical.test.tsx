@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { drawYMarks, SOLO_DIM_ALPHA, soloStyle, tickLabelAt, tickSplits, UPlotChart, xScaleRange } from '../src/chart/UPlotChart.tsx';
+import { drawYMarks, namedRepeats, SOLO_DIM_ALPHA, soloKey, soloStyle, tickLabelAt, tickSplits, UPlotChart, xScaleRange } from '../src/chart/UPlotChart.tsx';
+import { referenceLineName } from '../src/chart/text.ts';
 
 /** Shell 0.18.0 (CAOS_Fragmenta 0.09.000, BL-042): what CAOS_Fragmenta's own uPlot wrapper did and the shell's chart did not:
  * named x ticks, a key that solos a series, an x range, dots on short lines and an unlabelled reference line. */
@@ -142,4 +143,45 @@ test('drawYMarks: an unlabelled line reserves no room, so the labelled ones plac
 test('a chart with an unlabelled reference line among labelled ones declares them all', () => {
   const m = html(<UPlotChart height={200} x={{ values: [1, 2], label: 'Day' }} y={{ label: 'People' }} series={[{ label: 'A', values: [1, 2] }]} yMarks={[{ y: 0 }, { y: 1, label: 'level' }]} />);
   assert.match(m, /data-y-marks="2"/);
+});
+
+// ---- the fix round of 0.18.0 (review of 2026-10-20) ----------------------------------------------------------------
+
+test('namedRepeats: every duplicate label counts, adjacent or not; empty labels are no label', () => {
+  assert.deepEqual(namedRepeats(['A', 'B', 'C']), { n: 0, names: [] });
+  assert.deepEqual(namedRepeats(['A', 'A', 'B']), { n: 1, names: ['A'] });
+  assert.deepEqual(namedRepeats(['A', 'B', 'A']), { n: 1, names: ['A'], }, 'a repeat that is not adjacent');
+  assert.deepEqual(namedRepeats(['A', 'B', 'A', 'B', 'A']), { n: 3, names: ['A', 'B'] });
+  assert.deepEqual(namedRepeats(['', 'A', '', 'A']), { n: 1, names: ['A'] });
+  assert.deepEqual(namedRepeats([]), { n: 0, names: [] });
+});
+
+test('tickLabelAt: an x within 1e-9 of the span of a tick is on it; a value listed twice keeps its first label', () => {
+  const t = [{ value: 0.1, label: 'low' }, { value: 0.2, label: 'mid' }, { value: 0.3, label: 'high' }];
+  assert.equal(tickLabelAt(t, 0.1 + 0.2, 'en', 0.2), 'high');
+  assert.equal(tickLabelAt(t, 0.1 + 0.2, 'en'), null, 'without a span only an exact x is on a tick');
+  assert.equal(tickLabelAt(t, 0.3001, 'en', 0.2), null);
+  const dup = [{ value: 1, label: 'B' }, { value: 1, label: 'C' }];
+  assert.equal(tickLabelAt(dup, 1, 'en'), 'B', 'the first label of a value wins');
+  assert.deepEqual(tickSplits(dup, 0, 2), [1]);
+});
+
+test('xScaleRange: on a log axis a range that reaches 0 or below is ignored alone, the overlays still widen the scale', () => {
+  assert.deepEqual(xScaleRange([1, 100], { x: [1, 500] }, [0, 10], true), [1, 500]);
+  assert.deepEqual(xScaleRange([1, 100], { x: [1, 500] }, [-3, 10], true), [1, 500]);
+  assert.equal(xScaleRange([1, 100], null, [0, 10], true), null, 'nothing else widens it: uPlot keeps its own');
+  assert.deepEqual(xScaleRange([1, 100], null, [0.5, 1000], true), [0.5, 1000], 'a positive range is used');
+});
+
+test('soloKey: the series id, else its English label', () => {
+  assert.equal(soloKey({ label: { en: 'Alpha', es: 'Alfa' }, values: [] }), 'Alpha');
+  assert.equal(soloKey({ label: 'Alpha', values: [] }), 'Alpha');
+  assert.equal(soloKey({ id: 'a1', label: { en: 'Alpha', es: 'Alfa' }, values: [] }), 'a1');
+});
+
+test('referenceLineName: the name of an unlabelled handle in both languages, numbered when several share a chart', () => {
+  assert.equal(referenceLineName('en', 1, 1), 'Reference line');
+  assert.equal(referenceLineName('es', 1, 1), 'Línea de referencia');
+  assert.equal(referenceLineName('en', 2, 3), 'Reference line 2');
+  assert.equal(referenceLineName('es', 2, 3), 'Línea de referencia 2');
 });

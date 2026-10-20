@@ -3,11 +3,16 @@ import uPlot from 'uplot';
 import { type FormatOptions, formatNumber, formatTicks, NBSP } from '../lib/format';
 import { type Lang, useShellLang } from '../lib/lang';
 import { type BiText, pick } from '../lib/text';
+import { referenceLineName } from './text';
 import { resolveToken, type ShellColorToken } from '../lib/tokens';
 import { useThemeStore } from '../lib/theme';
 import { useStageSize } from '../workbench/Stage';
 
 export interface ChartSeries {
+  /** What identifies the series to the solo key (0.18.0): the solo follows the series with this id when the list of series
+   * changes (one dropped, one added, a label changed), not its position. Without an id the English label is the key. Unique
+   * within the chart; with two series of one key the first is taken. */
+  id?: string;
   label: BiText;
   /** One value per x; `null` leaves a gap. */
   values: (number | null)[];
@@ -70,11 +75,14 @@ export interface UPlotChartProps {
     log?: boolean;
     /** Named ticks (0.18.0): the axis ticks exactly at these values, no other, each labelled with its text in the page
      * language (a categorical axis: protocols, blast ids). The readout names an x that sits on one by its label. A tick
-     * outside the range is not drawn; an empty list leaves uPlot its own ticks. Labels must not repeat (the gate fails a
-     * repeated label). Ignored on a time axis. */
+     * outside the range is not drawn; an empty list leaves uPlot its own ticks. A value listed twice keeps its first label.
+     * Labels must be different from each other, adjacent or not (the gate fails any repeated label, G6). An x is on a tick
+     * when it is within 1e-9 of the x span of it. Ignored on a time axis. */
     ticks?: ChartTick[];
     /** The x scale spans at least this range (0.18.0), as `y.range` fixes the y scale: widen it past the data so an end tick's
-     * label is not cut by the plot edge. The data and the overlays still widen it further. */
+     * label is not cut by the plot edge. The data and the overlays still widen it further. On a log axis a range that reaches 0
+     * or below is ignored (the overlays still widen the scale); on a parity chart it is ignored, the chart's own shared range
+     * rules. */
     range?: [number, number];
   };
   y: ChartAxis & { log?: boolean; range?: [number, number] };
@@ -132,26 +140,52 @@ export function tickSplits(ticks: readonly ChartTick[], min: number, max: number
   return [...new Set(values)].sort((a, b) => a - b);
 }
 
-/** The label of the named tick at an x, in the page language; null when no tick sits there. */
-export function tickLabelAt(ticks: readonly ChartTick[] | undefined, x: number, lang: Lang): string | null {
-  const t = ticks?.find((one) => one.value === x);
+/** The label of the named tick at an x, in the page language; null when no tick sits there. An x is on a tick when it is
+ * within 1e-9 of `span` (the x span, as `tickSplits` takes the range) of its value, so 0.1 + 0.2 is on a tick at 0.3; without
+ * a span only an equal x is. A value listed twice keeps its first label. */
+export function tickLabelAt(ticks: readonly ChartTick[] | undefined, x: number, lang: Lang, span = 0): string | null {
+  const eps = Math.abs(span) * 1e-9;
+  const t = ticks?.find((one) => Math.abs(one.value - x) <= eps);
   return t ? pick(t.label, lang) : null;
 }
 
+/** How many of the labels of named ticks repeat another's, adjacent or not (the gate's check of numeric ticks counts only
+ * neighbours, and on a categorical axis order means nothing), and which ones; an empty label is no label. */
+export function namedRepeats(labels: readonly string[]): { n: number; names: string[] } {
+  const seen = new Set<string>();
+  const names: string[] = [];
+  let n = 0;
+  for (const l of labels) {
+    if (!l) continue;
+    if (seen.has(l)) {
+      n++;
+      if (!names.includes(l)) names.push(l);
+    } else seen.add(l);
+  }
+  return { n, names };
+}
+
+/** What a series is known by to the solo key: its id, else its English label. */
+export function soloKey(s: ChartSeries): string {
+  return s.id ?? pick(s.label, 'en');
+}
+
 /** The x scale of a chart whose x range is fixed, or whose overlays reach past the curve: the data's extent widened by the
- * given range and by the overlays' x; null when none is given (uPlot's own range), and on a log axis when it would reach 0.
+ * given range and by the overlays' x; null when none is given (uPlot's own range), and on a log axis when the data would reach 0.
  * One x alone gets a unit either side, a decade on a log axis. `xs` is sorted ascending. */
 export function xScaleRange(xs: readonly number[], ext: { x: [number, number] } | null, range: readonly [number, number] | undefined, log: boolean): [number, number] | null {
-  if ((!ext && !range) || xs.length === 0) return null;
+  // a log axis has no room at or below 0: a range that reaches it is ignored, alone, and the overlays still widen the scale
+  const given = range && !(log && Math.min(range[0], range[1]) <= 0) ? range : undefined;
+  if ((!ext && !given) || xs.length === 0) return null;
   let lo = xs[0];
   let hi = xs[xs.length - 1];
   if (ext) {
     lo = Math.min(lo, ext.x[0]);
     hi = Math.max(hi, ext.x[1]);
   }
-  if (range) {
-    lo = Math.min(lo, range[0], range[1]);
-    hi = Math.max(hi, range[0], range[1]);
+  if (given) {
+    lo = Math.min(lo, given[0], given[1]);
+    hi = Math.max(hi, given[0], given[1]);
   }
   if (log && !(lo > 0)) return null;
   return hi > lo ? [lo, hi] : log ? [lo / 10, hi * 10] : [lo - 1, hi + 1];
@@ -542,10 +576,15 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
   const hostRef = useRef<HTMLDivElement | null>(null);
   const [cursor, setCursor] = useState<number | null>(null);
   // the soloed series (its index in `series`); a press redraws the chart, so it is held here and read by the drawing
-  const [soloPick, setSoloPick] = useState<number | null>(null);
-  const soloIdx = solo && soloPick !== null && soloPick < series.length ? soloPick : null;
+  // held by the series key, not by position: a series dropped from the list releases it, and it is not given back when it returns
+  const [soloPick, setSoloPick] = useState<string | null>(null);
+  const soloFound = solo && soloPick !== null ? series.findIndex((s) => soloKey(s) === soloPick) : -1;
+  const soloIdx = soloFound >= 0 ? soloFound : null;
   const soloRef = useRef(soloIdx);
   soloRef.current = soloIdx;
+  useEffect(() => {
+    if (soloPick !== null && soloIdx === null) setSoloPick(null);
+  }, [soloPick, soloIdx]);
   const onCursorRef = useRef(onCursor);
   onCursorRef.current = onCursor;
   const onPickRef = useRef(onPick);
@@ -570,6 +609,8 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
   const yLevels = !parity && !y.range && (levels.length > 0 || ext) ? [...levels, ...(ext ? ext.y : [])] : null;
   // the x range that takes in the overlays (they have x values the curve has not)
   const xExt = useMemo((): [number, number] | null => (range ? null : xScaleRange(xs, ext, x.range, Boolean(x.log))), [ext, range, xs, x.log, x.range]);
+  // the x span a tick is matched within
+  const xSpan = xs.length > 0 ? Math.max(Math.abs(xs[xs.length - 1] - xs[0]), x.range ? Math.abs(x.range[1] - x.range[0]) : 0) : 0;
   // named ticks (not on a time axis); an empty list leaves uPlot its own
   const ticks = !x.time && x.ticks && x.ticks.length > 0 ? x.ticks : undefined;
   // a log axis reaching below uPlot's tick table ticks at powers of ten (known shell defect 31)
@@ -625,8 +666,8 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
     const surface = resolveToken('--color-surface', '#fff');
     const repeats = { x: 0, y: 0 };
     // One notation per axis (known shell defect 19): the labels of an axis are formatted together.
-    const declareTicks = (axis: 'x' | 'y', labels: string[]) => {
-      repeats[axis] = repeatedLabels(labels);
+    const declareTicks = (axis: 'x' | 'y', labels: string[], repeated = repeatedLabels(labels)) => {
+      repeats[axis] = repeated;
       hostRef.current?.setAttribute('data-ticks-repeat', String(repeats.x + repeats.y));
       // how many ticks the axis labels: a parity plot's two axes must agree, and an axis with fewer than two says nothing
       hostRef.current?.setAttribute(`data-ticks-${axis}`, String(labels.filter((l) => l).length));
@@ -642,7 +683,11 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
     const namedTicks = (_u: uPlot, vals: (number | null)[]) => {
       const labels = vals.map((v) => (v === null || v === undefined ? '' : (tickLabelAt(ticks, v, lang) ?? '')));
       hostRef.current?.setAttribute('data-x-tick-labels', labels.filter((l) => l).join('|'));
-      declareTicks('x', labels);
+      // a name used by two ticks is a repeat wherever they sit on the axis, and the gate names it
+      const dup = namedRepeats(labels);
+      if (dup.n > 0) hostRef.current?.setAttribute('data-ticks-repeated', dup.names.join('|'));
+      else hostRef.current?.removeAttribute('data-ticks-repeated');
+      declareTicks('x', labels, dup.n);
       return labels;
     };
     // the point nearest the pointer, computed once per cursor position and handed to every series (uPlot asks each)
@@ -883,7 +928,9 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
               el.style.top = `${top - HANDLE_HEIGHT / 2}px`;
               const label = m.label ? pick(m.label, lang) : '';
               const shown = `${formatNumber(v, lang, y.format ?? { digits: 4 })}${yUnit ? `${NBSP}${yUnit}` : ''}`;
-              el.setAttribute('aria-label', label || (lang === 'es' ? 'Línea de referencia' : 'Reference line'));
+              // an unlabelled line is named by the text module, numbered when several unlabelled lines can be dragged
+              const unnamed = lines.flatMap((one, k) => (one.drag && !one.label ? [k] : []));
+              el.setAttribute('aria-label', label || referenceLineName(lang, unnamed.indexOf(i) + 1, unnamed.length));
               el.setAttribute('aria-valuenow', String(Number(v.toPrecision(12))));
               el.setAttribute('aria-valuetext', label ? `${label}: ${shown}` : shown);
             });
@@ -892,6 +939,11 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
         ],
       },
     };
+    // the attributes of named ticks go with the ticks
+    if (!ticks) {
+      hostRef.current?.removeAttribute('data-x-tick-labels');
+      hostRef.current?.removeAttribute('data-ticks-repeated');
+    }
     uRef.current?.destroy();
     uRef.current = new uPlot(opts, data, el);
     return () => {
@@ -934,8 +986,8 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
       : cursor !== null
       ? [
           // an x that sits on a named tick is named by it, not by its number
-          tickLabelAt(ticks, xs[cursor], lang) !== null
-            ? `${xLabel} ${tickLabelAt(ticks, xs[cursor], lang)}`
+          tickLabelAt(ticks, xs[cursor], lang, xSpan) !== null
+            ? `${xLabel} ${tickLabelAt(ticks, xs[cursor], lang, xSpan)}`
             : `${xLabel} ${formatNumber(xs[cursor], lang, x.format ?? { digits: 4 })}${xUnit ? `${NBSP}${xUnit}` : ''}`,
           ...baseEntries
             .map(({ s }, k) => ({ s, v: ys[k][cursor] ?? null }))
@@ -972,7 +1024,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
           {series.map((s, i) => (
             <li key={i} className="caos-chart-key" data-mode={s.mode ?? 'line'} data-dash={seriesStyle(s, i).dash ? '1' : undefined}>
               {solo ? (
-                <button type="button" className="caos-chart-key-button" aria-pressed={soloIdx === i} onClick={() => setSoloPick(soloIdx === i ? null : i)}>
+                <button type="button" className="caos-chart-key-button" aria-pressed={soloIdx === i} onClick={() => setSoloPick(soloIdx === i ? null : soloKey(s))}>
                   <span className="caos-chart-swatch" style={{ '--swatch': `var(${seriesStyle(s, i).color})` } as CSSProperties} aria-hidden="true" />
                   {pick(s.label, lang)}
                 </button>

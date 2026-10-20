@@ -65,14 +65,19 @@ rebuilt on a theme or language change; compared by value, so a parent re-render 
   chart, blast ids) ticks exactly at the given values, no other, and labels each with its text in the page language
   (`BiText`). The readout names an x that sits on a tick by its label ("Protocol deduplicated"), never by its number. A
   tick outside the range is not drawn, a list of one draws that one, and an empty list leaves uPlot its own ticks;
-  on a log axis only the ticks above 0 inside the range are drawn (`tickSplits`, `tickLabelAt`). The labels must be
-  different: two ticks with one name fail the gate (G6, `data-ticks-repeat`). The host declares the labels shown in
+  on a log axis only the ticks above 0 inside the range are drawn (`tickSplits`, `tickLabelAt`). A value listed
+  twice keeps its first label, and an x within 1e-9 of the x span of a tick is on it. The labels must be different, adjacent or
+  not (A, B, A): two ticks with one name fail the gate (G6, which names the label; the host declares them in
+  `data-ticks-repeated` and counts them in `data-ticks-repeat`). The host declares the labels shown in
   `data-x-tick-labels`. Ignored on a time axis.
 - **An x range** (`x: { range: [lo, hi] }`, 0.18.0): the x scale spans at least that range, as `y.range` fixes the y scale.
   Widen it past the data by half a step so the label of an end tick is not cut by the plot edge. The data and the
-  overlays still widen it further, and on a log axis a range that reaches 0 is ignored (`xScaleRange`).
+  overlays still widen it further, and on a log axis a range that reaches 0 or below is ignored alone (`xScaleRange`). On a parity chart `x.range` is ignored: its
+  shared range rules.
 - **A key that solos a series** (`solo`, 0.18.0): each entry of the key is a `button` with `aria-pressed`, reached by Tab and
-  pressed by click, Enter or Space. Pressing one dims every other series to alpha 0.12 and 1 px (`soloStyle`; dimmed, not
+  pressed by click, Enter or Space. The solo is held by the series key, `ChartSeries.id` or else its English label, not by
+  position: it stays on that series when the list changes, is released when that series leaves and is not given back when
+  it returns. Pressing one dims every other series to alpha 0.12 and 1 px (`soloStyle`; dimmed, not
   hidden, so the reader keeps the context) and leaves the chosen one as drawn; pressing it again releases it, pressing
   another moves the solo. A press redraws the chart and never rebuilds it, so the cursor and a line the reader drags
   survive; the solo survives a theme or a language change. It dims a `points` series with an x of its own too, and a chart
@@ -83,7 +88,8 @@ rebuilt on a theme or language change; compared by value, so a parent re-render 
   same decides it the same way.
 - **A reference line with no label** (`yMarks: [{ y }]`, 0.18.0): drawn as the others, with no label box and nothing
   reserved for one, so the labelled lines place themselves as without it (a zero line). A draggable line without a
-  label names itself "Reference line" to a screen reader.
+  label names its handle "Reference line" ("Línea de referencia") to a screen reader, numbered ("Reference line 1",
+  "Reference line 2") when several unlabelled lines can be dragged (`referenceLineName`, in the text module).
 - **Markers apart on a log axis** (`marks`): a 60 cm target beside a 100 cm limit print their labels on two rows,
   as on any axis; see `drawMarks`.
 - **A parity plot** (`parity`, 0.9.0): predicted (the series, usually `mode: 'points'`) against observed (x) on one
