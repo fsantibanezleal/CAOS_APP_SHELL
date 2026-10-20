@@ -1,3 +1,20 @@
+## [0.18.000] - 2026-10-20
+
+### Added
+
+- `UPlotChart`: what CAOS_Fragmenta's own wrapper did and the shell's chart could not (CAOS_Fragmenta 0.09.000, BL-042). Each option is off by
+  default: a chart that uses none renders and declares as in 0.17.0.
+  - Named x ticks, `x.ticks: { value, label: BiText }[]`: the axis ticks exactly at those values and labels each in the page language; the
+    readout names an x on a tick by its label (within 1e-9 of the x span; a value listed twice keeps its first label); the host declares
+    `data-x-tick-labels` and drops it with the ticks; two ticks with one name, adjacent or not, fail G6, which names the label (SHC-047 to SHC-049, SHC-060, SHC-062).
+  - `x.range: [lo, hi]`: the x scale spans at least that range, as `y.range` fixes the y scale, so an end tick's label is not cut; on a log axis a range reaching 0 is ignored alone; on a parity chart it is ignored (SHC-050, SHC-061).
+  - `solo`: each entry of the key is a button (`aria-pressed`, Tab, click, Enter or Space) that dims every other series (alpha 0.12, 1 px) and a second
+    press releases; the chart is redrawn, not rebuilt; the host declares `data-solo` (SHC-051 to SHC-054). The solo is held by the series key, the new `ChartSeries.id` or else its English label, not by position (SHC-059).
+  - `ChartSeries.dots`: a dot at each value of a line, none at a null (SHC-055).
+  - A `yMarks` entry may omit `label`: the line is drawn with no label box and nothing reserved for one; a draggable one names its handle "Reference line", numbered when several are draggable (SHC-056, SHC-058).
+  - New exports `tickSplits`, `tickLabelAt`, `xScaleRange`, `namedRepeats`, `soloKey`, `soloStyle`, `SOLO_DIM_ALPHA`, `referenceLineName`, type `ChartTick`; the stylesheet gains `.caos-chart-key-button`.
+  - The gate fixture has a Categories view of each option and the plants `named-ticks-repeat` and `named-ticks-far`.
+
 ## [0.17.000] - 2026-10-20
 
 ### Added
