@@ -469,7 +469,7 @@ export async function runGate(o) {
       if (f.rail.outsideCount) fail('G5', where, `${f.rail.outsideCount} rail element(s) outside the rail: ${f.rail.outside.join('; ')}`);
     }
     if (f.truncatedCount) fail('G5', where, `${f.truncatedCount} truncated text(s) without the full text in a title: ${f.truncated.join('; ')}`);
-    if (f.cutSelectCount) fail('G5', where, `${f.cutSelectCount} select(s) cut the selected text (the text is wider than the room the select leaves it): ${f.cutSelects.join('; ')}`);
+    if (f.cutSelectCount) fail('G5', where, `${f.cutSelectCount} select(s) cut the selected text (a case name cut in its box, or a display that names another case than the one the select holds, or a plain select with a text wider than its room): ${f.cutSelects.join('; ')}`);
     for (const c of f.clipped) fail('G5', where, c);
     if (f.offCentre !== null && f.offCentre > 2) fail('ADR-0017.1', where, `the prose page is off-centre by ${f.offCentre.toFixed(1)}px`);
     if (f.referenceLists) fail('ADR-0017.4', where, `${f.referenceLists} bibliography outside the end-of-page references block (a .reference-list); give each DocSection its refs and let the page list them once`);
@@ -923,7 +923,7 @@ export async function runGate(o) {
     if (big && f.share < opt.instrumentMin) fail('G18', at, `${label}: the stage covers ${(100 * f.share).toFixed(1)}% of the viewport (floor ${(100 * opt.instrumentMin).toFixed(0)}%)`);
     if (f.exitInside === false) fail('G18', at, `${label}: the exit control is outside the viewport`);
     for (const c of f.covered) fail('G18', at, `${label}: ${c.chrome} covers the control "${c.control}" (the stage must clear the Focus chrome)`);
-    if (f.cutSelects.count) fail('G5', at, `${label}: ${f.cutSelects.count} select(s) cut the selected text (the text is wider than the room the select leaves it): ${f.cutSelects.list.join('; ')}`);
+    if (f.cutSelects.count) fail('G5', at, `${label}: ${f.cutSelects.count} select(s) cut the selected text (a case name cut in its box, or a display that names another case than the one the select holds, or a plain select with a text wider than its room): ${f.cutSelects.list.join('; ')}`);
     if (f.enterInside > 0) fail('G18', at, `${label}: the Focus control shows inside Focus mode (it opens the mode the reader is already in)`);
     for (const m of await page.evaluate(() => window.__caosGate.drawingText())) fail('G10', at, m);
     for (const m of await page.evaluate(() => window.__caosGate.brokenValues())) fail('G19', at, m);
