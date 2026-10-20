@@ -1,4 +1,4 @@
-import { isValidElement, type ReactNode } from 'react';
+import { isValidElement, useContext, type ReactNode } from 'react';
 import { Maximize2 } from 'lucide-react';
 import { readCaseParam } from '../case/caseModel';
 import { useShellLang } from '../lib/lang';
@@ -63,6 +63,7 @@ const viewFocus = (tab: TabDef | undefined): ViewFocusConfig | null => (!tab || 
  */
 export function SurfacePage({ title, lede, actions, tabs, value, onChange, deepLinkView = true, ariaLabel, instrument, focus, children }: SurfacePageProps) {
   const lang = useShellLang();
+  const placeAbove = useContext(PanelPathContext);
   const ids = (tabs ?? []).map((t) => t.id);
   const viewParam = tabs ? viewParamOf(deepLinkView) : null;
   const [open, select] = useUrlView(ids, viewParam, value, onChange);
@@ -117,7 +118,7 @@ export function SurfacePage({ title, lede, actions, tabs, value, onChange, deepL
             <div className="caos-surface-focus" data-surface-focus="" data-view-param={viewParam ?? ''} data-focus-param={focusCfg?.param ?? FOCUS_PARAM} data-focus-view={openTab.id} data-focus-group={openTab.id} data-instrument="">
               <div className="tabs">
                 <div className="tabpanel" role="tabpanel" tabIndex={0} aria-label={label || undefined} data-panel={openTab.id}>
-                  <PanelPathContext.Provider value={`/${openTab.id}`}>
+                  <PanelPathContext.Provider value={`${placeAbove}/${openTab.id}`}>
                     <PanelBoundary panel={openTab.id}>
                       <DocRefsScope>{openTab.content}</DocRefsScope>
                     </PanelBoundary>
@@ -131,7 +132,8 @@ export function SurfacePage({ title, lede, actions, tabs, value, onChange, deepL
       </ViewMemoryContext.Provider>
     );
   }
-  const head = title !== undefined || lede !== undefined || actions !== undefined;
+  // `null` is no actions: it renders neither an actions element nor a head of its own
+  const head = title !== undefined || lede !== undefined || (actions !== undefined && actions !== null);
   const page = (
     <div className="page-body wide caos-surface" data-surface="" data-view-param={reserve ? (viewParam ?? '') : undefined}>
       {head && (
@@ -140,7 +142,7 @@ export function SurfacePage({ title, lede, actions, tabs, value, onChange, deepL
             {title !== undefined && <h1 className="caos-surface-title">{pick(title, lang)}</h1>}
             {lede !== undefined && <p className="caos-surface-lede">{lede}</p>}
           </div>
-          {actions !== undefined && <div className="caos-surface-actions">{actions}</div>}
+          {actions !== undefined && actions !== null && <div className="caos-surface-actions">{actions}</div>}
         </div>
       )}
       <div className="caos-surface-body" data-instrument={instrument ? '' : undefined}>

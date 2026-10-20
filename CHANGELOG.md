@@ -41,11 +41,12 @@
   (`try_files $uri $uri/ /index.html`): an extensionless path that matches no file gets `index.html` with 200; a path with an extension
   that matches no file stays 404, so a missing artifact still fails. Default off: the server still answers as GitHub Pages does. Edge
   paths are documented in `docs/07_gate.md` and tested: a directory with no index answers the app shell, a dot in a directory name
-  reads as an extension (404), a dotfile answers the app shell, the query string is no part of the path.
+  reads as an extension (404), a missing dotfile answers the app shell (an existing file, a dotfile included, is served as it is), the query string is no part of the path.
 - The Focus frame (workbench and surface) carries `data-focus-param`, the query parameter that holds Focus; G18 reads it instead of the
   literal `focus` (a product that renames it with `param` was failed falsely, and a renamed parameter left after the return passed).
   G18 also fails a surface with Focus that renders a head with no title, lede or actions (an empty head row), and its message for a
-  tab row or head that moves between views no longer blames the Focus control.
+  tab row or head that moves between views no longer blames the Focus control. It also fails a tab row taller than its tabs need
+  (a taller Focus control in the slot adds height on every view; plant `surface-tall-control`).
 ### Changed
 
 - `CaseWorkbench` keeps its Focus behaviour in `useFocusMode`, no longer in its own state and effects. Its DOM, its URL behaviour and
@@ -71,7 +72,14 @@
   the end-of-page references block and the reference list (SHD-087): it is the source's own and is never translated, so G11 no longer
   reads `Version 3.4` in a NIST title as a Spanish decimal (about 300 false failures on CAOS_Aerovia's documentation pages). The block
   heading and the `link` label stay translatable; the DOI handling above is unchanged. A plain `3.4` in a Spanish paragraph of the same
-  page still fails G11 (plant `decimal-point-plain-34`).
+  page still fails G11 (plant `decimal-point-plain-34`). The citation text also leaves G19 (values whole), which skips `translate="no"`
+  as it does G11; a value in a bibliographic title is not measured either.
+- A `CaseWorkbench`, or a `SurfacePage`, placed inside a `Tabs` panel keeps the reader's sub-view entering and leaving Focus: the Focus
+  frames provide the inherited panel path plus the open id (`PanelPathContext`), not an absolute one (found in the re-review before
+  the release; no current consumer nests them).
+
+- `SurfacePage` with `actions={null}` renders no actions element and, with no title or lede, no head (before, a null `actions` rendered an
+  empty head row; an `undefined` one was already ignored).
 
 ### Migration
 

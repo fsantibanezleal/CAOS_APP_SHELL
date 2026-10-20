@@ -246,6 +246,7 @@ const PLANTS = [
   { id: 'decimal-point-plain-34', check: 'G11', re: /writes 3\.4 with a decimal point/, opts: { langs: 'es', routes: '/app,/introduction' } },
   { id: 'decimal-point-plain-2020', check: 'G11', re: /writes 20\.2020 with a decimal point/, opts: { langs: 'es', routes: '/app,/introduction' } },
   // round 3 (re-review): M1 an empty head row, M3 a renamed focus parameter
+  { id: 'surface-tall-control', check: 'G18', re: /the surface's tab row is [\d.]+px taller than its tabs need/, opts: SURF },
   { id: 'surface-empty-head', check: 'G18', re: /the surface renders a head with no title, lede or actions \(an empty head row \d+px high\)/, opts: SURF },
   { id: 'surface-fparam-left', check: 'G18', re: /Focus mode of view \w+: the URL still holds \?f after the return/, opts: SURF },
   { id: 'surface-focus-url-stays', check: 'G18', re: /Focus mode of view \w+: the URL still holds \?focus after the return/, opts: SURF },

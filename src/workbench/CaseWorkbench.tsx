@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo } from 'react';
+import { type ReactNode, useContext, useMemo } from 'react';
 import { Maximize2 } from 'lucide-react';
 import { CaseSelector, type CaseSelectorProps } from '../case/CaseSelector';
 import { DocRefsScope } from '../content/Cite';
@@ -97,6 +97,8 @@ export function CaseWorkbench(props: CaseWorkbenchProps) {
   // Focus mode, one piece of code with the surface's (useFocusMode): held in the URL (`?focus=1`), opened by the control or by a link,
   // closed by Escape or the exit button; the page behind the frame is inert and keyboard focus follows the reader.
   const { show: showFocus, setFocus, enterRef, memory } = useFocusMode(focusCfg);
+  // the place of this workbench in the page: the Focus frame mounts the open group again at the place its panel had
+  const placeAbove = useContext(PanelPathContext);
   const variantId = variants?.activeId;
   const stateKey = useMemo(
     () => makeStateKey({ caseId, variantId: variantId ?? null, source: source ?? null, controls: controls ?? {} }),
@@ -189,7 +191,7 @@ export function CaseWorkbench(props: CaseWorkbenchProps) {
                 <div className="tabs">
                   {open && (
                     <div className="tabpanel" role="tabpanel" tabIndex={0} aria-label={open.label} data-panel={open.id}>
-                      <PanelPathContext.Provider value={`/${open.id}`}>
+                      <PanelPathContext.Provider value={`${placeAbove}/${open.id}`}>
                         <PanelBoundary panel={open.id}>
                           <DocRefsScope>{open.content}</DocRefsScope>
                         </PanelBoundary>

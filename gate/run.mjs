@@ -971,7 +971,16 @@ export async function runGate(o) {
         const r = list.getBoundingClientRect();
         const head = document.querySelector('[data-surface] > .caos-surface-head');
         const round = (x) => Math.round(x * 10) / 10;
-        return { top: round(r.top - top), height: round(r.height), head: head ? round(head.getBoundingClientRect().height) : 0 };
+        // the height the tabs themselves need (their lowest edge, the row's bottom padding and rule): anything above it is height something
+        // else gave the row, such as a taller Focus control in the slot beside it
+        const cs = getComputedStyle(list);
+        // the tabs stretch to the row, so they are measured at their natural height (aligned to the start for this one reading)
+        const before = list.style.alignItems;
+        list.style.alignItems = 'flex-start';
+        const lowest = Math.max(0, ...[...list.querySelectorAll('[role="tab"]')].map((b) => b.getBoundingClientRect().bottom));
+        list.style.alignItems = before;
+        const need = lowest - r.top + parseFloat(cs.paddingBottom) + parseFloat(cs.borderBottomWidth);
+        return { top: round(r.top - top), height: round(r.height), head: head ? round(head.getBoundingClientRect().height) : 0, slack: round(r.height - need) };
       });
     for (let i = 0; i < n; i += 1) {
       await rowTabs.nth(i).click({ timeout: 4000 }).catch(() => undefined);
@@ -992,6 +1001,8 @@ export async function runGate(o) {
       }
     }
     if (focusable.length > 0) {
+      const tall = rows.find((r) => r.geo && r.geo.slack > 3);
+      if (tall) fail('G18', { ...at, trail: `view ${tall.id}` }, `the surface's tab row is ${tall.geo.slack}px taller than its tabs need (view ${tall.id}, row ${tall.geo.height}px): something beside the tabs, such as a taller Focus control in the tab row's slot, adds height to the row on every view (ADR-0071)`);
       const empty = (await page.evaluate(() => window.__caosGate.focusFacts())).emptyHead;
       if (empty !== null) fail('G18', { ...at, trail: 'surface head' }, `the surface renders a head with no title, lede or actions (an empty head row ${empty}px high): a surface without them has no head, and the Focus control sits on the tab row, never in a head of its own (ADR-0071)`);
     }

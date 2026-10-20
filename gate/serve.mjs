@@ -7,8 +7,8 @@
 // (`try_files $uri $uri/ /index.html`): an extensionless path that matches no file gets index.html with 200; a path with an
 // extension that matches no file stays 404, so a missing artifact still fails. Edge paths, by design of a gate server and tested:
 // a directory with no index.html answers the app shell (nginx: 301 then 403); a dot in a directory name reads as an extension, so
-// `/route/with.dot/` and `/app/run.v2` stay 404 (nginx would serve the app); a dotfile such as `/.env` has no extension and answers
-// the app shell, never the file; the query string is no part of the path (`/route?x=1.5` answers the app shell, `/missing.js?v=2` is 404).
+// `/route/with.dot/` and `/app/run.v2` stay 404 (nginx would serve the app); a MISSING dotfile such as `/.env` has no extension and
+// answers the app shell (an existing file, a dotfile included, is served as it is); the query string is no part of the path (`/route?x=1.5` answers the app shell, `/missing.js?v=2` is 404).
 
 import { createServer } from 'node:http';
 import { existsSync, readFileSync, statSync } from 'node:fs';

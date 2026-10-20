@@ -172,10 +172,16 @@ test('--spa-fallback edge paths, as documented: a directory without an index, a 
     // a dot in a directory name reads as an extension: the route is a 404, not the app (nginx would serve the app)
     assert.equal((await get('/route/with.dot/')).status, 404);
     assert.equal((await get('/app/run.v2')).status, 404);
-    // a dotfile has no extension: it answers the app shell, never the file
+    // a MISSING dotfile has no extension: it answers the app shell
     const dotfile = await get('/.env');
     assert.equal(dotfile.status, 200);
     assert.equal(await dotfile.text(), '<p>home</p>');
+    // an existing file, a dotfile included, is served as it is: the fallback answers only for a path that matches nothing
+    writeFileSync(join(dir, '.env'), 'SECRET=1');
+    const existing = await get('/.env');
+    assert.equal(existing.status, 200);
+    assert.equal(await existing.text(), 'SECRET=1');
+    rmSync(join(dir, '.env'));
     // the query string is no part of the path: an extensionless path with one answers the app shell, a missing file with one stays 404
     assert.equal((await get('/some/route?x=1.5')).status, 200);
     assert.equal((await get('/missing.js?v=2')).status, 404);
