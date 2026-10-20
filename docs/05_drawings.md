@@ -39,6 +39,30 @@ rebuilt on a theme or language change; compared by value, so a parent re-render 
   A given `y.range` is kept as it is and a line outside it is skipped.
 - **A log x axis** (`x: { log: true }`, 0.9.0): the axis spans the data (uPlot alone rounds out to the next decade),
   labels the ticks it keeps and leaves the rest blank; marks keep apart on it as on any axis.
+- **Decade labels** (`x: { log: true }`, 0.17.0): the log x axis labels the powers of ten only, in the interface
+  language's number format (1,000 in English, 1.000 in Spanish), and draws the ticks between them without a label
+  (`decadeOnly`); an axis whose range holds no power of ten keeps uPlot's labels, so it is never left bare. The host
+  declares the labels shown in `data-log-labels` (read by the shell's own test, not by the gate). An axis that spans
+  the data from a value that is not round (12 to 800) has no decade among its ticks and keeps uPlot's labels. Below `LOG_TABLE_FLOOR` every decade is labelled as before.
+- **Draggable reference lines** (`yMarks: [{ y, label, drag: { min, max, step? } }]` with `onYMarkChange(index, y)`,
+  0.17.0): a line with `drag` carries a handle on it (a `role="slider"` band 14 px tall across the plot, vertical, with
+  `aria-valuemin`, `aria-valuemax`, `aria-valuenow` and a value text). The reader drags it with the pointer or moves it
+  with the keyboard once it has focus: the arrows one step, Page Up and Page Down ten, Home and End the ends of
+  `[min, max]`. A step is `drag.step`, or a hundredth of the range when not given; on a log y axis it is a factor (a
+  hundredth of the range in decades) and a dragged value is not snapped. Every move calls `onYMarkChange` with the
+  index of the line in `yMarks` and the new y, inside `[min, max]`; the caller sets that y (and the label, which can
+  carry the value) in `yMarks`. The chart is redrawn, never rebuilt, while a line moves, so the handle keeps its
+  focus. Without a `y.range` the axis takes in the whole `[min, max]`, so it does not move under the pointer; with a `y.range`
+  the drag range is cut to it (`dragWithin`: a `[50, 150]` drag on a `[0, 100]` axis runs from 50 to 100, and the
+  `aria-valuemin` and `aria-valuemax` say so), so the line never leaves the axis and its handle is always reachable. The
+  host declares the count in `data-y-drag`.
+- **Points on their own x** (`series: [{ ..., mode: 'points', x: [...] }]`, 0.17.0): a `points` series with `x` (a line series ignores `x`) is drawn over the
+  plot at its own x values (measured sizes over a modelled curve that has other sizes). The axes take its extent in
+  (the x range on a log axis too), and the host declares `data-overlay` (the series) and `data-overlay-drawn` (the
+  points drawn inside the plot). Such a series is not part of the curves' data: it takes no part in the cursor, the
+  pick or the readout, and the key under the plot lists it.
+- **Markers apart on a log axis** (`marks`): a 60 cm target beside a 100 cm limit print their labels on two rows,
+  as on any axis; see `drawMarks`.
 - **A parity plot** (`parity`, 0.9.0): predicted (the series, usually `mode: 'points'`) against observed (x) on one
   shared range, in a square box centred in its card, with the dashed identity line. x need not be sorted. The range
   takes in the reference lines (`yMarks`, 0.10.0), so a null model's level is always in view; both axes tick at one
