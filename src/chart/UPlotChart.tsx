@@ -1,7 +1,7 @@
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import uPlot from 'uplot';
 import { type FormatOptions, formatNumber, formatTicks, NBSP } from '../lib/format';
-import { useShellLang } from '../lib/lang';
+import { type Lang, useShellLang } from '../lib/lang';
 import { type BiText, pick } from '../lib/text';
 import { resolveToken, type ShellColorToken } from '../lib/tokens';
 import { useThemeStore } from '../lib/theme';
@@ -23,6 +23,15 @@ export interface ChartSeries {
    * value. It is drawn over the plot on its own x, outside the curve's data, so it takes no part in the cursor, the
    * pick or the readout, and the axes take its extent in. */
   x?: number[];
+  /** A dot at each value of a `line` series (CAOS_Fragmenta drew them under 40 values: `dots={x.length < 40}`). Off by
+   * default; no dot is drawn at a `null`. */
+  dots?: boolean;
+}
+
+/** A named x tick: the x value it sits at and the text the axis reads there (and the readout, for an x on it). */
+export interface ChartTick {
+  value: number;
+  label: BiText;
 }
 
 /** What a reference line may be dragged over: the range it stays inside, and the step it snaps to (a hundredth of the
@@ -55,14 +64,26 @@ export const YMARK_TONE_TOKENS: Record<YMarkTone, ShellColorToken> = {
 export interface UPlotChartProps {
   /** The x values and their axis. A time axis must be declared (`time: true`); uPlot otherwise reads numbers as
    * epoch seconds and labels ticks as dates (failure class 7). */
-  x: ChartAxis & { values: number[]; time?: boolean; log?: boolean };
+  x: ChartAxis & {
+    values: number[];
+    time?: boolean;
+    log?: boolean;
+    /** Named ticks (0.18.0): the axis ticks exactly at these values, no other, each labelled with its text in the page
+     * language (a categorical axis: protocols, blast ids). The readout names an x that sits on one by its label. A tick
+     * outside the range is not drawn; an empty list leaves uPlot its own ticks. Labels must not repeat (the gate fails a
+     * repeated label). Ignored on a time axis. */
+    ticks?: ChartTick[];
+    /** The x scale spans at least this range (0.18.0), as `y.range` fixes the y scale: widen it past the data so an end tick's
+     * label is not cut by the plot edge. The data and the overlays still widen it further. */
+    range?: [number, number];
+  };
   y: ChartAxis & { log?: boolean; range?: [number, number] };
   series: ChartSeries[];
   /** Vertical markers at x positions, drawn on the plot and labelled (mark what the engine detected). */
   marks?: { x: number; label: BiText }[];
   /** Horizontal reference lines at y values, labelled at their right end (a null model's constant prediction, a
-   * target, a limit). */
-  yMarks?: { y: number; label: BiText; tone?: YMarkTone; drag?: YMarkDrag }[];
+   * target, a limit). A line without a `label` is drawn with no label box and nothing reserved for one (a zero line). */
+  yMarks?: { y: number; label?: BiText; tone?: YMarkTone; drag?: YMarkDrag }[];
   /** Called with the index in `yMarks` and the new y of a draggable reference line (`drag`) every time the reader moves
    * it, by the pointer or the keyboard (a slider on the line: arrows, Page keys, Home and End); the caller sets the new
    * y in `yMarks`. */
@@ -86,9 +107,55 @@ export interface UPlotChartProps {
   readout?: (index: number) => string;
   /** The readout at rest; by default "Hover the chart to read the values". */
   hint?: BiText;
+  /** The key solos a series (0.18.0): each entry is a button (`aria-pressed`, Tab, click, Enter or Space) that dims every
+   * other series (alpha 0.12, 1 px) and leaves the chosen one as drawn; pressing it again releases it, pressing another
+   * moves the solo. The chart is redrawn, not rebuilt. A chart of one series shows the key too. Off by default. */
+  solo?: boolean;
 }
 
 const ROTATION: ShellColorToken[] = ['--color-accent', '--color-magenta', '--color-accent-2', '--color-good', '--color-warn', '--color-bad'];
+
+/** The alpha a series takes when another one is soloed (0.18.0; what CAOS_Fragmenta's key did). */
+export const SOLO_DIM_ALPHA = 0.12;
+
+/** How a series is drawn while `solo` (the index in `series` of the soloed one, or null) is held: as given, or dimmed to
+ * `SOLO_DIM_ALPHA` and 1 px when another is soloed. Dimmed, never hidden, so the reader keeps the context. */
+export function soloStyle(solo: number | null, i: number, width: number): { alpha: number; width: number } {
+  return solo !== null && solo !== i ? { alpha: SOLO_DIM_ALPHA, width: 1 } : { alpha: 1, width };
+}
+
+/** The values a named x axis ticks at inside [min, max]: ascending, each once; on a log axis only the ones above 0. A value
+ * that is not a number is dropped. */
+export function tickSplits(ticks: readonly ChartTick[], min: number, max: number, log = false): number[] {
+  const eps = Math.abs(max - min) * 1e-9;
+  const values = ticks.map((t) => t.value).filter((v) => Number.isFinite(v) && (!log || v > 0) && v >= min - eps && v <= max + eps);
+  return [...new Set(values)].sort((a, b) => a - b);
+}
+
+/** The label of the named tick at an x, in the page language; null when no tick sits there. */
+export function tickLabelAt(ticks: readonly ChartTick[] | undefined, x: number, lang: Lang): string | null {
+  const t = ticks?.find((one) => one.value === x);
+  return t ? pick(t.label, lang) : null;
+}
+
+/** The x scale of a chart whose x range is fixed, or whose overlays reach past the curve: the data's extent widened by the
+ * given range and by the overlays' x; null when none is given (uPlot's own range), and on a log axis when it would reach 0.
+ * One x alone gets a unit either side, a decade on a log axis. `xs` is sorted ascending. */
+export function xScaleRange(xs: readonly number[], ext: { x: [number, number] } | null, range: readonly [number, number] | undefined, log: boolean): [number, number] | null {
+  if ((!ext && !range) || xs.length === 0) return null;
+  let lo = xs[0];
+  let hi = xs[xs.length - 1];
+  if (ext) {
+    lo = Math.min(lo, ext.x[0]);
+    hi = Math.max(hi, ext.x[1]);
+  }
+  if (range) {
+    lo = Math.min(lo, range[0], range[1]);
+    hi = Math.max(hi, range[0], range[1]);
+  }
+  if (log && !(lo > 0)) return null;
+  return hi > lo ? [lo, hi] : log ? [lo / 10, hi * 10] : [lo - 1, hi + 1];
+}
 
 /** The colour and dash of a series: its own, or the rotation's; when the rotation comes round (a seventh series
  * repeats the first colour) the repeat is dashed, so two series never look the same (CAOS_Fragmenta drew this for
@@ -367,10 +434,10 @@ export function drawMarks(u: uPlot, marks: { x: number; label: string }[], style
 /**
  * The horizontal reference lines of a chart and their labels: a dashed line across the plot, its label at the right
  * end above the line (below it when the line runs along the top), inside the plot, haloed; a label that would overlap
- * the one placed before it moves left of it. A line outside the y range is not drawn. A mark's `color` (the tone's) draws
+ * the one placed before it moves left of it. A line outside the y range is not drawn; a line without a label is drawn alone. A mark's `color` (the tone's) draws
  * its line and its label; without one `style.color` does.
  */
-export function drawYMarks(u: uPlot, marks: { y: number; label: string; color?: string }[], style: { color: string; halo: string; family: string }): void {
+export function drawYMarks(u: uPlot, marks: { y: number; label?: string; color?: string }[], style: { color: string; halo: string; family: string }): void {
   const ctx = u.ctx;
   const pr = uPlot.pxRatio || 1;
   const left = u.bbox.left;
@@ -396,6 +463,8 @@ export function drawYMarks(u: uPlot, marks: { y: number; label: string; color?: 
     ctx.lineTo(right, py);
     ctx.stroke();
     ctx.setLineDash([]);
+    // a line with no label stops here: no box, nothing reserved
+    if (!m.label) continue;
     const w = ctx.measureText(m.label).width;
     // above the line, or below it when there is no room above
     const base = py - gap - textH < top ? py + gap + textH : py - gap;
@@ -446,9 +515,11 @@ export function nearestPoint(xs: readonly number[], ys: readonly (readonly (numb
  * uPlot's legend, which a sized host clips (known shell defect 3). A chart of two or more series keys every series
  * under the plot, always (its colour, a dashed or a dotted swatch, its label): at rest the readout names none of them
  * (known shell defect 17). An axis with fixed decimals ticks only where its labels differ (`tickSteps`). The host
- * declares `data-series`, `data-axis-titles`, `data-ticks-cut`, `data-ticks-repeat` and `data-drawn` for the gate.
+ * declares `data-series`, `data-axis-titles`, `data-ticks-cut`, `data-ticks-repeat` and `data-drawn` for the gate. Since
+ * 0.18.0: named x ticks (`x.ticks`, declared in `data-x-tick-labels`), an x range (`x.range`), a key that solos a series
+ * (`solo`, declared in `data-solo`), dots on a line (`ChartSeries.dots`) and reference lines without a label.
  */
-export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height = 280, onCursor, onPick, parity, readout, hint }: UPlotChartProps) {
+export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height = 280, onCursor, onPick, parity, readout, hint, solo }: UPlotChartProps) {
   const lang = useShellLang();
   const theme = useThemeStore((s) => s.theme);
   const fill = height === 'fill';
@@ -470,6 +541,11 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
   // uPlot's draw, where a state update would loop)
   const hostRef = useRef<HTMLDivElement | null>(null);
   const [cursor, setCursor] = useState<number | null>(null);
+  // the soloed series (its index in `series`); a press redraws the chart, so it is held here and read by the drawing
+  const [soloPick, setSoloPick] = useState<number | null>(null);
+  const soloIdx = solo && soloPick !== null && soloPick < series.length ? soloPick : null;
+  const soloRef = useRef(soloIdx);
+  soloRef.current = soloIdx;
   const onCursorRef = useRef(onCursor);
   onCursorRef.current = onCursor;
   const onPickRef = useRef(onPick);
@@ -493,21 +569,16 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
   // any other chart without a given y range takes the reference lines and the overlays into it, so a line is always drawn (#94)
   const yLevels = !parity && !y.range && (levels.length > 0 || ext) ? [...levels, ...(ext ? ext.y : [])] : null;
   // the x range that takes in the overlays (they have x values the curve has not)
-  const xExt = useMemo((): [number, number] | null => {
-    if (!ext || range || xs.length === 0) return null;
-    const lo = Math.min(xs[0], ext.x[0]);
-    const hi = Math.max(xs[xs.length - 1], ext.x[1]);
-    if (x.log && !(lo > 0)) return null;
-    // one x alone: a unit either side, a decade either side on a log axis (which has no room below 0)
-    return hi > lo ? [lo, hi] : x.log ? [lo / 10, hi * 10] : [lo - 1, hi + 1];
-  }, [ext, range, xs, x.log]);
+  const xExt = useMemo((): [number, number] | null => (range ? null : xScaleRange(xs, ext, x.range, Boolean(x.log))), [ext, range, xs, x.log, x.range]);
+  // named ticks (not on a time axis); an empty list leaves uPlot its own
+  const ticks = !x.time && x.ticks && x.ticks.length > 0 ? x.ticks : undefined;
   // a log axis reaching below uPlot's tick table ticks at powers of ten (known shell defect 31)
   const tiny = useMemo(
     () => ({
-      x: Boolean(x.log) && smallestPositive(ext ? [xs, ext.x] : [xs], range) < LOG_TABLE_FLOOR,
+      x: !ticks && Boolean(x.log) && smallestPositive(ext ? [xs, ext.x] : [xs], range) < LOG_TABLE_FLOOR,
       y: Boolean(y.log) && smallestPositive(yLevels ? [...ys, yLevels] : ys, range ?? y.range) < LOG_TABLE_FLOOR,
     }),
-    [x.log, y.log, xs, ys, range, y.range, yLevels, ext],
+    [x.log, y.log, xs, ys, range, y.range, yLevels, ext, ticks],
   );
 
   const xLabel = pick(x.label, lang);
@@ -527,14 +598,14 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
   const yUnit = y.unit ? pick(y.unit, lang) : '';
   // Everything that changes the plot's structure, by value.
   const structure = JSON.stringify({
-    s: series.map((s, i) => [pick(s.label, lang), seriesStyle(s, i), s.width ?? 2, s.mode ?? 'line', s.size ?? 9, isOverlay(s)]),
-    x: [xLabel, xUnit, Boolean(x.time), Boolean(x.log), x.format ?? null, tiny.x, xExt],
+    s: series.map((s, i) => [pick(s.label, lang), seriesStyle(s, i), s.width ?? 2, s.mode ?? 'line', s.size ?? 9, isOverlay(s), Boolean(s.dots)]),
+    x: [xLabel, xUnit, Boolean(x.time), Boolean(x.log), x.format ?? null, tiny.x, xExt, ticks ? ticks.map((t) => [t.value, pick(t.label, lang)]) : null],
     oe: ext,
     p: range,
     pick: Boolean(onPick),
     y: [yLabel, yUnit, Boolean(y.log), y.range ?? null, y.format ?? null, tiny.y],
     m: (marks ?? []).map((m) => [m.x, pick(m.label, lang)]),
-    ym: (yMarks ?? []).map((m) => (m.drag ? ['drag', m.drag] : [m.y, pick(m.label, lang), m.tone ?? 'warn'])),
+    ym: (yMarks ?? []).map((m) => (m.drag ? ['drag', m.drag, Boolean(m.label)] : [m.y, m.label ? pick(m.label, lang) : null, m.tone ?? 'warn'])),
     theme,
     lang,
     h,
@@ -554,14 +625,24 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
     const surface = resolveToken('--color-surface', '#fff');
     const repeats = { x: 0, y: 0 };
     // One notation per axis (known shell defect 19): the labels of an axis are formatted together.
-    const tick = (fmt: FormatOptions | undefined, axis: 'x' | 'y', pre?: (v: (number | null)[]) => (number | null)[]) => (_u: uPlot, vals: (number | null)[]) => {
-      const labels = formatTicks(pre ? pre(vals) : vals, lang, fmt ?? { digits: 4 });
-      // a log x axis: the labels it shows, declared for the shell's own test (the decades, no other)
-      if (axis === 'x' && pre) hostRef.current?.setAttribute('data-log-labels', labels.filter((l) => l).join('|'));
+    const declareTicks = (axis: 'x' | 'y', labels: string[]) => {
       repeats[axis] = repeatedLabels(labels);
       hostRef.current?.setAttribute('data-ticks-repeat', String(repeats.x + repeats.y));
       // how many ticks the axis labels: a parity plot's two axes must agree, and an axis with fewer than two says nothing
       hostRef.current?.setAttribute(`data-ticks-${axis}`, String(labels.filter((l) => l).length));
+    };
+    const tick = (fmt: FormatOptions | undefined, axis: 'x' | 'y', pre?: (v: (number | null)[]) => (number | null)[]) => (_u: uPlot, vals: (number | null)[]) => {
+      const labels = formatTicks(pre ? pre(vals) : vals, lang, fmt ?? { digits: 4 });
+      // a log x axis: the labels it shows, declared for the shell's own test (the decades, no other)
+      if (axis === 'x' && pre) hostRef.current?.setAttribute('data-log-labels', labels.filter((l) => l).join('|'));
+      declareTicks(axis, labels);
+      return labels;
+    };
+    // named x ticks: the text of each tick, declared for the gate and the shell's own test
+    const namedTicks = (_u: uPlot, vals: (number | null)[]) => {
+      const labels = vals.map((v) => (v === null || v === undefined ? '' : (tickLabelAt(ticks, v, lang) ?? '')));
+      hostRef.current?.setAttribute('data-x-tick-labels', labels.filter((l) => l).join('|'));
+      declareTicks('x', labels);
       return labels;
     };
     // the point nearest the pointer, computed once per cursor position and handed to every series (uPlot asks each)
@@ -622,10 +703,15 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
           label: xUnit ? `${xLabel} (${xUnit})` : xLabel,
           labelFont: font,
           // a log x axis labels the decades only; the ticks between stay drawn, unlabelled
-          values: x.time ? undefined : tick(x.format, 'x', x.log && !tiny.x ? decadeOnly : undefined),
-          ...(xSteps ? { incrs: xSteps } : {}),
-          ...(range ? { space: PARITY_TICK_SPACE } : {}),
-          ...(tiny.x ? DECADE_AXIS : {}),
+          values: x.time ? undefined : ticks ? namedTicks : tick(x.format, 'x', x.log && !tiny.x ? decadeOnly : undefined),
+          ...(ticks
+            ? // exactly the named values, no other tick
+              { splits: (_u: uPlot, _i: number, min: number, max: number) => tickSplits(ticks, min, max, Boolean(x.log)), filter: (_u: uPlot, splits: number[]) => splits }
+            : {
+                ...(xSteps ? { incrs: xSteps } : {}),
+                ...(range ? { space: PARITY_TICK_SPACE } : {}),
+                ...(tiny.x ? DECADE_AXIS : {}),
+              }),
         },
         {
           stroke: fg,
@@ -655,9 +741,11 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
         ...baseEntries.map(({ s, i }) => {
           const style = seriesStyle(s, i);
           const stroke = resolveToken(style.color, '#4a8');
+          // a soloed chart dims the other series; the build reads the solo as it stands
+          const dim = soloStyle(soloRef.current, i, s.mode === 'points' ? 1.5 : (s.width ?? 2));
           return s.mode === 'points'
-            ? { label: pick(s.label, lang), stroke, width: 1.5, paths: () => null, points: { show: true, space: 0, size: s.size ?? 9, fill: stroke } }
-            : { label: pick(s.label, lang), stroke, width: s.width ?? 2, dash: style.dash, spanGaps: false, points: { show: false } };
+            ? { label: pick(s.label, lang), stroke, width: dim.width, alpha: dim.alpha, paths: () => null, points: { show: true, space: 0, size: s.size ?? 9, fill: stroke } }
+            : { label: pick(s.label, lang), stroke, width: dim.width, alpha: dim.alpha, dash: style.dash, spanGaps: false, points: s.dots ? { show: true, size: 5, fill: stroke } : { show: false } };
         }),
       ],
       hooks: {
@@ -758,6 +846,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
               ctx.rect(u.bbox.left, u.bbox.top, u.bbox.width, u.bbox.height);
               ctx.clip();
               for (const { s, i } of dots) {
+                ctx.globalAlpha = soloStyle(soloRef.current, i, 1).alpha;
                 ctx.fillStyle = resolveToken(seriesStyle(s, i).color, '#4a8');
                 ctx.strokeStyle = surface;
                 ctx.lineWidth = Math.max(1, pr);
@@ -782,7 +871,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
             const markStyle = { color: resolveToken('--color-warn', '#c80'), halo: surface, family };
             // the lines as the caller last gave them (a dragged line has a new y and label, not a new chart)
             const lines = yMarksRef.current ?? [];
-            if (lines.length) drawYMarks(u, lines.map((m, i) => ({ y: liveRef.current[i] ?? m.y, label: pick(m.label, lang), color: resolveToken(YMARK_TONE_TOKENS[m.tone ?? 'warn'], '#c80') })), markStyle);
+            if (lines.length) drawYMarks(u, lines.map((m, i) => ({ y: liveRef.current[i] ?? m.y, label: m.label ? pick(m.label, lang) : undefined, color: resolveToken(YMARK_TONE_TOKENS[m.tone ?? 'warn'], '#c80') })), markStyle);
             // each handle sits on its line, and says its value to a screen reader
             u.over.querySelectorAll<HTMLElement>('[data-y-handle]').forEach((el) => {
               const i = Number(el.getAttribute('data-y-handle'));
@@ -792,10 +881,11 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
               const top = u.valToPos(v, 'y');
               el.style.display = Number.isFinite(top) && top >= 0 && top <= u.bbox.height / (uPlot.pxRatio || 1) ? '' : 'none';
               el.style.top = `${top - HANDLE_HEIGHT / 2}px`;
-              const label = pick(m.label, lang);
-              el.setAttribute('aria-label', label);
+              const label = m.label ? pick(m.label, lang) : '';
+              const shown = `${formatNumber(v, lang, y.format ?? { digits: 4 })}${yUnit ? `${NBSP}${yUnit}` : ''}`;
+              el.setAttribute('aria-label', label || (lang === 'es' ? 'Línea de referencia' : 'Reference line'));
               el.setAttribute('aria-valuenow', String(Number(v.toPrecision(12))));
-              el.setAttribute('aria-valuetext', `${label}: ${formatNumber(v, lang, y.format ?? { digits: 4 })}${yUnit ? `${NBSP}${yUnit}` : ''}`);
+              el.setAttribute('aria-valuetext', label ? `${label}: ${shown}` : shown);
             });
             if (marks?.length) drawMarks(u, marks.map((m) => ({ x: m.x, label: pick(m.label, lang) })), markStyle);
           },
@@ -818,17 +908,35 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
 
   // a line moved or relabelled by the caller, and overlays given anew, are drawn again without a rebuild
   const overlaysKey = JSON.stringify(overlays.map(({ s, i }) => [i, s.x, s.values, s.size ?? 9, seriesStyle(s, i).color]));
-  const linesKey = JSON.stringify((yMarks ?? []).map((m) => [m.y, pick(m.label, lang), m.tone ?? 'warn']));
+  const linesKey = JSON.stringify((yMarks ?? []).map((m) => [m.y, m.label ? pick(m.label, lang) : null, m.tone ?? 'warn']));
   useEffect(() => {
     uRef.current?.redraw(false);
   }, [linesKey, overlaysKey]);
+
+  // a press on the key dims the other series: their style is changed on the plot and it is drawn again, never rebuilt, so the
+  // cursor and a line the reader holds survive
+  useEffect(() => {
+    const u = uRef.current;
+    if (!u) return;
+    baseEntries.forEach(({ s, i }, k) => {
+      const dim = soloStyle(soloIdx, i, s.mode === 'points' ? 1.5 : (s.width ?? 2));
+      const one = u.series[k + 1];
+      if (!one) return;
+      one.alpha = dim.alpha;
+      one.width = dim.width;
+    });
+    u.redraw(false);
+  }, [soloIdx, baseEntries]);
 
   const read =
     cursor !== null && readout
       ? readout(order ? order[cursor] : cursor)
       : cursor !== null
       ? [
-          `${xLabel} ${formatNumber(xs[cursor], lang, x.format ?? { digits: 4 })}${xUnit ? `${NBSP}${xUnit}` : ''}`,
+          // an x that sits on a named tick is named by it, not by its number
+          tickLabelAt(ticks, xs[cursor], lang) !== null
+            ? `${xLabel} ${tickLabelAt(ticks, xs[cursor], lang)}`
+            : `${xLabel} ${formatNumber(xs[cursor], lang, x.format ?? { digits: 4 })}${xUnit ? `${NBSP}${xUnit}` : ''}`,
           ...baseEntries
             .map(({ s }, k) => ({ s, v: ys[k][cursor] ?? null }))
             // a scatter's series are sets of points: name only the ones that have this point
@@ -856,14 +964,24 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
       data-y-marks={yMarks?.length ? String(yMarks.length) : undefined}
       data-y-drag={dragCount ? String(dragCount) : undefined}
       data-overlay={overlays.length ? String(overlays.length) : undefined}
+      data-solo={soloIdx !== null ? String(soloIdx) : undefined}
     >
       <div ref={setPlot} className="caos-chart-plot" />
-      {series.length > 1 && (
+      {(series.length > 1 || solo) && (
         <ul className="caos-chart-legend" aria-label={lang === 'es' ? 'Series del gráfico' : 'Series of the chart'}>
           {series.map((s, i) => (
             <li key={i} className="caos-chart-key" data-mode={s.mode ?? 'line'} data-dash={seriesStyle(s, i).dash ? '1' : undefined}>
-              <span className="caos-chart-swatch" style={{ '--swatch': `var(${seriesStyle(s, i).color})` } as CSSProperties} aria-hidden="true" />
-              {pick(s.label, lang)}
+              {solo ? (
+                <button type="button" className="caos-chart-key-button" aria-pressed={soloIdx === i} onClick={() => setSoloPick(soloIdx === i ? null : i)}>
+                  <span className="caos-chart-swatch" style={{ '--swatch': `var(${seriesStyle(s, i).color})` } as CSSProperties} aria-hidden="true" />
+                  {pick(s.label, lang)}
+                </button>
+              ) : (
+                <>
+                  <span className="caos-chart-swatch" style={{ '--swatch': `var(${seriesStyle(s, i).color})` } as CSSProperties} aria-hidden="true" />
+                  {pick(s.label, lang)}
+                </>
+              )}
             </li>
           ))}
         </ul>
