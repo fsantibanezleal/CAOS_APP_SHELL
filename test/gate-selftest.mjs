@@ -40,6 +40,15 @@ const PLANTS = [
   { id: 'covered', check: 'G5', re: /is covered by/, opts: { routes: '/app' } },
   { id: 'rail-overflow', check: 'G5', re: /outside the rail/, opts: { routes: '/app' } },
   { id: 'truncated', check: 'G5', re: /truncated text/, opts: { routes: '/app' } },
+  // shell 0.17.0 (round 3): the case select shows the name whole at any length; a product stylesheet that clamps the display's text, or a display that
+  // names another case than the one the select holds, is a cut or stale case name. The names are the consumer trial's (three lines in the rail).
+  { id: 'select-cut', check: 'G5', re: /select\(s\) cut the selected text.*cuts the case name "Lifetime PD, IFRS 9 staging/, opts: { routes: '/app' } },
+  { id: 'select-cut-display', check: 'G5', re: /select\(s\) cut the selected text.*cuts the case name "Lifetime PD, IFRS 9 staging[^"]*" in its display/, opts: { routes: '/app' } },
+  { id: 'select-cut-token', check: 'G5', re: /select\(s\) cut the selected text.*cuts the case name "fragmenta_escondida_bench/, opts: { routes: '/app' } },
+  { id: 'select-display-stale', check: 'G5', re: /select\(s\) cut the selected text.*shows "A planted stale display name" while the select holds "[^"]+" \(a stale display\)/, opts: { routes: '/app' } },
+  // the review of 0.17.0: a product's own plain select whose text fits its content box by 2px and ends under the native arrow (M1); the Focus rail's select is cut (M2)
+  { id: 'select-arrow', check: 'G5', re: /select\(s\) cut the selected text.*Low contact.*arrow/, opts: { routes: '/app' } },
+  { id: 'select-focus-rail', check: 'G5', re: /select\(s\) cut the selected text.*cuts the case name "Lifetime PD, IFRS 9 staging/, trail: /Focus/, opts: { routes: '/app', requireFocus: true } },
   { id: 'deep-defect', check: 'G5', re: /scrolls sideways/, trail: /validation > table/, opts: { routes: '/app' } },
   { id: 'shrunk-tabs', check: 'G5', re: /cuts its tabs by \d+px/, trail: /validation > daily/, opts: { routes: '/app' } },
   { id: 'blank', check: 'G6', re: /is blank/, opts: { routes: '/app' } },
@@ -241,6 +250,8 @@ const PLANTS = [
   { id: 'surface-focus-escape-one-view', check: 'G18', re: /Focus mode of view engine: Escape does not return to the App/, opts: SURF },
   { id: 'surface-mode-url-dropped', check: 'G18', re: /Focus mode of view \w+: the URL \(\?focus=1\) does not hold \?focus=1 and the view \(\?mode=\)/, opts: SURF },
   { id: 'surface-app-route-unwalked', check: 'G18', re: /the App route \/app is not among the measured routes \(\/console\)/, opts: { routes: '/console', workbench: '', requireFocus: true } },
+  // shell 0.17.0: the same for a workbench App (--workbench /app --require-focus with /app not among the routes)
+  { id: 'workbench-route-unwalked', check: 'G18', re: /the workbench route \/app is not among the measured routes \(\/introduction\)/, opts: { routes: '/introduction', requireFocus: true } },
   // F9: a plain number with a dotted segment in a Spanish paragraph still fails G11 (the DOI of a reference does not: the clean fixture and the test of the dotted DOI)
   // F12: the title of a reference ("Version 3.4") is the source's own and never read as a Spanish decimal, but a plain 3.4 in a Spanish paragraph of the same page fails
   { id: 'decimal-point-plain-34', check: 'G11', re: /writes 3\.4 with a decimal point/, opts: { langs: 'es', routes: '/app,/introduction' } },
@@ -256,6 +267,9 @@ const PLANTS = [
 
 /** Legitimate pages that the gate once failed (ADR-0017 2.1 allows them): each must pass every check, in both languages. */
 const LEGIT = [
+  // long case names the shell's case select shows whole (the consumer trial of 0.17.0: names of 241 and 311 px in 181 px of room, then 354 and 398 px that need three lines)
+  { id: 'legit-select-two-lines', opts: { routes: '/app', requireFocus: true } },
+  { id: 'legit-select-three-lines', opts: { routes: '/app', requireFocus: true } },
   { id: 'legit-engine-subtabs', opts: { routes: '/app,/implementation' } },
   { id: 'legit-method-view-tabs', opts: { routes: '/app,/methodology' } },
 ];

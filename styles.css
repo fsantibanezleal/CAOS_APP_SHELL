@@ -507,11 +507,28 @@ svg.lucide { flex: none; }
 .cs-reset { border: none; background: transparent; color: var(--color-accent); font-size: 0.8rem; font-weight: 600; padding: 0.1rem 0.2rem; text-decoration: underline; text-underline-offset: 2px; }
 /* The compact one-of-N case picker (ADR-0071 rule 7): ten cases in four categories cost a 308px chip block, 21% of a
    2560x1440 viewport, and one row as a dropdown. */
-.cs-select { width: 100%; max-width: 460px; }
-/* the select and a control beside it (the workbench's Focus button): one row, the select shrinks, the control keeps its size */
+/* The case select shows the selected name whole, at any length, in a display (as many lines as the longest name of the list needs, measured in the DOM by CaseSelector; no clamp, no ellipsis), the native select on top of it, transparent by colour (shell 0.17.0; BL-074). */
+.cs-select-wrap { position: relative; width: 100%; max-width: 460px; min-width: 0; }
+.cs-select-display { box-sizing: border-box; display: flex; align-items: center; position: relative; min-width: 0; background: var(--color-surface-2); color: var(--color-fg); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0.35rem 1.7rem 0.35rem 0.5rem; font-size: 0.85rem; line-height: 1.25; }
+.cs-select-text { display: block; max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
+.cs-select-display::after { content: ''; position: absolute; right: 0.65rem; top: 50%; width: 0.4rem; height: 0.4rem; margin-top: -0.3rem; border-right: 2px solid var(--color-fg-subtle); border-bottom: 2px solid var(--color-fg-subtle); transform: rotate(45deg); }
+.cs-select-wrap > .cs-select-native { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; margin: 0; padding: 0 0.5rem; box-sizing: border-box; background: transparent; color: transparent; border-color: transparent; cursor: pointer; appearance: none; -webkit-appearance: none; }
+.cs-select-native option, .cs-select-native optgroup { color: var(--color-fg); background: var(--color-surface-2); }
+.cs-select-wrap > .cs-select-native:focus { outline: none; }
+.cs-select-wrap:focus-within > .cs-select-display { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+@supports selector(:has(*)) {
+  .cs-select-wrap:focus-within > .cs-select-display { outline: none; }
+  .cs-select-wrap:has(> .cs-select-native:focus-visible) > .cs-select-display { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+}
+/* Windows High Contrast forces a select's text back to CanvasText, which would paint its one cut line over the display's lines (the re-review of 0.17.0, B1) */
+@media (forced-colors: active) {
+  .cs-select-wrap > .cs-select-native { forced-color-adjust: none; }
+  .cs-select-native option, .cs-select-native optgroup { forced-color-adjust: auto; }
+}
+/* the select and a control beside it (a product's accessory): one row, the select shrinks, the control keeps its size */
 .cs-select-row { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
-.cs-select-row > .cs-select { flex: 1 1 auto; min-width: 0; }
-.cs-select-row > :not(.cs-select) { flex: none; }
+.cs-select-row > .cs-select-wrap { flex: 1 1 auto; min-width: 0; }
+.cs-select-row > :not(.cs-select-wrap) { flex: none; }
 
 /* == 9 workbench ================================================================================================ */
 
@@ -858,3 +875,7 @@ svg.lucide { flex: none; }
 .tabs-has-slot > .tabs-slot { grid-column: 2; grid-row: 1; align-self: stretch; display: flex; align-items: center; padding-bottom: 0.4rem; margin-bottom: 0.9rem; border-bottom: 1px solid var(--color-border); }
 .tabs-has-slot > .tabs-slot > .caos-focus-enter { align-self: center; padding-block: 0.2rem; }
 .tabs-has-slot > .tabpanel { grid-column: 1 / -1; grid-row: 2; }
+/* The same slot in the workbench's group tab row (shell 0.17.0, BL-074): the Focus control of the App ends the row, so the case select keeps
+   the rail head's whole width. The tab row's own spacing (a tighter rule than the surface's) is repeated under the slot. */
+.caos-cw > .tabs.tabs-has-slot { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto minmax(0, 1fr); column-gap: 0.5rem; }
+.caos-cw > .tabs-has-slot > .tabs-slot { margin-bottom: 0.5rem; padding-bottom: var(--space-1); }

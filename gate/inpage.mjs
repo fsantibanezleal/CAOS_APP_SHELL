@@ -181,6 +181,67 @@ export function installLib() {
     };
   };
 
+  /**
+   * Selects whose selected option does not fit the room it leaves, or a case select that shows another name than the one it holds (BL-074, shell
+   * 0.17.0; the reviews of 0.17.0). What is measured is what the reader sees:
+   * - a select with the shell's display (`.cs-select-wrap`, the case select since the trial of 0.17.0) shows the name whole at any length in the
+   *   display's real `.cs-select-text` element: the name is cut when that element overflows its box (`scrollHeight` or `scrollWidth` past its
+   *   `clientHeight` or `clientWidth` by more than 1px, e.g. a product stylesheet that clamps it), measured on the element itself, never on a probe
+   *   copy, and when the display's own box is smaller than its content (a product stylesheet that fixes its height); the display is stale when the name it shows, whitespace normalized, differs from the text of the option the select holds;
+   * - any other select shows its text on one line: the room is its width less its own CSS padding and less the native arrow, which is
+   *   measured, not assumed (a probe select of the same class holding one character, sized to its content; 0 with `appearance: none`).
+   * Plain text is measured with the select's own font on one canvas. Runs in the App and inside Focus (its rail holds a case select too).
+   */
+  const selectCuts = () => {
+    const cuts = [];
+    const mctx = document.createElement('canvas').getContext('2d');
+    const norm = (t) => (t ?? '').trim().replace(/\s+/g, ' ');
+    for (const sel of document.querySelectorAll('select')) {
+      if (!mctx || !visible(sel)) continue;
+      const ss = getComputedStyle(sel);
+      const held = norm(sel.options[sel.selectedIndex]?.textContent);
+      const display = sel.closest('.cs-select-wrap')?.querySelector('.cs-select-display');
+      if (display) {
+        const t = display.querySelector('.cs-select-text') ?? display;
+        const shown = norm(t.textContent);
+        if (shown !== held) {
+          cuts.push(`${describe(sel)} shows "${shown}" while the select holds "${held}" (a stale display)`);
+          continue;
+        }
+        const overV = t.scrollHeight > t.clientHeight + 1;
+        const overH = t.scrollWidth > t.clientWidth + 1;
+        if (overV || overH) {
+          const line = Number.parseFloat(getComputedStyle(t).lineHeight) || 1;
+          cuts.push(`${describe(sel)} cuts the case name "${shown}" (the name needs ${Math.round(t.scrollHeight / line)} lines, ${Math.round(t.scrollHeight)}px high and ${Math.round(t.scrollWidth)}px wide, and its box holds ${Math.round(t.clientHeight)}px by ${Math.round(t.clientWidth)}px; held option "${held}")`);
+        } else if (display.scrollHeight > display.clientHeight + 1 || display.scrollWidth > display.clientWidth + 1) {
+          // the text fits its own box but the display's box is smaller (a product stylesheet that fixes the display's height)
+          cuts.push(`${describe(sel)} cuts the case name "${shown}" in its display (the name needs ${Math.round(display.scrollHeight)}px by ${Math.round(display.scrollWidth)}px, the display holds ${Math.round(display.clientHeight)}px by ${Math.round(display.clientWidth)}px; held option "${held}")`);
+        }
+        continue;
+      }
+      const text = held;
+      if (!text) continue;
+      mctx.font = `${ss.fontStyle} ${ss.fontWeight} ${ss.fontSize} ${ss.fontFamily}`;
+      const pad = Number.parseFloat(ss.paddingLeft) + Number.parseFloat(ss.paddingRight);
+      let arrow = 0;
+      const host = sel.parentElement;
+      if (host) {
+        const probe = sel.cloneNode(false);
+        for (const a of [...probe.attributes]) if (a.name !== 'class') probe.removeAttribute(a.name);
+        probe.append(new Option('x'));
+        probe.setAttribute('style', 'position:absolute;visibility:hidden;width:auto;min-width:0;max-width:none;flex:none;left:0;top:0');
+        host.append(probe);
+        const pv = getComputedStyle(probe);
+        arrow = Math.max(0, probe.clientWidth - Number.parseFloat(pv.paddingLeft) - Number.parseFloat(pv.paddingRight) - mctx.measureText('x').width);
+        probe.remove();
+      }
+      const need = mctx.measureText(text).width;
+      const has = sel.clientWidth - pad - arrow;
+      if (need > has + 1) cuts.push(`${describe(sel)} cuts "${text}" (${Math.round(need)}px of text in ${Math.round(has)}px of room, the ${Math.round(arrow)}px arrow taken out)`);
+    }
+    return cuts;
+  };
+
   /** The static layout of the current view (G5, G6 inputs, ADR-0071 and ADR-0017 measures). */
   G.facts = () => {
     const vw = window.innerWidth;
@@ -271,6 +332,8 @@ export function installLib() {
       }
       if (!named) truncated.push(describe(el));
     }
+
+    const cutSelects = selectCuts();
 
     // Containers that cut their content: overflow hidden or clip with more content than box (S1, G5).
     const clipped = [];
@@ -415,6 +478,8 @@ export function installLib() {
       rail,
       truncated: truncated.slice(0, 5),
       truncatedCount: truncated.length,
+      cutSelects: cutSelects.slice(0, 5),
+      cutSelectCount: cutSelects.length,
       clipped,
       instrument,
       surfaces,
@@ -1063,6 +1128,7 @@ export function installLib() {
     return {
       focus: Boolean(shell),
       covered,
+      cutSelects: (() => { const c = selectCuts(); return { count: c.length, list: c.slice(0, 5) }; })(),
       enterInside: [...document.querySelectorAll('[data-focus-shell] [data-focus-enter]')].filter(visible).length,
       app: Boolean(document.querySelector('[data-workbench], [data-surface]')),
       caseId: stage ? stage.getAttribute('data-case') : null,
