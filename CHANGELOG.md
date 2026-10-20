@@ -1,3 +1,19 @@
+## [Unreleased]
+
+### Added
+
+- `UPlotChart`: what CAOS_Fragmenta's own wrapper did and the shell's chart could not (CAOS_Fragmenta 0.09.000, BL-042). Each option is off by
+  default: a chart that uses none renders and declares as in 0.17.0.
+  - Named x ticks, `x.ticks: { value, label: BiText }[]`: the axis ticks exactly at those values and labels each in the page language; the
+    readout names an x on a tick by its label; the host declares `data-x-tick-labels`; two ticks with one name fail G6 (SHC-047 to SHC-049).
+  - `x.range: [lo, hi]`: the x scale spans at least that range, as `y.range` fixes the y scale, so an end tick's label is not cut (SHC-050).
+  - `solo`: each entry of the key is a button (`aria-pressed`, Tab, click, Enter or Space) that dims every other series (alpha 0.12, 1 px) and a second
+    press releases; the chart is redrawn, not rebuilt; the host declares `data-solo` (SHC-051 to SHC-054).
+  - `ChartSeries.dots`: a dot at each value of a line, none at a null (SHC-055).
+  - A `yMarks` entry may omit `label`: the line is drawn with no label box and nothing reserved for one (SHC-056).
+  - New exports `tickSplits`, `tickLabelAt`, `xScaleRange`, `soloStyle`, `SOLO_DIM_ALPHA`, type `ChartTick`; the stylesheet gains `.caos-chart-key-button`.
+  - The gate fixture has a Categories view of each option and the plant `named-ticks-repeat`.
+
 ## [0.17.000] - 2026-10-20
 
 ### Added
