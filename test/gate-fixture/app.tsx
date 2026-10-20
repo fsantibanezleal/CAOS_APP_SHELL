@@ -552,8 +552,57 @@ function ValidationView({ sim, focusOn }: { sim: Sim; focusOn?: boolean }) {
             </PlotCard>
           ),
         },
+        {
+          // the chart forms of 0.17.0: decade labels on a log x axis, draggable lines, points on their own x
+          id: 'forms',
+          label: pick({ en: 'Forms', es: 'Formas' }, lang),
+          content: <FormsView />,
+        },
       ]}
     />
+  );
+}
+
+/** The forms of the chart added in 0.17.0 (CAOS_APP_SHELL#65): a log x axis labelled at its decades, a draggable reference
+ * line, measured points on their own x, and marks that keep apart on a log axis. A synthetic size distribution (Rosin-Rammler). */
+function FormsView() {
+  const lang = useShellLang();
+  const { stateKey } = useWorkbenchState();
+  const [level, setLevel] = useState(50);
+  const [limit, setLimit] = useState(80);
+  const sizes = useMemo(() => [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10], []);
+  const model = useMemo(() => sizes.map((d) => 100 * (1 - Math.exp(-((d / 0.4) ** 1.2)))), [sizes]);
+  const measured = useMemo(() => ({ x: [0.015, 0.07, 0.3, 3], y: [3, 19, 51, 99] }), []);
+  return (
+    <ViewsRow shares={[3, 2]}>
+      <PlotCard fill title={{ en: 'Passing against size, on a log axis', es: 'Pasante contra tamaño, en un eje logarítmico' }} lane="live" provenance="synthetic" dataKey={stateKey}>
+        <UPlotChart
+          height="fill"
+          x={{ values: sizes, label: { en: 'Size', es: 'Tamaño' }, unit: 'm', log: true }}
+          y={{ label: { en: 'Passing', es: 'Pasante' }, unit: '%', range: [0, 100], format: { decimals: 0 } }}
+          series={[
+            { label: { en: 'Model', es: 'Modelo' }, values: model },
+            { label: { en: 'Measured', es: 'Medido' }, values: measured.y, x: measured.x, mode: 'points', color: '--color-bad' },
+          ]}
+          marks={[
+            { x: 0.6, label: { en: 'target 60 cm', es: 'meta 60 cm' } },
+            { x: 1, label: { en: 'limit 100 cm', es: 'límite 100 cm' } },
+          ]}
+          yMarks={[{ y: level, label: { en: `P${Math.round(level)}`, es: `P${Math.round(level)}` }, tone: 'neutral', drag: { min: 5, max: 95, step: 1 } }]}
+          onYMarkChange={(_i, y) => setLevel(y)}
+        />
+      </PlotCard>
+      <PlotCard fill title={{ en: 'A limit to move, on a log axis', es: 'Un límite que se mueve, en un eje logarítmico' }} lane="live" provenance="synthetic" dataKey={stateKey}>
+        <UPlotChart
+          height="fill"
+          x={{ values: sizes, label: { en: 'Size', es: 'Tamaño' }, unit: 'm', log: true }}
+          y={{ label: { en: 'Passing', es: 'Pasante' }, unit: '%', range: [0, 100], format: { decimals: 0 } }}
+          series={[{ label: { en: 'Model', es: 'Modelo' }, values: model }]}
+          yMarks={[{ y: limit, label: pick({ en: `limit ${Math.round(limit)} %`, es: `límite ${Math.round(limit)} %` }, lang), tone: 'bad', drag: { min: 50, max: 99, step: 1 } }]}
+          onYMarkChange={(_i, y) => setLimit(y)}
+        />
+      </PlotCard>
+    </ViewsRow>
   );
 }
 
