@@ -19,6 +19,18 @@ export interface ChartSeries {
   mode?: 'line' | 'points';
   /** The marker diameter of a `points` series, in CSS pixels (9 by default): a larger one rings the selected case. */
   size?: number;
+  /** A `points` series on x values of its own (measured cases over a modelled curve that has other sizes): one x per
+   * value. It is drawn over the plot on its own x, outside the curve's data, so it takes no part in the cursor, the
+   * pick or the readout, and the axes take its extent in. */
+  x?: number[];
+}
+
+/** What a reference line may be dragged over: the range it stays inside, and the step it snaps to (a hundredth of the
+ * range when not given; on a log axis the step is a factor). */
+export interface YMarkDrag {
+  min: number;
+  max: number;
+  step?: number;
 }
 
 export interface ChartAxis {
@@ -50,7 +62,11 @@ export interface UPlotChartProps {
   marks?: { x: number; label: BiText }[];
   /** Horizontal reference lines at y values, labelled at their right end (a null model's constant prediction, a
    * target, a limit). */
-  yMarks?: { y: number; label: BiText; tone?: YMarkTone }[];
+  yMarks?: { y: number; label: BiText; tone?: YMarkTone; drag?: YMarkDrag }[];
+  /** Called with the index in `yMarks` and the new y of a draggable reference line (`drag`) every time the reader moves
+   * it, by the pointer or the keyboard (a slider on the line: arrows, Page keys, Home and End); the caller sets the new
+   * y in `yMarks`. */
+  onYMarkChange?: (index: number, y: number) => void;
   /** Height in pixels, or `fill` to take the container's height (inside `PlotCard fill`); the width is always the
    * container's. */
   height?: number | 'fill';
@@ -182,6 +198,94 @@ export function smallestPositive(columns: readonly (readonly (number | null)[])[
   return lo;
 }
 
+/** Whether a tick is a power of ten (a decade of a log axis). */
+function isDecade(t: number | null | undefined): t is number {
+  if (t === null || t === undefined || !Number.isFinite(t) || t <= 0) return false;
+  const d = Math.log10(t);
+  return Math.abs(d - Math.round(d)) < 1e-6;
+}
+
+/**
+ * The ticks of a log x axis that get a label: the powers of ten only (null for every other tick, which formatTicks leaves
+ * blank). A range with no power of ten in it keeps its ticks, so the axis is never left without a label.
+ */
+export function decadeOnly(ticks: readonly (number | null)[]): (number | null)[] {
+  if (!ticks.some(isDecade)) return [...ticks];
+  return ticks.map((t) => (isDecade(t) ? t : null));
+}
+
+/** The side of the square box of a parity plot: the smaller of the box's width and the height asked for (the box's
+ * height when the chart fills it). */
+export function parityBox(boxWidth: number, boxHeight: number, height: number, fill: boolean): number {
+  return Math.min(boxWidth, fill ? boxHeight : height);
+}
+
+/** A dragged value kept inside the range of its line and snapped to its step; a value that is not a number falls to the
+ * lower end. */
+export function clampMark(y: number, drag: YMarkDrag): number {
+  if (!Number.isFinite(y)) return drag.min;
+  const v = drag.step && drag.step > 0 ? drag.min + Math.round((y - drag.min) / drag.step) * drag.step : y;
+  const clamped = Math.min(drag.max, Math.max(drag.min, v));
+  return Number(clamped.toPrecision(12));
+}
+
+/**
+ * The value a key sets on a draggable line, or null for a key it does not handle: the arrows one step, Page Up and Down
+ * ten, Home and End the ends of the range. A step is a hundredth of the range, or `drag.step`; on a log axis it is a factor
+ * (a hundredth of the range in decades) and `drag.step` is not used.
+ */
+export function nudgeMark(y: number, key: string, drag: YMarkDrag, log = false): number | null {
+  const dir = key === 'ArrowUp' || key === 'ArrowRight' || key === 'PageUp' ? 1 : key === 'ArrowDown' || key === 'ArrowLeft' || key === 'PageDown' ? -1 : 0;
+  if (key === 'Home') return drag.min;
+  if (key === 'End') return drag.max;
+  if (dir === 0) return null;
+  const n = key === 'PageUp' || key === 'PageDown' ? 10 : 1;
+  if (log && drag.min > 0 && drag.max > drag.min) {
+    const decades = (Math.log10(drag.max) - Math.log10(drag.min)) / 100;
+    return Math.min(drag.max, Math.max(drag.min, y * 10 ** (dir * n * decades)));
+  }
+  const step = drag.step && drag.step > 0 ? drag.step : (drag.max - drag.min) / 100;
+  return clampMark(y + dir * n * step, { ...drag, step: undefined });
+}
+
+/** Whether a series is an overlay: a `points` series with an x of its own (a line series ignores `x`). */
+export function isOverlay(s: ChartSeries): boolean {
+  return Boolean(s.x) && s.mode === 'points';
+}
+
+/** A drag range cut to the y range the chart was given, so a line cannot be dragged off the axis (its handle would be
+ * hidden and lose focus); a range that does not meet the axis collapses to its nearest end. */
+export function dragWithin(drag: YMarkDrag, range?: readonly [number, number] | null): YMarkDrag {
+  if (!range) return drag;
+  const lo = Math.min(range[0], range[1]);
+  const hi = Math.max(range[0], range[1]);
+  const min = Math.min(hi, Math.max(lo, drag.min));
+  const max = Math.max(lo, Math.min(hi, drag.max));
+  return { ...drag, min, max: Math.max(min, max) };
+}
+
+/** The x and y extent of the series that bring an x of their own, finite points only (on a log x axis, `positiveX`,
+ * only the points with x above 0); null when there are none. */
+export function overlayExtent(series: readonly ChartSeries[], positiveX = false): { x: [number, number]; y: [number, number] } | null {
+  let x0 = Infinity;
+  let x1 = -Infinity;
+  let y0 = Infinity;
+  let y1 = -Infinity;
+  for (const s of series) {
+    if (!isOverlay(s) || !s.x) continue;
+    for (let i = 0; i < Math.min(s.x.length, s.values.length); i++) {
+      const px = s.x[i];
+      const py = s.values[i];
+      if (py === null || py === undefined || !Number.isFinite(px) || !Number.isFinite(py) || (positiveX && !(px > 0))) continue;
+      x0 = Math.min(x0, px);
+      x1 = Math.max(x1, px);
+      y0 = Math.min(y0, py);
+      y1 = Math.max(y1, py);
+    }
+  }
+  return Number.isFinite(x0) ? { x: [x0, x1], y: [y0, y1] } : null;
+}
+
 /** A log axis reaching below uPlot's tick table: decade ticks, every one labelled (uPlot's own log filter blanks the
  * labels outside its table). */
 const DECADE_AXIS = {
@@ -193,6 +297,9 @@ const DECADE_AXIS = {
  * and y ticks at 30 by default, so two axes over one range ticked at different steps (25, 30, 35 against 24, 26, 28
  * on CAOS_Fragmenta's blasts); one spacing gives both the same step. */
 const PARITY_TICK_SPACE = 40;
+
+/** The height of the handle on a draggable line, in CSS pixels: a band the pointer can take hold of. */
+const HANDLE_HEIGHT = 14;
 
 /** How many tick labels repeat the label before them (empty labels apart); the gate fails a chart with any (G6). */
 export function repeatedLabels(labels: readonly (string | null | undefined)[]): number {
@@ -341,7 +448,7 @@ export function nearestPoint(xs: readonly number[], ys: readonly (readonly (numb
  * (known shell defect 17). An axis with fixed decimals ticks only where its labels differ (`tickSteps`). The host
  * declares `data-series`, `data-axis-titles`, `data-ticks-cut`, `data-ticks-repeat` and `data-drawn` for the gate.
  */
-export function UPlotChart({ x, y, series, marks, yMarks, height = 280, onCursor, onPick, parity, readout, hint }: UPlotChartProps) {
+export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height = 280, onCursor, onPick, parity, readout, hint }: UPlotChartProps) {
   const lang = useShellLang();
   const theme = useThemeStore((s) => s.theme);
   const fill = height === 'fill';
@@ -356,7 +463,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, height = 280, onCursor
     [measureRef],
   );
   // a parity plot is square: the side is the smaller of the box's width and the height asked for
-  const width = parity ? Math.min(box.width, fill ? box.height : height) : box.width;
+  const width = parity ? parityBox(box.width, box.height, typeof height === 'number' ? height : 0, fill) : box.width;
   const h = parity ? width : fill ? box.height : height;
   const uRef = useRef<uPlot | null>(null);
   // the host, whose data-ticks-repeat the tick formatters keep current (set on the element: a formatter runs inside
@@ -374,33 +481,60 @@ export function UPlotChart({ x, y, series, marks, yMarks, height = 280, onCursor
   const orderRef = useRef(order);
   orderRef.current = order;
   const xs = useMemo(() => (order ? order.map((i) => x.values[i]) : x.values), [order, x.values]);
-  const ys = useMemo(() => series.map((s) => (order ? order.map((i) => s.values[i] ?? null) : s.values)), [order, series]);
-  const levels = useMemo(() => (yMarks ?? []).map((m) => m.y), [yMarks]);
-  const range = useMemo(() => (parity ? parityRange(xs, ...ys, levels) : null), [parity, xs, ys, levels]);
-  // any other chart without a given y range takes the reference lines into it, so a line is always drawn (#94)
-  const yLevels = !parity && !y.range && levels.length > 0 ? levels : null;
+  // a series with an x of its own is an overlay, drawn over the plot on its own x; the others share the chart's x
+  const entries = useMemo(() => series.map((s, i) => ({ s, i })), [series]);
+  const baseEntries = useMemo(() => entries.filter(({ s }) => !isOverlay(s)), [entries]);
+  const overlays = useMemo(() => entries.filter(({ s }) => isOverlay(s)), [entries]);
+  const ext = useMemo(() => overlayExtent(series, Boolean(x.log)), [series, x.log]);
+  const ys = useMemo(() => baseEntries.map(({ s }) => (order ? order.map((i) => s.values[i] ?? null) : s.values)), [order, baseEntries]);
+  // a draggable line takes in the whole range it may be dragged over, so the axis does not move under the pointer
+  const levels = useMemo(() => (yMarks ?? []).flatMap((m) => (m.drag ? [m.drag.min, m.drag.max] : [m.y])), [yMarks]);
+  const range = useMemo(() => (parity ? parityRange(xs, ...ys, levels, ext ? [...ext.x, ...ext.y] : []) : null), [parity, xs, ys, levels, ext]);
+  // any other chart without a given y range takes the reference lines and the overlays into it, so a line is always drawn (#94)
+  const yLevels = !parity && !y.range && (levels.length > 0 || ext) ? [...levels, ...(ext ? ext.y : [])] : null;
+  // the x range that takes in the overlays (they have x values the curve has not)
+  const xExt = useMemo((): [number, number] | null => {
+    if (!ext || range || xs.length === 0) return null;
+    const lo = Math.min(xs[0], ext.x[0]);
+    const hi = Math.max(xs[xs.length - 1], ext.x[1]);
+    if (x.log && !(lo > 0)) return null;
+    // one x alone: a unit either side, a decade either side on a log axis (which has no room below 0)
+    return hi > lo ? [lo, hi] : x.log ? [lo / 10, hi * 10] : [lo - 1, hi + 1];
+  }, [ext, range, xs, x.log]);
   // a log axis reaching below uPlot's tick table ticks at powers of ten (known shell defect 31)
   const tiny = useMemo(
     () => ({
-      x: Boolean(x.log) && smallestPositive([xs], range) < LOG_TABLE_FLOOR,
+      x: Boolean(x.log) && smallestPositive(ext ? [xs, ext.x] : [xs], range) < LOG_TABLE_FLOOR,
       y: Boolean(y.log) && smallestPositive(yLevels ? [...ys, yLevels] : ys, range ?? y.range) < LOG_TABLE_FLOOR,
     }),
-    [x.log, y.log, xs, ys, range, y.range, yLevels],
+    [x.log, y.log, xs, ys, range, y.range, yLevels, ext],
   );
 
   const xLabel = pick(x.label, lang);
   const yLabel = pick(y.label, lang);
+  // the lines, the overlays and the callback as the caller last gave them: the drawing reads these, so a line dragged to a
+  // new value (and a new label) is redrawn, never rebuilt (a rebuild would drop the handle the reader holds)
+  const yMarksRef = useRef(yMarks);
+  yMarksRef.current = yMarks;
+  const liveRef = useRef<number[]>([]);
+  liveRef.current = (yMarks ?? []).map((m) => m.y);
+  const overlaysRef = useRef(overlays);
+  overlaysRef.current = overlays;
+  const onYMarkChangeRef = useRef(onYMarkChange);
+  onYMarkChangeRef.current = onYMarkChange;
+  const dragCount = (yMarks ?? []).filter((m) => m.drag).length;
   const xUnit = x.unit ? pick(x.unit, lang) : '';
   const yUnit = y.unit ? pick(y.unit, lang) : '';
   // Everything that changes the plot's structure, by value.
   const structure = JSON.stringify({
-    s: series.map((s, i) => [pick(s.label, lang), seriesStyle(s, i), s.width ?? 2, s.mode ?? 'line', s.size ?? 9]),
-    x: [xLabel, xUnit, Boolean(x.time), Boolean(x.log), x.format ?? null, tiny.x],
+    s: series.map((s, i) => [pick(s.label, lang), seriesStyle(s, i), s.width ?? 2, s.mode ?? 'line', s.size ?? 9, isOverlay(s)]),
+    x: [xLabel, xUnit, Boolean(x.time), Boolean(x.log), x.format ?? null, tiny.x, xExt],
+    oe: ext,
     p: range,
     pick: Boolean(onPick),
     y: [yLabel, yUnit, Boolean(y.log), y.range ?? null, y.format ?? null, tiny.y],
     m: (marks ?? []).map((m) => [m.x, pick(m.label, lang)]),
-    ym: (yMarks ?? []).map((m) => [m.y, pick(m.label, lang), m.tone ?? 'warn']),
+    ym: (yMarks ?? []).map((m) => (m.drag ? ['drag', m.drag] : [m.y, pick(m.label, lang), m.tone ?? 'warn'])),
     theme,
     lang,
     h,
@@ -408,7 +542,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, height = 280, onCursor
   });
   const data = useMemo(() => [xs, ...ys] as uPlot.AlignedData, [xs, ys]);
   // a chart of points only (a scatter, a parity plot): the cursor takes the point nearest the pointer in the plane
-  const scatter = series.length > 0 && series.every((s) => s.mode === 'points');
+  const scatter = baseEntries.length > 0 && baseEntries.every(({ s }) => s.mode === 'points');
 
   useEffect(() => {
     const el = plotRef.current;
@@ -420,8 +554,10 @@ export function UPlotChart({ x, y, series, marks, yMarks, height = 280, onCursor
     const surface = resolveToken('--color-surface', '#fff');
     const repeats = { x: 0, y: 0 };
     // One notation per axis (known shell defect 19): the labels of an axis are formatted together.
-    const tick = (fmt: FormatOptions | undefined, axis: 'x' | 'y') => (_u: uPlot, vals: (number | null)[]) => {
-      const labels = formatTicks(vals, lang, fmt ?? { digits: 4 });
+    const tick = (fmt: FormatOptions | undefined, axis: 'x' | 'y', pre?: (v: (number | null)[]) => (number | null)[]) => (_u: uPlot, vals: (number | null)[]) => {
+      const labels = formatTicks(pre ? pre(vals) : vals, lang, fmt ?? { digits: 4 });
+      // a log x axis: the labels it shows, declared for the shell's own test (the decades, no other)
+      if (axis === 'x' && pre) hostRef.current?.setAttribute('data-log-labels', labels.filter((l) => l).join('|'));
       repeats[axis] = repeatedLabels(labels);
       hostRef.current?.setAttribute('data-ticks-repeat', String(repeats.x + repeats.y));
       // how many ticks the axis labels: a parity plot's two axes must agree, and an axis with fewer than two says nothing
@@ -457,7 +593,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, height = 280, onCursor
         x: {
           time: Boolean(x.time),
           distr: x.log ? 3 : 1,
-          ...(range ? { range } : x.log ? { range: (_u: uPlot, min: number, max: number): uPlot.Range.MinMax => [min, max] } : {}),
+          ...(range ? { range } : xExt ? { range: xExt } : x.log ? { range: (_u: uPlot, min: number, max: number): uPlot.Range.MinMax => [min, max] } : {}),
         },
         y: {
           distr: y.log ? 3 : 1,
@@ -485,7 +621,8 @@ export function UPlotChart({ x, y, series, marks, yMarks, height = 280, onCursor
           font,
           label: xUnit ? `${xLabel} (${xUnit})` : xLabel,
           labelFont: font,
-          values: x.time ? undefined : tick(x.format, 'x'),
+          // a log x axis labels the decades only; the ticks between stay drawn, unlabelled
+          values: x.time ? undefined : tick(x.format, 'x', x.log && !tiny.x ? decadeOnly : undefined),
           ...(xSteps ? { incrs: xSteps } : {}),
           ...(range ? { space: PARITY_TICK_SPACE } : {}),
           ...(tiny.x ? DECADE_AXIS : {}),
@@ -515,7 +652,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, height = 280, onCursor
       ],
       series: [
         {},
-        ...series.map((s, i) => {
+        ...baseEntries.map(({ s, i }) => {
           const style = seriesStyle(s, i);
           const stroke = resolveToken(style.color, '#4a8');
           return s.mode === 'points'
@@ -539,6 +676,59 @@ export function UPlotChart({ x, y, series, marks, yMarks, height = 280, onCursor
               if (idx === null || idx === undefined || !onPickRef.current) return;
               onPickRef.current(orderRef.current ? orderRef.current[idx] : idx);
             });
+            // a draggable line has a handle on it: a slider the pointer drags and the keyboard moves
+            const accent = resolveToken('--color-accent', '#06c');
+            (yMarks ?? []).forEach((m, i) => {
+              if (!m.drag) return;
+              // a given y range bounds the drag: a line dragged off the axis would lose its handle
+              const drag = dragWithin(m.drag, range ? undefined : y.range);
+              const el = document.createElement('div');
+              el.setAttribute('role', 'slider');
+              el.setAttribute('tabindex', '0');
+              el.setAttribute('aria-orientation', 'vertical');
+              el.setAttribute('aria-valuemin', String(drag.min));
+              el.setAttribute('aria-valuemax', String(drag.max));
+              el.setAttribute('data-y-handle', String(i));
+              Object.assign(el.style, { position: 'absolute', left: '0', width: '100%', height: `${HANDLE_HEIGHT}px`, cursor: 'ns-resize', touchAction: 'none', outlineOffset: '-2px', zIndex: '3' });
+              el.addEventListener('focus', () => (el.style.outline = `2px solid ${accent}`));
+              el.addEventListener('blur', () => (el.style.outline = 'none'));
+              el.addEventListener('click', (e) => e.stopPropagation());
+              const set = (raw: number) => {
+                const v = clampMark(raw, y.log ? { ...drag, step: undefined } : drag);
+                if (v === liveRef.current[i]) return;
+                liveRef.current[i] = v;
+                onYMarkChangeRef.current?.(i, v);
+                u.redraw(false);
+              };
+              let dragging = false;
+              el.addEventListener('pointerdown', (e) => {
+                if (e.button !== 0) return;
+                dragging = true;
+                el.setPointerCapture(e.pointerId);
+                el.focus();
+                e.preventDefault();
+              });
+              el.addEventListener('pointermove', (e) => {
+                if (!dragging) return;
+                set(u.posToVal(e.clientY - u.over.getBoundingClientRect().top, 'y'));
+              });
+              const end = (e: PointerEvent) => {
+                dragging = false;
+                if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
+              };
+              el.addEventListener('pointerup', end);
+              el.addEventListener('pointercancel', end);
+              el.addEventListener('keydown', (e) => {
+                const v = nudgeMark(liveRef.current[i], e.key, drag, Boolean(y.log));
+                if (v === null) return;
+                e.preventDefault();
+                set(v);
+              });
+              u.over.appendChild(el);
+            });
+            // the first draw came before the handles, and uPlot ignores a redraw asked inside its own commit: draw once more
+            // when it is done, so each handle is placed
+            if (dragCount) queueMicrotask(() => uRef.current === u && u.redraw(false));
           },
         ],
         draw: [
@@ -557,8 +747,56 @@ export function UPlotChart({ x, y, series, marks, yMarks, height = 280, onCursor
               ctx.stroke();
               ctx.restore();
             }
+            // the points that bring their own x, drawn over the curves on the plot's scales
+            const dots = overlaysRef.current;
+            if (dots.length) {
+              const ctx = u.ctx;
+              const pr = uPlot.pxRatio || 1;
+              let drawn = 0;
+              ctx.save();
+              ctx.beginPath();
+              ctx.rect(u.bbox.left, u.bbox.top, u.bbox.width, u.bbox.height);
+              ctx.clip();
+              for (const { s, i } of dots) {
+                ctx.fillStyle = resolveToken(seriesStyle(s, i).color, '#4a8');
+                ctx.strokeStyle = surface;
+                ctx.lineWidth = Math.max(1, pr);
+                const r = ((s.size ?? 9) / 2) * pr;
+                const ox = s.x ?? [];
+                for (let k = 0; k < Math.min(ox.length, s.values.length); k++) {
+                  const v = s.values[k];
+                  if (v === null || v === undefined || !Number.isFinite(v) || !Number.isFinite(ox[k])) continue;
+                  const px = u.valToPos(ox[k], 'x', true);
+                  const py = u.valToPos(v, 'y', true);
+                  if (!Number.isFinite(px) || !Number.isFinite(py) || px < u.bbox.left - 0.5 || px > u.bbox.left + u.bbox.width + 0.5 || py < u.bbox.top - 0.5 || py > u.bbox.top + u.bbox.height + 0.5) continue;
+                  ctx.beginPath();
+                  ctx.arc(px, py, r, 0, Math.PI * 2);
+                  ctx.fill();
+                  ctx.stroke();
+                  drawn++;
+                }
+              }
+              ctx.restore();
+              hostRef.current?.setAttribute('data-overlay-drawn', String(drawn));
+            }
             const markStyle = { color: resolveToken('--color-warn', '#c80'), halo: surface, family };
-            if (yMarks?.length) drawYMarks(u, yMarks.map((m) => ({ y: m.y, label: pick(m.label, lang), color: resolveToken(YMARK_TONE_TOKENS[m.tone ?? 'warn'], '#c80') })), markStyle);
+            // the lines as the caller last gave them (a dragged line has a new y and label, not a new chart)
+            const lines = yMarksRef.current ?? [];
+            if (lines.length) drawYMarks(u, lines.map((m, i) => ({ y: liveRef.current[i] ?? m.y, label: pick(m.label, lang), color: resolveToken(YMARK_TONE_TOKENS[m.tone ?? 'warn'], '#c80') })), markStyle);
+            // each handle sits on its line, and says its value to a screen reader
+            u.over.querySelectorAll<HTMLElement>('[data-y-handle]').forEach((el) => {
+              const i = Number(el.getAttribute('data-y-handle'));
+              const m = lines[i];
+              const v = liveRef.current[i];
+              if (!m || v === undefined) return;
+              const top = u.valToPos(v, 'y');
+              el.style.display = Number.isFinite(top) && top >= 0 && top <= u.bbox.height / (uPlot.pxRatio || 1) ? '' : 'none';
+              el.style.top = `${top - HANDLE_HEIGHT / 2}px`;
+              const label = pick(m.label, lang);
+              el.setAttribute('aria-label', label);
+              el.setAttribute('aria-valuenow', String(Number(v.toPrecision(12))));
+              el.setAttribute('aria-valuetext', `${label}: ${formatNumber(v, lang, y.format ?? { digits: 4 })}${yUnit ? `${NBSP}${yUnit}` : ''}`);
+            });
             if (marks?.length) drawMarks(u, marks.map((m) => ({ x: m.x, label: pick(m.label, lang) })), markStyle);
           },
         ],
@@ -578,14 +816,21 @@ export function UPlotChart({ x, y, series, marks, yMarks, height = 280, onCursor
     uRef.current?.setData(data);
   }, [data]);
 
+  // a line moved or relabelled by the caller, and overlays given anew, are drawn again without a rebuild
+  const overlaysKey = JSON.stringify(overlays.map(({ s, i }) => [i, s.x, s.values, s.size ?? 9, seriesStyle(s, i).color]));
+  const linesKey = JSON.stringify((yMarks ?? []).map((m) => [m.y, pick(m.label, lang), m.tone ?? 'warn']));
+  useEffect(() => {
+    uRef.current?.redraw(false);
+  }, [linesKey, overlaysKey]);
+
   const read =
     cursor !== null && readout
       ? readout(order ? order[cursor] : cursor)
       : cursor !== null
       ? [
           `${xLabel} ${formatNumber(xs[cursor], lang, x.format ?? { digits: 4 })}${xUnit ? `${NBSP}${xUnit}` : ''}`,
-          ...series
-            .map((s, k) => ({ s, v: ys[k][cursor] ?? null }))
+          ...baseEntries
+            .map(({ s }, k) => ({ s, v: ys[k][cursor] ?? null }))
             // a scatter's series are sets of points: name only the ones that have this point
             .filter(({ v }) => !scatter || v !== null)
             .map(({ s, v }) => `${pick(s.label, lang)} ${formatNumber(v, lang, y.format ?? { digits: 4 })}${yUnit ? `${NBSP}${yUnit}` : ''}`),
@@ -609,6 +854,8 @@ export function UPlotChart({ x, y, series, marks, yMarks, height = 280, onCursor
       data-log-x={x.log ? '1' : undefined}
       data-pick={onPick ? '1' : undefined}
       data-y-marks={yMarks?.length ? String(yMarks.length) : undefined}
+      data-y-drag={dragCount ? String(dragCount) : undefined}
+      data-overlay={overlays.length ? String(overlays.length) : undefined}
     >
       <div ref={setPlot} className="caos-chart-plot" />
       {series.length > 1 && (

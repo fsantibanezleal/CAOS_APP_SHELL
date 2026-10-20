@@ -8,7 +8,7 @@
 //   G4 deep links            every route loaded directly (and with a trailing slash), 200 and rendered; artifacts
 //                            are JSON, not the HTML fallback; a missing asset answers 404; doc text clears a floor
 //   G5 scroll and reach      boxes inside the viewport, the rail and their scrollers; tall views scroll; nothing is
-//                            cut; truncated text carries its full text; every control reachable by the pointer
+//                            cut; truncated text carries its full text; a select shows its whole selected text (0.17.0); every control reachable by the pointer
 //   G6 painted area          drawing surfaces have painted pixels, fill their stage, and cover at least half the
 //                            viewport on the App route, measured on the screenshot, never on a host box
 //   G7 walk everything       every route, tab, sub-tab and case, at five sizes, both themes, both languages,
@@ -269,6 +269,15 @@ export async function runGate(o) {
       fail('G18', { route: appRoute, mode: 'routes' }, `the App route ${appRoute} is not among the measured routes (${routes.join(', ') || 'none'}): with --workbench '' and --require-focus the gate measures the App as a surface and must walk it; add it to --routes or name it with --app-route`);
     }
 
+    // ---- G18 on a workbench App (shell 0.17.0): under --require-focus every workbench route must be among the measured routes, or no Focus would be measured
+    if (opt.requireFocus) {
+      for (const wr of workbenchRoutes) {
+        if (!routes.includes(wr)) {
+          fail('G18', { route: wr, mode: 'routes' }, `the workbench route ${wr} is not among the measured routes (${routes.join(', ') || 'none'}): with --require-focus the gate must walk the App to measure its Focus mode; add it to --routes or drop it from --workbench`);
+        }
+      }
+    }
+
     // ---- The landing (shell 0.13.0): the root opens the Introduction on its executive view; an old App link with a query string reaches the App.
     {
       const ctx = await openContext(primarySize, themes[0], langs[0]);
@@ -460,6 +469,7 @@ export async function runGate(o) {
       if (f.rail.outsideCount) fail('G5', where, `${f.rail.outsideCount} rail element(s) outside the rail: ${f.rail.outside.join('; ')}`);
     }
     if (f.truncatedCount) fail('G5', where, `${f.truncatedCount} truncated text(s) without the full text in a title: ${f.truncated.join('; ')}`);
+    if (f.cutSelectCount) fail('G5', where, `${f.cutSelectCount} select(s) cut the selected text (a case name cut in its box, or a display that names another case than the one the select holds, or a plain select with a text wider than its room): ${f.cutSelects.join('; ')}`);
     for (const c of f.clipped) fail('G5', where, c);
     if (f.offCentre !== null && f.offCentre > 2) fail('ADR-0017.1', where, `the prose page is off-centre by ${f.offCentre.toFixed(1)}px`);
     if (f.referenceLists) fail('ADR-0017.4', where, `${f.referenceLists} bibliography outside the end-of-page references block (a .reference-list); give each DocSection its refs and let the page list them once`);
@@ -913,6 +923,7 @@ export async function runGate(o) {
     if (big && f.share < opt.instrumentMin) fail('G18', at, `${label}: the stage covers ${(100 * f.share).toFixed(1)}% of the viewport (floor ${(100 * opt.instrumentMin).toFixed(0)}%)`);
     if (f.exitInside === false) fail('G18', at, `${label}: the exit control is outside the viewport`);
     for (const c of f.covered) fail('G18', at, `${label}: ${c.chrome} covers the control "${c.control}" (the stage must clear the Focus chrome)`);
+    if (f.cutSelects.count) fail('G5', at, `${label}: ${f.cutSelects.count} select(s) cut the selected text (a case name cut in its box, or a display that names another case than the one the select holds, or a plain select with a text wider than its room): ${f.cutSelects.list.join('; ')}`);
     if (f.enterInside > 0) fail('G18', at, `${label}: the Focus control shows inside Focus mode (it opens the mode the reader is already in)`);
     for (const m of await page.evaluate(() => window.__caosGate.drawingText())) fail('G10', at, m);
     for (const m of await page.evaluate(() => window.__caosGate.brokenValues())) fail('G19', at, m);

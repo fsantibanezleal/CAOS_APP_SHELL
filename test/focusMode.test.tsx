@@ -18,14 +18,18 @@ const bench = (focus?: React.ComponentProps<typeof CaseWorkbench>['focus']) =>
     />,
   );
 
-test('a workbench with a focus configuration shows the Focus control in the rail head, with a name in both languages', () => {
+test('a workbench with a focus configuration shows the Focus control at the end of the group tab row, with a name in both languages', () => {
   // the server render follows the English default; the Spanish words are checked here as constants and in the browser (e2e/focus-mode.test.ts)
   const html = bench(true);
   assert.match(html, /<button[^>]*data-focus-enter=""/, 'a real button');
   assert.ok(html.includes(`aria-label="${FOCUS_TEXT.enterLabel.en}"`), `the accessible name "${FOCUS_TEXT.enterLabel.en}"`);
   assert.ok(html.includes(`>${FOCUS_TEXT.enter.en}<`), 'the visible word');
-  const head = html.indexOf('caos-wb-rail-head');
-  assert.ok(head > 0 && html.indexOf('data-focus-enter') > head && html.indexOf('data-focus-enter') < html.indexOf('data-instrument'), 'the control sits in the rail head, beside the case picker');
+  const slot = html.indexOf('data-tabs-slot');
+  const list = html.indexOf('role="tablist"');
+  assert.ok(list > 0 && slot > list && html.indexOf('data-focus-enter') > slot, 'the control is in the slot after the tab list');
+  assert.ok(html.indexOf('data-focus-enter') > html.indexOf('data-case-workbench'), 'inside the instrument, not in the rail');
+  const head = html.slice(html.indexOf('caos-wb-rail-head'), html.indexOf('data-case-workbench'));
+  assert.doesNotMatch(head, /data-focus-enter/, 'not in the rail head (shell 0.17.0, BL-074)');
   assert.equal(FOCUS_TEXT.enter.es, 'Enfocar');
   assert.equal(FOCUS_TEXT.enterLabel.es, 'Abrir este caso en modo enfoque');
   assert.equal(FOCUS_TEXT.exit.es, 'Volver a la App');
@@ -48,37 +52,47 @@ test('the App renders in the App frame while focus is off (the stage is the tab 
   assert.doesNotMatch(html, /data-focus-shell/);
 });
 
-test('the Focus control shares the case select row, so the rail head is no taller with it (shell 0.14.1)', () => {
-  // on a row of its own it added 37px to the rail head, and rails with little slack scrolled (ADR-0071 rule 6)
+test('the case select takes the rail head alone: the Focus control is not in its row, so no case name is cut beside it (shell 0.17.0, BL-074)', () => {
   const html = bench(true);
-  const row = html.indexOf('class="cs-select-row"');
-  assert.ok(row > 0, 'the select sits in a row with the control');
-  const select = html.indexOf('<select', row);
-  const enter = html.indexOf('data-focus-enter', row);
-  const rowEnd = html.indexOf('</div>', enter);
-  assert.ok(select > row && enter > select && rowEnd > enter, 'the select first, then the control, inside that one row');
-  assert.equal((html.match(/data-focus-enter=""/g) ?? []).length, 1, 'one control, not a second one in the rail head');
+  assert.doesNotMatch(html, /cs-select-row/, 'no row beside the select');
+  assert.equal((html.match(/data-focus-enter=""/g) ?? []).length, 1, 'one control');
+  const slot = html.indexOf('data-tabs-slot');
+  assert.ok(html.indexOf('data-focus-enter') > slot && slot > html.indexOf('<select'), 'the select first, the control later in the tab row');
 });
 
-test('with case chips, or with no case picker, the Focus control keeps a row of its own in the rail head', () => {
-  const chips = renderToStaticMarkup(
+test('whatever the case picker (select, chips or none) the Focus control sits in the tab row slot and the rail head gets no row for it', () => {
+  const mk = (layout?: 'select' | 'chips') =>
+    renderToStaticMarkup(
+      <CaseWorkbench
+        caseId="c1"
+        cases={layout ? { cases: [{ id: 'c1', name: 'First' }], selectedId: 'c1', onSelect: () => undefined, layout } : undefined}
+        groups={[{ id: 'model', label: { en: 'Model', es: 'Modelo' }, content: <p>MODEL</p> }]}
+        context={{ content: <p>CONTEXT</p> }}
+        focus
+      />,
+    );
+  for (const layout of ['select', 'chips', undefined] as const) {
+    const html = mk(layout);
+    assert.equal((html.match(/data-focus-enter=""/g) ?? []).length, 1, `${layout}: one control`);
+    assert.ok(html.indexOf('data-focus-enter') > html.indexOf('data-tabs-slot'), `${layout}: in the tab row slot`);
+    assert.doesNotMatch(html, /cs-select-row/, `${layout}: no select row`);
+  }
+  assert.doesNotMatch(mk(undefined), /caos-wb-rail-head/, 'no case picker and no variants: no rail head at all');
+});
+
+test('a product accessory on a select picker still shares the select row; the Focus control no longer does', () => {
+  const html = renderToStaticMarkup(
     <CaseWorkbench
       caseId="c1"
-      cases={{ cases: [{ id: 'c1', name: 'First' }], selectedId: 'c1', onSelect: () => undefined, layout: 'chips' }}
+      cases={{ cases: [{ id: 'c1', name: 'First' }], selectedId: 'c1', onSelect: () => undefined, layout: 'select', accessory: <span data-product-accessory="">ACC</span> }}
       groups={[{ id: 'model', label: { en: 'Model', es: 'Modelo' }, content: <p>MODEL</p> }]}
       context={{ content: <p>CONTEXT</p> }}
       focus
     />,
   );
-  assert.doesNotMatch(chips, /cs-select-row/);
-  assert.equal((chips.match(/data-focus-enter=""/g) ?? []).length, 1);
-  assert.ok(chips.indexOf('data-focus-enter') > chips.lastIndexOf('cs-chips'), 'after the chips');
-  const none = renderToStaticMarkup(
-    <CaseWorkbench caseId="c1" groups={[{ id: 'model', label: { en: 'Model', es: 'Modelo' }, content: <p>MODEL</p> }]}
-      context={{ content: <p>CONTEXT</p> }} focus />,
-  );
-  assert.equal((none.match(/data-focus-enter=""/g) ?? []).length, 1);
-  assert.doesNotMatch(none, /cs-select-row/);
+  const row = html.indexOf('class="cs-select-row"');
+  assert.ok(row > 0 && html.indexOf('data-product-accessory') > row, 'the product accessory is on the select row');
+  assert.ok(html.indexOf('data-focus-enter') > html.indexOf('data-tabs-slot'), 'the Focus control is in the tab row');
 });
 
 /** Shell 0.14.3 (SHW-037): inside Focus the rail head shows the pickers without the Focus control. */
@@ -119,4 +133,16 @@ test('inside Focus a product accessory on the case picker still renders in the f
     assert.match(html, /data-product-accessory=""/, `${layout}: the product's own accessory shows in the focus rail`);
     assert.doesNotMatch(html, /data-focus-enter/);
   }
+});
+
+test('the case select is the native select on top of an aria-hidden display of the selected name (shell 0.17.0, the consumer trial)', () => {
+  const html = bench(true);
+  const wrap = html.indexOf('class="cs-select-wrap"');
+  assert.ok(wrap > 0, 'a wrap');
+  const display = html.indexOf('class="cs-select-display"', wrap);
+  const select = html.indexOf('<select', wrap);
+  assert.ok(display > wrap && select > display, 'the display first, the native select after it (on top)');
+  assert.match(html.slice(display, select), /aria-hidden="true"[^>]*><span class="cs-select-text">First<\/span>/, 'the display is hidden from assistive tools and holds the selected name');
+  assert.match(html.slice(select, html.indexOf('</select>', select)), /aria-label="Case selector"/, 'the select keeps its accessible name');
+  assert.doesNotMatch(html.slice(display, select), /style=/, 'no height until some name needs more than one line (measured in the browser)');
 });

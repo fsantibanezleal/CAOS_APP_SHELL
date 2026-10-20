@@ -1,3 +1,52 @@
+## [0.17.000] - 2026-10-20
+
+### Added
+
+- `UPlotChart`: draggable reference lines. A `yMarks` entry takes `drag: { min, max, step? }` and the chart `onYMarkChange(index, y)`; the line carries a slider handle the reader drags or moves with the arrows, Page keys, Home and End, inside its range, and the chart is redrawn, not rebuilt, while it moves (SHC-037 to SHC-041, BL-029). New exports `clampMark`, `nudgeMark`, type `YMarkDrag`; the host declares `data-y-drag`.
+- `UPlotChart`: a `points` series with an `x` of its own is drawn over the plot on its own x values, the axes taking its extent in; the host declares `data-overlay` and `data-overlay-drawn` (SHC-042 to SHC-044, BL-029). New export `overlayExtent`.
+- `parityBox` (the side of the square parity box, SHC-034 and SHC-035), `decadeOnly`; the gate fixture has a Forms view of each new form (a log x axis with a draggable percentile line, measured points on their own sizes and marks apart; a log axis with a draggable limit).
+- Gate: G5 fails a select, in the App or in Focus, whose selected text does not fit the room it leaves, naming the route, the state, the text and
+  what was measured: for a case select with the shell's display, a name cut in its box (the real `.cs-select-text` element overflows, as a product
+  stylesheet that clamps it or an overflow the wrap cannot break, or the display's own box smaller than the name) and a stale display (the shown name differs from the option the select holds); for
+  any other select, a text wider than its content box less the native arrow (measured with a probe select, 0 with `appearance: none`). SHG-072,
+  plants `select-cut`, `select-cut-token`, `select-cut-display`, `select-display-stale`, `select-arrow`, `select-focus-rail`, and the pages that must pass,
+  `legit-select-two-lines` and `legit-select-three-lines`.
+- Gate: under `--require-focus`, G18 fails a workbench route (`--workbench`) that is not among the measured routes, as 0.16.0 does for a
+  surface App route, so a run cannot measure no Focus at all (SHG-073, plant `workbench-route-unwalked`).
+
+### Changed
+
+- `UPlotChart`: a log x axis labels decades whatever uPlot's tick filter does (`decadeOnly`, SHC-030 to SHC-033, CAOS_APP_SHELL#65): with uPlot 1.6.32 the labels are those of 0.16.0 (it already labelled only the ticks whose mantissa is 1) except a non-decade tick whose mantissa is 1, such as 0.15 on a 0.15 to 15 axis, which loses its label; the host declares the labels shown in `data-log-labels`. An axis whose range holds no power of ten keeps uPlot's labels.
+- The `katex` peer range accepts 0.16 to 0.19 (`^0.16.0 || ^0.17.0 || ^0.18.0 || ^0.19.0`; it was `^0.16.0`, so a product pinning katex 0.19.0,
+  its current release, failed `npm ci` with ERESOLVE, CAOS_Fragmenta 0.09.000's dependency round). The shell develops and tests on katex 0.19.0,
+  which ships its own types (`@types/katex` dropped). 0.18.0 prefixed katex's internal classes; the classes the shell's stylesheet and the gate
+  select (`.katex`, `.katex-display`, `.katex-mathml`) are unchanged in 0.19.0, and the build and every suite pass on it.
+
+### Fixed
+
+- The workbench's case select no longer cuts a case name (SHW-041, SHW-042, BL-074). Since 0.14.1 the **Focus** control shared the select's
+  row and, at 1280x800, a name was cut inside the native select with no ellipsis (CAOS_Fragmenta 0.08.001: "Mina de cob"). The control now ends
+  the group tab row, in the slot `Tabs` reserves (`trailing`), as a surface's does since 0.16.0, whatever the case picker (select, chips or
+  none); the select takes the rail head's whole width. Measured at 390, 768 and 1280 px: the rail head, the tab row and the panel start are the
+  same with and without `focus`. Focus keeps its URL, Escape, exit button and return to the same case, group and sub-view; inside Focus there
+  is no control, as before. `CaseSelectorProps.accessory` stays for a product's own control and still shares the select's row.
+- `CaseWorkbench` no longer drops a product's own `cases.accessory` while `focus` is on: in 0.16.0 and before, a select picker with `focus` replaced the
+  accessory by the Focus control, so the accessory never showed in the App. It now shows on the select's row, and the Focus control is in the tab row.
+- The case select shows real case names whole (SHW-043; the consumer trial of 0.17.0 at a584b08: CAOS_Fragmenta failed 112 states and CAOS_Contraste 413,
+  all `select.cs-select[data-control="case"]`, with names of 202 to 311 px in 181 px of room, such as "Degenerate design: the negative control" at
+  241 px and "Corporate PD across 1 to 5 year horizons (planned)" at 311 px; the template passed with short names). `CaseSelector` with
+  `layout: 'select'` now shows the selected name whole, at any length, in a display (`.cs-select-display`, `aria-hidden`) with the native
+  `select` kept in place on top of it, transparent by colour: the keyboard, the screen reader (accessible name and value) and the native list are
+  unchanged. There is no line cap and no ellipsis: the name wraps to the lines it needs and a token wider than the room breaks inside
+  (`overflow-wrap: anywhere`); the display is as tall as the longest name of the visible list needs at the current width, measured in the DOM
+  (the display's own font, padding and content width) and re-measured when the list, the width or the fonts change, so the rail head never moves
+  when the reader switches cases, and a list whose names all fit keeps one line as tall as a plain select. Same in the App rail and the Focus
+  rail. The consumer trial of 8e6e254 (CAOS_Fragmenta 8 states, CAOS_Contraste 90, names of 354 and 398 px that need three lines in 182 px) is why
+  there is no cap: any cap cuts the next longer name; a product that finds its rail head too tall shortens its names. The display names the case the
+  native select holds (the selected case, else the first enabled visible case, as React selects it: a selected id outside the visible source lane no
+  longer shows another case than the select). Under forced colours (Windows High Contrast) the native select stays transparent, so its one cut line
+  is not painted over the display; the focus ring is the display's alone, on `:focus-visible`.
+
 ## [0.16.000] - 2026-10-20
 
 ### Added
