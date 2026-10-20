@@ -594,6 +594,13 @@ function ValidationView({ sim, focusOn }: { sim: Sim; focusOn?: boolean }) {
           label: pick({ en: 'Forms', es: 'Formas' }, lang),
           content: <FormsView />,
         },
+        {
+          // the chart forms of 0.18.0: named x ticks over an x range, a key that solos a series, dots on a short line, a reference
+          // line without a label
+          id: 'categories',
+          label: pick({ en: 'Categories', es: 'Categorías' }, lang),
+          content: <CategoriesView />,
+        },
       ]}
     />
   );
@@ -636,6 +643,59 @@ function FormsView() {
           series={[{ label: { en: 'Model', es: 'Modelo' }, values: model }]}
           yMarks={[{ y: limit, label: pick({ en: `limit ${Math.round(limit)} %`, es: `límite ${Math.round(limit)} %` }, lang), tone: 'bad', drag: { min: 50, max: 99, step: 1 } }]}
           onYMarkChange={(_i, y) => setLimit(y)}
+        />
+      </PlotCard>
+    </ViewsRow>
+  );
+}
+
+/** The forms of the chart added in 0.18.0 (CAOS_Fragmenta 0.09.000, BL-042): named x ticks with an x range and dots on three values,
+ * a key that solos one of five crossing lines, and a zero line with no label beside a labelled level. The plant
+ * `named-ticks-repeat` gives two ticks the same name, which the gate's repeated-label check (G6) fails. */
+function CategoriesView() {
+  const { stateKey } = useWorkbenchState();
+  const names = PLANT === 'named-ticks-repeat' ? ['random', 'deduplicated', 'deduplicated'] : ['random', 'deduplicated', 'site held out'];
+  const protocols = [
+    { value: 0, label: { en: names[0], es: 'aleatorio' } },
+    { value: 1, label: { en: names[1], es: 'deduplicado' } },
+    { value: 2, label: { en: names[2], es: PLANT === 'named-ticks-repeat' ? 'deduplicado' : 'sitio retenido' } },
+  ];
+  const days = useMemo(() => [1, 2, 3, 4, 5, 6, 7, 8], []);
+  const lines = useMemo(
+    () => [
+      { en: 'Alpha', es: 'Alfa', k: 0.6 },
+      { en: 'Beta', es: 'Beta', k: 0.9 },
+      { en: 'Gamma', es: 'Gama', k: 1.2 },
+      { en: 'Delta', es: 'Delta', k: 1.5 },
+      { en: 'Epsilon', es: 'Épsilon', k: 1.8 },
+    ].map((l) => ({ label: { en: l.en, es: l.es }, values: days.map((d) => 10 + (d - 4) * (3 - l.k) * 2 + l.k * 3) })),
+    [days],
+  );
+  return (
+    <ViewsRow shares={[3, 2]}>
+      <>
+        <PlotCard fill title={{ en: 'Error by protocol, with named ticks', es: 'Error por protocolo, con marcas con nombre' }} lane="live" provenance="synthetic" dataKey={stateKey}>
+          <UPlotChart
+            height="fill"
+            x={{ values: [0, 1, 2], label: { en: 'Protocol', es: 'Protocolo' }, ticks: protocols, range: [-0.5, 2.5] }}
+            y={{ label: { en: 'Error', es: 'Error' }, unit: 'cm', range: [0, 40], format: { decimals: 0 } }}
+            series={[
+              { label: { en: 'Model', es: 'Modelo' }, values: [12, 24, 31], dots: true },
+              { label: { en: 'Baseline', es: 'Línea base' }, values: [20, 25, 29], dots: true },
+            ]}
+          />
+        </PlotCard>
+        <PlotCard fill title={{ en: 'Five lines, one to follow', es: 'Cinco líneas, una para seguir' }} lane="live" provenance="synthetic" dataKey={stateKey}>
+          <UPlotChart height="fill" solo x={{ values: days, label: { en: 'Day', es: 'Día' }, format: { decimals: 0 } }} y={{ label: { en: 'Level', es: 'Nivel' }, format: { decimals: 0 } }} series={lines} />
+        </PlotCard>
+      </>
+      <PlotCard fill title={{ en: 'A zero line with no label', es: 'Una línea de cero sin etiqueta' }} lane="live" provenance="synthetic" dataKey={stateKey}>
+        <UPlotChart
+          height="fill"
+          x={{ values: days, label: { en: 'Day', es: 'Día' }, format: { decimals: 0 } }}
+          y={{ label: { en: 'Bias', es: 'Sesgo' }, range: [-4, 8], format: { decimals: 0 } }}
+          series={[{ label: { en: 'Bias', es: 'Sesgo' }, values: [-2, -1, 0, 2, 3, 5, 4, 6], dots: true }]}
+          yMarks={[{ y: 0.5, tone: 'neutral' }, { y: 5.5, label: { en: 'alert', es: 'alerta' }, tone: 'bad' }]}
         />
       </PlotCard>
     </ViewsRow>

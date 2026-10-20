@@ -55,6 +55,8 @@ const PLANTS = [
   { id: 'small', check: 'G6', re: /draws on \d+% of its stage/, opts: { routes: '/app' } },
   { id: 'stage-floor', check: 'G6', re: /the drawing of .* keeps \d+ px under its note \(floor 140 px\)/, opts: { routes: '/app' } },
   { id: 'repeat-ticks', check: 'G6', re: /axis tick label\(s\) repeat the label before them/, opts: { routes: '/app' } },
+  // shell 0.18.0: a chart's named x ticks are measured as its other ticks are: two ticks with one name fail G6
+  { id: 'named-ticks-repeat', check: 'G6', re: /axis tick label\(s\) repeat the label before them/, opts: { routes: '/app' } },
   { id: 'never-ready', check: 'G7', re: /data-state="loading"/, opts: { routes: '/app,/benchmark', settleMs: 3000 } },
   { id: 'raf-loop', check: 'G8', re: /animation frames/, opts: { routes: '/app' } },
   { id: 'mutation-loop', check: 'G8', re: /DOM mutations/, opts: { routes: '/app' } },
