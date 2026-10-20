@@ -1,3 +1,12 @@
+## [Unreleased]
+
+### Added
+
+- `UPlotChart`: the log x axis labels the powers of ten only, in the interface language's number format, and draws the ticks between them without a label (`decadeOnly`; an axis whose range holds no power of ten keeps uPlot's labels); the host declares the labels in `data-log-labels` (SHC-030 to SHC-033, CAOS_APP_SHELL#65). A log x axis that showed 2, 3 and 5 between the decades now shows the decades only.
+- `UPlotChart`: draggable reference lines. A `yMarks` entry takes `drag: { min, max, step? }` and the chart `onYMarkChange(index, y)`; the line carries a slider handle the reader drags or moves with the arrows, Page keys, Home and End, inside its range, and the chart is redrawn, not rebuilt, while it moves (SHC-037 to SHC-041, BL-029). New exports `clampMark`, `nudgeMark`, type `YMarkDrag`; the host declares `data-y-drag`.
+- `UPlotChart`: a `points` series with an `x` of its own is drawn over the plot on its own x values, the axes taking its extent in; the host declares `data-overlay` and `data-overlay-drawn` (SHC-042 to SHC-044, BL-029). New export `overlayExtent`.
+- `parityBox` (the side of the square parity box, SHC-034 and SHC-035), `decadeOnly`; the gate fixture has a Forms view of each new form (a log x axis with a draggable percentile line, measured points on their own sizes and marks apart; a log axis with a draggable limit).
+
 ## [0.16.000] - 2026-10-20
 
 ### Added

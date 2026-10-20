@@ -59,7 +59,7 @@ it is re-exported.
 | `src/case/CaseSelector.tsx` | `CaseSelectorText`, `CaseSelectorProps`, `CaseSelector`, `CaseDef`, `CaseKind` | 245 | workbench |
 | `src/chart/BarChart.tsx` | `BarDatum`, `BarChartProps`, `BarChart` | 238 | charts |
 | `src/chart/text.ts` | `fontFamily`, `textWidth`, `widestLabel`, `FittedLabel`, `fitLabel`, `niceStep`, `niceTicks` | 102 | charts |
-| `src/chart/UPlotChart.tsx` | `ChartSeries`, `ChartAxis`, `YMarkTone`, `YMARK_TONE_TOKENS`, `UPlotChartProps`, `seriesStyle`, `sortOrder`, `parityRange`, `rangeWithLevels`, `tickSteps`, `LOG_TABLE_FLOOR`, `logDecades`, `smallestPositive`, `repeatedLabels`, `drawMarks`, `drawYMarks`, `nearestPoint`, `UPlotChart` | 629 | charts |
+| `src/chart/UPlotChart.tsx` | `ChartSeries`, `ChartAxis`, `YMarkTone`, `YMARK_TONE_TOKENS`, `UPlotChartProps`, `seriesStyle`, `sortOrder`, `parityRange`, `rangeWithLevels`, `tickSteps`, `LOG_TABLE_FLOOR`, `logDecades`, `smallestPositive`, `repeatedLabels`, `drawMarks`, `drawYMarks`, `nearestPoint`, `decadeOnly`, `parityBox`, `clampMark`, `nudgeMark`, `overlayExtent`, `YMarkDrag`, `UPlotChart` | 856 | charts |
 | `src/chart.ts` | re-exports the chart entry | 4 | charts |
 | `src/content/Callout.tsx` | `Callout` | 25 | documents |
 | `src/content/CardDeck.tsx` | `DECK_TEXT`, `perPageFor`, `deckWindow`, `deckPosition`, `DeckCard`, `CardDeckProps`, `CardDeck` | 204 | documents |
@@ -289,8 +289,8 @@ Public API of the main entry by group, with the module that declares each value 
 | Boundaries and animation | types | `VizFrame`, `VizLoop`, `VizLoopOptions`, `VizLoopDeps` | `src/lib/vizLoop.ts` |
 
 The chart entry (`src/chart.ts`) exports the values `drawMarks`, `drawYMarks`, `LOG_TABLE_FLOOR`, `logDecades`, `nearestPoint`, `parityRange`, `rangeWithLevels`,
-`repeatedLabels`, `seriesStyle`, `smallestPositive`, `sortOrder`, `tickSteps`, `UPlotChart`, `YMARK_TONE_TOKENS`, and the types `ChartAxis`, `ChartSeries`,
-`UPlotChartProps`, `YMarkTone`, all from `src/chart/UPlotChart.tsx`.
+`repeatedLabels`, `seriesStyle`, `smallestPositive`, `sortOrder`, `tickSteps`, `UPlotChart`, `YMARK_TONE_TOKENS`, `decadeOnly`, `parityBox`, `clampMark`,
+`nudgeMark`, `overlayExtent`, and the types `ChartAxis`, `ChartSeries`, `UPlotChartProps`, `YMarkDrag`, `YMarkTone`, all from `src/chart/UPlotChart.tsx`.
 
 Reserved CSS classes. `reserved-classes.json` lists the classes the shell styles: `components` (a class the shell styles on its own, for example `chip`, `tablist`,
 `caos-plot`, `page-body`, `caos-surface`, `skip-link`), which a product never restyles, and `modifiers` (a state or variant used only joined to another class, for
