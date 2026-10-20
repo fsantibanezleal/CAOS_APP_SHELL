@@ -182,11 +182,13 @@ export function installLib() {
   };
 
   /**
-   * Selects whose selected option is wider than the room the select leaves its text (BL-074, shell 0.17.0; the review of 0.17.0, M1): the text
-   * is cut with no ellipsis and nowhere else to read it. The room is the select's width less its own CSS padding and less the native arrow.
-   * The arrow is measured, not assumed: a probe select of the same class, font, padding and appearance holding one character, sized to
-   * its content, gives `arrow = probe content width - padding - the character's width`; with `appearance: none` it comes out 0. Text is
-   * measured with the select's own font on one canvas. Runs in the App and inside Focus (the rail of the frame holds a case select too).
+   * Selects whose selected option does not fit the room the select leaves its text (BL-074, shell 0.17.0; the reviews of 0.17.0). What is
+   * measured is what the reader sees:
+   * - a select with the shell's display (`.cs-select-wrap`, the case select since the trial of 0.17.0) shows the name in the display, up
+   *   to two wrapped lines: a probe copy of the display, sized to it and unclamped, gives the lines the text needs; more than two is cut;
+   * - any other select shows its text on one line: the room is its width less its own CSS padding and less the native arrow, which is
+   *   measured, not assumed (a probe select of the same class holding one character, sized to its content; 0 with `appearance: none`).
+   * Text is measured with the select's own font on one canvas. Runs in the App and inside Focus (its rail holds a case select too).
    */
   const selectCuts = () => {
     const cuts = [];
@@ -194,10 +196,28 @@ export function installLib() {
     for (const sel of document.querySelectorAll('select')) {
       if (!mctx || !visible(sel)) continue;
       const ss = getComputedStyle(sel);
-      mctx.font = `${ss.fontStyle} ${ss.fontWeight} ${ss.fontSize} ${ss.fontFamily}`;
       const text = (sel.selectedOptions[0]?.textContent ?? '').trim().replace(/\s+/g, ' ');
       if (!text) continue;
-      const pad = parseFloat(ss.paddingLeft) + parseFloat(ss.paddingRight);
+      const display = sel.closest('.cs-select-wrap')?.querySelector('.cs-select-display');
+      if (display) {
+        const ds = getComputedStyle(display);
+        mctx.font = `${ds.fontStyle} ${ds.fontWeight} ${ds.fontSize} ${ds.fontFamily}`;
+        const probe = display.cloneNode(false);
+        probe.removeAttribute('aria-hidden');
+        probe.textContent = text;
+        probe.setAttribute('style', `position:absolute;visibility:hidden;left:0;top:0;width:${display.getBoundingClientRect().width}px;display:block;overflow:visible;max-height:none;min-height:0;height:auto`);
+        display.parentElement.append(probe);
+        const pv = getComputedStyle(probe);
+        const line = Number.parseFloat(pv.lineHeight);
+        const box = Number.parseFloat(pv.paddingTop) + Number.parseFloat(pv.paddingBottom) + Number.parseFloat(pv.borderTopWidth) + Number.parseFloat(pv.borderBottomWidth);
+        const room = display.clientWidth - Number.parseFloat(ds.paddingLeft) - Number.parseFloat(ds.paddingRight);
+        const lines = Math.round((probe.getBoundingClientRect().height - box) / line);
+        probe.remove();
+        if (lines > 2) cuts.push(`${describe(sel)} cuts "${text}" (${Math.round(mctx.measureText(text).width)}px of text needs ${lines} lines in ${Math.round(room)}px of room, the display holds 2)`);
+        continue;
+      }
+      mctx.font = `${ss.fontStyle} ${ss.fontWeight} ${ss.fontSize} ${ss.fontFamily}`;
+      const pad = Number.parseFloat(ss.paddingLeft) + Number.parseFloat(ss.paddingRight);
       let arrow = 0;
       const host = sel.parentElement;
       if (host) {
@@ -206,12 +226,13 @@ export function installLib() {
         probe.append(new Option('x'));
         probe.setAttribute('style', 'position:absolute;visibility:hidden;width:auto;min-width:0;max-width:none;flex:none;left:0;top:0');
         host.append(probe);
-        arrow = Math.max(0, probe.clientWidth - parseFloat(getComputedStyle(probe).paddingLeft) - parseFloat(getComputedStyle(probe).paddingRight) - mctx.measureText('x').width);
+        const pv = getComputedStyle(probe);
+        arrow = Math.max(0, probe.clientWidth - Number.parseFloat(pv.paddingLeft) - Number.parseFloat(pv.paddingRight) - mctx.measureText('x').width);
         probe.remove();
       }
       const need = mctx.measureText(text).width;
       const has = sel.clientWidth - pad - arrow;
-      if (need > has + 1) cuts.push(`${describe(sel)} cuts "${text}" (${Math.round(need)}px of text in ${Math.round(has)}px, the ${Math.round(arrow)}px arrow taken out)`);
+      if (need > has + 1) cuts.push(`${describe(sel)} cuts "${text}" (${Math.round(need)}px of text in ${Math.round(has)}px of room, the ${Math.round(arrow)}px arrow taken out)`);
     }
     return cuts;
   };
