@@ -159,3 +159,27 @@ test('--spa-fallback answers as nginx try_files does: an extensionless path that
   const pages = await fetch(new URL('/some/deep/route', server.url), { redirect: 'manual' });
   assert.equal(pages.status, 404, 'without the option the server is GitHub Pages: no fallback');
 });
+
+test('--spa-fallback edge paths, as documented: a directory without an index, a dotted directory name, a dotfile and a query string (shell 0.16.0)', async () => {
+  mkdirSync(join(dir, 'assets'), { recursive: true });
+  const spa = await servePages(dir, '/', 0, { spaFallback: true });
+  try {
+    const get = (p: string) => fetch(new URL(p, spa.url), { redirect: 'manual' });
+    // a directory with no index.html answers the app shell (nginx would answer 301, then 403)
+    const directory = await get('/assets');
+    assert.equal(directory.status, 200);
+    assert.equal(await directory.text(), '<p>home</p>');
+    // a dot in a directory name reads as an extension: the route is a 404, not the app (nginx would serve the app)
+    assert.equal((await get('/route/with.dot/')).status, 404);
+    assert.equal((await get('/app/run.v2')).status, 404);
+    // a dotfile has no extension: it answers the app shell, never the file
+    const dotfile = await get('/.env');
+    assert.equal(dotfile.status, 200);
+    assert.equal(await dotfile.text(), '<p>home</p>');
+    // the query string is no part of the path: an extensionless path with one answers the app shell, a missing file with one stays 404
+    assert.equal((await get('/some/route?x=1.5')).status, 200);
+    assert.equal((await get('/missing.js?v=2')).status, 404);
+  } finally {
+    await spa.close();
+  }
+});

@@ -39,8 +39,13 @@
   routes. The fixture gains a headless surface that holds its view in `?mode=` (the shape of CAOS_Neuraxis), which passes.
 - `--spa-fallback` for `caos-shell-gate --serve` (SHG-067): the server answers as nginx does for a single-page app on a VPS
   (`try_files $uri $uri/ /index.html`): an extensionless path that matches no file gets `index.html` with 200; a path with an extension
-  that matches no file stays 404, so a missing artifact still fails. Default off: the server still answers as GitHub Pages does.
-
+  that matches no file stays 404, so a missing artifact still fails. Default off: the server still answers as GitHub Pages does. Edge
+  paths are documented in `docs/07_gate.md` and tested: a directory with no index answers the app shell, a dot in a directory name
+  reads as an extension (404), a dotfile answers the app shell, the query string is no part of the path.
+- The Focus frame (workbench and surface) carries `data-focus-param`, the query parameter that holds Focus; G18 reads it instead of the
+  literal `focus` (a product that renames it with `param` was failed falsely, and a renamed parameter left after the return passed).
+  G18 also fails a surface with Focus that renders a head with no title, lede or actions (an empty head row), and its message for a
+  tab row or head that moves between views no longer blames the Focus control.
 ### Changed
 
 - `CaseWorkbench` keeps its Focus behaviour in `useFocusMode`, no longer in its own state and effects. Its DOM, its URL behaviour and
@@ -54,11 +59,19 @@
 ### Fixed
 
 - A language switch inside Focus no longer loses the reader's sub-view on the return (SHW-040). The view memory keyed a tab row on its
-  localized `ariaLabel`, so the key changed with the language; it now keys on the row's kind and ids. This is a defect of Focus on a
-  workbench since 0.14.0, not of the surface; it is fixed for both.
+  localized `ariaLabel`, so the key changed with the language; it now keys on the row's kind, its place and its ids. The place is the
+  path of the open panels above the row (`PanelPathContext`, provided by `Tabs` and `SubTabs` around their open panel and by the Focus
+  frames), so two sub-view rows with the same ids in different groups or views keep separate selections, and a row honours its own
+  `initial` (keying on the ids alone would have merged them). This is a defect of Focus on a workbench since 0.14.0, not of the
+  surface; it is fixed for both.
 - The DOI of a reference is printed inside `translate="no"` (SHD-086), in the end-of-page references and in the reference list, so G11
   (Spanish numbers) no longer reads the dotted number of an identifier such as `doi:10.1523/ENEURO.0159-20.2020` as a decimal point on a
   Spanish page. A plain number with a decimal point in a Spanish paragraph still fails G11.
+- The bibliographic text of a reference (the citation: title, venue, edition or version, publisher) is printed inside `translate="no"` in
+  the end-of-page references block and the reference list (SHD-087): it is the source's own and is never translated, so G11 no longer
+  reads `Version 3.4` in a NIST title as a Spanish decimal (about 300 false failures on CAOS_Aerovia's documentation pages). The block
+  heading and the `link` label stay translatable; the DOI handling above is unchanged. A plain `3.4` in a Spanish paragraph of the same
+  page still fails G11 (plant `decimal-point-plain-34`).
 
 ### Migration
 

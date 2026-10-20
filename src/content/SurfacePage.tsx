@@ -5,10 +5,10 @@ import { useShellLang } from '../lib/lang';
 import { PanelBoundary } from '../lib/PanelBoundary';
 import { type BiText, pick } from '../lib/text';
 import { useUrlView, viewParamOf } from '../lib/urlView';
-import { ViewMemoryContext } from '../lib/viewMemory';
+import { PanelPathContext, ViewMemoryContext } from '../lib/viewMemory';
 import { FocusShell } from '../shell/FocusShell';
 import { useFocusMode } from '../shell/useFocusMode';
-import { FOCUS_TEXT, type SurfaceFocusConfig, type ViewFocusConfig } from '../workbench/focus';
+import { FOCUS_PARAM, FOCUS_TEXT, type SurfaceFocusConfig, type ViewFocusConfig } from '../workbench/focus';
 import { DocRefsScope } from './Cite';
 import { type TabDef, Tabs } from './Tabs';
 
@@ -114,12 +114,14 @@ export function SurfacePage({ title, lede, actions, tabs, value, onChange, deepL
           stageLabel={FOCUS_TEXT.stage[lang]}
           landmark={false}
           stage={
-            <div className="caos-surface-focus" data-surface-focus="" data-view-param={viewParam ?? ''} data-focus-view={openTab.id} data-focus-group={openTab.id} data-instrument="">
+            <div className="caos-surface-focus" data-surface-focus="" data-view-param={viewParam ?? ''} data-focus-param={focusCfg?.param ?? FOCUS_PARAM} data-focus-view={openTab.id} data-focus-group={openTab.id} data-instrument="">
               <div className="tabs">
                 <div className="tabpanel" role="tabpanel" tabIndex={0} aria-label={label || undefined} data-panel={openTab.id}>
-                  <PanelBoundary panel={openTab.id}>
-                    <DocRefsScope>{openTab.content}</DocRefsScope>
-                  </PanelBoundary>
+                  <PanelPathContext.Provider value={`/${openTab.id}`}>
+                    <PanelBoundary panel={openTab.id}>
+                      <DocRefsScope>{openTab.content}</DocRefsScope>
+                    </PanelBoundary>
+                  </PanelPathContext.Provider>
                 </div>
               </div>
             </div>

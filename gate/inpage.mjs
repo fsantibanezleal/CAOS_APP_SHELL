@@ -1068,6 +1068,10 @@ export function installLib() {
       caseId: stage ? stage.getAttribute('data-case') : null,
       group: shell ? (stage ? stage.getAttribute('data-focus-group') : null) : panel ? panel.getAttribute('data-panel') : null,
       search: location.search,
+      // the query parameter that holds Focus (`focus`, or `param` of the product's focus configuration), written on the Focus frame
+      focusParam: (() => { const e = document.querySelector('[data-focus-param]'); return e ? e.getAttribute('data-focus-param') : null; })(),
+      // a head with no title, lede or actions (an empty head row) on a surface
+      emptyHead: (() => { const h = document.querySelector('[data-surface] > .caos-surface-head'); return h && !h.querySelector('.caos-surface-title, .caos-surface-lede, .caos-surface-actions') ? Math.round(h.getBoundingClientRect().height) : null; })(),
       // the query parameter the surface holds its open view in (`deepLinkView`): `view`, or the product's own name
       viewParam: (() => { const e = document.querySelector('[data-surface-focus]') ?? document.querySelector('[data-surface]'); return e && e.hasAttribute('data-view-param') ? e.getAttribute('data-view-param') : null; })(),
       subview: (() => { const t = document.querySelector('[data-case-workbench] .subtab.active, [data-surface] .subtab.active, [data-surface-focus] .subtab.active'); return t ? t.getAttribute('data-tab') : null; })(),

@@ -5,7 +5,7 @@ import { DocRefsScope } from '../content/Cite';
 import { MAX_PEER_TABS, Tabs } from '../content/Tabs';
 import { useShellLang } from '../lib/lang';
 import { PanelBoundary } from '../lib/PanelBoundary';
-import { ViewMemoryContext } from '../lib/viewMemory';
+import { PanelPathContext, ViewMemoryContext } from '../lib/viewMemory';
 import { useUrlView, viewParamOf } from '../lib/urlView';
 import { FocusShell } from '../shell/FocusShell';
 import { useFocusMode } from '../shell/useFocusMode';
@@ -13,7 +13,7 @@ import { type BiText, pick } from '../lib/text';
 import type { Lane } from './LaneBadge';
 import { makeStateKey, type Provenance, WorkbenchStateContext } from './state';
 import { type VariantBarProps, VariantBar } from './VariantBar';
-import { type CaseFocusConfig, FOCUS_TEXT } from './focus';
+import { type CaseFocusConfig, FOCUS_PARAM, FOCUS_TEXT } from './focus';
 import { RailBody, type RailSection, WorkbenchLayout } from './WorkbenchLayout';
 
 /** One group of views of the selected case, named for the question the user is asking (ADR-0071 rule 5). */
@@ -185,13 +185,15 @@ export function CaseWorkbench(props: CaseWorkbenchProps) {
             stageLabel={FOCUS_TEXT.stage[lang]}
             landmark={false}
             stage={
-              <div className="caos-cw caos-cw-focus" {...instrumentData} data-focus-group={open?.id} data-instrument="">
+              <div className="caos-cw caos-cw-focus" {...instrumentData} data-focus-group={open?.id} data-focus-param={focusCfg.param ?? FOCUS_PARAM} data-instrument="">
                 <div className="tabs">
                   {open && (
                     <div className="tabpanel" role="tabpanel" tabIndex={0} aria-label={open.label} data-panel={open.id}>
-                      <PanelBoundary panel={open.id}>
-                        <DocRefsScope>{open.content}</DocRefsScope>
-                      </PanelBoundary>
+                      <PanelPathContext.Provider value={`/${open.id}`}>
+                        <PanelBoundary panel={open.id}>
+                          <DocRefsScope>{open.content}</DocRefsScope>
+                        </PanelBoundary>
+                      </PanelPathContext.Provider>
                     </div>
                   )}
                 </div>

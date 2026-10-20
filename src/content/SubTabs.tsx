@@ -1,5 +1,5 @@
 import { useContext, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { ViewMemoryContext, memoryKey } from '../lib/viewMemory';
+import { PanelPathContext, ViewMemoryContext, memoryKey } from '../lib/viewMemory';
 import { PanelBoundary } from '../lib/PanelBoundary';
 import { useOverflowFade } from '../lib/overflow';
 import { DocRefsScope } from './Cite';
@@ -30,7 +30,8 @@ export function SubTabs({ tabs, initial, value, onChange, ariaLabel, orientation
   const baseId = useId();
   const first = tabs[0]?.id ?? '';
   const memory = useContext(ViewMemoryContext);
-  const mkey = memoryKey('subtabs', tabs.map((t) => t.id));
+  const path = useContext(PanelPathContext);
+  const mkey = memoryKey('subtabs', path, tabs.map((t) => t.id));
   const [own, setOwn] = useState<string>(() => {
     const kept = memory?.get(mkey);
     return kept && tabs.some((t) => t.id === kept) ? kept : (initial ?? first);
@@ -108,9 +109,11 @@ export function SubTabs({ tabs, initial, value, onChange, ariaLabel, orientation
             className="subtabpanel"
             data-panel={current.id}
           >
-            <PanelBoundary panel={current.id}>
-              <DocRefsScope>{current.content}</DocRefsScope>
-            </PanelBoundary>
+            <PanelPathContext.Provider value={`${path}/${current.id}`}>
+              <PanelBoundary panel={current.id}>
+                <DocRefsScope>{current.content}</DocRefsScope>
+              </PanelBoundary>
+            </PanelPathContext.Provider>
           </div>
         )}
       </div>
