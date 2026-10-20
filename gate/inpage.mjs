@@ -187,7 +187,7 @@ export function installLib() {
    * - a select with the shell's display (`.cs-select-wrap`, the case select since the trial of 0.17.0) shows the name whole at any length in the
    *   display's real `.cs-select-text` element: the name is cut when that element overflows its box (`scrollHeight` or `scrollWidth` past its
    *   `clientHeight` or `clientWidth` by more than 1px, e.g. a product stylesheet that clamps it), measured on the element itself, never on a probe
-   *   copy; the display is stale when the name it shows, whitespace normalized, differs from the text of the option the select holds;
+   *   copy, and when the display's own box is smaller than its content (a product stylesheet that fixes its height); the display is stale when the name it shows, whitespace normalized, differs from the text of the option the select holds;
    * - any other select shows its text on one line: the room is its width less its own CSS padding and less the native arrow, which is
    *   measured, not assumed (a probe select of the same class holding one character, sized to its content; 0 with `appearance: none`).
    * Plain text is measured with the select's own font on one canvas. Runs in the App and inside Focus (its rail holds a case select too).
@@ -213,6 +213,9 @@ export function installLib() {
         if (overV || overH) {
           const line = Number.parseFloat(getComputedStyle(t).lineHeight) || 1;
           cuts.push(`${describe(sel)} cuts the case name "${shown}" (the name needs ${Math.round(t.scrollHeight / line)} lines, ${Math.round(t.scrollHeight)}px high and ${Math.round(t.scrollWidth)}px wide, and its box holds ${Math.round(t.clientHeight)}px by ${Math.round(t.clientWidth)}px; held option "${held}")`);
+        } else if (display.scrollHeight > display.clientHeight + 1 || display.scrollWidth > display.clientWidth + 1) {
+          // the text fits its own box but the display's box is smaller (a product stylesheet that fixes the display's height)
+          cuts.push(`${describe(sel)} cuts the case name "${shown}" in its display (the name needs ${Math.round(display.scrollHeight)}px by ${Math.round(display.scrollWidth)}px, the display holds ${Math.round(display.clientHeight)}px by ${Math.round(display.clientWidth)}px; held option "${held}")`);
         }
         continue;
       }

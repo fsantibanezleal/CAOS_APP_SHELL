@@ -29,9 +29,9 @@
 
 - Gate: G5 fails a select, in the App or in Focus, whose selected text does not fit the room it leaves, naming the route, the state, the text and
   what was measured: for a case select with the shell's display, a name cut in its box (the real `.cs-select-text` element overflows, as a product
-  stylesheet that clamps it or an overflow the wrap cannot break) and a stale display (the shown name differs from the option the select holds); for
+  stylesheet that clamps it or an overflow the wrap cannot break, or the display's own box smaller than the name) and a stale display (the shown name differs from the option the select holds); for
   any other select, a text wider than its content box less the native arrow (measured with a probe select, 0 with `appearance: none`). SHG-072,
-  plants `select-cut`, `select-cut-token`, `select-display-stale`, `select-arrow`, `select-focus-rail`, and the pages that must pass,
+  plants `select-cut`, `select-cut-token`, `select-cut-display`, `select-display-stale`, `select-arrow`, `select-focus-rail`, and the pages that must pass,
   `legit-select-two-lines` and `legit-select-three-lines`.
 - Gate: under `--require-focus`, G18 fails a workbench route (`--workbench`) that is not among the measured routes, as 0.16.0 does for a
   surface App route, so a run cannot measure no Focus at all (SHG-073, plant `workbench-route-unwalked`).
