@@ -123,7 +123,33 @@ before(async () => {
             />,
           );
         }
-        const forms: Record<string, () => React.ReactNode> = { ticks: Ticks, logticks: LogTicks, plainticks: PlainTicks, oneTick: OneTick, solo: Solo, sdrag: SoloDrag, soverlay: SoloOverlay, sone: SoloOne, plain: Plain, dots: Dots, dotslong: DotsLong, unlabelled: Unlabelled };
+        function SoloSeries() {
+          const withIds = q.get('ids') === '1';
+          const [list, setList] = useState<{ id?: string; label: string }[]>([{ label: 'Alpha' }, { label: 'Beta' }, { label: 'Gamma' }].map((l, k) => (withIds ? { ...l, id: 'id' + k } : l)));
+          w.setSeries = setList;
+          return box(
+            <UPlotChart height={360} solo x={{ values: [1, 2, 3, 4, 5], label: 'Day' }} y={{ label: 'People', range: [0, 6] }} series={list.map((l, k) => ({ ...l, values: [1 + k, 2 + k, 3, 2 + k, 1 + k] }))} />,
+          );
+        }
+        function ToggleTicks() {
+          const [on, setOn] = useState(true);
+          w.setTicks = setOn;
+          return box(<UPlotChart height={360} x={{ values: [0, 1, 2], label: 'Protocol', ticks: on ? protocol : undefined }} y={{ label: 'Error' }} series={[{ label: 'Model', values: [1, 2, 3] }]} />);
+        }
+        function Drag({ n }: { n: number }) {
+          const [v, setV] = useState([60, 30]);
+          return box(
+            <UPlotChart
+              height={360}
+              x={{ values: [1, 2, 3], label: 'Day' }}
+              y={{ label: 'Share', unit: '%', range: [0, 100], format: { decimals: 0 } }}
+              series={[{ label: 'Alpha', values: [10, 50, 90] }]}
+              yMarks={v.slice(0, n).map((y) => ({ y, drag: { min: 0, max: 100, step: 1 } }))}
+              onYMarkChange={(i, y) => setV((old) => old.map((o, k) => (k === i ? y : o)))}
+            />,
+          );
+        }
+        const forms: Record<string, () => React.ReactNode> = { ticks: Ticks, logticks: LogTicks, plainticks: PlainTicks, oneTick: OneTick, solo: Solo, sdrag: SoloDrag, soverlay: SoloOverlay, sone: SoloOne, plain: Plain, dots: Dots, dotslong: DotsLong, unlabelled: Unlabelled, soloseries: SoloSeries, toggleticks: ToggleTicks, drag1: () => <Drag n={1} />, drag2: () => <Drag n={2} /> };
         const App = forms[form] ?? Ticks;
         createRoot(document.getElementById('root')).render(<App />);
       `,
@@ -438,10 +464,17 @@ test('solo: the solo survives a theme and a language change, and the key reads i
     await buttons.nth(2).click();
     await solo.page.evaluate(`window.setTheme('dark')`);
     await solo.page.waitForSelector('html[data-theme="dark"]');
+    await solo.page.waitForFunction(() => document.querySelector('.caos-chart')!.getAttribute('data-solo') === '2');
+    assert.equal((await runs(solo.page, '--color-accent')).length, 0, 'Alpha is dimmed after the theme change alone');
+    assert.ok((await runs(solo.page, '--color-accent-2')).length > 0, 'Gamma is drawn after the theme change alone');
     await solo.page.evaluate(`window.setLang('es')`);
     await solo.page.waitForFunction(() => document.querySelector('.caos-chart-legend')!.getAttribute('aria-label') === 'Series del gráfico');
     assert.equal(await buttons.nth(2).getAttribute('aria-pressed'), 'true', 'still soloed after both changes');
     assert.equal(await solo.page.locator('.caos-chart').getAttribute('data-solo'), '2');
+    // and still drawn soloed: Alpha and Beta dimmed to 0.12 (no pixel of their full colour), Gamma as drawn
+    assert.equal((await runs(solo.page, '--color-accent')).length, 0, 'Alpha is still dimmed after the theme and language changes');
+    assert.equal((await runs(solo.page, '--color-magenta')).length, 0, 'Beta is still dimmed after the theme and language changes');
+    assert.ok((await runs(solo.page, '--color-accent-2')).length > 0, 'Gamma is still drawn as given');
     assert.ok(errors.length === 0 && solo.errors.length === 0, `${errors} ${solo.errors}`);
   } finally {
     await solo.page.close();
@@ -519,3 +552,94 @@ test('an unlabelled reference line is drawn in the warn colour and writes no tex
     await named.page.close();
   }
 });
+
+// ---- the fix round of 0.18.0 (review of 2026-10-20) ----------------------------------------------------------------
+
+const pressed = (page: Page) => page.evaluate(`[...document.querySelectorAll('.caos-chart-key button')].map((b) => b.textContent + ':' + b.getAttribute('aria-pressed'))`) as Promise<string[]>;
+const setSeries = (page: Page, list: { id?: string; label: string }[]) => page.evaluate(`window.setSeries(${JSON.stringify(list)})`);
+const NB = /\u00a0/g;
+
+test('solo is held by the series, not by its position: dropping another series keeps it, dropping it releases it, restoring does not re-solo', async () => {
+  const { page, errors } = await open('soloseries');
+  try {
+    await page.locator('.caos-chart-key button').nth(1).click();
+    assert.deepEqual(await pressed(page), ['Alpha:false', 'Beta:true', 'Gamma:false']);
+    await setSeries(page, [{ label: 'Beta' }, { label: 'Gamma' }]);
+    await page.waitForFunction(() => document.querySelectorAll('.caos-chart-key button').length === 2);
+    assert.deepEqual(await pressed(page), ['Beta:true', 'Gamma:false'], 'Beta is still the soloed one');
+    assert.equal(await page.locator('.caos-chart').getAttribute('data-solo'), '0');
+    await setSeries(page, [{ label: 'Gamma' }]);
+    await page.waitForFunction(() => document.querySelectorAll('.caos-chart-key button').length === 1);
+    assert.deepEqual(await pressed(page), ['Gamma:false'], 'the series that was soloed left: the solo is released, no other shows pressed');
+    assert.equal(await page.locator('.caos-chart').getAttribute('data-solo'), null);
+    await setSeries(page, [{ label: 'Alpha' }, { label: 'Beta' }, { label: 'Gamma' }]);
+    await page.waitForFunction(() => document.querySelectorAll('.caos-chart-key button').length === 3);
+    assert.deepEqual(await pressed(page), ['Alpha:false', 'Beta:false', 'Gamma:false'], 'restored: not soloed again');
+    assert.equal(await page.locator('.caos-chart').getAttribute('data-solo'), null);
+    assert.deepEqual(errors, []);
+  } finally {
+    await page.close();
+  }
+});
+
+test('solo: a series with an id keeps the solo when its label changes or its position moves', async () => {
+  const { page, errors } = await open('soloseries', '&ids=1');
+  try {
+    await page.locator('.caos-chart-key button').nth(2).click();
+    await setSeries(page, [{ id: 'id0', label: 'Alpha 2' }, { id: 'id1', label: 'Beta 2' }, { id: 'id2', label: 'Gamma 2' }]);
+    await page.waitForFunction(() => /Gamma 2/.test(document.querySelector('.caos-chart-legend')?.textContent ?? ''));
+    assert.deepEqual(await pressed(page), ['Alpha 2:false', 'Beta 2:false', 'Gamma 2:true']);
+    await setSeries(page, [{ id: 'id2', label: 'Gamma 2' }, { id: 'id0', label: 'Alpha 2' }]);
+    await page.waitForFunction(() => document.querySelectorAll('.caos-chart-key button').length === 2);
+    assert.deepEqual(await pressed(page), ['Gamma 2:true', 'Alpha 2:false'], 'the id follows the series when the order changes');
+    assert.deepEqual(errors, []);
+  } finally {
+    await page.close();
+  }
+});
+
+test('named ticks: the host drops its tick labels when the ticks go away', async () => {
+  const { page, errors } = await open('toggleticks');
+  try {
+    const host = page.locator('.caos-chart');
+    assert.equal(await host.getAttribute('data-x-tick-labels'), 'random|deduplicated|site held out');
+    await page.evaluate(`window.setTicks(false)`);
+    await page.waitForFunction(() => document.querySelector('.caos-chart')!.getAttribute('data-x-tick-labels') === null);
+    await page.evaluate(`window.setTicks(true)`);
+    await page.waitForFunction(() => document.querySelector('.caos-chart')!.getAttribute('data-x-tick-labels') !== null);
+    assert.deepEqual(errors, []);
+  } finally {
+    await page.close();
+  }
+});
+
+for (const lang of ['en', 'es'] as const) {
+  test(`an unlabelled draggable line names itself to a screen reader and says its value (${lang})`, async () => {
+    const { page, errors } = await open('drag1', `&lang=${lang}`);
+    try {
+      const h = page.locator('[data-y-handle="0"]');
+      assert.equal(await h.getAttribute('aria-label'), lang === 'es' ? 'Línea de referencia' : 'Reference line');
+      assert.equal((await h.getAttribute('aria-valuetext'))!.replace(NB, ' '), '60 %');
+      await h.focus();
+      await page.keyboard.press('ArrowUp');
+      assert.equal((await h.getAttribute('aria-valuetext'))!.replace(NB, ' '), '61 %');
+      assert.deepEqual(errors, []);
+    } finally {
+      await page.close();
+    }
+  });
+
+  test(`several unlabelled draggable lines get distinct names (${lang})`, async () => {
+    const { page, errors } = await open('drag2', `&lang=${lang}`);
+    try {
+      const base = lang === 'es' ? 'Línea de referencia' : 'Reference line';
+      const names = await page.evaluate(`[...document.querySelectorAll('[data-y-handle]')].map((h) => h.getAttribute('aria-label'))`);
+      assert.deepEqual(names, [base + ' 1', base + ' 2']);
+      const texts = (await page.evaluate(`[...document.querySelectorAll('[data-y-handle]')].map((h) => h.getAttribute('aria-valuetext'))`)) as string[];
+      assert.deepEqual(texts.map((t) => t.replace(NB, ' ')), ['60 %', '30 %']);
+      assert.deepEqual(errors, []);
+    } finally {
+      await page.close();
+    }
+  });
+}

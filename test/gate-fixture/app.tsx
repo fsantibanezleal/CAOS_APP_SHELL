@@ -651,14 +651,15 @@ function FormsView() {
 
 /** The forms of the chart added in 0.18.0 (CAOS_Fragmenta 0.09.000, BL-042): named x ticks with an x range and dots on three values,
  * a key that solos one of five crossing lines, and a zero line with no label beside a labelled level. The plant
- * `named-ticks-repeat` gives two ticks the same name, which the gate's repeated-label check (G6) fails. */
+ * `named-ticks-repeat` gives two neighbouring ticks the same name and `named-ticks-far` gives the first and the last the same name (A, B, A); the gate's repeated-label check (G6) fails both. */
 function CategoriesView() {
   const { stateKey } = useWorkbenchState();
-  const names = PLANT === 'named-ticks-repeat' ? ['random', 'deduplicated', 'deduplicated'] : ['random', 'deduplicated', 'site held out'];
+  const names = PLANT === 'named-ticks-repeat' ? ['random', 'deduplicated', 'deduplicated'] : PLANT === 'named-ticks-far' ? ['random', 'deduplicated', 'random'] : ['random', 'deduplicated', 'site held out'];
+  const spanish = PLANT === 'named-ticks-repeat' ? ['aleatorio', 'deduplicado', 'deduplicado'] : PLANT === 'named-ticks-far' ? ['aleatorio', 'deduplicado', 'aleatorio'] : ['aleatorio', 'deduplicado', 'sitio retenido'];
   const protocols = [
-    { value: 0, label: { en: names[0], es: 'aleatorio' } },
-    { value: 1, label: { en: names[1], es: 'deduplicado' } },
-    { value: 2, label: { en: names[2], es: PLANT === 'named-ticks-repeat' ? 'deduplicado' : 'sitio retenido' } },
+    { value: 0, label: { en: names[0], es: spanish[0] } },
+    { value: 1, label: { en: names[1], es: spanish[1] } },
+    { value: 2, label: { en: names[2], es: spanish[2] } },
   ];
   const days = useMemo(() => [1, 2, 3, 4, 5, 6, 7, 8], []);
   const lines = useMemo(
