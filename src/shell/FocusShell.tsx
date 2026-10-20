@@ -4,7 +4,8 @@ import { ThemeToggle } from './ThemeToggle';
 
 export interface FocusShellProps {
   stage: ReactNode;
-  rail: ReactNode;
+  /** The parameter column on the right. Null or omitted: no column, and the stage is the whole frame (a view of a surface with no rail). */
+  rail?: ReactNode;
   title: string;
   description: string;
   hud: Array<{ label: string; value: string }>;
@@ -95,7 +96,7 @@ export function FocusShell({ stage, rail, title, description, hud, onExit, exitL
     };
   }, []);
   return (
-    <Root className="caos-focus-shell" data-focus-shell="">
+    <Root className={rail === null || rail === undefined ? 'caos-focus-shell caos-focus-norail' : 'caos-focus-shell'} data-focus-shell="">
       <section ref={stageRef} className="caos-focus-stage" aria-label={stageLabel}>
         <div className="caos-focus-instrument">{stage}</div>
         <div className="caos-focus-label"><strong>{title}</strong><span>{description}</span></div>
@@ -104,7 +105,7 @@ export function FocusShell({ stage, rail, title, description, hud, onExit, exitL
         </div>
         <div className="caos-focus-actions"><LanguageToggle /><ThemeToggle /><button type="button" data-focus-exit="" onClick={onExit}>{exitLabel}</button></div>
       </section>
-      <aside className="caos-focus-rail" data-rail="">{rail}</aside>
+      {rail !== null && rail !== undefined && <aside className="caos-focus-rail" data-rail="">{rail}</aside>}
     </Root>
   );
 }

@@ -18,6 +18,7 @@ import {
   PlotCard,
   Readout,
   Landing,
+  SurfacePage,
   STANDARD_ROUTES,
   Stage,
   SubTabs,
@@ -37,6 +38,14 @@ declare global {
   }
 }
 const PLANT = window.__PLANT__ ?? '';
+/** The surface App (shell 0.16.0): the plant `surface` is its clean run, `surface-*` its defects; `/console` is its route. */
+const SURFACE = PLANT === 'surface' || PLANT.startsWith('surface-');
+/** The first consumer's shape (CAOS_Neuraxis): a headless surface (no title, lede or actions) that holds its view in `?mode=`. */
+const HEADLESS = PLANT === 'surface-headless' || PLANT === 'surface-headless-head' || PLANT === 'surface-mode-url-dropped' || PLANT === 'surface-empty-head';
+/** A surface whose focus configuration renames the parameter (`SurfaceFocusConfig.param`): clean, and with the parameter left after the return. */
+const FPARAM = PLANT === 'surface-fparam' || PLANT === 'surface-fparam-left' ? 'f' : undefined;
+/** A surface with one view that has a stage (the plant of Escape on the only focusable view). */
+const ONE_STAGE = PLANT === 'surface-focus-escape-one-view';
 /** Twenty lines of note for the stage-floor plant. */
 const STAGE_FLOOR_NOTE = {
   en: Array.from({ length: 20 }, (_, i) => `Line ${i + 1} of a long note the requirements ask for.`).join('\n'),
@@ -359,8 +368,10 @@ function ValidationView({ sim, focusOn }: { sim: Sim; focusOn?: boolean }) {
   const rows = [10, 30, 60, 90, 120].filter((d) => d < sim.t.length);
   return (
     <SubTabs
-      ariaLabel={pick({ en: 'Validation views', es: 'Vistas de validación' }, lang) + (PLANT === 'focus-drops-subview' && focusOn ? ' ' : '')}
+      ariaLabel={pick({ en: 'Validation views', es: 'Vistas de validación' }, lang)}
       tabs={[
+        // the plant that loses the sub-view: in Focus the row has another first tab, so the view memory (keyed on the ids) finds no entry
+        ...(PLANT === 'focus-drops-subview' && focusOn ? [{ id: 'planted', label: 'Planted', content: <p>planted first tab</p> }] : []),
         {
           id: 'phase',
           label: pick({ en: 'Phase plane', es: 'Plano de fase' }, lang),
@@ -774,9 +785,248 @@ function Workbench() {
   );
 }
 
+// ------------------------------------------------------------------------------------------ the surface App (0.16.0)
+/**
+ * A console: an App that is not one case's (`SurfacePage`). Three views: an overview with no stage, the engine (a stage with a
+ * rail, a HUD and a sub-view row) and the runs (a stage with no rail and its own control in its body).
+ */
+function Console() {
+  const lang = useShellLang();
+  const [scale, setScale] = useState(1);
+  const [view, setView] = useState('overview');
+  const [focusOn, setFocusOn] = useState(false);
+  const sim = useMemo(() => simulate(0.35 * scale, 120), [scale]);
+  // the plants of Focus mode reuse those of the workbench (the same frame): `surface-focus-not-isolated` is `focus-not-isolated`
+  useEffect(() => flipPlant(PLANT.replace(/^surface-/, '')), []);
+  useEffect(() => {
+    const styled = (css: string) => {
+      const style = document.createElement('style');
+      style.textContent = css;
+      document.head.append(style);
+      return () => style.remove();
+    };
+    if (PLANT === 'surface-focus-page-scroll') {
+      const t = setInterval(() => {
+        const want = /[?&]focus=1/.test(window.location.search) ? '300vh' : '';
+        if (document.body.style.minHeight !== want) document.body.style.minHeight = want;
+      }, 50);
+      return () => {
+        clearInterval(t);
+        document.body.style.minHeight = '';
+      };
+    }
+    if (PLANT === 'surface-focus-chrome-covers') return styled('.caos-focus-instrument > .caos-surface-focus { padding-top: 0.4rem !important; }');
+    if (PLANT === 'surface-focus-no-exit') return styled('[data-focus-exit] { display: none !important; }');
+    if (PLANT === 'surface-focus-stage-small') return styled('.caos-focus-shell { grid-template-columns: minmax(0, 1fr) 62vw !important; }');
+    if (PLANT === 'surface-focus-tabs-wrap') return styled('.caos-focus-instrument .subtablist { flex-wrap: wrap !important; max-width: 90px !important; overflow: visible !important; }');
+    if (PLANT === 'surface-headless-head') {
+      // the Focus control in a head of its own (shell 0.16.0 before the fix round): a head row appears on a view with a stage
+      return plantDom(() => {
+        const surface = document.querySelector('[data-surface]');
+        if (!surface) return;
+        const open = surface.querySelector(':scope > .caos-surface-body [role="tabpanel"][data-panel]')?.getAttribute('data-panel') ?? '';
+        const here = surface.querySelector(':scope > [data-plant-head]');
+        if (['engine', 'runs'].includes(open) && !here) {
+          const head = document.createElement('div');
+          head.className = 'caos-surface-head';
+          head.setAttribute('data-plant-head', '');
+          head.innerHTML = '<div class="caos-surface-actions"><button type="button" class="btn">Focus</button></div>';
+          surface.insertBefore(head, surface.firstChild);
+        } else if (!['engine', 'runs'].includes(open) && here) here.remove();
+      });
+    }
+    if (PLANT === 'surface-tall-control') return styled('.caos-focus-enter { min-height: 90px !important; }');
+    if (PLANT === 'surface-empty-head') {
+      // a head row with nothing in it, permanently, on a headless surface
+      return plantDom(() => {
+        const surface = document.querySelector('[data-surface]');
+        if (surface && !surface.querySelector(':scope > .caos-surface-head')) {
+          const head = document.createElement('div');
+          head.className = 'caos-surface-head';
+          head.style.minHeight = '20px';
+          surface.insertBefore(head, surface.firstChild);
+        }
+      });
+    }
+    if (PLANT === 'surface-focus-escape-one-view') {
+      // a product key handler takes Escape on its only view with a stage
+      const stop = (e: KeyboardEvent) => {
+        if (e.key === 'Escape' && document.querySelector('[data-focus-shell]')) e.stopPropagation();
+      };
+      document.addEventListener('keydown', stop, true);
+      return () => document.removeEventListener('keydown', stop, true);
+    }
+    if (PLANT === 'surface-focus-no-open') {
+      // the control does nothing: the click never reaches the App's handlers
+      const stop = (e: Event) => {
+        if ((e.target as Element | null)?.closest('[data-focus-enter]')) e.stopPropagation();
+      };
+      document.addEventListener('click', stop, true);
+      return () => document.removeEventListener('click', stop, true);
+    }
+    return undefined;
+  }, []);
+  // a controlled surface holds its view itself: the plants that lose the view need it
+  const controlled = PLANT === 'surface-focus-loses-view' || PLANT === 'surface-focus-return-wrong-view';
+  const onFocus = (on: boolean) => {
+    setFocusOn(on);
+    if (PLANT === 'surface-fparam-left' && !on) window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}${window.location.search ? '&' : '?'}f=1`);
+    if (PLANT === 'surface-focus-loses-view' && on) setView('runs');
+    if (PLANT === 'surface-focus-return-wrong-view' && !on) setView('overview');
+    if (PLANT === 'surface-mode-url-dropped' && on) {
+      const q = new URLSearchParams(window.location.search);
+      q.delete('mode');
+      window.history.replaceState(window.history.state, '', `${window.location.pathname}?${q.toString()}`);
+    }
+    if (PLANT === 'surface-focus-url-no-view' && on) window.history.replaceState(window.history.state, '', `${window.location.pathname}?focus=1`);
+    if (PLANT === 'surface-focus-url-stays' && !on) window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}${window.location.search ? '&' : '?'}focus=1`);
+  };
+  const scaleKnob = (
+    <Knob
+      id="scale"
+      label={{ en: 'Contact scale', es: 'Escala de contacto' }}
+      hint={{ en: 'Multiplies the contact rate of the run.', es: 'Multiplica la tasa de contacto de la corrida.' }}
+      value={scale}
+      min={0.5}
+      max={2}
+      step={0.1}
+      unit="x"
+      onChange={setScale}
+    />
+  );
+  const rows = [10, 30, 60, 90, 120].filter((d) => d < sim.t.length);
+  const curve = (
+    <PlotCard fill title={{ en: 'Epidemic curves of the run', es: 'Curvas epidémicas de la corrida' }} lane="live" provenance="synthetic">
+      <UPlotChart
+        height="fill"
+        x={{ values: sim.t, label: { en: 'Day', es: 'Día' }, unit: 'd' }}
+        y={{ label: { en: 'People', es: 'Personas' } }}
+        series={[
+          { label: { en: 'Susceptible', es: 'Susceptibles' }, values: sim.S, color: '--color-accent' },
+          { label: { en: 'Infected', es: 'Infectados' }, values: sim.I, color: '--color-bad' },
+        ]}
+        marks={[{ x: sim.peakDay, label: { en: 'peak', es: 'pico' } }]}
+      />
+    </PlotCard>
+  );
+  const tabs = [
+    {
+      id: 'overview',
+      label: pick({ en: 'Overview', es: 'Resumen' }, lang),
+      content: (
+        <div className="prose">
+          <p>
+            {pick(
+              {
+                en: 'This console runs the engine of the fixture product over a closed population of one thousand people. The overview names what each view holds and where its controls are; it draws nothing, so it opens no focus mode.',
+                es: 'Esta consola ejecuta el motor del producto de prueba sobre una población cerrada de mil personas. El resumen nombra lo que contiene cada vista y dónde están sus controles; no dibuja nada, así que no abre el modo enfoque.',
+              },
+              lang,
+            )}
+          </p>
+          <p>
+            {pick(
+              {
+                en: 'The engine view draws the epidemic curves and the checkpoints of one run, with the contact scale beside it. The runs view repeats the curve for a fresh run and keeps its own control in its body. Both open in focus mode, in the full viewport, and come back to the same view.',
+                es: 'La vista del motor dibuja las curvas epidémicas y los puntos de control de una corrida, con la escala de contacto a su lado. La vista de corridas repite la curva de una corrida nueva y guarda su propio control en el cuerpo. Ambas abren en modo enfoque, en el viewport completo, y vuelven a la misma vista.',
+              },
+              lang,
+            )}
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: 'engine',
+      label: pick({ en: 'Engine', es: 'Motor' }, lang),
+      focus: {
+        title: { en: 'Engine run: a closed population, one infection and a contact scale', es: 'Corrida del motor: una población cerrada, un contagio y una escala de contacto' },
+        hud: [{ label: { en: 'Peak infected', es: 'Pico de infectados' }, value: sim.peak.toFixed(0) }],
+        rail: (
+          <>
+            {scaleKnob}
+            {PLANT === 'surface-focus-rail-scroll' && <div style={{ height: 1800, flex: 'none' }}>planted rail block</div>}
+          </>
+        ),
+      },
+      content: (
+        <>
+          {!focusOn && scaleKnob}
+          <SubTabs
+            ariaLabel={pick({ en: 'Engine views', es: 'Vistas del motor' }, lang)}
+            tabs={[
+              ...(PLANT === 'surface-focus-drops-subview' && focusOn ? [{ id: 'planted', label: 'Planted', content: <p>planted first tab</p> }] : []),
+              { id: 'curves', label: pick({ en: 'Curves', es: 'Curvas' }, lang), content: curve },
+              {
+                id: 'table',
+                label: pick({ en: 'Checkpoints', es: 'Puntos de control' }, lang),
+                content: (
+                  <PlotCard title={{ en: 'State at checkpoints', es: 'Estado en puntos de control' }} lane="live" provenance="synthetic">
+                    <table className="caos-table">
+                      <thead>
+                        <tr>
+                          <th>{pick({ en: 'Day', es: 'Día' }, lang)}</th>
+                          <th>S</th>
+                          <th>I</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows.map((d) => (
+                          <tr key={d}>
+                            <td>{d}</td>
+                            <td>{sim.S[d].toFixed(0)}</td>
+                            <td>{sim.I[d].toFixed(0)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </PlotCard>
+                ),
+              },
+            ]}
+          />
+        </>
+      ),
+    },
+    {
+      id: 'runs',
+      label: pick({ en: 'Runs', es: 'Corridas' }, lang),
+      focus: true,
+      content: (
+        <>
+          <button type="button" className="btn" onClick={() => setScale((s) => (s >= 2 ? 0.5 : s + 0.5))}>
+            {pick({ en: 'Run again', es: 'Correr de nuevo' }, lang)}
+          </button>
+          {curve}
+        </>
+      ),
+    },
+  ];
+  return (
+    <SurfacePage
+      title={HEADLESS ? undefined : { en: 'Console', es: 'Consola' }}
+      lede={HEADLESS ? undefined : pick({ en: 'The engine of the fixture, run in the browser.', es: 'El motor del producto de prueba, ejecutado en el navegador.' }, lang)}
+      actions={
+        HEADLESS ? undefined : (
+          <button type="button" className="btn">
+            {pick({ en: 'Export', es: 'Exportar' }, lang)}
+          </button>
+        )
+      }
+      deepLinkView={HEADLESS ? 'mode' : undefined}
+      tabs={ONE_STAGE ? tabs.filter((tab) => tab.id !== 'runs') : tabs}
+      value={controlled ? view : undefined}
+      onChange={setView}
+      instrument
+      focus={PLANT === 'surface-focus-missing' ? undefined : { onChange: onFocus, param: FPARAM }}
+    />
+  );
+}
+
 // ------------------------------------------------------------------------------------------- the documentation
 const CITATIONS = [
   { id: 'km1927', label: { en: 'Kermack and McKendrick 1927', es: 'Kermack y McKendrick 1927' }, citation: 'Kermack, W. O., McKendrick, A. G. (1927). A contribution to the mathematical theory of epidemics. Proc. R. Soc. Lond. A 115, 700-721.', doi: '10.1098/rspa.1927.0118' },
+  { id: 'eneuro2020', label: 'Ramirez 2020', citation: 'Ramirez, A. (2020). A reference whose DOI carries a dotted number: Framework for Improving Critical Infrastructure, Version 3.4. eNeuro 7(6).', doi: '10.1523/ENEURO.0159-20.2020' },
   { id: 'hethcote2000', label: 'Hethcote 2000', citation: 'Hethcote, H. W. (2000). The mathematics of infectious diseases. SIAM Review 42(4), 599-653.', doi: '10.1137/S0036144500371907' },
 ];
 
@@ -835,6 +1085,8 @@ function Doc({ id }: { id: string }) {
         </p>
       )}
       {PLANT === 'hoverflow' && id === 'introduction' && <div style={{ width: 3000, height: 12 }}>planted wide block</div>}
+      {PLANT === 'decimal-point-plain-34' && id === 'introduction' && <p>{pick({ en: 'See version 3.4 of the standard.', es: 'Véase la versión 3.4 de la norma.' }, lang)}</p>}
+      {PLANT === 'decimal-point-plain-2020' && id === 'introduction' && <p>{pick({ en: 'See the item 20.2020 of the list.', es: 'Véase el ítem 20.2020 de la lista.' }, lang)}</p>}
       {PLANT === 'decimal-point' && id === 'introduction' && <p>{pick({ en: 'Integration step: 0.25 days; worst difference 2.7e-08.', es: 'Paso de integración: 0.25 días; peor diferencia 2.7e-08.' }, lang)}</p>}
       {PLANT === 'low-contrast' && id === 'introduction' && <p style={{ color: '#9a9a9a' }}>{pick({ en: 'A planted pale line.', es: 'Una línea pálida plantada.' }, lang)}</p>}
       {PLANT === 'label-wide' && id === 'introduction' && <NarrowFontLabel />}
@@ -883,7 +1135,7 @@ function NarrowRange() {
 const ARCH_SVG = '<svg viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="4" width="192" height="72" rx="8" fill="var(--color-surface)" stroke="var(--color-border)"/><text x="100" y="46" text-anchor="middle" fill="var(--color-fg)" font-size="14">fixture</text></svg>';
 const config: ShellConfig = {
   product: { name: PLANT === 'brand' ? 'Impostor' : 'GateFixture' },
-  routes: STANDARD_ROUTES,
+  routes: SURFACE ? [...STANDARD_ROUTES, { path: '/console', en: 'Console', es: 'Consola' }] : STANDARD_ROUTES,
   links: { github: 'https://github.com/fsantibanezleal/CAOS_APP_SHELL' },
   version: '0.07.000',
   build: 'fixture',
@@ -915,6 +1167,7 @@ function App() {
         <Routes>
           <Route path="/" element={PLANT === 'landing-app' ? <Workbench /> : <Landing />} />
           <Route path="/app" element={<Workbench />} />
+          <Route path="/console" element={<Console />} />
           {['introduction', 'methodology', 'implementation', 'experiments', 'benchmark'].map((id) => (
             <Route key={id} path={`/${id}`} element={<Doc id={id} />} />
           ))}
