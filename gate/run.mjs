@@ -481,7 +481,9 @@ export async function runGate(o) {
       if (d) s.walkState.doc.push(d);
     }
     for (const r of f.repeatedTicks ?? []) {
-      fail('G6', where, `${r.label}: ${r.n} axis tick label(s) repeat the label before them (give the axis fixed decimals)`);
+      // named x ticks (UPlotChart declares the repeated names): a name used twice, wherever the two ticks sit on the axis
+      if (r.names) fail('G6', where, `${r.label}: ${r.n} named x tick label(s) repeat another tick's label (${r.names.split('|').map((n) => `"${n}"`).join(', ')}); give every named tick a label of its own`);
+      else fail('G6', where, `${r.label}: ${r.n} axis tick label(s) repeat the label before them (give the axis fixed decimals)`);
     }
     // a filling card whose note leaves its drawing under the floor (CAOS_APP_SHELL#95); below 1280 px the document scrolls
     if (big) for (const c of f.fillStages ?? []) if (c.h < opt.stageFloor) fail('G6', where, `the drawing of ${c.label} keeps ${Math.round(c.h)} px under its note (floor ${opt.stageFloor} px)`);
