@@ -56,8 +56,8 @@ const SIZES: Array<[number, number]> = [[390, 844], [768, 844], [1280, 800]];
 const q = (page: Page) => new URL(page.url()).searchParams;
 
 /**
- * Every visible select whose selected text does not fit the room it leaves: a case select with the shell's display shows its name in up to
- * two wrapped lines (a probe copy of the display gives the lines the text needs); any other select shows one line in its width less its own
+ * Every visible select whose selected text does not fit the room it leaves: a case select with the shell's display shows its name whole (its
+ * real text element must not overflow its box, and it must name the held option); any other select shows one line in its width less its own
  * padding and the native arrow, which is measured (a probe select of the same class holding one character; 0 with `appearance: none`).
  * The same measure as the gate's G5 (gate/inpage.mjs, `selectCuts`).
  */
@@ -72,15 +72,12 @@ const cutSelects = (page: Page) =>
       const text = (sel.selectedOptions[0]?.textContent ?? '').trim();
       const display = sel.closest('.cs-select-wrap')?.querySelector('.cs-select-display') as HTMLElement | null;
       if (display) {
-        const probe = display.cloneNode(false) as HTMLElement;
-        probe.textContent = text;
-        probe.setAttribute('style', `position:absolute;visibility:hidden;left:0;top:0;width:${display.getBoundingClientRect().width}px;display:block;overflow:visible;max-height:none;min-height:0;height:auto`);
-        display.parentElement!.append(probe);
-        const pv = getComputedStyle(probe);
-        const box = parseFloat(pv.paddingTop) + parseFloat(pv.paddingBottom) + parseFloat(pv.borderTopWidth) + parseFloat(pv.borderBottomWidth);
-        const lines = Math.round((probe.getBoundingClientRect().height - box) / parseFloat(pv.lineHeight));
-        probe.remove();
-        if (lines > 2) out.push({ text, need: lines, has: 2 });
+        // the real text element, as the gate does (M1: a probe copy missed a token the real element wraps and clamps), and the display against the held option (M2)
+        const t = (display.querySelector('.cs-select-text') ?? display) as HTMLElement;
+        const shown = (t.textContent ?? '').trim().replace(/\s+/g, ' ');
+        const held = (sel.options[sel.selectedIndex]?.textContent ?? '').trim().replace(/\s+/g, ' ');
+        if (shown !== held) out.push({ text: `${shown} != ${held}`, need: 0, has: 0 });
+        else if (t.scrollHeight > t.clientHeight + 1 || t.scrollWidth > t.clientWidth + 1) out.push({ text: shown, need: t.scrollHeight, has: t.clientHeight });
         continue;
       }
       ctx.font = `${s.fontStyle} ${s.fontWeight} ${s.fontSize} ${s.fontFamily}`;

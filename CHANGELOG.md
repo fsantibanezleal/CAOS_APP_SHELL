@@ -13,18 +13,26 @@
 - The case select shows real case names whole (SHW-043; the consumer trial of 0.17.0 at a584b08: CAOS_Fragmenta failed 112 states and CAOS_Contraste 413,
   all `select.cs-select[data-control="case"]`, with names of 202 to 311 px in 181 px of room, such as "Degenerate design: the negative control" at
   241 px and "Corporate PD across 1 to 5 year horizons (planned)" at 311 px; the template passed with short names). `CaseSelector` with
-  `layout: 'select'` now shows the selected name in a display of up to two wrapped lines (`.cs-select-display`, `aria-hidden`) with the native
+  `layout: 'select'` now shows the selected name whole, at any length, in a display (`.cs-select-display`, `aria-hidden`) with the native
   `select` kept in place on top of it, transparent by colour: the keyboard, the screen reader (accessible name and value) and the native list are
-  unchanged. The second line is reserved only when some case of the list needs it at the current width (measured once per width), so the rail head
-  never moves when the reader switches cases, and a list whose names all fit keeps one line as tall as before. Same in the App rail and the Focus rail.
-  A name that needs a third line is cut and G5 fails it.
+  unchanged. There is no line cap and no ellipsis: the name wraps to the lines it needs and a token wider than the room breaks inside
+  (`overflow-wrap: anywhere`); the display is as tall as the longest name of the visible list needs at the current width, measured in the DOM
+  (the display's own font, padding and content width) and re-measured when the list, the width or the fonts change, so the rail head never moves
+  when the reader switches cases, and a list whose names all fit keeps one line as tall as a plain select. Same in the App rail and the Focus
+  rail. The consumer trial of 8e6e254 (CAOS_Fragmenta 8 states, CAOS_Contraste 90, names of 354 and 398 px that need three lines in 182 px) is why
+  there is no cap: any cap cuts the next longer name; a product that finds its rail head too tall shortens its names. The display names the case the
+  native select holds (the selected case, else the first enabled visible case, as React selects it: a selected id outside the visible source lane no
+  longer shows another case than the select). Under forced colours (Windows High Contrast) the native select stays transparent, so its one cut line
+  is not painted over the display; the focus ring is the display's alone, on `:focus-visible`.
 
 ### Added
 
 - Gate: G5 fails a select, in the App or in Focus, whose selected text does not fit the room it leaves, naming the route, the state, the text and
-  what was measured: for a case select with the shell's display, a name that needs more than its two lines; for any other select, a text wider
-  than its content box less the native arrow (measured with a probe select, 0 with `appearance: none`). SHG-072, plants `select-cut`,
-  `select-arrow`, `select-focus-rail`, and the page that must pass, `legit-select-two-lines`.
+  what was measured: for a case select with the shell's display, a name cut in its box (the real `.cs-select-text` element overflows, as a product
+  stylesheet that clamps it or an overflow the wrap cannot break) and a stale display (the shown name differs from the option the select holds); for
+  any other select, a text wider than its content box less the native arrow (measured with a probe select, 0 with `appearance: none`). SHG-072,
+  plants `select-cut`, `select-cut-token`, `select-display-stale`, `select-arrow`, `select-focus-rail`, and the pages that must pass,
+  `legit-select-two-lines` and `legit-select-three-lines`.
 - Gate: under `--require-focus`, G18 fails a workbench route (`--workbench`) that is not among the measured routes, as 0.16.0 does for a
   surface App route, so a run cannot measure no Focus at all (SHG-073, plant `workbench-route-unwalked`).
 
