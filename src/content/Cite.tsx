@@ -149,7 +149,7 @@ export function DocReferences({ ids }: { ids: string[] }) {
               <span>{c.citation}</span>{' '}
               {h ? (
                 <a href={h} target="_blank" rel="noreferrer noopener" className="faint">
-                  {c.doi ? `doi:${c.doi}` : 'link'}
+                  {c.doi ? <span translate="no">{`doi:${c.doi}`}</span> : 'link'}
                 </a>
               ) : null}
             </li>
@@ -194,7 +194,7 @@ export function ReferenceList({ ids, heading }: { ids?: string[]; heading?: stri
               <span>{c.citation}</span>{' '}
               {h ? (
                 <a href={h} target="_blank" rel="noreferrer noopener" className="faint">
-                  {c.doi ? `doi:${c.doi}` : 'link'}
+                  {c.doi ? <span translate="no">{`doi:${c.doi}`}</span> : 'link'}
                 </a>
               ) : null}
             </li>

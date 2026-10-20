@@ -28,6 +28,12 @@ export interface TabsProps {
   /** Called on every selection, controlled or not. */
   onChange?: (id: string) => void;
   ariaLabel?: string;
+  /**
+   * A control at the end of the tab row, in a slot beside the tab list (never inside it) on the same row: its space is reserved
+   * whatever it shows, so the row does not move. The tabs scroll beside it when they do not fit. Used by `SurfacePage` for its Focus
+   * control (shell 0.16.0). Omit it and the markup is what it was.
+   */
+  trailing?: ReactNode;
 }
 
 /**
@@ -35,11 +41,11 @@ export interface TabsProps {
  * is rendered, inside an error boundary; a row wider than its box fades the hidden end. Controlled when `value` is
  * given (known shell defect 6). More than six peers is reported (rule 5).
  */
-export function Tabs({ tabs, initial, value, onChange, ariaLabel }: TabsProps) {
+export function Tabs({ tabs, initial, value, onChange, ariaLabel, trailing }: TabsProps) {
   const baseId = useId();
   const first = tabs[0]?.id ?? '';
   const memory = useContext(ViewMemoryContext);
-  const mkey = memoryKey('tabs', ariaLabel, tabs.map((t) => t.id));
+  const mkey = memoryKey('tabs', tabs.map((t) => t.id));
   const [own, setOwn] = useState<string>(() => {
     const kept = memory?.get(mkey);
     return kept && tabs.some((t) => t.id === kept) ? kept : (initial ?? first);
@@ -74,7 +80,7 @@ export function Tabs({ tabs, initial, value, onChange, ariaLabel }: TabsProps) {
 
   const current = tabs.find((t) => t.id === active) ?? tabs[0];
   return (
-    <div className="tabs">
+    <div className={trailing === undefined ? 'tabs' : 'tabs tabs-has-slot'}>
       <div className="tablist" role="tablist" aria-label={ariaLabel} ref={rowRef}>
         {tabs.map((tab, idx) => {
           const selected = tab.id === current?.id;
@@ -97,6 +103,7 @@ export function Tabs({ tabs, initial, value, onChange, ariaLabel }: TabsProps) {
           );
         })}
       </div>
+      {trailing !== undefined && <div className="tabs-slot" data-tabs-slot="">{trailing}</div>}
       {current && (
         <div
           key={current.id}

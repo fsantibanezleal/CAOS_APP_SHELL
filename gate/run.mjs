@@ -108,7 +108,7 @@ export async function runGate(o) {
   let server = null;
   let base = opt.url;
   if (opt.serve) {
-    server = await servePages(opt.serve, opt.basePath ?? '/');
+    server = await servePages(opt.serve, opt.basePath ?? '/', 0, { spaFallback: Boolean(opt.spaFallback) });
     base = server.url;
   }
   base = base.endsWith('/') ? base : `${base}/`;
@@ -262,6 +262,11 @@ export async function runGate(o) {
       }
       sink.splice(0);
       await ctx.close();
+    }
+
+    // ---- G18 on a surface App: under --require-focus the App route must be among the measured routes, or nothing would be measured
+    if (opt.requireFocus && workbenchRoutes.size === 0 && !routes.includes(appRoute)) {
+      fail('G18', { route: appRoute, mode: 'routes' }, `the App route ${appRoute} is not among the measured routes (${routes.join(', ') || 'none'}): with --workbench '' and --require-focus the gate measures the App as a surface and must walk it; add it to --routes or name it with --app-route`);
     }
 
     // ---- The landing (shell 0.13.0): the root opens the Introduction on its executive view; an old App link with a query string reaches the App.
@@ -886,8 +891,9 @@ export async function runGate(o) {
     const q = new URLSearchParams(f.search);
     if (isView) {
       // the view the App held in its URL stays there (a surface that keeps its view out of the URL has none to keep)
-      const held = new URLSearchParams(before.search).get('view');
-      if (q.get('focus') !== '1' || (held !== null && q.get('view') !== held)) fail('G18', at, `${label}: the URL (${f.search || 'no query'}) does not hold ?focus=1 and the view`);
+      const param = before.viewParam || 'view';
+      const held = new URLSearchParams(before.search).get(param);
+      if (q.get('focus') !== '1' || (held !== null && q.get(param) !== held)) fail('G18', at, `${label}: the URL (${f.search || 'no query'}) does not hold ?focus=1 and the view (?${param}=)`);
     } else if (q.get('focus') !== '1' || (subject.total > 1 && q.get('case') !== caseId)) fail('G18', at, `${label}: the URL (${f.search || 'no query'}) does not hold ?focus=1 and the case`);
     if (f.docW > f.vw + 1 || f.docH > f.vh + 1) fail('G18', at, `${label}: the page scrolls (the document is ${f.docW}x${f.docH}px in a ${f.vw}x${f.vh}px viewport); Focus mode is the viewport`);
     if (f.nestedMain) fail('G18', at, `${label}: the page holds a main inside a main (the Focus frame must not be a second landmark inside the App's main)`);
@@ -929,7 +935,7 @@ export async function runGate(o) {
     const g = await facts();
     if (g.focus) {
       fail('G18', at, `${label}: ${byButton && left ? 'the exit control' : 'Escape'} does not return to the App`);
-      await page.goto(`${urlFor(s.route)}?${isView ? 'view' : 'case'}=${encodeURIComponent(caseId)}`, { waitUntil: 'load', timeout: 30000 }).catch(() => undefined);
+      await page.goto(`${urlFor(s.route)}?${isView ? (before.viewParam || 'view') : 'case'}=${encodeURIComponent(caseId)}`, { waitUntil: 'load', timeout: 30000 }).catch(() => undefined);
       await settle(page);
     } else {
       if (!g.app) fail('G18', at, `${label}: back from Focus mode there is no App on the page`);
@@ -943,19 +949,44 @@ export async function runGate(o) {
 
   /**
    * G18 on an App that is a surface (`--workbench ''`, the App route `--app-route`, shell 0.16.0): every view of the surface's tab row is
-   * opened; each one that offers the Focus control is entered from its last sub-view (the first view is where the walk leaves the
-   * App, so a Focus that fell back to it would go unseen; outside the primary mode, the last focusable view only). The same failures as
-   * for a workbench apply, with the view in place of the case and the group.
+   * opened and its tab row measured (the row and the head must not move between views: the Focus control must add no row, ADR-0071);
+   * each view that offers the Focus control is entered from its last sub-view (the first view is where the walk leaves the App, so a
+   * Focus that fell back to it would go unseen) and, in the primary mode, left both by the exit button and by Escape; outside the primary
+   * mode, the last focusable view only. The same failures as for a workbench apply, with the view in place of the case and the group.
    */
   async function surfaceFocusWalk(page, sink, at, s) {
     const rowTabs = page.locator('[data-surface] > .caos-surface-body > .tabs > [role="tablist"] > [role="tab"]');
     const n = await rowTabs.count();
     const focusable = [];
+    const rows = [];
+    // the tab row and the head, from the surface's own top (the document may have scrolled)
+    const geometry = () =>
+      page.evaluate(() => {
+        const surface = document.querySelector('[data-surface]');
+        const list = document.querySelector('[data-surface] > .caos-surface-body > .tabs > [role="tablist"]');
+        if (!surface || !list) return null;
+        const top = surface.getBoundingClientRect().top;
+        const r = list.getBoundingClientRect();
+        const head = document.querySelector('[data-surface] > .caos-surface-head');
+        const round = (x) => Math.round(x * 10) / 10;
+        return { top: round(r.top - top), height: round(r.height), head: head ? round(head.getBoundingClientRect().height) : 0 };
+      });
     for (let i = 0; i < n; i += 1) {
       await rowTabs.nth(i).click({ timeout: 4000 }).catch(() => undefined);
       await settle(page);
-      if ((await page.locator('[data-focus-enter]').filter({ visible: true }).count()) > 0) {
-        focusable.push({ index: i, id: (await page.evaluate(() => window.__caosGate.focusFacts())).group });
+      const shown = (await page.locator('[data-focus-enter]').filter({ visible: true }).count()) > 0;
+      const facts = await page.evaluate(() => window.__caosGate.focusFacts());
+      if (shown) focusable.push({ index: i, id: facts.group });
+      rows.push({ id: facts.group, geo: await geometry() });
+    }
+    if (focusable.length > 0 && rows[0]?.geo) {
+      for (const r of rows.slice(1)) {
+        if (!r.geo) continue;
+        const g0 = rows[0].geo;
+        if (r.geo.top !== g0.top || r.geo.height !== g0.height || r.geo.head !== g0.head) {
+          fail('G18', { ...at, trail: `view ${r.id}` }, `the surface's tab row moves between views (view ${rows[0].id}: row at ${g0.top}px, ${g0.height}px high, head ${g0.head}px; view ${r.id}: row at ${r.geo.top}px, ${r.geo.height}px high, head ${r.geo.head}px): the Focus control must sit on the tab row with its space reserved, never add a row or a head (ADR-0071)`);
+          break;
+        }
       }
     }
     if (focusable.length === 0) {
@@ -968,16 +999,19 @@ export async function runGate(o) {
     }
     const targets = s.primary ? focusable : focusable.slice(-1);
     for (const [k, v] of targets.entries()) {
-      await rowTabs.nth(v.index).click({ timeout: 4000 }).catch(() => undefined);
-      await settle(page);
-      const subs = page.locator('[data-surface] .subtablist [role="tab"]');
-      const sn = await subs.count();
-      if (sn > 1) {
-        await subs.nth(sn - 1).click({ timeout: 4000 }).catch(() => undefined);
+      // the primary mode leaves each focusable view twice: by the exit button (even index), then by Escape (odd index)
+      for (const way of s.primary ? [0, 1] : [0]) {
+        await rowTabs.nth(v.index).click({ timeout: 4000 }).catch(() => undefined);
         await settle(page);
+        const subs = page.locator('[data-surface] .subtablist [role="tab"]');
+        const sn = await subs.count();
+        if (sn > 1) {
+          await subs.nth(sn - 1).click({ timeout: 4000 }).catch(() => undefined);
+          await settle(page);
+        }
+        const enter = page.locator('[data-focus-enter]').filter({ visible: true }).first();
+        await focusVisitOne(page, sink, at, s, { kind: 'view', id: v.id }, 2 * k + way, enter);
       }
-      const enter = page.locator('[data-focus-enter]').filter({ visible: true }).first();
-      await focusVisitOne(page, sink, at, s, { kind: 'view', id: v.id }, k, enter);
     }
     await rowTabs.nth(0).click({ timeout: 4000 }).catch(() => undefined);
     await settle(page);

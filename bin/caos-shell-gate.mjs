@@ -8,6 +8,8 @@
 //   npx caos-shell-gate --url https://contraste.fasl-work.com --expect-brand "Contraste"     the deployed origin
 // Options:
 //   --base-path /Repo/           the site's base path with --serve (a project page); default /
+//   --spa-fallback               with --serve, answer as nginx does for a single-page app (try_files $uri $uri/ /index.html): an extensionless
+//                                path that matches no file gets index.html with 200; a path with an extension stays 404; default off (Pages)
 //   --routes /,/methodology      the routes; default: read from the header navigation
 //   --workbench /app             the routes that carry the case workbench; default /app; '' for a product whose App is a SurfacePage
 //   --app-route /app             the App route measured as a surface when --workbench is '' (G18 walks its views' Focus mode); default /app
@@ -23,7 +25,7 @@
 
 import { runGate } from '../gate/run.mjs';
 
-const FLAGS = new Set(['single-case', 'no-wide-font', 'require-focus']);
+const FLAGS = new Set(['single-case', 'no-wide-font', 'require-focus', 'spa-fallback']);
 const args = {};
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i += 1) {
@@ -49,6 +51,7 @@ const options = {
   caseSample: args['case-sample'],
   singleCase: args['single-case'] === true,
   requireFocus: args['require-focus'] === true,
+  spaFallback: args['spa-fallback'] === true,
   idleMs: num('idle-ms'),
   settleMs: num('settle-ms'),
   textFloor: num('text-floor'),

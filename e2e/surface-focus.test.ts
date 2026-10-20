@@ -11,10 +11,32 @@ before(async () => {
   h = await startHarness(`
     import { useState } from 'react';
     import { createRoot } from 'react-dom/client';
-    import { SurfacePage, SubTabs, Knob } from './src/index';
+    import { SurfacePage, SubTabs, Knob, CaseWorkbench, useLangStore, useShellLang } from './src/index';
+    window.__setLang = (l) => useLangStore.getState().setLang(l);
+    function Bench() {
+      const lang = useShellLang();
+      return (
+        <CaseWorkbench
+          caseId="c1"
+          focus
+          groups={[{ id: 'validation', label: { en: 'Validation', es: 'Validación' }, content: (
+            <SubTabs ariaLabel={lang === 'es' ? 'Vistas de validación' : 'Validation views'} tabs={[
+              { id: 'phase', label: 'Phase', content: <p data-probe="phase">PHASE</p> },
+              { id: 'table', label: 'Table', content: <p data-probe="table">TABLE</p> },
+            ]} />
+          ) }]}
+          context={{ content: <p>CONTEXT</p> }}
+        />
+      );
+    }
     function App() {
+      const lang = useShellLang();
+      if (new URLSearchParams(location.search).get('workbench') === '1') return <main><Bench /></main>;
       const [scale, setScale] = useState(1);
       const param = window.__PARAM;
+      const q = new URLSearchParams(location.search);
+      const shape = q.get('shape') ?? 'full';
+      const nofocus = q.get('nofocus') === '1';
       const tabs = [
         { id: 'list', label: 'List', content: <p data-probe="list">LIST</p> },
         {
@@ -25,7 +47,7 @@ before(async () => {
             rail: <Knob id="scale" label={{ en: 'Scale', es: 'Escala' }} value={scale} min={0.5} max={2} step={0.1} onChange={setScale} />,
           },
           content: (
-            <SubTabs ariaLabel="Engine views" tabs={[
+            <SubTabs ariaLabel={lang === 'es' ? 'Vistas del motor' : 'Engine views'} tabs={[
               { id: 'phase', label: 'Phase', content: <p data-probe="phase">PHASE {scale}</p> },
               { id: 'table', label: 'Table', content: <p data-probe="table">TABLE {scale}</p> },
             ]} />
@@ -39,12 +61,12 @@ before(async () => {
           <header><a id="bg-head" href="#top">header link</a></header>
           <main id="app-main" style={{ flex: '1 1 auto', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
             <SurfacePage
-              title={{ en: 'Console', es: 'Consola' }}
-              lede="What the console runs."
-              actions={<button type="button" id="export">Export</button>}
+              title={shape === 'headless' ? undefined : { en: 'Console', es: 'Consola' }}
+              lede={shape === 'full' || shape === 'lede' ? 'What the console runs.' : undefined}
+              actions={shape === 'full' || shape === 'actions' ? <button type="button" id="export">Export</button> : undefined}
               tabs={tabs}
               instrument
-              focus={{ param, onChange: (on) => { window.__focusEvents = [...(window.__focusEvents ?? []), on]; } }}
+              focus={nofocus ? undefined : { param, onChange: (on) => { window.__focusEvents = [...(window.__focusEvents ?? []), on]; } }}
             />
           </main>
           <footer><a id="bg-foot" href="#top">footer link</a></footer>
@@ -123,7 +145,7 @@ test('a deep link to a view with no stage, or to an unknown view, opens no Focus
     await page.waitForFunction(() => !new URLSearchParams(location.search).has('focus'));
     assert.equal(q(page).get('focus'), null, `${view}: the parameter is removed`);
     assert.equal(q(page).get('view'), view, `${view}: the view of the link is left as it was`);
-    assert.equal(await page.locator('[data-focus-enter]').count(), 0, `${view}: no control on a view with no stage`);
+    assert.equal(await page.locator('[data-focus-enter]').filter({ visible: true }).count(), 0, `${view}: no control on a view with no stage`);
     assert.equal(await page.evaluate(() => (window as unknown as { __focusEvents?: boolean[] }).__focusEvents ?? null), null, `${view}: no change was reported`);
     await page.close();
   }
@@ -133,32 +155,114 @@ test('a deep link to a view with no stage, or to an unknown view, opens no Focus
   await page.close();
 });
 
-test('the control follows the open view: shown on a view with a stage, hidden on one without, and the head keeps its height', async () => {
-  for (const width of [390, 768, 1280]) {
-    const page = await h.browser.newPage({ viewport: { width, height: width < 800 ? 844 : 800 } });
-    await page.goto(h.address);
-    await page.waitForSelector('[data-surface]');
-    const head = () => page.locator('.caos-surface-head').evaluate((e) => Math.round(e.getBoundingClientRect().height));
-    const rows = () => page.locator('.caos-surface-body > .tabs > .tablist').evaluate((t) => new Set([...t.querySelectorAll('[role="tab"]')].map((b) => Math.round(b.getBoundingClientRect().top))).size);
-    assert.equal(await page.locator('[data-focus-enter]').count(), 0, `${width}px: hidden on the list`);
-    const plainHead = await head();
-    await page.getByRole('tab', { name: 'Engine' }).click();
-    assert.equal(await page.locator('[data-focus-enter]').count(), 1, `${width}px: shown on the engine view`);
-    // no new row: the control sits on the row of the heading (never below it), and the head grows by less than a line of text
-    const onRow = await page.evaluate(() => {
-      const c = document.querySelector('[data-focus-enter]')!.getBoundingClientRect();
-      const hd = document.querySelector('.caos-surface-heading')!.getBoundingClientRect();
-      return c.top < hd.bottom - 8 && c.bottom > hd.top;
-    });
-    assert.equal(onRow, true, `${width}px: the control is on the heading's row (no new row)`);
-    assert.ok((await head()) - plainHead < 8, `${width}px: the head is no taller than a line more with the control (${plainHead} to ${await head()})`);
-    assert.equal(await rows(), 1, `${width}px: one tab row`);
-    assert.deepEqual(await noScroll(page), { w: true, h: true }, `${width}px: no page scroll with the control`);
-    await page.getByRole('tab', { name: 'Notes' }).click();
-    assert.equal(await page.locator('[data-focus-enter]').count(), 0, `${width}px: hidden again on the notes`);
-    assert.equal(await head(), plainHead, `${width}px: the head returns to its height`);
-    await page.close();
+const SHAPES = ['headless', 'title', 'actions', 'lede', 'full'];
+const VIEWS = ['List', 'Engine', 'Tasks', 'Notes'];
+
+test('the control sits at the end of the tab row: on every shape of surface the tab row and the head are the same on every view, as in 0.15.0, at 390, 768 and 1280 px', async () => {
+  for (const shape of SHAPES) {
+    for (const width of [390, 768, 1280]) {
+      const where = `${shape} ${width}px`;
+      const geometry = async (nofocus: boolean) => {
+        const page = await h.browser.newPage({ viewport: { width, height: width < 800 ? 844 : 800 } });
+        await page.goto(`${h.address}/?shape=${shape}${nofocus ? '&nofocus=1' : ''}`);
+        await page.waitForSelector('[data-surface]');
+        const out: Array<{ view: string; top: number; height: number; head: number; control: boolean }> = [];
+        for (const view of VIEWS) {
+          await page.getByRole('tab', { name: view, exact: true }).click();
+          out.push(await page.evaluate((v) => {
+            const s = document.querySelector('[data-surface]')!.getBoundingClientRect();
+            const row = document.querySelector('.caos-surface-body > .tabs > [role="tablist"]')!.getBoundingClientRect();
+            const head = document.querySelector('.caos-surface-head');
+            const c = document.querySelector('[data-focus-enter]');
+            const shown = c ? getComputedStyle(c).visibility !== 'hidden' && c.getAttribute('aria-hidden') !== 'true' : false;
+            return { view: v, top: Math.round((row.top - s.top) * 100) / 100, height: Math.round(row.height * 100) / 100, head: head ? Math.round(head.getBoundingClientRect().height * 100) / 100 : 0, control: shown };
+          }, view));
+        }
+        await page.close();
+        return out;
+      };
+      const withFocus = await geometry(false);
+      const without = await geometry(true);
+      const first = withFocus[0];
+      for (const g of withFocus) {
+        assert.equal(g.top, first.top, `${where}: the tab row's top is the same on ${g.view} and ${first.view} (${g.top} against ${first.top})`);
+        assert.equal(g.height, first.height, `${where}: the tab row's height is the same on every view`);
+        assert.equal(g.head, first.head, `${where}: the head's height is the same on every view`);
+      }
+      assert.deepEqual(withFocus.map((g) => g.control), [false, true, true, false], `${where}: the control shows on Engine and Tasks only`);
+      for (let i = 0; i < withFocus.length; i += 1) {
+        assert.equal(withFocus[i].head, without[i].head, `${where}: the head's height equals 0.15.0's (no head is added) on ${withFocus[i].view}`);
+        assert.equal(withFocus[i].top, without[i].top, `${where}: the tab row's top equals 0.15.0's on ${withFocus[i].view}`);
+        assert.equal(withFocus[i].height, without[i].height, `${where}: the tab row's height equals 0.15.0's on ${withFocus[i].view}`);
+      }
+    }
   }
+});
+
+test('the control stays visible and reachable beside the tabs at 390 px, in one row, never inside the tab list', async () => {
+  const page = await h.browser.newPage({ viewport: { width: 390, height: 844 } });
+  await page.goto(`${h.address}/?shape=headless`);
+  await page.getByRole('tab', { name: 'Engine', exact: true }).click();
+  const m = await page.evaluate(() => {
+    const c = document.querySelector('[data-focus-enter]')!.getBoundingClientRect();
+    const list = document.querySelector('.caos-surface-body > .tabs > [role="tablist"]')!.getBoundingClientRect();
+    const rows = new Set([...document.querySelectorAll('.caos-surface-body > .tabs > [role="tablist"] [role="tab"]')].map((b) => Math.round(b.getBoundingClientRect().top))).size;
+    const slot = document.querySelector('[data-tabs-slot]')!;
+    return { right: c.right, left: c.left, w: innerWidth, listRight: list.right, rows, inTablist: document.querySelector('[role="tablist"]')!.contains(slot), sideBySide: Math.abs(c.top - list.top) < list.height };
+  });
+  assert.ok(m.right <= m.w && m.left >= 0, 'the control is inside the viewport');
+  assert.ok(m.listRight <= m.left + 1, 'the tab list ends where the slot starts: the tabs scroll beside it');
+  assert.equal(m.rows, 1);
+  assert.equal(m.inTablist, false, 'the slot is beside the tablist, never inside it');
+  assert.equal(m.sideBySide, true, 'on the same row');
+  await page.locator('[data-focus-enter]').click();
+  assert.equal(await inFocus(page), 1, 'reachable by a click');
+  await page.close();
+});
+
+test('on a view with no stage the hidden control takes no tab stop and is out of the accessibility tree', async () => {
+  const page = await h.browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await page.goto(`${h.address}/?view=list`);
+  await page.waitForSelector('[data-surface]');
+  const c = page.locator('[data-focus-enter]');
+  assert.equal(await c.getAttribute('aria-hidden'), 'true');
+  assert.equal(await c.getAttribute('tabindex'), '-1');
+  const seen = new Set<string>();
+  for (let i = 0; i < 12; i += 1) {
+    await page.keyboard.press('Tab');
+    seen.add(await page.evaluate(() => ((document.activeElement as HTMLElement).hasAttribute('data-focus-enter') ? 'control' : 'other')));
+  }
+  assert.equal(seen.has('control'), false, 'Tab never lands on the hidden control');
+  await page.close();
+});
+
+test('the surface and its Focus frame name their view parameter for the gate (data-view-param), view by default', async () => {
+  const page = await h.browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await page.goto(`${h.address}/?view=engine`);
+  assert.equal(await page.locator('[data-surface]').getAttribute('data-view-param'), 'view');
+  await page.locator('[data-focus-enter]').click();
+  assert.equal(await page.locator('[data-surface-focus]').getAttribute('data-view-param'), 'view');
+  await page.close();
+});
+
+test('a language switch inside Focus keeps the sub-view on a surface and on a workbench (the view memory is keyed on ids)', async () => {
+  const surface = await h.browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await surface.goto(`${h.address}/?view=engine`);
+  await surface.getByRole('tab', { name: 'Table' }).click();
+  await surface.locator('[data-focus-enter]').click();
+  await surface.evaluate(() => (window as unknown as { __setLang: (l: string) => void }).__setLang('es'));
+  assert.match(await probe(surface), /TABLE/, 'still on the table sub-view in Focus after the switch');
+  await surface.keyboard.press('Escape');
+  assert.match(await probe(surface), /TABLE/, 'back in the App on the table sub-view after a language switch inside Focus');
+  await surface.close();
+  const bench = await h.browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await bench.goto(`${h.address}/?workbench=1&view=validation`);
+  await bench.getByRole('tab', { name: 'Table' }).click();
+  await bench.locator('[data-focus-enter]').click();
+  await bench.evaluate(() => (window as unknown as { __setLang: (l: string) => void }).__setLang('es'));
+  await bench.keyboard.press('Escape');
+  assert.match(await probe(bench), /TABLE/, 'back in the workbench on the table sub-view after a language switch inside Focus');
+  await bench.close();
 });
 
 test('Focus never scrolls the page and keeps one tab row, at phone, tablet and desktop, in both languages and themes', async () => {

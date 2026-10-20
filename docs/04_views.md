@@ -94,13 +94,13 @@ takes `focus` (`true`, or a `SurfaceFocusConfig`: `param`, `onChange`), and each
 
 | What | How |
 |---|---|
-| Control | a **Focus** button ("Focus" / "Enfocar", named "Open this view in focus mode" / "Abrir esta vista en modo enfoque") at the end of the head's actions, on the heading's row, so it adds no row; it shows only while the open view sets `focus` and is absent on the others. A surface with no head gets one, holding the control, on a focusable view: give it a `title` or `actions` for a head that stays |
+| Control | a **Focus** button ("Focus" / "Enfocar", named "Open this view in focus mode" / "Abrir esta vista en modo enfoque") at the END OF THE TAB ROW, in a slot beside the tab list on the same row (never in the head, never inside the `tablist`); the head is what it was in 0.15.0 for every surface shape, headless included. The slot's space is reserved while the surface has `focus` and any view sets it, so on a view with no stage the button stays in the layout but is hidden from sight, the accessibility tree and the keyboard (`visibility: hidden`, `aria-hidden`, `tabindex=-1`) and neither the row nor the tabs move; at 390 px the tabs scroll beside it. `Tabs` takes the slot as `trailing` |
 | Frame | `FocusShell` (`landmark={false}`): the open view is the stage, `rail` the right column; the title is the view's label and the description the surface's title unless the config says otherwise. Without a `rail` the stage is the whole frame and the view keeps its own controls in its body; with one the product moves them there (the shell moves no DOM) |
 | URL | `?focus=1` beside `?view=` (`param` renames `focus`); a link with both opens Focus on that view. A link with `focus=1` for a view with no stage, for an unknown view, or with no view when the first view has no stage, opens nothing and the parameter is removed |
 | Leave | the exit button or Escape: the same view and sub-view (the view memory `CaseWorkbench` keeps), `focus` leaves the URL, keyboard focus returns to the Focus button |
 | Keyboard, page | on opening keyboard focus moves to the exit button, the page behind the frame is `inert`, the page holds one `main` and the frame no Focus control |
 | Callback | `onChange(on)` when the reader opens and closes it |
-| Marks | the stage carries `data-surface-focus`, `data-focus-view` and `data-focus-group` (the open view's id) for the gate |
+| Marks | the surface (while Focus is configured and a view sets it) and its Focus frame carry `data-view-param`, the query parameter that holds the open view (`view`, or the product's `deepLinkView` name, empty when none); the frame also `data-surface-focus`, `data-focus-view` and `data-focus-group` (the open view's id), for the gate |
 
 The behaviour is the one `CaseWorkbench` has, one piece of code (`useFocusMode`, exported for a product with a frame of its own).
 A surface without `focus`, or whose views set none, renders exactly as before. Needs `tabs`: a surface with one body has no view

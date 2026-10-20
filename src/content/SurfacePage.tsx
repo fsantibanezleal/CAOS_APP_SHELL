@@ -30,7 +30,7 @@ export interface SurfacePageProps {
   /** Mark the body as the instrument, so the gate measures what is drawn in it (ADR-0071 rule 8). */
   instrument?: boolean;
   /**
-   * Focus mode for the App (ADR-0070, shell 0.16.0): while the open view sets `TabDef.focus`, a Focus control in the head's actions
+   * Focus mode for the App (ADR-0070, shell 0.16.0): while the open view sets `TabDef.focus`, a Focus control at the end of the tab row
    * opens that view in the full viewport through `FocusShell` (the view is the stage, its `rail` the parameter column), holds
    * `?focus=1` beside `?view=` in the URL, and returns with Escape or the exit button to the same view and sub-view. `true` takes all
    * the defaults. Omit it and the surface is exactly what it was. Needs `tabs`: a surface with one body has no view to focus.
@@ -58,8 +58,8 @@ const viewFocus = (tab: TabDef | undefined): ViewFocusConfig | null => (!tab || 
  * themselves (CAOS_MANAGE audit 2026-10-07, section 3), owned here so no product writes it again.
  *
  * Its views that have a stage (a simulation, a drawing, a live run) open in Focus mode (0.16.0, ADR-0070): the same behaviour as
- * `CaseWorkbench`'s, one piece of code (`useFocusMode`). The control sits in the head's actions, so it adds no row; it shows only
- * while the open view is focusable.
+ * `CaseWorkbench`'s, one piece of code (`useFocusMode`). The control sits at the end of the tab row (a slot beside the tab list) with
+ * its space reserved, so it adds no row and moves nothing; it is hidden while the open view has no stage.
  */
 export function SurfacePage({ title, lede, actions, tabs, value, onChange, deepLinkView = true, ariaLabel, instrument, focus, children }: SurfacePageProps) {
   const lang = useShellLang();
@@ -78,7 +78,12 @@ export function SurfacePage({ title, lede, actions, tabs, value, onChange, deepL
       return viewFocus(tabs?.find((t) => t.id === (named ?? ids[0]))) !== null;
     },
   });
-  const enter = openFocus !== null && (
+  // The control sits at the end of the tab row, in a slot beside the tab list (never in the head, which stays what it was). Its space is
+  // reserved while the surface has `focus` and any view sets it; on a view with no stage it is hidden from sight, the accessibility tree
+  // and the keyboard, so neither the row nor the tabs move.
+  const reserve = focusCfg !== null && Boolean(tabs?.some((t) => viewFocus(t) !== null));
+  const idle = openFocus === null;
+  const enter = reserve && (
     <button
       ref={mode.enterRef}
       type="button"
@@ -86,6 +91,9 @@ export function SurfacePage({ title, lede, actions, tabs, value, onChange, deepL
       data-focus-enter=""
       aria-label={FOCUS_TEXT.enterViewLabel[lang]}
       title={FOCUS_TEXT.enterViewLabel[lang]}
+      aria-hidden={idle ? true : undefined}
+      tabIndex={idle ? -1 : undefined}
+      style={idle ? { visibility: 'hidden' } : undefined}
       onClick={() => mode.setFocus(true)}
     >
       <Maximize2 size={14} aria-hidden="true" />
@@ -106,7 +114,7 @@ export function SurfacePage({ title, lede, actions, tabs, value, onChange, deepL
           stageLabel={FOCUS_TEXT.stage[lang]}
           landmark={false}
           stage={
-            <div className="caos-surface-focus" data-surface-focus="" data-focus-view={openTab.id} data-focus-group={openTab.id} data-instrument="">
+            <div className="caos-surface-focus" data-surface-focus="" data-view-param={viewParam ?? ''} data-focus-view={openTab.id} data-focus-group={openTab.id} data-instrument="">
               <div className="tabs">
                 <div className="tabpanel" role="tabpanel" tabIndex={0} aria-label={label || undefined} data-panel={openTab.id}>
                   <PanelBoundary panel={openTab.id}>
@@ -121,26 +129,21 @@ export function SurfacePage({ title, lede, actions, tabs, value, onChange, deepL
       </ViewMemoryContext.Provider>
     );
   }
-  const head = title !== undefined || lede !== undefined || actions !== undefined || Boolean(enter);
+  const head = title !== undefined || lede !== undefined || actions !== undefined;
   const page = (
-    <div className="page-body wide caos-surface" data-surface="">
+    <div className="page-body wide caos-surface" data-surface="" data-view-param={reserve ? (viewParam ?? '') : undefined}>
       {head && (
         <div className="caos-surface-head">
           <div className="caos-surface-heading">
             {title !== undefined && <h1 className="caos-surface-title">{pick(title, lang)}</h1>}
             {lede !== undefined && <p className="caos-surface-lede">{lede}</p>}
           </div>
-          {(actions !== undefined || enter) && (
-            <div className="caos-surface-actions">
-              {actions}
-              {enter}
-            </div>
-          )}
+          {actions !== undefined && <div className="caos-surface-actions">{actions}</div>}
         </div>
       )}
       <div className="caos-surface-body" data-instrument={instrument ? '' : undefined}>
         {tabs ? (
-          <Tabs tabs={tabs} value={open} onChange={select} ariaLabel={pick(ariaLabel ?? title ?? { en: 'Views', es: 'Vistas' }, lang)} />
+          <Tabs tabs={tabs} value={open} onChange={select} ariaLabel={pick(ariaLabel ?? title ?? { en: 'Views', es: 'Vistas' }, lang)} trailing={enter || undefined} />
         ) : (
           children
         )}

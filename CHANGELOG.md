@@ -2,18 +2,23 @@
 
 ### Added
 
-- Focus mode for a `SurfacePage` App (SHF-031 to SHF-035, BL-068, ADR-0070). `SurfacePage` takes `focus?: boolean | SurfaceFocusConfig`
+- Focus mode for a `SurfacePage` App (SHF-031 to SHF-036, BL-068, ADR-0070). `SurfacePage` takes `focus?: boolean | SurfaceFocusConfig`
   (`param`, `onChange`) and each view with a stage takes `TabDef.focus?: boolean | ViewFocusConfig` (`title`, `description`, `hud`,
   `rail`). While the open view is focusable, a **Focus** button ("Focus" / "Enfocar", named "Open this view in focus mode" / "Abrir
-  esta vista en modo enfoque", new `FOCUS_TEXT.enterViewLabel`) shows at the end of the head's actions, on the heading's row, so it
-  adds no row (measured at 390, 768 and 1280 px); it is absent on a view with no stage. It opens the view in `FocusShell`
+  esta vista en modo enfoque", new `FOCUS_TEXT.enterViewLabel`) sits at the end of the tab row, in a slot beside the tab list (`Tabs`
+  takes it as `trailing`), never in the head and never inside the `tablist`, with its space always reserved while the surface has `focus`
+  and any view sets it: on a view with no stage it is hidden from sight, the accessibility tree and the keyboard (`visibility: hidden`,
+  `aria-hidden`, `tabindex=-1`), so the tab row and the head do not move and no row is added. Measured on a headless surface, a
+  title-only one, one with title and actions and one with a lede, at 390, 768 and 1280 px: the tab row's top and height and the head's
+  height are the same on every view and equal to a surface without `focus`; at 390 px the tabs scroll beside the control. It opens the view in `FocusShell`
   (`landmark={false}`: one `main`), the view as the stage and its `rail` as the parameter column, the title the view's label unless
   given, the HUD per view. The URL holds `?focus=1` beside `?view=`; Escape or the exit button return to the same view and sub-view
   (the view memory `CaseWorkbench` keeps), drop the parameter and return keyboard focus to the Focus button; the page behind is
   `inert`. A link with `focus=1` for a view with no stage, an unknown view, or no view when the first has no stage opens no Focus and
   the parameter is removed. A view with no `rail` leaves the stage the whole frame (`FocusShell` `rail` may now be omitted, class
   `caos-focus-norail`) and keeps its own controls in its body. The frame carries `data-surface-focus`, `data-focus-view` and
-  `data-focus-group`. Why: a console App (CAOS_Neuraxis: Tasks, Investigations, Engine) is a `SurfacePage`, and a surface with a
+  `data-focus-group`; the surface and the frame also carry `data-view-param`, the query parameter that holds the open view (`view`, or the
+  product's `deepLinkView` name), which the gate reads. Why: a console App (CAOS_Neuraxis: Tasks, Investigations, Engine) is a `SurfacePage`, and a surface with a
   simulation could not meet ADR-0070 on the shell. Without `focus` a surface renders exactly as in 0.15.0.
 - `useFocusMode(config, { enabled, initialAllowed })`, exported with `FocusMode`, `FocusModeConfig` and `FocusModeOptions`: the one
   Focus behaviour (the URL parameter, Escape, the inert page, keyboard focus in and out, the view memory) that `CaseWorkbench` and
@@ -28,21 +33,40 @@
   `--require-focus` a surface none of whose views offers the control fails with "the surface App (/console) offers no Focus control
   ([data-focus-enter]) on any of its 3 view(s)". The fixture gains the route `/console` (a surface with a view with no stage, a view with a
   rail, a HUD and sub-views, and a view with no rail), a clean run of it at 390 and 1280 px in both languages and themes, and sixteen
-  plants `surface-focus-*`.
+  plants `surface-focus-*`. The gate also fails (SHG-063 to SHG-066) a surface whose tab row or head moves between views, an Escape that
+  does not return (each focusable view is left both by the exit button and by Escape in the primary mode), a Focus URL that drops the
+  view parameter whatever its name, and, under `--require-focus` with `--workbench ''`, an App route that is not among the measured
+  routes. The fixture gains a headless surface that holds its view in `?mode=` (the shape of CAOS_Neuraxis), which passes.
+- `--spa-fallback` for `caos-shell-gate --serve` (SHG-067): the server answers as nginx does for a single-page app on a VPS
+  (`try_files $uri $uri/ /index.html`): an extensionless path that matches no file gets `index.html` with 200; a path with an extension
+  that matches no file stays 404, so a missing artifact still fails. Default off: the server still answers as GitHub Pages does.
 
 ### Changed
 
 - `CaseWorkbench` keeps its Focus behaviour in `useFocusMode`, no longer in its own state and effects. Its DOM, its URL behaviour and
   its tests and plants are unchanged. `FocusShell`'s `rail` prop is optional (a rail is still rendered when one is given).
-  `window.__caosGate.focusFacts()` reads a surface App's instrument as well as a workbench's.
+  `window.__caosGate.focusFacts()` reads a surface App's instrument as well as a workbench's, preferring the workbench, then the Focus
+  frame, then the surface, by explicit order.
+- `FocusShell`: `rail={null}` (or no `rail`) now renders no rail column and the frame is one column (class `caos-focus-norail`); before
+  it rendered an empty rail column. A direct consumer of `FocusShell` that passed `rail={null}` gets a frame whose stage is the whole
+  width; pass an empty element to keep the column. `CaseWorkbench` always passes a rail and is unchanged.
+
+### Fixed
+
+- A language switch inside Focus no longer loses the reader's sub-view on the return (SHW-040). The view memory keyed a tab row on its
+  localized `ariaLabel`, so the key changed with the language; it now keys on the row's kind and ids. This is a defect of Focus on a
+  workbench since 0.14.0, not of the surface; it is fixed for both.
+- The DOI of a reference is printed inside `translate="no"` (SHD-086), in the end-of-page references and in the reference list, so G11
+  (Spanish numbers) no longer reads the dotted number of an identifier such as `doi:10.1523/ENEURO.0159-20.2020` as a decimal point on a
+  Spanish page. A plain number with a decimal point in a Spanish paragraph still fails G11.
 
 ### Migration
 
 - A product whose App is a `SurfacePage` and that has a simulation or a dynamic scenario (ADR-0070): set `focus` on the `SurfacePage`
   and `focus` on each view with a stage (a simulation, a drawing, a live run; not a list or a form); move that view's controls into its
   `focus.rail` (they stay in its body when it has no rail; the view's content renders in both places, so the product shows the control
-  in the body only outside Focus, as the fixture's engine view does); give the surface a `title` or `actions` for a head that stays when
-  the view changes; then run the gate with `--workbench '' --require-focus` (and `--app-route` when the App route is not `/app`). A
+  in the body only outside Focus, as the fixture's engine view does); the control sits on the tab row, so the head needs no title or
+  actions; then run the gate with `--workbench '' --require-focus` (and `--app-route` when the App route is not `/app`). A
   surface App with no simulation changes nothing; a product whose App is a `CaseWorkbench` changes nothing.
 
 ## [0.15.000] - 2026-10-15
