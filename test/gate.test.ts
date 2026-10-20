@@ -138,3 +138,24 @@ test('a finite count of cycles plays that many times and an over-long play is re
   const once = analyseSvgAnimation(svg(`@keyframes g { to { opacity: 1 } } .a { animation: g 4s ease 1; } ${block}`));
   assert.equal(once.seconds, 4);
 });
+
+test('--spa-fallback answers as nginx try_files does: an extensionless path that matches no file gets index.html with 200, a path with an extension stays 404; off by default (shell 0.16.0)', async () => {
+  const spa = await servePages(dir, '/', 0, { spaFallback: true });
+  try {
+    const get = (p: string) => fetch(new URL(p, spa.url), { redirect: 'manual' });
+    const deep = await get('/some/deep/route');
+    assert.equal(deep.status, 200, 'an unknown extensionless path answers the app shell');
+    assert.equal(await deep.text(), '<p>home</p>');
+    assert.equal((await get('/app')).status, 200);
+    assert.equal(await (await get('/about')).text(), '<p>about</p>', 'a path that matches a file still serves it');
+    assert.equal(await (await get('/methodology/')).text(), '<p>methodology</p>');
+    const missing = await get('/data/missing.json');
+    assert.equal(missing.status, 404, 'a missing artifact still fails');
+    assert.equal(await missing.text(), '<p>not found</p>');
+    assert.equal((await get('/assets/gone.js')).status, 404);
+  } finally {
+    await spa.close();
+  }
+  const pages = await fetch(new URL('/some/deep/route', server.url), { redirect: 'manual' });
+  assert.equal(pages.status, 404, 'without the option the server is GitHub Pages: no fallback');
+});

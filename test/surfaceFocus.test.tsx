@@ -5,6 +5,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { SurfacePage, type SurfacePageProps } from '../src/content/SurfacePage.tsx';
 import type { TabDef } from '../src/content/Tabs.tsx';
+import { memoryKey } from '../src/lib/viewMemory.ts';
 import { FOCUS_TEXT, type SurfaceFocusConfig, type ViewFocusConfig } from '../src/workbench/focus.ts';
 
 /** Focus mode for a SurfacePage App (shell 0.16.0, BL-068, ADR-0070): the control, its words, and an unchanged surface without it. */
@@ -41,28 +42,55 @@ test('a view with focus set but no surface focus shows no control (the surface o
   assert.doesNotMatch(plain(WITH_STAGE, { value: 'engine' }), /data-focus-enter/);
 });
 
-test('with focus and a focusable view open, the control sits in the head actions with its name', () => {
+const head = (html: string) => html.slice(html.indexOf('<div class="caos-surface-head">'), html.indexOf('<div class="caos-surface-body"'));
+
+test('with focus and a focusable view open, the control sits at the end of the tab row, in a slot beside the tab list, with its name', () => {
   const html = plain(WITH_STAGE, { focus: true, value: 'engine' });
   assert.match(html, /<button[^>]*data-focus-enter=""/, 'a real button');
   assert.ok(html.includes(`aria-label="${FOCUS_TEXT.enterViewLabel.en}"`), 'the accessible name');
   assert.ok(html.includes(`>${FOCUS_TEXT.enter.en}<`), 'the visible word');
-  const actions = html.indexOf('caos-surface-actions');
+  const list = html.indexOf('role="tablist"');
+  const listEnd = html.indexOf('</div>', list);
+  const slot = html.indexOf('data-tabs-slot=""');
   const control = html.indexOf('data-focus-enter');
-  assert.ok(actions > 0 && control > actions && control < html.indexOf('caos-surface-body'), 'in the head actions area, after the product\'s actions');
+  assert.ok(list > 0 && slot > listEnd && control > slot && control < html.indexOf('role="tabpanel"'), 'in a slot after the tab list (never inside it), before the panel');
+  assert.match(html, /class="tabs tabs-has-slot"/);
+  assert.equal(head(html), head(plain(WITH_STAGE, { value: 'engine' })), 'the head is what it was in 0.15.0: the control adds nothing to it');
+  assert.doesNotMatch(html, /aria-hidden="true"[^>]*data-focus-enter|visibility:s*hidden/, 'visible, reachable');
   assert.equal((html.match(/data-focus-enter=""/g) ?? []).length, 1, 'one control');
   assert.doesNotMatch(html, /data-focus-shell/, 'the App frame, not Focus');
   assert.equal(FOCUS_TEXT.enterViewLabel.es, 'Abrir esta vista en modo enfoque');
 });
 
-test('on a non-focusable view the control is hidden, and the markup is the 0.15.0 markup', () => {
+test('on a view with no stage the control keeps its space but is hidden from sight, the accessibility tree and the keyboard', () => {
   const html = plain(WITH_STAGE, { focus: true, value: 'list' });
-  assert.doesNotMatch(html, /data-focus-enter/);
-  assert.equal(html, plain(WITH_STAGE, { value: 'list' }), 'nothing else differs from a surface without focus');
+  const button = html.slice(html.indexOf('<button', html.indexOf('data-tabs-slot')), html.indexOf('</button>', html.indexOf('data-tabs-slot')));
+  assert.match(button, /data-focus-enter=""/, 'the control is in the row, so the row does not move');
+  assert.match(button, /aria-hidden="true"/);
+  assert.match(button, /tabindex="-1"/);
+  assert.match(button, /style="visibility:hidden"/);
+  assert.equal(head(html), head(plain(WITH_STAGE, { value: 'list' })), 'the head is what it was');
 });
 
 test('the control follows the open view: the first view of the row decides when nothing names another', () => {
-  assert.doesNotMatch(plain(WITH_STAGE, { focus: true }), /data-focus-enter/, 'the list view is first and has no stage');
-  assert.match(plain([...WITH_STAGE].reverse(), { focus: true }), /data-focus-enter/, 'the engine view first: the control shows');
+  assert.match(plain(WITH_STAGE, { focus: true }), /aria-hidden="true"[^>]*data-focus-enter|data-focus-enter=""[^>]*aria-hidden="true"/, 'the list view is first and has no stage: hidden');
+  assert.doesNotMatch(plain([...WITH_STAGE].reverse(), { focus: true }), /aria-hidden="true"[^>]*data-focus-enter|data-focus-enter=""[^>]*aria-hidden="true"/, 'the engine view first: the control shows');
+});
+
+test('a headless surface with focus adds no head, and the surface marks its view parameter for the gate (data-view-param)', () => {
+  const headless = (props: Partial<SurfacePageProps>) => norm(renderToStaticMarkup(<SurfacePage tabs={WITH_STAGE} {...props} />));
+  const html = headless({ focus: true, value: 'engine' });
+  assert.doesNotMatch(html, /caos-surface-head/, 'no head appears');
+  assert.match(html, /data-surface="" data-view-param="view"/);
+  assert.match(headless({ focus: true, value: 'engine', deepLinkView: 'mode' }), /data-view-param="mode"/);
+  assert.match(headless({ focus: true, value: 'engine', deepLinkView: false }), /data-view-param=""/);
+  assert.doesNotMatch(headless({ value: 'engine' }), /data-view-param/, 'a surface without focus keeps its 0.15.0 markup');
+});
+
+test('the view memory is keyed on the kind and the ids, never on a localized name', () => {
+  assert.equal(memoryKey('subtabs', ['a', 'b']), 'subtabs|a,b');
+  assert.notEqual(memoryKey('tabs', ['a', 'b']), memoryKey('subtabs', ['a', 'b']));
+  assert.equal(memoryKey.length, 2, 'two arguments: the name of the row is not one of them');
 });
 
 test('focus: true on a view takes every default, and a config takes title, description, hud and rail', () => {

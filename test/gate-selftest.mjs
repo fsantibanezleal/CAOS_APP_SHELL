@@ -224,7 +224,7 @@ const PLANTS = [
   { id: 'surface-focus-missing', check: 'G18', re: /the surface App \(\/console\) offers no Focus control \(\[data-focus-enter\]\) on any of its 3 view\(s\)/, opts: { ...SURF, requireFocus: true } },
   { id: 'surface-focus-no-open', check: 'G18', re: /Focus mode of view \w+: the Focus control did not open Focus mode/, opts: SURF },
   { id: 'surface-focus-loses-view', check: 'G18', re: /Focus mode of view engine shows view runs, the App had engine/, opts: SURF },
-  { id: 'surface-focus-drops-subview', check: 'G18', re: /Focus mode of view engine shows sub-view curves, the App had table/, opts: SURF },
+  { id: 'surface-focus-drops-subview', check: 'G18', re: /Focus mode of view engine shows sub-view planted, the App had table/, opts: SURF },
   { id: 'surface-focus-url-no-view', check: 'G18', re: /Focus mode of view \w+: the URL \(\?focus=1\) does not hold \?focus=1 and the view/, opts: SURF },
   { id: 'surface-focus-page-scroll', check: 'G18', re: /Focus mode of view \w+: the page scrolls/, opts: SURF },
   { id: 'surface-focus-rail-scroll', check: 'G18', re: /Focus mode of view engine: the rail scrolls/, opts: SURF },
@@ -236,6 +236,13 @@ const PLANTS = [
   { id: 'surface-focus-not-isolated', check: 'G18', re: /Focus mode of view \w+: Tab leaves the Focus frame/, opts: SURF },
   { id: 'surface-focus-nested-main', check: 'G18', re: /Focus mode of view \w+: the page holds a main inside a main/, opts: SURF },
   { id: 'surface-focus-return-wrong-view', check: 'G18', re: /Focus mode of view engine: back in the App on view overview, it was left on view engine/, opts: SURF },
+  // the fix round after the review of 0.16.0 (CAOS_MANAGE wip/app-shell/review-shell-0-16-0-2026-10-19.md): F1 the tab row, F2 Escape on the only focusable view, F3 a renamed view parameter, F4 the App route walked
+  { id: 'surface-headless-head', check: 'G18', re: /the surface's tab row moves between views \(view overview: row at [\d.]+px, [\d.]+px high, head 0px; view engine: row at [\d.]+px/, opts: SURF },
+  { id: 'surface-focus-escape-one-view', check: 'G18', re: /Focus mode of view engine: Escape does not return to the App/, opts: SURF },
+  { id: 'surface-mode-url-dropped', check: 'G18', re: /Focus mode of view \w+: the URL \(\?focus=1\) does not hold \?focus=1 and the view \(\?mode=\)/, opts: SURF },
+  { id: 'surface-app-route-unwalked', check: 'G18', re: /the App route \/app is not among the measured routes \(\/console\)/, opts: { routes: '/console', workbench: '', requireFocus: true } },
+  // F9: a plain number with a dotted segment in a Spanish paragraph still fails G11 (the DOI of a reference does not: the clean fixture and the test of the dotted DOI)
+  { id: 'decimal-point-plain-2020', check: 'G11', re: /writes 20\.2020 with a decimal point/, opts: { langs: 'es', routes: '/app,/introduction' } },
   { id: 'surface-focus-url-stays', check: 'G18', re: /Focus mode of view \w+: the URL still holds \?focus after the return/, opts: SURF },
   { id: 'exec-deck-hidden-cards', check: 'ADR-0017.2', re: /executive view \(EN\): the proposal holds 1 row\(s\) of the 4 C's, exactly 4 are required/, opts: { routes: '/introduction' } },
   { id: 'exec-flip-content-hidden', check: 'ADR-0017.2', re: /executive view \(EN\): \d+ field\(s\) are in the page and a reader cannot read them/, opts: { routes: '/introduction' } },
@@ -287,6 +294,19 @@ test('the clean surface App passes every check, G18 included, in both languages 
   // --app-route defaults to /app: with --workbench '' that route is measured as a surface (here it is the fixture's workbench, which has no surface views)
   const dflt = await runGate({ ...QUICK, workbench: '', routes: '/app', requireFocus: true, serve: dir, expectBrand: BRAND, out: join(work, 'out-surface-default') });
   assert.ok(dflt.failures.some((f) => f.check === 'G18' && /the surface App \(\/app\) offers no Focus control/.test(f.message)), `the default App route is /app; failures:\n${show(dflt)}`);
+});
+
+test('a headless surface that holds its view in ?mode= (the shape of CAOS_Neuraxis) passes every check with Focus: no head, no row, G7 clicks every tab, G18 reads the renamed parameter', { timeout: 1_800_000 }, async () => {
+  const dir = makePlant(clean, join(work, 'plant-surface-headless'), 'surface-headless');
+  const r = await runGate({ ...SURF, requireFocus: true, serve: dir, expectBrand: BRAND, sizes: '390x844,1280x800', themes: 'light', idleMs: 600, out: join(work, 'out-surface-headless') });
+  assert.equal(r.failures.length, 0, `the clean headless surface failed:\n${show(r)}`);
+});
+
+test('a Spanish page whose reference has a DOI with a dotted numeric segment passes G11 (the DOI is an identifier, translate="no")', { timeout: 600_000 }, async () => {
+  const dir = makePlant(clean, join(work, 'plant-doi-es'), 'surface');
+  const r = await runGate({ ...QUICK, langs: 'es', routes: '/introduction,/methodology', serve: dir, expectBrand: BRAND, out: join(work, 'out-doi-es') });
+  assert.equal(r.failures.filter((f) => f.check === 'G11').length, 0, `G11 read the DOI as a decimal:\n${show(r)}`);
+  assert.equal(r.failures.length, 0, `failures:\n${show(r)}`);
 });
 
 describe('every planted defect fails the check that owns it', { concurrency: 4 }, () => {

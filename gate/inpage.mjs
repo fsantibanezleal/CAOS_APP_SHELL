@@ -1030,7 +1030,8 @@ export function installLib() {
   G.focusFacts = () => {
     const shell = document.querySelector('[data-focus-shell]');
     // the instrument of the App: a case workbench, or (a surface App, 0.16.0) the surface or its Focus frame
-    const stage = document.querySelector('[data-case-workbench], [data-surface-focus], [data-surface]');
+    // by explicit order, never the first match in document order: a workbench nested in a surface view is read as the workbench
+    const stage = document.querySelector('[data-case-workbench]') ?? document.querySelector('[data-surface-focus]') ?? document.querySelector('[data-surface]');
     const rail = document.querySelector('.caos-focus-rail');
     const lists = [...document.querySelectorAll('[data-focus-shell] [role="tablist"]')].filter(visible);
     const rows = lists.map((t) => new Set([...t.querySelectorAll('[role="tab"]')].map((b) => Math.round(b.getBoundingClientRect().top))).size);
@@ -1067,6 +1068,8 @@ export function installLib() {
       caseId: stage ? stage.getAttribute('data-case') : null,
       group: shell ? (stage ? stage.getAttribute('data-focus-group') : null) : panel ? panel.getAttribute('data-panel') : null,
       search: location.search,
+      // the query parameter the surface holds its open view in (`deepLinkView`): `view`, or the product's own name
+      viewParam: (() => { const e = document.querySelector('[data-surface-focus]') ?? document.querySelector('[data-surface]'); return e && e.hasAttribute('data-view-param') ? e.getAttribute('data-view-param') : null; })(),
       subview: (() => { const t = document.querySelector('[data-case-workbench] .subtab.active, [data-surface] .subtab.active, [data-surface-focus] .subtab.active'); return t ? t.getAttribute('data-tab') : null; })(),
       nestedMain: document.querySelectorAll('main').length > 1 || Boolean(document.querySelector('main main')),
       vw: window.innerWidth,

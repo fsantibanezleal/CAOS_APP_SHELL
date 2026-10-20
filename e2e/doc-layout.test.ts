@@ -90,7 +90,7 @@ test('a wide document page: text fills its section, the references block is the 
       caption: cap.getBoundingClientRect().width,
       blocks: document.querySelectorAll('[data-doc-references]').length,
       lastIsBlock: body.lastElementChild === block,
-      refs: [...block.querySelectorAll('li span')].map((s) => s.textContent),
+      refs: [...block.querySelectorAll('li > span')].map((s) => s.textContent),
       rows: document.querySelectorAll('.th-refs').length,
     };
   })()`) as { para: number; section: number; item: number; body: number; caption: number; blocks: number; lastIsBlock: boolean; refs: string[]; rows: number };

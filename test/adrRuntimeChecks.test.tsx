@@ -4,7 +4,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router';
 import { Equation } from '../src/content/Equation.tsx';
-import { Cite, CitationsProvider, ReferenceList } from '../src/content/Cite.tsx';
+import { Cite, CitationsProvider, DocReferences, ReferenceList } from '../src/content/Cite.tsx';
 import { AppShell } from '../src/shell/AppShell.tsx';
 
 /**
@@ -78,4 +78,29 @@ test('the architecture configuration is validated: tab count, inline SVG, tokens
   assert.match(problems, /uses --color-nope, which the shell does not define/);
   assert.match(problems, /uses hex colours/);
   assert.match(problems, /lacks a label or a body in one language/);
+});
+
+test('a DOI is printed inside translate="no" in the end-of-page references and in the reference list, so no reader or gate takes its dotted number for a decimal (shell 0.16.0)', () => {
+  const items = [{ id: 'n', label: 'N 2020', citation: 'N (2020). A title.', doi: '10.1523/ENEURO.0159-20.2020' }];
+  const seen = capture(() =>
+    renderToStaticMarkup(
+      <CitationsProvider items={items}>
+        <ReferenceList ids={['n']} />
+      </CitationsProvider>,
+    ),
+  );
+  void seen;
+  const html = renderToStaticMarkup(
+    <CitationsProvider items={items}>
+      <DocReferences ids={['n']} />
+    </CitationsProvider>,
+  );
+  assert.match(html, /<span translate="no">doi:10\.1523\/ENEURO\.0159-20\.2020<\/span>/);
+  const list = renderToStaticMarkup(
+    <CitationsProvider items={items}>
+      <ReferenceList ids={['n']} />
+    </CitationsProvider>,
+  );
+  assert.match(list, /<span translate="no">doi:10\.1523\/ENEURO\.0159-20\.2020<\/span>/);
+  assert.match(html, /href="https:\/\/doi\.org\/10\.1523\/ENEURO\.0159-20\.2020"/, 'the link is unchanged');
 });

@@ -40,6 +40,10 @@ declare global {
 const PLANT = window.__PLANT__ ?? '';
 /** The surface App (shell 0.16.0): the plant `surface` is its clean run, `surface-*` its defects; `/console` is its route. */
 const SURFACE = PLANT === 'surface' || PLANT.startsWith('surface-');
+/** The first consumer's shape (CAOS_Neuraxis): a headless surface (no title, lede or actions) that holds its view in `?mode=`. */
+const HEADLESS = PLANT === 'surface-headless' || PLANT === 'surface-headless-head' || PLANT === 'surface-mode-url-dropped';
+/** A surface with one view that has a stage (the plant of Escape on the only focusable view). */
+const ONE_STAGE = PLANT === 'surface-focus-escape-one-view';
 /** Twenty lines of note for the stage-floor plant. */
 const STAGE_FLOOR_NOTE = {
   en: Array.from({ length: 20 }, (_, i) => `Line ${i + 1} of a long note the requirements ask for.`).join('\n'),
@@ -362,8 +366,10 @@ function ValidationView({ sim, focusOn }: { sim: Sim; focusOn?: boolean }) {
   const rows = [10, 30, 60, 90, 120].filter((d) => d < sim.t.length);
   return (
     <SubTabs
-      ariaLabel={pick({ en: 'Validation views', es: 'Vistas de validación' }, lang) + (PLANT === 'focus-drops-subview' && focusOn ? ' ' : '')}
+      ariaLabel={pick({ en: 'Validation views', es: 'Vistas de validación' }, lang)}
       tabs={[
+        // the plant that loses the sub-view: in Focus the row has another first tab, so the view memory (keyed on the ids) finds no entry
+        ...(PLANT === 'focus-drops-subview' && focusOn ? [{ id: 'planted', label: 'Planted', content: <p>planted first tab</p> }] : []),
         {
           id: 'phase',
           label: pick({ en: 'Phase plane', es: 'Plano de fase' }, lang),
@@ -811,6 +817,30 @@ function Console() {
     if (PLANT === 'surface-focus-no-exit') return styled('[data-focus-exit] { display: none !important; }');
     if (PLANT === 'surface-focus-stage-small') return styled('.caos-focus-shell { grid-template-columns: minmax(0, 1fr) 62vw !important; }');
     if (PLANT === 'surface-focus-tabs-wrap') return styled('.caos-focus-instrument .subtablist { flex-wrap: wrap !important; max-width: 90px !important; overflow: visible !important; }');
+    if (PLANT === 'surface-headless-head') {
+      // the Focus control in a head of its own (shell 0.16.0 before the fix round): a head row appears on a view with a stage
+      return plantDom(() => {
+        const surface = document.querySelector('[data-surface]');
+        if (!surface) return;
+        const open = surface.querySelector(':scope > .caos-surface-body [role="tabpanel"][data-panel]')?.getAttribute('data-panel') ?? '';
+        const here = surface.querySelector(':scope > [data-plant-head]');
+        if (['engine', 'runs'].includes(open) && !here) {
+          const head = document.createElement('div');
+          head.className = 'caos-surface-head';
+          head.setAttribute('data-plant-head', '');
+          head.innerHTML = '<div class="caos-surface-actions"><button type="button" class="btn">Focus</button></div>';
+          surface.insertBefore(head, surface.firstChild);
+        } else if (!['engine', 'runs'].includes(open) && here) here.remove();
+      });
+    }
+    if (PLANT === 'surface-focus-escape-one-view') {
+      // a product key handler takes Escape on its only view with a stage
+      const stop = (e: KeyboardEvent) => {
+        if (e.key === 'Escape' && document.querySelector('[data-focus-shell]')) e.stopPropagation();
+      };
+      document.addEventListener('keydown', stop, true);
+      return () => document.removeEventListener('keydown', stop, true);
+    }
     if (PLANT === 'surface-focus-no-open') {
       // the control does nothing: the click never reaches the App's handlers
       const stop = (e: Event) => {
@@ -827,6 +857,11 @@ function Console() {
     setFocusOn(on);
     if (PLANT === 'surface-focus-loses-view' && on) setView('runs');
     if (PLANT === 'surface-focus-return-wrong-view' && !on) setView('overview');
+    if (PLANT === 'surface-mode-url-dropped' && on) {
+      const q = new URLSearchParams(window.location.search);
+      q.delete('mode');
+      window.history.replaceState(window.history.state, '', `${window.location.pathname}?${q.toString()}`);
+    }
     if (PLANT === 'surface-focus-url-no-view' && on) window.history.replaceState(window.history.state, '', `${window.location.pathname}?focus=1`);
     if (PLANT === 'surface-focus-url-stays' && !on) window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}${window.location.search ? '&' : '?'}focus=1`);
   };
@@ -902,8 +937,9 @@ function Console() {
         <>
           {!focusOn && scaleKnob}
           <SubTabs
-            ariaLabel={pick({ en: 'Engine views', es: 'Vistas del motor' }, lang) + (PLANT === 'surface-focus-drops-subview' && focusOn ? ' ' : '')}
+            ariaLabel={pick({ en: 'Engine views', es: 'Vistas del motor' }, lang)}
             tabs={[
+              ...(PLANT === 'surface-focus-drops-subview' && focusOn ? [{ id: 'planted', label: 'Planted', content: <p>planted first tab</p> }] : []),
               { id: 'curves', label: pick({ en: 'Curves', es: 'Curvas' }, lang), content: curve },
               {
                 id: 'table',
@@ -952,14 +988,17 @@ function Console() {
   ];
   return (
     <SurfacePage
-      title={{ en: 'Console', es: 'Consola' }}
-      lede={pick({ en: 'The engine of the fixture, run in the browser.', es: 'El motor del producto de prueba, ejecutado en el navegador.' }, lang)}
+      title={HEADLESS ? undefined : { en: 'Console', es: 'Consola' }}
+      lede={HEADLESS ? undefined : pick({ en: 'The engine of the fixture, run in the browser.', es: 'El motor del producto de prueba, ejecutado en el navegador.' }, lang)}
       actions={
-        <button type="button" className="btn">
-          {pick({ en: 'Export', es: 'Exportar' }, lang)}
-        </button>
+        HEADLESS ? undefined : (
+          <button type="button" className="btn">
+            {pick({ en: 'Export', es: 'Exportar' }, lang)}
+          </button>
+        )
       }
-      tabs={tabs}
+      deepLinkView={HEADLESS ? 'mode' : undefined}
+      tabs={ONE_STAGE ? tabs.filter((tab) => tab.id !== 'runs') : tabs}
       value={controlled ? view : undefined}
       onChange={setView}
       instrument
@@ -971,6 +1010,7 @@ function Console() {
 // ------------------------------------------------------------------------------------------- the documentation
 const CITATIONS = [
   { id: 'km1927', label: { en: 'Kermack and McKendrick 1927', es: 'Kermack y McKendrick 1927' }, citation: 'Kermack, W. O., McKendrick, A. G. (1927). A contribution to the mathematical theory of epidemics. Proc. R. Soc. Lond. A 115, 700-721.', doi: '10.1098/rspa.1927.0118' },
+  { id: 'eneuro2020', label: 'Ramirez 2020', citation: 'Ramirez, A. (2020). A reference whose DOI carries a dotted number. eNeuro 7(6).', doi: '10.1523/ENEURO.0159-20.2020' },
   { id: 'hethcote2000', label: 'Hethcote 2000', citation: 'Hethcote, H. W. (2000). The mathematics of infectious diseases. SIAM Review 42(4), 599-653.', doi: '10.1137/S0036144500371907' },
 ];
 
@@ -1029,6 +1069,7 @@ function Doc({ id }: { id: string }) {
         </p>
       )}
       {PLANT === 'hoverflow' && id === 'introduction' && <div style={{ width: 3000, height: 12 }}>planted wide block</div>}
+      {PLANT === 'decimal-point-plain-2020' && id === 'introduction' && <p>{pick({ en: 'See the item 20.2020 of the list.', es: 'Véase el ítem 20.2020 de la lista.' }, lang)}</p>}
       {PLANT === 'decimal-point' && id === 'introduction' && <p>{pick({ en: 'Integration step: 0.25 days; worst difference 2.7e-08.', es: 'Paso de integración: 0.25 días; peor diferencia 2.7e-08.' }, lang)}</p>}
       {PLANT === 'low-contrast' && id === 'introduction' && <p style={{ color: '#9a9a9a' }}>{pick({ en: 'A planted pale line.', es: 'Una línea pálida plantada.' }, lang)}</p>}
       {PLANT === 'label-wide' && id === 'introduction' && <NarrowFontLabel />}

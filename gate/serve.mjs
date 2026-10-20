@@ -3,6 +3,9 @@
 // index.html; `/name` falls back to `name.html`; anything else is 404 with the site's 404.html. There is no SPA
 // fallback, which is the point: a route that was not materialised, or an artifact missing from the build, fails here
 // exactly as it would on Pages (failure classes 2 and 22: deep links that 404, artifacts answered with HTML).
+// With `spaFallback` (`--spa-fallback`, shell 0.16.0) it answers as nginx does for a single-page app on a VPS
+// (`try_files $uri $uri/ /index.html`): an extensionless path that matches no file gets index.html with 200; a path with an
+// extension that matches no file stays 404, so a missing artifact still fails.
 
 import { createServer } from 'node:http';
 import { existsSync, readFileSync, statSync } from 'node:fs';
@@ -37,12 +40,14 @@ const MIME = {
  * @param {string} dir the built site
  * @param {string} basePath the site's base path ('/' for a custom domain, '/Repo/' for a project page)
  * @param {number} port 0 for any free port (the gate), or a fixed one (a product's preview)
+ * @param {{ spaFallback?: boolean }} options `spaFallback`: answer an extensionless path that matches no file with index.html and 200
  * @returns {Promise<{ url: string, close: () => Promise<void> }>}
  */
-export function servePages(dir, basePath = '/', port = 0) {
+export function servePages(dir, basePath = '/', port = 0, options = {}) {
   const root = resolve(dir);
   const base = basePath.endsWith('/') ? basePath : `${basePath}/`;
   const notFound = join(root, '404.html');
+  const rootIndex = join(root, 'index.html');
   const server = createServer((req, res) => {
     const send = (status, file, headers = {}) => {
       res.writeHead(status, { 'Content-Type': MIME[extname(file).toLowerCase()] ?? 'application/octet-stream', 'Cache-Control': 'no-store', ...headers });
@@ -57,6 +62,8 @@ export function servePages(dir, basePath = '/', port = 0) {
     };
     let path;
     let search = '';
+    // nginx `try_files $uri $uri/ /index.html`: a path with no extension that is no file answers the app shell
+    const miss = () => (options.spaFallback && !extname(path ?? '') && existsSync(rootIndex) ? send(200, rootIndex) : missing());
     try {
       const u = new URL(req.url ?? '/', 'http://x');
       path = decodeURIComponent(u.pathname);
@@ -77,7 +84,7 @@ export function servePages(dir, basePath = '/', port = 0) {
       if (st.isFile()) return send(200, file);
       if (st.isDirectory()) {
         const index = join(file, 'index.html');
-        if (!existsSync(index)) return missing();
+        if (!existsSync(index)) return miss();
         if (!path.endsWith('/')) {
           // the query string survives the redirect, as a Pages host keeps it (an old link /app?case=B2 must reach its case)
           res.writeHead(301, { Location: `${path}/${search}` });
@@ -87,7 +94,7 @@ export function servePages(dir, basePath = '/', port = 0) {
       }
     }
     if (!path.endsWith('/') && existsSync(`${file}.html`)) return send(200, `${file}.html`);
-    return missing();
+    return miss();
   });
   return new Promise((ok) => {
     server.listen(port, '127.0.0.1', () => {

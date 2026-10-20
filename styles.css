@@ -850,4 +850,11 @@ svg.lucide { flex: none; }
   .caos-focus-instrument > .caos-surface-focus { padding: var(--caos-focus-clear-top, 6.6rem) 0.5rem max(0.5rem, var(--caos-focus-clear-bottom, 0px)); }
   .caos-focus-shell.caos-focus-norail { grid-template-rows: minmax(0,1fr); }
 }
-.caos-surface-actions > .caos-focus-enter { align-self: center; }
+/* The Focus control of a surface sits at the end of the tab row, in a slot beside the tab list, on the same row (never in the head, never
+   inside the tablist). The slot is always there while the surface has Focus, so the row does not move between views; the tabs scroll
+   beside it. The slot repeats the tab list's bottom rule, so the line runs under both. */
+.caos-surface-body > .tabs.tabs-has-slot { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto minmax(0, 1fr); column-gap: 0.5rem; }
+.tabs-has-slot > .tablist { grid-column: 1; grid-row: 1; }
+.tabs-has-slot > .tabs-slot { grid-column: 2; grid-row: 1; align-self: stretch; display: flex; align-items: center; padding-bottom: 0.4rem; margin-bottom: 0.9rem; border-bottom: 1px solid var(--color-border); }
+.tabs-has-slot > .tabs-slot > .caos-focus-enter { align-self: center; padding-block: 0.2rem; }
+.tabs-has-slot > .tabpanel { grid-column: 1 / -1; grid-row: 2; }

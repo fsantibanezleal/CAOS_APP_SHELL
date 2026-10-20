@@ -30,7 +30,7 @@ export function SubTabs({ tabs, initial, value, onChange, ariaLabel, orientation
   const baseId = useId();
   const first = tabs[0]?.id ?? '';
   const memory = useContext(ViewMemoryContext);
-  const mkey = memoryKey('subtabs', ariaLabel, tabs.map((t) => t.id));
+  const mkey = memoryKey('subtabs', tabs.map((t) => t.id));
   const [own, setOwn] = useState<string>(() => {
     const kept = memory?.get(mkey);
     return kept && tabs.some((t) => t.id === kept) ? kept : (initial ?? first);

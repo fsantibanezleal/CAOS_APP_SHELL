@@ -8,5 +8,8 @@ import { createContext } from 'react';
  */
 export const ViewMemoryContext = createContext<Map<string, string> | null>(null);
 
-/** The key a tab row is remembered under: its name and its ids. */
-export const memoryKey = (kind: string, ariaLabel: string | undefined, ids: string[]): string => `${kind}|${ariaLabel ?? ''}|${ids.join(',')}`;
+/**
+ * The key a tab row is remembered under: its kind and its ids, never its name (the name is localized, and a language switch inside
+ * Focus used to change the key and lose the sub-view, before 0.16.0).
+ */
+export const memoryKey = (kind: string, ids: string[]): string => `${kind}|${ids.join(',')}`;
