@@ -17,6 +17,17 @@ The App route of a product about cases, the whole route in one component:
 />
 ```
 
+With `layout: 'select'` the case picker shows the selected case's name whole, at any length, in a display with the native `select` kept in
+place on top of it, transparent (since 0.17.0): the keyboard, the screen reader (the select keeps its accessible name and value; the display is
+`aria-hidden`) and the native list are the select's own, and a name of 200 to 400 px reads whole in a rail that leaves 181 px. There is no line cap
+and no ellipsis: the name wraps to the lines it needs, a token with no space breaks inside, and the display is as tall as the longest name of the
+visible list needs at the current width (measured in the DOM, re-measured when the list, the width or the fonts change), so every case has the same
+height and the rail head never moves when the reader switches cases; a list whose names all fit keeps one line, as tall as a plain select. A
+product that finds its rail head too tall shortens its names or puts the detail in the case's `tooltip`. The gate fails a case name that is still
+cut (a product stylesheet that clamps the text) and a display that names another case than the select holds (G5). The display follows the select
+(the selected case, else the first enabled visible case), shows no ring of its own except on `:focus-visible`, and under forced colours the native
+select stays transparent. The rail of Focus mode shows the same select.
+
 The rail holds, in order, the case picker, the variants and the product's parameters (`Knob`, `ChipGroup`) and live
 values (`Readout`, `Gauge`, `Verdict`). The instrument holds at most six groups (the product's question groups, the
 variant comparison, the context write-up); the open group is held in `?view=`. Each view is a `PlotCard` with its
@@ -26,9 +37,10 @@ ready; the gate waits for that, never for the network.
 
 ### Focus mode for the App (`focus`, 0.14.0, ADR-0070)
 
-`CaseWorkbench` takes a `focus` prop (`true`, or a `CaseFocusConfig`). With it, the rail head shows a **Focus** button ("Focus" /
-"Enfocar") on the case select's row (the select shrinks to make room, so the rail head is no taller; with case chips or no case
-picker the button keeps a row of its own); pressing it opens the selected case's **open group** in the full viewport through `FocusShell`:
+`CaseWorkbench` takes a `focus` prop (`true`, or a `CaseFocusConfig`). With it, a **Focus** button ("Focus" /
+"Enfocar") ends the group tab row, in the slot `Tabs` reserves beside the tab list (since 0.17.0; the place a surface's has had since
+0.16.0, whatever the case picker), so the case select keeps the rail head's whole width and no case name is cut, and neither the rail head
+nor the tab row is taller than without the control; pressing it opens the selected case's **open group** in the full viewport through `FocusShell`:
 the stage is that group (its views, sub-tabs and cards, the group row is gone), the rail stays on the right with the same controls
 acting on the same state, and the stage is labelled in place (the case name and the group name, or the `title` and `description` the
 product gives; `hud` lays up to four readouts over the stage). Nothing is rebuilt from scratch: the case, the group, the variant and
