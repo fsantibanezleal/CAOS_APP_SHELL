@@ -86,8 +86,9 @@ export interface CaseSelectorProps {
    * category structure is preserved either way; only the height changes.
    */
   layout?: 'chips' | 'select';
-  /** A control that sits on the select's row, after it (the workbench's Focus button, shell 0.14.1): the select shrinks to make
-   * room, so the selector is no taller with it. With `layout: 'chips'` it gets a row of its own, after the chips. */
+  /** A control of the product that sits on the select's row, after it: the select shrinks to make room, so the selector is no taller with
+   * it (a long case name may then be cut: keep the control narrow). The workbench's own Focus control is not an accessory since 0.17.0:
+   * it sits in the group tab row. With `layout: 'chips'` it gets a row of its own, after the chips. */
   accessory?: ReactNode;
 }
 

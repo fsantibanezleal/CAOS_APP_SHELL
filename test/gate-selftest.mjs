@@ -40,6 +40,7 @@ const PLANTS = [
   { id: 'covered', check: 'G5', re: /is covered by/, opts: { routes: '/app' } },
   { id: 'rail-overflow', check: 'G5', re: /outside the rail/, opts: { routes: '/app' } },
   { id: 'truncated', check: 'G5', re: /truncated text/, opts: { routes: '/app' } },
+  { id: 'select-cut', check: 'G5', re: /select\(s\) cut the selected text.*A planted case name far too long/, opts: { routes: '/app' } },
   { id: 'deep-defect', check: 'G5', re: /scrolls sideways/, trail: /validation > table/, opts: { routes: '/app' } },
   { id: 'shrunk-tabs', check: 'G5', re: /cuts its tabs by \d+px/, trail: /validation > daily/, opts: { routes: '/app' } },
   { id: 'blank', check: 'G6', re: /is blank/, opts: { routes: '/app' } },
@@ -241,6 +242,8 @@ const PLANTS = [
   { id: 'surface-focus-escape-one-view', check: 'G18', re: /Focus mode of view engine: Escape does not return to the App/, opts: SURF },
   { id: 'surface-mode-url-dropped', check: 'G18', re: /Focus mode of view \w+: the URL \(\?focus=1\) does not hold \?focus=1 and the view \(\?mode=\)/, opts: SURF },
   { id: 'surface-app-route-unwalked', check: 'G18', re: /the App route \/app is not among the measured routes \(\/console\)/, opts: { routes: '/console', workbench: '', requireFocus: true } },
+  // shell 0.17.0: the same for a workbench App (--workbench /app --require-focus with /app not among the routes)
+  { id: 'workbench-route-unwalked', check: 'G18', re: /the workbench route \/app is not among the measured routes \(\/introduction\)/, opts: { routes: '/introduction', requireFocus: true } },
   // F9: a plain number with a dotted segment in a Spanish paragraph still fails G11 (the DOI of a reference does not: the clean fixture and the test of the dotted DOI)
   // F12: the title of a reference ("Version 3.4") is the source's own and never read as a Spanish decimal, but a plain 3.4 in a Spanish paragraph of the same page fails
   { id: 'decimal-point-plain-34', check: 'G11', re: /writes 3\.4 with a decimal point/, opts: { langs: 'es', routes: '/app,/introduction' } },
