@@ -248,18 +248,35 @@ export function nudgeMark(y: number, key: string, drag: YMarkDrag, log = false):
   return clampMark(y + dir * n * step, { ...drag, step: undefined });
 }
 
-/** The x and y extent of the series that bring an x of their own, finite points only; null when there are none. */
-export function overlayExtent(series: readonly ChartSeries[]): { x: [number, number]; y: [number, number] } | null {
+/** Whether a series is an overlay: a `points` series with an x of its own (a line series ignores `x`). */
+export function isOverlay(s: ChartSeries): boolean {
+  return Boolean(s.x) && s.mode === 'points';
+}
+
+/** A drag range cut to the y range the chart was given, so a line cannot be dragged off the axis (its handle would be
+ * hidden and lose focus); a range that does not meet the axis collapses to its nearest end. */
+export function dragWithin(drag: YMarkDrag, range?: readonly [number, number] | null): YMarkDrag {
+  if (!range) return drag;
+  const lo = Math.min(range[0], range[1]);
+  const hi = Math.max(range[0], range[1]);
+  const min = Math.min(hi, Math.max(lo, drag.min));
+  const max = Math.max(lo, Math.min(hi, drag.max));
+  return { ...drag, min, max: Math.max(min, max) };
+}
+
+/** The x and y extent of the series that bring an x of their own, finite points only (on a log x axis, `positiveX`,
+ * only the points with x above 0); null when there are none. */
+export function overlayExtent(series: readonly ChartSeries[], positiveX = false): { x: [number, number]; y: [number, number] } | null {
   let x0 = Infinity;
   let x1 = -Infinity;
   let y0 = Infinity;
   let y1 = -Infinity;
   for (const s of series) {
-    if (!s.x) continue;
+    if (!isOverlay(s) || !s.x) continue;
     for (let i = 0; i < Math.min(s.x.length, s.values.length); i++) {
       const px = s.x[i];
       const py = s.values[i];
-      if (py === null || py === undefined || !Number.isFinite(px) || !Number.isFinite(py)) continue;
+      if (py === null || py === undefined || !Number.isFinite(px) || !Number.isFinite(py) || (positiveX && !(px > 0))) continue;
       x0 = Math.min(x0, px);
       x1 = Math.max(x1, px);
       y0 = Math.min(y0, py);
@@ -466,9 +483,9 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
   const xs = useMemo(() => (order ? order.map((i) => x.values[i]) : x.values), [order, x.values]);
   // a series with an x of its own is an overlay, drawn over the plot on its own x; the others share the chart's x
   const entries = useMemo(() => series.map((s, i) => ({ s, i })), [series]);
-  const baseEntries = useMemo(() => entries.filter(({ s }) => !s.x), [entries]);
-  const overlays = useMemo(() => entries.filter(({ s }) => s.x), [entries]);
-  const ext = useMemo(() => overlayExtent(series), [series]);
+  const baseEntries = useMemo(() => entries.filter(({ s }) => !isOverlay(s)), [entries]);
+  const overlays = useMemo(() => entries.filter(({ s }) => isOverlay(s)), [entries]);
+  const ext = useMemo(() => overlayExtent(series, Boolean(x.log)), [series, x.log]);
   const ys = useMemo(() => baseEntries.map(({ s }) => (order ? order.map((i) => s.values[i] ?? null) : s.values)), [order, baseEntries]);
   // a draggable line takes in the whole range it may be dragged over, so the axis does not move under the pointer
   const levels = useMemo(() => (yMarks ?? []).flatMap((m) => (m.drag ? [m.drag.min, m.drag.max] : [m.y])), [yMarks]);
@@ -481,7 +498,8 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
     const lo = Math.min(xs[0], ext.x[0]);
     const hi = Math.max(xs[xs.length - 1], ext.x[1]);
     if (x.log && !(lo > 0)) return null;
-    return hi > lo ? [lo, hi] : [lo - 1, hi + 1];
+    // one x alone: a unit either side, a decade either side on a log axis (which has no room below 0)
+    return hi > lo ? [lo, hi] : x.log ? [lo / 10, hi * 10] : [lo - 1, hi + 1];
   }, [ext, range, xs, x.log]);
   // a log axis reaching below uPlot's tick table ticks at powers of ten (known shell defect 31)
   const tiny = useMemo(
@@ -509,7 +527,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
   const yUnit = y.unit ? pick(y.unit, lang) : '';
   // Everything that changes the plot's structure, by value.
   const structure = JSON.stringify({
-    s: series.map((s, i) => [pick(s.label, lang), seriesStyle(s, i), s.width ?? 2, s.mode ?? 'line', s.size ?? 9, Boolean(s.x)]),
+    s: series.map((s, i) => [pick(s.label, lang), seriesStyle(s, i), s.width ?? 2, s.mode ?? 'line', s.size ?? 9, isOverlay(s)]),
     x: [xLabel, xUnit, Boolean(x.time), Boolean(x.log), x.format ?? null, tiny.x, xExt],
     oe: ext,
     p: range,
@@ -538,7 +556,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
     // One notation per axis (known shell defect 19): the labels of an axis are formatted together.
     const tick = (fmt: FormatOptions | undefined, axis: 'x' | 'y', pre?: (v: (number | null)[]) => (number | null)[]) => (_u: uPlot, vals: (number | null)[]) => {
       const labels = formatTicks(pre ? pre(vals) : vals, lang, fmt ?? { digits: 4 });
-      // a log x axis: the labels it shows, for the gate (the decades, no other)
+      // a log x axis: the labels it shows, declared for the shell's own test (the decades, no other)
       if (axis === 'x' && pre) hostRef.current?.setAttribute('data-log-labels', labels.filter((l) => l).join('|'));
       repeats[axis] = repeatedLabels(labels);
       hostRef.current?.setAttribute('data-ticks-repeat', String(repeats.x + repeats.y));
@@ -661,8 +679,9 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
             // a draggable line has a handle on it: a slider the pointer drags and the keyboard moves
             const accent = resolveToken('--color-accent', '#06c');
             (yMarks ?? []).forEach((m, i) => {
-              const drag = m.drag;
-              if (!drag) return;
+              if (!m.drag) return;
+              // a given y range bounds the drag: a line dragged off the axis would lose its handle
+              const drag = dragWithin(m.drag, range ? undefined : y.range);
               const el = document.createElement('div');
               el.setAttribute('role', 'slider');
               el.setAttribute('tabindex', '0');
@@ -798,10 +817,11 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
   }, [data]);
 
   // a line moved or relabelled by the caller, and overlays given anew, are drawn again without a rebuild
+  const overlaysKey = JSON.stringify(overlays.map(({ s, i }) => [i, s.x, s.values, s.size ?? 9, seriesStyle(s, i).color]));
   const linesKey = JSON.stringify((yMarks ?? []).map((m) => [m.y, pick(m.label, lang), m.tone ?? 'warn']));
   useEffect(() => {
     uRef.current?.redraw(false);
-  }, [linesKey, overlays]);
+  }, [linesKey, overlaysKey]);
 
   const read =
     cursor !== null && readout
