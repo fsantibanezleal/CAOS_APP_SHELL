@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { clampMark, decadeOnly, drawMarks, nudgeMark, overlayExtent, parityBox, UPlotChart } from '../src/chart/UPlotChart.tsx';
+import { clampMark, decadeOnly, dragWithin, drawMarks, nudgeMark, overlayExtent, parityBox, UPlotChart } from '../src/chart/UPlotChart.tsx';
 import { formatTicks } from '../src/lib/format.ts';
 
 /** Shell 0.17.0 S1 (CAOS_APP_SHELL#65, CAOS_MANAGE plans/app-shell BL-029): what CAOS_Fragmenta's own uPlot wrapper
@@ -155,4 +155,22 @@ test('UPlotChart declares its draggable lines and its overlay for the gate; a ch
   assert.match(on, /data-series="2"/);
   const off = html(<UPlotChart x={{ values: [1, 2], label: 'x' }} y={{ label: 'y' }} series={[{ label: 's', values: [1, 2] }]} yMarks={[{ y: 1.5, label: 'm' }]} />);
   assert.doesNotMatch(off, /data-y-drag|data-overlay/);
+});
+
+// ---- fix round (review of 2026-10-20) -----------------------------------------------------------------------------
+
+test('dragWithin: a drag range is cut to the y range given, so the line stays on the axis', () => {
+  assert.deepEqual(dragWithin({ min: 50, max: 150, step: 5 }, [0, 100]), { min: 50, max: 100, step: 5 });
+  assert.deepEqual(dragWithin({ min: -20, max: 80 }, [0, 100]), { min: 0, max: 80 });
+  assert.deepEqual(dragWithin({ min: 5, max: 95 }, undefined), { min: 5, max: 95 });
+  // a range that does not meet the axis collapses to its nearest end
+  assert.deepEqual(dragWithin({ min: 120, max: 150 }, [0, 100]), { min: 100, max: 100 });
+  assert.equal(nudgeMark(60, 'End', dragWithin({ min: 50, max: 150 }, [0, 100])), 100);
+});
+
+test('overlayExtent: on a log axis only positive x counts; a series that is not points keeps no x of its own', () => {
+  const series = [{ label: 'cases', values: [1, 2, 3], x: [-1, 5, 30], mode: 'points' as const }];
+  assert.deepEqual(overlayExtent(series, true), { x: [5, 30], y: [2, 3] });
+  assert.deepEqual(overlayExtent(series), { x: [-1, 30], y: [1, 3] });
+  assert.equal(overlayExtent([{ label: 'line', values: [1, 2], x: [1, 2] }]), null);
 });
