@@ -8,11 +8,13 @@
   none); the select takes the rail head's whole width. Measured at 390, 768 and 1280 px: the rail head, the tab row and the panel start are the
   same with and without `focus`. Focus keeps its URL, Escape, exit button and return to the same case, group and sub-view; inside Focus there
   is no control, as before. `CaseSelectorProps.accessory` stays for a product's own control and still shares the select's row.
+- `CaseWorkbench` no longer drops a product's own `cases.accessory` while `focus` is on: in 0.16.0 and before, a select picker with `focus` replaced the
+  accessory by the Focus control, so the accessory never showed in the App. It now shows on the select's row, and the Focus control is in the tab row.
 
 ### Added
 
-- Gate: G5 fails a select whose selected text is wider than its content box, naming the route, the state and the text (SHG-072, plant
-  `select-cut`).
+- Gate: G5 fails a select, in the App or in Focus, whose selected text is wider than its content box less the native arrow (measured with a probe
+  select, 0 with `appearance: none`), naming the route, the state and the text (SHG-072, plants `select-cut`, `select-arrow`, `select-focus-rail`).
 - Gate: under `--require-focus`, G18 fails a workbench route (`--workbench`) that is not among the measured routes, as 0.16.0 does for a
   surface App route, so a run cannot measure no Focus at all (SHG-073, plant `workbench-route-unwalked`).
 
