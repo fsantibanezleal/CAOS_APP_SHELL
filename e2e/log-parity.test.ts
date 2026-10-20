@@ -70,7 +70,46 @@ before(async () => {
             </div>
           );
         }
-        const App = form === 'parity' ? Parity : form === 'logline' ? LogLine : Distribution;
+        function Wide() {
+          const [v, setV] = useState(90);
+          return (
+            <div style={{ width: 600, height: 380 }}>
+              <UPlotChart
+                height={320}
+                x={{ values: [1, 2, 3, 4], label: 'Day' }}
+                y={{ label: 'People', range: [0, 100] }}
+                series={[{ label: 'Recovered', values: [10, 40, 60, 80] }]}
+                yMarks={[{ y: v, label: 'limit', drag: { min: 50, max: 150 } }]}
+                onYMarkChange={(_i, y) => setV(y)}
+              />
+            </div>
+          );
+        }
+        function SingleOverlay() {
+          return (
+            <div style={{ width: 600, height: 380 }}>
+              <UPlotChart
+                height={320}
+                x={{ values: [1], label: 'Day', log: true }}
+                y={{ label: 'People' }}
+                series={[{ label: 'Curve', values: [3] }, { label: 'Cases', values: [4], x: [1], mode: 'points' }]}
+              />
+            </div>
+          );
+        }
+        function NegativeOverlay() {
+          return (
+            <div style={{ width: 600, height: 380 }}>
+              <UPlotChart
+                height={320}
+                x={{ values: [0.01, 0.1, 1, 10], label: 'Day', log: true }}
+                y={{ label: 'People' }}
+                series={[{ label: 'Curve', values: [1, 2, 3, 4] }, { label: 'Cases', values: [2, 3], x: [-1, 3], mode: 'points' }]}
+              />
+            </div>
+          );
+        }
+        const App = form === 'wide' ? Wide : form === 'single' ? SingleOverlay : form === 'negative' ? NegativeOverlay : form === 'parity' ? Parity : form === 'logline' ? LogLine : Distribution;
         createRoot(document.getElementById('root')).render(<App />);
       `,
       resolveDir: root,
@@ -238,5 +277,49 @@ test('only a draggable line has a handle, and the host declares how many', async
     assert.equal(await page.locator('.caos-chart').getAttribute('data-y-marks'), '2');
   } finally {
     await page.close();
+  }
+});
+
+test('a drag range wider than y.range is cut to it: End stops on the axis and the handle stays reachable', async () => {
+  const { page, errors } = await open('wide');
+  try {
+    const handle = page.locator('[role="slider"]');
+    assert.equal(await handle.getAttribute('aria-valuemax'), '100');
+    assert.equal(await handle.getAttribute('aria-valuemin'), '50');
+    await handle.focus();
+    await page.keyboard.press('End');
+    assert.equal(await handle.getAttribute('aria-valuenow'), '100');
+    assert.notEqual(await handle.evaluate((el) => (el as HTMLElement).style.display), 'none', 'the handle is still shown');
+    assert.equal(await handle.evaluate((el) => document.activeElement === el), true, 'and still has focus');
+    await page.keyboard.press('ArrowDown');
+    assert.equal(Number(await handle.getAttribute('aria-valuenow')) < 100, true, 'the keyboard still moves it');
+    // dragged far past the top by the pointer it stops on the axis too
+    const over = (await page.locator('.u-over').boundingBox())!;
+    const hb = (await handle.boundingBox())!;
+    await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(hb.x + hb.width / 2, over.y - 100, { steps: 5 });
+    await page.mouse.up();
+    assert.equal(await handle.getAttribute('aria-valuenow'), '100');
+    assert.deepEqual(errors, []);
+  } finally {
+    await page.close();
+  }
+});
+
+test('a log x axis with one x and an overlay on it draws, and a non-positive overlay x does not drop the valid ones', async () => {
+  const single = await open('single');
+  try {
+    assert.equal(await single.page.locator('.caos-chart').getAttribute('data-overlay-drawn'), '1');
+    assert.deepEqual(single.errors, []);
+  } finally {
+    await single.page.close();
+  }
+  const neg = await open('negative');
+  try {
+    assert.equal(await neg.page.locator('.caos-chart').getAttribute('data-overlay-drawn'), '1', 'the point at 3 is drawn, the one at -1 is not');
+    assert.deepEqual(neg.errors, []);
+  } finally {
+    await neg.page.close();
   }
 });
