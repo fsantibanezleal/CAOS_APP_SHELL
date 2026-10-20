@@ -1,3 +1,21 @@
+## [Unreleased]
+
+### Fixed
+
+- The workbench's case select no longer cuts a case name (SHW-041, SHW-042, BL-074). Since 0.14.1 the **Focus** control shared the select's
+  row and, at 1280x800, a name was cut inside the native select with no ellipsis (CAOS_Fragmenta 0.08.001: "Mina de cob"). The control now ends
+  the group tab row, in the slot `Tabs` reserves (`trailing`), as a surface's does since 0.16.0, whatever the case picker (select, chips or
+  none); the select takes the rail head's whole width. Measured at 390, 768 and 1280 px: the rail head, the tab row and the panel start are the
+  same with and without `focus`. Focus keeps its URL, Escape, exit button and return to the same case, group and sub-view; inside Focus there
+  is no control, as before. `CaseSelectorProps.accessory` stays for a product's own control and still shares the select's row.
+
+### Added
+
+- Gate: G5 fails a select whose selected text is wider than its content box, naming the route, the state and the text (SHG-072, plant
+  `select-cut`).
+- Gate: under `--require-focus`, G18 fails a workbench route (`--workbench`) that is not among the measured routes, as 0.16.0 does for a
+  surface App route, so a run cannot measure no Focus at all (SHG-073, plant `workbench-route-unwalked`).
+
 ## [0.16.000] - 2026-10-20
 
 ### Added
