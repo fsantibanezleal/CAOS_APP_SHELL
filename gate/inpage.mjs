@@ -1029,7 +1029,8 @@ export function installLib() {
   /** The App or Focus mode as the reader meets it: which one, the case and the group, the URL, the page and the rail. */
   G.focusFacts = () => {
     const shell = document.querySelector('[data-focus-shell]');
-    const stage = document.querySelector('[data-case-workbench]');
+    // the instrument of the App: a case workbench, or (a surface App, 0.16.0) the surface or its Focus frame
+    const stage = document.querySelector('[data-case-workbench], [data-surface-focus], [data-surface]');
     const rail = document.querySelector('.caos-focus-rail');
     const lists = [...document.querySelectorAll('[data-focus-shell] [role="tablist"]')].filter(visible);
     const rows = lists.map((t) => new Set([...t.querySelectorAll('[role="tab"]')].map((b) => Math.round(b.getBoundingClientRect().top))).size);
@@ -1062,11 +1063,11 @@ export function installLib() {
       focus: Boolean(shell),
       covered,
       enterInside: [...document.querySelectorAll('[data-focus-shell] [data-focus-enter]')].filter(visible).length,
-      app: Boolean(document.querySelector('[data-workbench]')),
+      app: Boolean(document.querySelector('[data-workbench], [data-surface]')),
       caseId: stage ? stage.getAttribute('data-case') : null,
       group: shell ? (stage ? stage.getAttribute('data-focus-group') : null) : panel ? panel.getAttribute('data-panel') : null,
       search: location.search,
-      subview: (() => { const t = document.querySelector('[data-case-workbench] .subtab.active'); return t ? t.getAttribute('data-tab') : null; })(),
+      subview: (() => { const t = document.querySelector('[data-case-workbench] .subtab.active, [data-surface] .subtab.active, [data-surface-focus] .subtab.active'); return t ? t.getAttribute('data-tab') : null; })(),
       nestedMain: document.querySelectorAll('main').length > 1 || Boolean(document.querySelector('main main')),
       vw: window.innerWidth,
       vh: window.innerHeight,

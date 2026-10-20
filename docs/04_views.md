@@ -66,6 +66,46 @@ below 900 px the document scrolls. This is the containment 15 to 19 products wro
 (`.app-shell` at 100dvh, `.page` and `.page-body` as flex columns with `min-height: 0`, `.tabs` filling, `.tabpanel`
 scrolling); a product on 0.8.0 deletes it. Without `tabs`, the children are the body and fill it.
 
+### Focus mode for a surface App (`focus`, `TabDef.focus`, 0.16.0, ADR-0070)
+
+A console with a simulation, a drawing or a live run opens it in the full viewport the way a workbench's case does. The surface
+takes `focus` (`true`, or a `SurfaceFocusConfig`: `param`, `onChange`), and each view with a stage takes `focus` on its
+`TabDef` (`true`, or a `ViewFocusConfig`: `title`, `description`, `hud`, `rail`). A list or a form sets nothing.
+
+```tsx
+<SurfacePage
+  title={{ en: 'Console', es: 'Consola' }}
+  tabs={[
+    { id: 'tasks', label: 'Tasks', content: <TaskList /> },                      // no stage: no Focus control
+    {
+      id: 'engine',
+      label: 'Engine',
+      focus: {
+        title: { en: 'Engine run', es: 'Corrida del motor' },                   // default: the view's label
+        hud: [{ label: { en: 'Peak', es: 'Pico' }, value: peak }],              // readouts over the stage
+        rail: <><Knob ... /><ChipGroup ... /></>,                              // the parameter column (ADR-0070 requirement 2)
+      },
+      content: <SubTabs ... />,                                                // the stage; its sub-tab is kept across Focus
+    },
+  ]}
+  focus={{ onChange: (on) => record(on) }}
+/>
+```
+
+| What | How |
+|---|---|
+| Control | a **Focus** button ("Focus" / "Enfocar", named "Open this view in focus mode" / "Abrir esta vista en modo enfoque") at the end of the head's actions, on the heading's row, so it adds no row; it shows only while the open view sets `focus` and is absent on the others. A surface with no head gets one, holding the control, on a focusable view: give it a `title` or `actions` for a head that stays |
+| Frame | `FocusShell` (`landmark={false}`): the open view is the stage, `rail` the right column; the title is the view's label and the description the surface's title unless the config says otherwise. Without a `rail` the stage is the whole frame and the view keeps its own controls in its body; with one the product moves them there (the shell moves no DOM) |
+| URL | `?focus=1` beside `?view=` (`param` renames `focus`); a link with both opens Focus on that view. A link with `focus=1` for a view with no stage, for an unknown view, or with no view when the first view has no stage, opens nothing and the parameter is removed |
+| Leave | the exit button or Escape: the same view and sub-view (the view memory `CaseWorkbench` keeps), `focus` leaves the URL, keyboard focus returns to the Focus button |
+| Keyboard, page | on opening keyboard focus moves to the exit button, the page behind the frame is `inert`, the page holds one `main` and the frame no Focus control |
+| Callback | `onChange(on)` when the reader opens and closes it |
+| Marks | the stage carries `data-surface-focus`, `data-focus-view` and `data-focus-group` (the open view's id) for the gate |
+
+The behaviour is the one `CaseWorkbench` has, one piece of code (`useFocusMode`, exported for a product with a frame of its own).
+A surface without `focus`, or whose views set none, renders exactly as before. Needs `tabs`: a surface with one body has no view
+to focus. `caos-shell-gate --workbench '' --require-focus` fails a surface App none of whose views offers the control.
+
 ## The document (`DocPage`, `DocSection`)
 
 A documentation route: the page head (title, lede), then sections. Each `DocSection` declares `refs` (the citation

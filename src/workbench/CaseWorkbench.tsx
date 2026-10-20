@@ -1,19 +1,19 @@
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useMemo } from 'react';
 import { Maximize2 } from 'lucide-react';
 import { CaseSelector, type CaseSelectorProps } from '../case/CaseSelector';
-import { readCaseParam } from '../case/caseModel';
 import { DocRefsScope } from '../content/Cite';
 import { MAX_PEER_TABS, Tabs } from '../content/Tabs';
 import { useShellLang } from '../lib/lang';
 import { PanelBoundary } from '../lib/PanelBoundary';
 import { ViewMemoryContext } from '../lib/viewMemory';
-import { removeQueryParam, replaceQueryParam, useUrlView, viewParamOf } from '../lib/urlView';
+import { useUrlView, viewParamOf } from '../lib/urlView';
 import { FocusShell } from '../shell/FocusShell';
+import { useFocusMode } from '../shell/useFocusMode';
 import { type BiText, pick } from '../lib/text';
 import type { Lane } from './LaneBadge';
 import { makeStateKey, type Provenance, WorkbenchStateContext } from './state';
 import { type VariantBarProps, VariantBar } from './VariantBar';
-import { type CaseFocusConfig, FOCUS_PARAM, FOCUS_TEXT } from './focus';
+import { type CaseFocusConfig, FOCUS_TEXT } from './focus';
 import { RailBody, type RailSection, WorkbenchLayout } from './WorkbenchLayout';
 
 /** One group of views of the selected case, named for the question the user is asking (ADR-0071 rule 5). */
@@ -94,61 +94,9 @@ export function CaseWorkbench(props: CaseWorkbenchProps) {
   const { caseId, cases, source, controls, replayOnly, variants, rail, railLabel, groups, compare, context, group, onGroupChange, deepLinkView = true, ariaLabel, focus } = props;
   const lang = useShellLang();
   const focusCfg: CaseFocusConfig | null = focus === true ? {} : focus || null;
-  const focusParam = focusCfg?.param ?? FOCUS_PARAM;
-  // Focus mode: held in the URL (`?focus=1`), opened by the control or by a link, closed by Escape or the exit button.
-  const [focusOn, setFocusOn] = useState(() => focusCfg !== null && typeof window !== 'undefined' && readCaseParam(window.location.search, focusParam) === '1');
-  const enterRef = useRef<HTMLButtonElement | null>(null);
-  // what the reader had open in the tab rows of the views: the focus frame mounts them again
-  const memory = useRef(new Map<string, string>());
-  const turned = useRef<'in' | 'out' | null>(null);
-  const onChangeRef = useRef(focusCfg?.onChange);
-  onChangeRef.current = focusCfg?.onChange;
-  const setFocus = useCallback(
-    (on: boolean) => {
-      turned.current = on ? 'in' : 'out';
-      setFocusOn(on);
-      if (on) replaceQueryParam(focusParam, '1');
-      else removeQueryParam(focusParam);
-      onChangeRef.current?.(on);
-    },
-    [focusParam],
-  );
-  const showFocus = focusCfg !== null && focusOn;
-  useEffect(() => {
-    if (!showFocus) return undefined;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || e.defaultPrevented) return;
-      e.preventDefault();
-      setFocus(false);
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [showFocus, setFocus]);
-  // The page behind the focus frame (the header, the footer, the skip link, whatever else is not on the way to the frame) is inert
-  // while Focus is open: no Tab into it, nothing of it in the accessibility tree.
-  useEffect(() => {
-    if (!showFocus) return undefined;
-    const frame = document.querySelector('[data-focus-shell]');
-    if (!frame) return undefined;
-    const made: Element[] = [];
-    for (let node: Element | null = frame; node && node !== document.body; node = node.parentElement) {
-      for (const sib of Array.from(node.parentElement?.children ?? [])) {
-        if (sib !== node && !sib.hasAttribute('inert') && sib.tagName !== 'SCRIPT' && sib.tagName !== 'STYLE') {
-          sib.setAttribute('inert', '');
-          made.push(sib);
-        }
-      }
-    }
-    return () => {
-      for (const el of made) el.removeAttribute('inert');
-    };
-  }, [showFocus]);
-  // Keyboard focus follows the reader: to the exit control when Focus opens, back to the Focus control when it closes.
-  useEffect(() => {
-    if (turned.current === 'in' && showFocus) document.querySelector<HTMLElement>('[data-focus-exit]')?.focus();
-    else if (turned.current === 'out' && !showFocus) enterRef.current?.focus();
-    turned.current = null;
-  }, [showFocus]);
+  // Focus mode, one piece of code with the surface's (useFocusMode): held in the URL (`?focus=1`), opened by the control or by a link,
+  // closed by Escape or the exit button; the page behind the frame is inert and keyboard focus follows the reader.
+  const { show: showFocus, setFocus, enterRef, memory } = useFocusMode(focusCfg);
   const variantId = variants?.activeId;
   const stateKey = useMemo(
     () => makeStateKey({ caseId, variantId: variantId ?? null, source: source ?? null, controls: controls ?? {} }),
@@ -226,7 +174,7 @@ export function CaseWorkbench(props: CaseWorkbenchProps) {
     const open = tabs.find((t) => t.id === openGroup) ?? tabs[0];
     const caseName = cases?.cases.find((c) => c.id === caseId)?.name ?? caseId;
     return (
-      <ViewMemoryContext.Provider value={memory.current}>
+      <ViewMemoryContext.Provider value={memory}>
         <WorkbenchStateContext.Provider value={{ stateKey, caseId, variantId, source }}>
           <FocusShell
             title={focusCfg.title !== undefined ? pick(focusCfg.title, lang) : caseName}
@@ -260,7 +208,7 @@ export function CaseWorkbench(props: CaseWorkbenchProps) {
     );
   }
   return (
-    <ViewMemoryContext.Provider value={memory.current}>
+    <ViewMemoryContext.Provider value={memory}>
       <WorkbenchStateContext.Provider value={{ stateKey, caseId, variantId, source }}>
         <WorkbenchLayout rail={rail ?? null} railHead={railHead} railLabel={railLabel}>
           <div className="caos-cw" {...instrumentData}>

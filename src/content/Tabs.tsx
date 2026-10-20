@@ -2,12 +2,18 @@ import { useContext, useId, useRef, useState, type KeyboardEvent, type ReactNode
 import { ViewMemoryContext, memoryKey } from '../lib/viewMemory';
 import { PanelBoundary } from '../lib/PanelBoundary';
 import { useOverflowFade } from '../lib/overflow';
+import type { ViewFocusConfig } from '../workbench/focus';
 import { DocRefsScope } from './Cite';
 
 export interface TabDef {
   id: string;
   label: ReactNode;
   content: ReactNode;
+  /**
+   * A view with a stage (a simulation, a drawing, a live run) of a `SurfacePage` that has `focus`: it opens in Focus mode (shell
+   * 0.16.0, ADR-0070). `true` takes the defaults. A list or a form sets nothing. Ignored outside a `SurfacePage`.
+   */
+  focus?: boolean | ViewFocusConfig;
 }
 
 /** At most about six peers, then group by the question (ADR-0071 rule 5). */
