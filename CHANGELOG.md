@@ -1,4 +1,4 @@
-## [Unreleased]
+## [0.16.000] - 2026-10-20
 
 ### Added
 
@@ -47,6 +47,7 @@
   G18 also fails a surface with Focus that renders a head with no title, lede or actions (an empty head row), and its message for a
   tab row or head that moves between views no longer blames the Focus control. It also fails a tab row taller than its tabs need
   (a taller Focus control in the slot adds height on every view; plant `surface-tall-control`).
+
 ### Changed
 
 - `CaseWorkbench` keeps its Focus behaviour in `useFocusMode`, no longer in its own state and effects. Its DOM, its URL behaviour and
@@ -56,6 +57,8 @@
 - `FocusShell`: `rail={null}` (or no `rail`) now renders no rail column and the frame is one column (class `caos-focus-norail`); before
   it rendered an empty rail column. A direct consumer of `FocusShell` that passed `rail={null}` gets a frame whose stage is the whole
   width; pass an empty element to keep the column. `CaseWorkbench` always passes a rail and is unchanged.
+- `SurfacePage` with `actions={null}` renders no actions element and, with no title or lede, no head (before, a null `actions` rendered an
+  empty head row; an `undefined` one was already ignored).
 
 ### Fixed
 
@@ -77,9 +80,6 @@
 - A `CaseWorkbench`, or a `SurfacePage`, placed inside a `Tabs` panel keeps the reader's sub-view entering and leaving Focus: the Focus
   frames provide the inherited panel path plus the open id (`PanelPathContext`), not an absolute one (found in the re-review before
   the release; no current consumer nests them).
-
-- `SurfacePage` with `actions={null}` renders no actions element and, with no title or lede, no head (before, a null `actions` rendered an
-  empty head row; an `undefined` one was already ignored).
 
 ### Migration
 
