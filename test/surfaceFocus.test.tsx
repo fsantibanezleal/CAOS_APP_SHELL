@@ -87,10 +87,11 @@ test('a headless surface with focus adds no head, and the surface marks its view
   assert.doesNotMatch(headless({ value: 'engine' }), /data-view-param/, 'a surface without focus keeps its 0.15.0 markup');
 });
 
-test('the view memory is keyed on the kind and the ids, never on a localized name', () => {
-  assert.equal(memoryKey('subtabs', ['a', 'b']), 'subtabs|a,b');
-  assert.notEqual(memoryKey('tabs', ['a', 'b']), memoryKey('subtabs', ['a', 'b']));
-  assert.equal(memoryKey.length, 2, 'two arguments: the name of the row is not one of them');
+test('the view memory is keyed on the kind, the place and the ids, never on a localized name and never on the ids alone', () => {
+  assert.equal(memoryKey('subtabs', '/alpha', ['a', 'b']), 'subtabs|/alpha|a,b');
+  assert.notEqual(memoryKey('tabs', '', ['a', 'b']), memoryKey('subtabs', '', ['a', 'b']));
+  assert.notEqual(memoryKey('subtabs', '/alpha', ['chart', 'table']), memoryKey('subtabs', '/beta', ['chart', 'table']), 'the same ids in another place are another row');
+  assert.equal(memoryKey.length, 3, 'kind, place and ids: the name of the row is not an argument');
 });
 
 test('focus: true on a view takes every default, and a config takes title, description, hud and rail', () => {

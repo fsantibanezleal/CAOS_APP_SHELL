@@ -41,7 +41,9 @@ const PLANT = window.__PLANT__ ?? '';
 /** The surface App (shell 0.16.0): the plant `surface` is its clean run, `surface-*` its defects; `/console` is its route. */
 const SURFACE = PLANT === 'surface' || PLANT.startsWith('surface-');
 /** The first consumer's shape (CAOS_Neuraxis): a headless surface (no title, lede or actions) that holds its view in `?mode=`. */
-const HEADLESS = PLANT === 'surface-headless' || PLANT === 'surface-headless-head' || PLANT === 'surface-mode-url-dropped';
+const HEADLESS = PLANT === 'surface-headless' || PLANT === 'surface-headless-head' || PLANT === 'surface-mode-url-dropped' || PLANT === 'surface-empty-head';
+/** A surface whose focus configuration renames the parameter (`SurfaceFocusConfig.param`): clean, and with the parameter left after the return. */
+const FPARAM = PLANT === 'surface-fparam' || PLANT === 'surface-fparam-left' ? 'f' : undefined;
 /** A surface with one view that has a stage (the plant of Escape on the only focusable view). */
 const ONE_STAGE = PLANT === 'surface-focus-escape-one-view';
 /** Twenty lines of note for the stage-floor plant. */
@@ -833,6 +835,18 @@ function Console() {
         } else if (!['engine', 'runs'].includes(open) && here) here.remove();
       });
     }
+    if (PLANT === 'surface-empty-head') {
+      // a head row with nothing in it, permanently, on a headless surface
+      return plantDom(() => {
+        const surface = document.querySelector('[data-surface]');
+        if (surface && !surface.querySelector(':scope > .caos-surface-head')) {
+          const head = document.createElement('div');
+          head.className = 'caos-surface-head';
+          head.style.minHeight = '20px';
+          surface.insertBefore(head, surface.firstChild);
+        }
+      });
+    }
     if (PLANT === 'surface-focus-escape-one-view') {
       // a product key handler takes Escape on its only view with a stage
       const stop = (e: KeyboardEvent) => {
@@ -855,6 +869,7 @@ function Console() {
   const controlled = PLANT === 'surface-focus-loses-view' || PLANT === 'surface-focus-return-wrong-view';
   const onFocus = (on: boolean) => {
     setFocusOn(on);
+    if (PLANT === 'surface-fparam-left' && !on) window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}${window.location.search ? '&' : '?'}f=1`);
     if (PLANT === 'surface-focus-loses-view' && on) setView('runs');
     if (PLANT === 'surface-focus-return-wrong-view' && !on) setView('overview');
     if (PLANT === 'surface-mode-url-dropped' && on) {
@@ -1002,7 +1017,7 @@ function Console() {
       value={controlled ? view : undefined}
       onChange={setView}
       instrument
-      focus={PLANT === 'surface-focus-missing' ? undefined : { onChange: onFocus }}
+      focus={PLANT === 'surface-focus-missing' ? undefined : { onChange: onFocus, param: FPARAM }}
     />
   );
 }
@@ -1010,7 +1025,7 @@ function Console() {
 // ------------------------------------------------------------------------------------------- the documentation
 const CITATIONS = [
   { id: 'km1927', label: { en: 'Kermack and McKendrick 1927', es: 'Kermack y McKendrick 1927' }, citation: 'Kermack, W. O., McKendrick, A. G. (1927). A contribution to the mathematical theory of epidemics. Proc. R. Soc. Lond. A 115, 700-721.', doi: '10.1098/rspa.1927.0118' },
-  { id: 'eneuro2020', label: 'Ramirez 2020', citation: 'Ramirez, A. (2020). A reference whose DOI carries a dotted number. eNeuro 7(6).', doi: '10.1523/ENEURO.0159-20.2020' },
+  { id: 'eneuro2020', label: 'Ramirez 2020', citation: 'Ramirez, A. (2020). A reference whose DOI carries a dotted number: Framework for Improving Critical Infrastructure, Version 3.4. eNeuro 7(6).', doi: '10.1523/ENEURO.0159-20.2020' },
   { id: 'hethcote2000', label: 'Hethcote 2000', citation: 'Hethcote, H. W. (2000). The mathematics of infectious diseases. SIAM Review 42(4), 599-653.', doi: '10.1137/S0036144500371907' },
 ];
 
@@ -1069,6 +1084,7 @@ function Doc({ id }: { id: string }) {
         </p>
       )}
       {PLANT === 'hoverflow' && id === 'introduction' && <div style={{ width: 3000, height: 12 }}>planted wide block</div>}
+      {PLANT === 'decimal-point-plain-34' && id === 'introduction' && <p>{pick({ en: 'See version 3.4 of the standard.', es: 'Véase la versión 3.4 de la norma.' }, lang)}</p>}
       {PLANT === 'decimal-point-plain-2020' && id === 'introduction' && <p>{pick({ en: 'See the item 20.2020 of the list.', es: 'Véase el ítem 20.2020 de la lista.' }, lang)}</p>}
       {PLANT === 'decimal-point' && id === 'introduction' && <p>{pick({ en: 'Integration step: 0.25 days; worst difference 2.7e-08.', es: 'Paso de integración: 0.25 días; peor diferencia 2.7e-08.' }, lang)}</p>}
       {PLANT === 'low-contrast' && id === 'introduction' && <p style={{ color: '#9a9a9a' }}>{pick({ en: 'A planted pale line.', es: 'Una línea pálida plantada.' }, lang)}</p>}

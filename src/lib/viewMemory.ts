@@ -9,7 +9,15 @@ import { createContext } from 'react';
 export const ViewMemoryContext = createContext<Map<string, string> | null>(null);
 
 /**
- * The key a tab row is remembered under: its kind and its ids, never its name (the name is localized, and a language switch inside
- * Focus used to change the key and lose the sub-view, before 0.16.0).
+ * The place of a tab row: the path of the open panels above it (`/<open tab id>/<open sub-tab id>...`), provided by `Tabs` and
+ * `SubTabs` around their open panel. A focus frame that mounts a view again (`CaseWorkbench`, `SurfacePage`) provides the same
+ * path the row's panel would have, so a row finds its memory there. Ids only, never a localized name.
  */
-export const memoryKey = (kind: string, ids: string[]): string => `${kind}|${ids.join(',')}`;
+export const PanelPathContext = createContext<string>('');
+
+/**
+ * The key a tab row is remembered under: its kind, its place (`PanelPathContext`) and its ids. Never its localized name (a language
+ * switch inside Focus used to change the key and lose the sub-view, before 0.16.0), and never the ids alone (two rows with the same
+ * ids in different groups or views would share one selection and override each other's `initial`).
+ */
+export const memoryKey = (kind: string, path: string, ids: string[]): string => `${kind}|${path}|${ids.join(',')}`;

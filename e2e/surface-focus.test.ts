@@ -29,8 +29,36 @@ before(async () => {
         />
       );
     }
+    const rowTabs = (tag) => [
+      { id: 'chart', label: 'Chart', content: <p data-probe="row">CHART {tag}</p> },
+      { id: 'table', label: 'Table', content: <p data-probe="row">TABLE {tag}</p> },
+    ];
+    // two places with sub-view rows that share their ids: they must keep separate selections (the view memory keys on the place)
+    function Twin() {
+      const tabs = [
+        { id: 'alpha', label: 'Alpha', focus: true, content: <SubTabs ariaLabel="Alpha views" tabs={rowTabs('alpha')} /> },
+        { id: 'beta', label: 'Beta', focus: true, content: <SubTabs ariaLabel="Beta views" initial="chart" tabs={rowTabs('beta')} /> },
+      ];
+      return <main><SurfacePage title={{ en: 'Twin', es: 'Gemelo' }} tabs={tabs} focus /></main>;
+    }
+    function Bench2() {
+      return (
+        <main>
+          <CaseWorkbench
+            caseId="c1"
+            groups={[
+              { id: 'alpha', label: { en: 'Alpha', es: 'Alfa' }, content: <SubTabs ariaLabel="Alpha views" tabs={rowTabs('alpha')} /> },
+              { id: 'beta', label: { en: 'Beta', es: 'Beta' }, content: <SubTabs ariaLabel="Beta views" initial="chart" tabs={rowTabs('beta')} /> },
+            ]}
+            context={{ content: <p>CONTEXT</p> }}
+          />
+        </main>
+      );
+    }
     function App() {
       const lang = useShellLang();
+      if (new URLSearchParams(location.search).get('twin') === '1') return <Twin />;
+      if (new URLSearchParams(location.search).get('bench2') === '1') return <Bench2 />;
       if (new URLSearchParams(location.search).get('workbench') === '1') return <main><Bench /></main>;
       const [scale, setScale] = useState(1);
       const param = window.__PARAM;
@@ -339,4 +367,47 @@ test('the parameter can be renamed (SurfaceFocusConfig.param)', async () => {
   assert.equal(q(page).get('f'), '1');
   assert.equal(q(page).get('focus'), null);
   await page.close();
+});
+
+test('two sub-view rows with the same ids in different groups or views keep separate selections, and a row honours its own initial (the view memory keys on the place)', async () => {
+  const bench = await h.browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await bench.goto(`${h.address}/?bench2=1`);
+  await bench.getByRole('tab', { name: 'Table' }).click();
+  assert.match(await probe(bench), /TABLE alpha/);
+  await bench.getByRole('tab', { name: 'Beta' }).click();
+  assert.match(await probe(bench), /CHART beta/, 'Beta opens on its own initial, not on the Table chosen in Alpha');
+  await bench.getByRole('tab', { name: 'Alpha' }).click();
+  assert.match(await probe(bench), /TABLE alpha/, 'and Alpha still has its own choice');
+  await bench.close();
+  const surface = await h.browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await surface.goto(`${h.address}/?twin=1`);
+  await surface.getByRole('tab', { name: 'Table' }).click();
+  assert.match(await probe(surface), /TABLE alpha/);
+  await surface.getByRole('tab', { name: 'Beta' }).click();
+  assert.match(await probe(surface), /CHART beta/, 'the second view opens on its own initial');
+  await surface.locator('[data-focus-enter]').click();
+  assert.match(await probe(surface), /CHART beta/, 'Focus opens the second view on its own sub-view');
+  await surface.keyboard.press('Escape');
+  await surface.getByRole('tab', { name: 'Alpha' }).click();
+  assert.match(await probe(surface), /TABLE alpha/, 'the first view kept its choice across Focus');
+  await surface.close();
+});
+
+test('the Focus frame names its focus parameter for the gate (data-focus-param), focus by default and the renamed one when the product renames it', async () => {
+  const page = await h.browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await page.goto(`${h.address}/?view=engine`);
+  await page.locator('[data-focus-enter]').click();
+  assert.equal(await page.locator('[data-surface-focus]').getAttribute('data-focus-param'), 'focus');
+  await page.close();
+  const renamed = await h.browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await renamed.addInitScript('window.__PARAM = "f";');
+  await renamed.goto(`${h.address}/?view=engine`);
+  await renamed.locator('[data-focus-enter]').click();
+  assert.equal(await renamed.locator('[data-surface-focus]').getAttribute('data-focus-param'), 'f');
+  await renamed.close();
+  const bench = await h.browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await bench.goto(`${h.address}/?workbench=1`);
+  await bench.locator('[data-focus-enter]').click();
+  assert.equal(await bench.locator('.caos-cw-focus').getAttribute('data-focus-param'), 'focus');
+  await bench.close();
 });

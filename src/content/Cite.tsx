@@ -146,7 +146,7 @@ export function DocReferences({ ids }: { ids: string[] }) {
           const h = href(c);
           return (
             <li key={id}>
-              <span>{c.citation}</span>{' '}
+              <span translate="no">{c.citation}</span>{' '}
               {h ? (
                 <a href={h} target="_blank" rel="noreferrer noopener" className="faint">
                   {c.doi ? <span translate="no">{`doi:${c.doi}`}</span> : 'link'}
@@ -191,7 +191,7 @@ export function ReferenceList({ ids, heading }: { ids?: string[]; heading?: stri
           const h = href(c);
           return (
             <li key={c.id}>
-              <span>{c.citation}</span>{' '}
+              <span translate="no">{c.citation}</span>{' '}
               {h ? (
                 <a href={h} target="_blank" rel="noreferrer noopener" className="faint">
                   {c.doi ? <span translate="no">{`doi:${c.doi}`}</span> : 'link'}

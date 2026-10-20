@@ -237,12 +237,17 @@ const PLANTS = [
   { id: 'surface-focus-nested-main', check: 'G18', re: /Focus mode of view \w+: the page holds a main inside a main/, opts: SURF },
   { id: 'surface-focus-return-wrong-view', check: 'G18', re: /Focus mode of view engine: back in the App on view overview, it was left on view engine/, opts: SURF },
   // the fix round after the review of 0.16.0 (CAOS_MANAGE wip/app-shell/review-shell-0-16-0-2026-10-19.md): F1 the tab row, F2 Escape on the only focusable view, F3 a renamed view parameter, F4 the App route walked
-  { id: 'surface-headless-head', check: 'G18', re: /the surface's tab row moves between views \(view overview: row at [\d.]+px, [\d.]+px high, head 0px; view engine: row at [\d.]+px/, opts: SURF },
+  { id: 'surface-headless-head', check: 'G18', re: /the surface's tab row or head moves between views \(view overview: row at [\d.]+px, [\d.]+px high, head 0px; view engine: row at [\d.]+px/, opts: SURF },
   { id: 'surface-focus-escape-one-view', check: 'G18', re: /Focus mode of view engine: Escape does not return to the App/, opts: SURF },
   { id: 'surface-mode-url-dropped', check: 'G18', re: /Focus mode of view \w+: the URL \(\?focus=1\) does not hold \?focus=1 and the view \(\?mode=\)/, opts: SURF },
   { id: 'surface-app-route-unwalked', check: 'G18', re: /the App route \/app is not among the measured routes \(\/console\)/, opts: { routes: '/console', workbench: '', requireFocus: true } },
   // F9: a plain number with a dotted segment in a Spanish paragraph still fails G11 (the DOI of a reference does not: the clean fixture and the test of the dotted DOI)
+  // F12: the title of a reference ("Version 3.4") is the source's own and never read as a Spanish decimal, but a plain 3.4 in a Spanish paragraph of the same page fails
+  { id: 'decimal-point-plain-34', check: 'G11', re: /writes 3\.4 with a decimal point/, opts: { langs: 'es', routes: '/app,/introduction' } },
   { id: 'decimal-point-plain-2020', check: 'G11', re: /writes 20\.2020 with a decimal point/, opts: { langs: 'es', routes: '/app,/introduction' } },
+  // round 3 (re-review): M1 an empty head row, M3 a renamed focus parameter
+  { id: 'surface-empty-head', check: 'G18', re: /the surface renders a head with no title, lede or actions \(an empty head row \d+px high\)/, opts: SURF },
+  { id: 'surface-fparam-left', check: 'G18', re: /Focus mode of view \w+: the URL still holds \?f after the return/, opts: SURF },
   { id: 'surface-focus-url-stays', check: 'G18', re: /Focus mode of view \w+: the URL still holds \?focus after the return/, opts: SURF },
   { id: 'exec-deck-hidden-cards', check: 'ADR-0017.2', re: /executive view \(EN\): the proposal holds 1 row\(s\) of the 4 C's, exactly 4 are required/, opts: { routes: '/introduction' } },
   { id: 'exec-flip-content-hidden', check: 'ADR-0017.2', re: /executive view \(EN\): \d+ field\(s\) are in the page and a reader cannot read them/, opts: { routes: '/introduction' } },
@@ -302,11 +307,18 @@ test('a headless surface that holds its view in ?mode= (the shape of CAOS_Neurax
   assert.equal(r.failures.length, 0, `the clean headless surface failed:\n${show(r)}`);
 });
 
-test('a Spanish page whose reference has a DOI with a dotted numeric segment passes G11 (the DOI is an identifier, translate="no")', { timeout: 600_000 }, async () => {
+test('a Spanish page whose reference has a DOI with a dotted numeric segment and a title with Version 3.4 passes G11 (bibliographic text is never translated, translate="no")', { timeout: 600_000 }, async () => {
   const dir = makePlant(clean, join(work, 'plant-doi-es'), 'surface');
   const r = await runGate({ ...QUICK, langs: 'es', routes: '/introduction,/methodology', serve: dir, expectBrand: BRAND, out: join(work, 'out-doi-es') });
   assert.equal(r.failures.filter((f) => f.check === 'G11').length, 0, `G11 read the DOI as a decimal:\n${show(r)}`);
   assert.equal(r.failures.length, 0, `failures:\n${show(r)}`);
+});
+
+test('a surface that renames the focus parameter (SurfaceFocusConfig.param) passes every check: the gate reads data-focus-param, not the literal focus', { timeout: 900_000 }, async () => {
+  const dir = makePlant(clean, join(work, 'plant-surface-fparam'), 'surface-fparam');
+  const r = await runGate({ ...SURF, requireFocus: true, serve: dir, expectBrand: BRAND, sizes: '1280x800', themes: 'light', langs: 'en', idleMs: 600, out: join(work, 'out-surface-fparam') });
+  assert.equal(r.failures.length, 0, `the renamed focus parameter failed:
+${show(r)}`);
 });
 
 describe('every planted defect fails the check that owns it', { concurrency: 4 }, () => {

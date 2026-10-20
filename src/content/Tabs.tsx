@@ -1,5 +1,5 @@
 import { useContext, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { ViewMemoryContext, memoryKey } from '../lib/viewMemory';
+import { PanelPathContext, ViewMemoryContext, memoryKey } from '../lib/viewMemory';
 import { PanelBoundary } from '../lib/PanelBoundary';
 import { useOverflowFade } from '../lib/overflow';
 import type { ViewFocusConfig } from '../workbench/focus';
@@ -45,7 +45,8 @@ export function Tabs({ tabs, initial, value, onChange, ariaLabel, trailing }: Ta
   const baseId = useId();
   const first = tabs[0]?.id ?? '';
   const memory = useContext(ViewMemoryContext);
-  const mkey = memoryKey('tabs', tabs.map((t) => t.id));
+  const path = useContext(PanelPathContext);
+  const mkey = memoryKey('tabs', path, tabs.map((t) => t.id));
   const [own, setOwn] = useState<string>(() => {
     const kept = memory?.get(mkey);
     return kept && tabs.some((t) => t.id === kept) ? kept : (initial ?? first);
@@ -114,9 +115,11 @@ export function Tabs({ tabs, initial, value, onChange, ariaLabel, trailing }: Ta
           className="tabpanel"
           data-panel={current.id}
         >
-          <PanelBoundary panel={current.id}>
-            <DocRefsScope>{current.content}</DocRefsScope>
-          </PanelBoundary>
+          <PanelPathContext.Provider value={`${path}/${current.id}`}>
+            <PanelBoundary panel={current.id}>
+              <DocRefsScope>{current.content}</DocRefsScope>
+            </PanelBoundary>
+          </PanelPathContext.Provider>
         </div>
       )}
     </div>

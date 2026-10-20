@@ -889,12 +889,14 @@ export async function runGate(o) {
     if (f.group !== before.group) fail('G18', at, `${label} shows ${isView ? 'view' : 'group'} ${f.group}, the App had ${before.group}`);
     if (f.subview !== before.subview) fail('G18', at, `${label} shows sub-view ${f.subview}, the App had ${before.subview}`);
     const q = new URLSearchParams(f.search);
+    // the parameter the App holds Focus in (`focus`, or the product's own `param`), named by the Focus frame
+    const fp = f.focusParam || 'focus';
     if (isView) {
       // the view the App held in its URL stays there (a surface that keeps its view out of the URL has none to keep)
       const param = before.viewParam || 'view';
       const held = new URLSearchParams(before.search).get(param);
-      if (q.get('focus') !== '1' || (held !== null && q.get(param) !== held)) fail('G18', at, `${label}: the URL (${f.search || 'no query'}) does not hold ?focus=1 and the view (?${param}=)`);
-    } else if (q.get('focus') !== '1' || (subject.total > 1 && q.get('case') !== caseId)) fail('G18', at, `${label}: the URL (${f.search || 'no query'}) does not hold ?focus=1 and the case`);
+      if (q.get(fp) !== '1' || (held !== null && q.get(param) !== held)) fail('G18', at, `${label}: the URL (${f.search || 'no query'}) does not hold ?${fp}=1 and the view (?${param}=)`);
+    } else if (q.get(fp) !== '1' || (subject.total > 1 && q.get('case') !== caseId)) fail('G18', at, `${label}: the URL (${f.search || 'no query'}) does not hold ?${fp}=1 and the case`);
     if (f.docW > f.vw + 1 || f.docH > f.vh + 1) fail('G18', at, `${label}: the page scrolls (the document is ${f.docW}x${f.docH}px in a ${f.vw}x${f.vh}px viewport); Focus mode is the viewport`);
     if (f.nestedMain) fail('G18', at, `${label}: the page holds a main inside a main (the Focus frame must not be a second landmark inside the App's main)`);
     // the keyboard stays in the Focus frame: the App behind it is out of the tab order
@@ -942,7 +944,7 @@ export async function runGate(o) {
       if (!isView && g.caseId !== caseId) fail('G18', at, `${label}: back in the App on case ${g.caseId}, it was left on case ${caseId}`);
       if (g.group !== before.group) fail('G18', at, `${label}: back in the App on ${isView ? 'view' : 'group'} ${g.group}, it was left on ${isView ? 'view' : 'group'} ${before.group}`);
       if (g.subview !== before.subview) fail('G18', at, `${label}: back in the App on sub-view ${g.subview}, it was left on sub-view ${before.subview}`);
-      if (new URLSearchParams(g.search).has('focus')) fail('G18', at, `${label}: the URL still holds ?focus after the return`);
+      if (new URLSearchParams(g.search).has(fp)) fail('G18', at, `${label}: the URL still holds ?${fp} after the return`);
     }
     drain(sink, at);
   }
@@ -984,10 +986,14 @@ export async function runGate(o) {
         if (!r.geo) continue;
         const g0 = rows[0].geo;
         if (r.geo.top !== g0.top || r.geo.height !== g0.height || r.geo.head !== g0.head) {
-          fail('G18', { ...at, trail: `view ${r.id}` }, `the surface's tab row moves between views (view ${rows[0].id}: row at ${g0.top}px, ${g0.height}px high, head ${g0.head}px; view ${r.id}: row at ${r.geo.top}px, ${r.geo.height}px high, head ${r.geo.head}px): the Focus control must sit on the tab row with its space reserved, never add a row or a head (ADR-0071)`);
+          fail('G18', { ...at, trail: `view ${r.id}` }, `the surface's tab row or head moves between views (view ${rows[0].id}: row at ${g0.top}px, ${g0.height}px high, head ${g0.head}px; view ${r.id}: row at ${r.geo.top}px, ${r.geo.height}px high, head ${r.geo.head}px): a view must not add a row or shift the tab row (ADR-0071); the Focus control sits on the tab row with its space reserved and adds none, and a per-view head is the product's to keep steady`);
           break;
         }
       }
+    }
+    if (focusable.length > 0) {
+      const empty = (await page.evaluate(() => window.__caosGate.focusFacts())).emptyHead;
+      if (empty !== null) fail('G18', { ...at, trail: 'surface head' }, `the surface renders a head with no title, lede or actions (an empty head row ${empty}px high): a surface without them has no head, and the Focus control sits on the tab row, never in a head of its own (ADR-0071)`);
     }
     if (focusable.length === 0) {
       if (opt.requireFocus) {
