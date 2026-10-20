@@ -55,7 +55,11 @@ after(async () => {
 const SIZES: Array<[number, number]> = [[390, 844], [768, 844], [1280, 800]];
 const q = (page: Page) => new URL(page.url()).searchParams;
 
-/** Every visible select whose selected option text is wider than the select's content box (its own font). */
+/**
+ * Every visible select whose selected option text is wider than the room it leaves the text: the select's width less its own padding and
+ * less the native arrow, which is measured (a probe select of the same class holding one character, sized to its content; 0 with
+ * `appearance: none`). The same measure as the gate's G5 (gate/inpage.mjs, `selectCuts`).
+ */
 const cutSelects = (page: Page) =>
   page.evaluate(() => {
     const out: Array<{ text: string; need: number; has: number }> = [];
@@ -66,8 +70,17 @@ const cutSelects = (page: Page) =>
       const s = getComputedStyle(sel);
       ctx.font = `${s.fontStyle} ${s.fontWeight} ${s.fontSize} ${s.fontFamily}`;
       const text = (sel.selectedOptions[0]?.textContent ?? '').trim();
+      const pad = parseFloat(s.paddingLeft) + parseFloat(s.paddingRight);
+      const probe = sel.cloneNode(false) as HTMLSelectElement;
+      for (const a of Array.from(probe.attributes)) if (a.name !== 'class') probe.removeAttribute(a.name);
+      probe.append(new Option('x'));
+      probe.setAttribute('style', 'position:absolute;visibility:hidden;width:auto;min-width:0;max-width:none;flex:none;left:0;top:0');
+      sel.parentElement!.append(probe);
+      const ps = getComputedStyle(probe);
+      const arrow = Math.max(0, probe.clientWidth - parseFloat(ps.paddingLeft) - parseFloat(ps.paddingRight) - ctx.measureText('x').width);
+      probe.remove();
       const need = ctx.measureText(text).width;
-      const has = sel.clientWidth - parseFloat(s.paddingLeft) - parseFloat(s.paddingRight);
+      const has = sel.clientWidth - pad - arrow;
       if (need > has + 1) out.push({ text, need: Math.round(need), has: Math.round(has) });
     }
     return out;
@@ -163,5 +176,32 @@ test('Focus keeps its behaviour from the tab row: the URL, the exit button, Esca
   assert.equal(await page.locator('[data-focus-shell]').count(), 0, 'Escape returns');
   assert.equal(q(page).get('case'), 'c-long');
   assert.deepEqual(await page.evaluate(() => (window as unknown as { __focusEvents: boolean[] }).__focusEvents), [true, false, true, false]);
+  await page.close();
+});
+
+test('a select whose text fits its content box but ends under the native arrow is cut (the arrow is measured, review of 0.17.0 M1), in the App and in the Focus rail', async () => {
+  const page = await h.browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await page.goto(`${h.address}/?case=c-long`);
+  await page.waitForSelector('[data-control="case"]');
+  assert.deepEqual(await cutSelects(page), [], 'whole at the natural width');
+  const size = (sel: string, extra: number) =>
+    page.evaluate(([q2, add]) => {
+      const el = document.querySelector(q2 as string) as HTMLSelectElement;
+      const s = getComputedStyle(el);
+      const ctx = document.createElement('canvas').getContext('2d')!;
+      ctx.font = `${s.fontStyle} ${s.fontWeight} ${s.fontSize} ${s.fontFamily}`;
+      const box = parseFloat(s.paddingLeft) + parseFloat(s.paddingRight) + parseFloat(s.borderLeftWidth) + parseFloat(s.borderRightWidth);
+      el.style.maxWidth = 'none';
+      el.style.width = `${ctx.measureText((el.selectedOptions[0]?.textContent ?? '').trim()).width + box + (add as number)}px`;
+    }, [sel, extra] as const);
+  await size('[data-rail] select[data-control="case"]', 2);
+  const cut = await cutSelects(page);
+  assert.equal(cut.length, 1, 'the text ends under the arrow: cut');
+  assert.ok(cut[0].has < cut[0].need, 'the arrow is taken out of the room');
+  await page.locator('[data-focus-enter]').click();
+  await page.waitForSelector('[data-focus-shell]');
+  assert.deepEqual(await cutSelects(page), [], 'the Focus rail is its own select, whole');
+  await size('[data-focus-shell] select[data-control="case"]', 2);
+  assert.equal((await cutSelects(page)).length, 1, 'cut in the Focus rail too');
   await page.close();
 });

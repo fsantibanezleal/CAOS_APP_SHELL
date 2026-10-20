@@ -923,6 +923,7 @@ export async function runGate(o) {
     if (big && f.share < opt.instrumentMin) fail('G18', at, `${label}: the stage covers ${(100 * f.share).toFixed(1)}% of the viewport (floor ${(100 * opt.instrumentMin).toFixed(0)}%)`);
     if (f.exitInside === false) fail('G18', at, `${label}: the exit control is outside the viewport`);
     for (const c of f.covered) fail('G18', at, `${label}: ${c.chrome} covers the control "${c.control}" (the stage must clear the Focus chrome)`);
+    if (f.cutSelects.count) fail('G5', at, `${label}: ${f.cutSelects.count} select(s) cut the selected text (no ellipsis, nowhere else to read it): ${f.cutSelects.list.join('; ')}`);
     if (f.enterInside > 0) fail('G18', at, `${label}: the Focus control shows inside Focus mode (it opens the mode the reader is already in)`);
     for (const m of await page.evaluate(() => window.__caosGate.drawingText())) fail('G10', at, m);
     for (const m of await page.evaluate(() => window.__caosGate.brokenValues())) fail('G19', at, m);

@@ -68,6 +68,22 @@ function plantDom(mutate: () => void): () => void {
 }
 const WORDS = 'one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty';
 function flipPlant(plant: string): (() => void) | undefined {
+  // review of 0.17.0 (M1, M2): a case select whose text fits the content box by 2px but ends under the native arrow (`select-arrow`),
+  // and the select of the Focus rail made too narrow for its text (`select-focus-rail`)
+  if (plant === 'select-arrow' || plant === 'select-focus-rail') {
+    return plantDom(() => {
+      const where = plant === 'select-arrow' ? '[data-rail] select[data-control="case"]' : '[data-focus-shell] select[data-control="case"]';
+      for (const sel of document.querySelectorAll<HTMLSelectElement>(where)) {
+        const cs = getComputedStyle(sel);
+        const ctx = document.createElement('canvas').getContext('2d')!;
+        ctx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+        const text = (sel.selectedOptions[0]?.textContent ?? '').trim();
+        const box = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
+        sel.style.maxWidth = 'none';
+        sel.style.width = plant === 'select-focus-rail' ? '64px' : `${ctx.measureText(text).width + box + 2}px`;
+      }
+    });
+  }
   if (plant === 'flip-back-long') {
     // a back far over the limit of forty words
     return plantDom(() => {

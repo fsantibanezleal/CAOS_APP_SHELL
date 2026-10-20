@@ -181,6 +181,41 @@ export function installLib() {
     };
   };
 
+  /**
+   * Selects whose selected option is wider than the room the select leaves its text (BL-074, shell 0.17.0; the review of 0.17.0, M1): the text
+   * is cut with no ellipsis and nowhere else to read it. The room is the select's width less its own CSS padding and less the native arrow.
+   * The arrow is measured, not assumed: a probe select of the same class, font, padding and appearance holding one character, sized to
+   * its content, gives `arrow = probe content width - padding - the character's width`; with `appearance: none` it comes out 0. Text is
+   * measured with the select's own font on one canvas. Runs in the App and inside Focus (the rail of the frame holds a case select too).
+   */
+  const selectCuts = () => {
+    const cuts = [];
+    const mctx = document.createElement('canvas').getContext('2d');
+    for (const sel of document.querySelectorAll('select')) {
+      if (!mctx || !visible(sel)) continue;
+      const ss = getComputedStyle(sel);
+      mctx.font = `${ss.fontStyle} ${ss.fontWeight} ${ss.fontSize} ${ss.fontFamily}`;
+      const text = (sel.selectedOptions[0]?.textContent ?? '').trim().replace(/\s+/g, ' ');
+      if (!text) continue;
+      const pad = parseFloat(ss.paddingLeft) + parseFloat(ss.paddingRight);
+      let arrow = 0;
+      const host = sel.parentElement;
+      if (host) {
+        const probe = sel.cloneNode(false);
+        for (const a of [...probe.attributes]) if (a.name !== 'class') probe.removeAttribute(a.name);
+        probe.append(new Option('x'));
+        probe.setAttribute('style', 'position:absolute;visibility:hidden;width:auto;min-width:0;max-width:none;flex:none;left:0;top:0');
+        host.append(probe);
+        arrow = Math.max(0, probe.clientWidth - parseFloat(getComputedStyle(probe).paddingLeft) - parseFloat(getComputedStyle(probe).paddingRight) - mctx.measureText('x').width);
+        probe.remove();
+      }
+      const need = mctx.measureText(text).width;
+      const has = sel.clientWidth - pad - arrow;
+      if (need > has + 1) cuts.push(`${describe(sel)} cuts "${text}" (${Math.round(need)}px of text in ${Math.round(has)}px, the ${Math.round(arrow)}px arrow taken out)`);
+    }
+    return cuts;
+  };
+
   /** The static layout of the current view (G5, G6 inputs, ADR-0071 and ADR-0017 measures). */
   G.facts = () => {
     const vw = window.innerWidth;
@@ -272,20 +307,7 @@ export function installLib() {
       if (!named) truncated.push(describe(el));
     }
 
-    // A select whose selected option is wider than the select's content box cuts the text with no ellipsis and no other place to read it
-    // (BL-074, shell 0.17.0): measured with the select's own font, on the same canvas for every select.
-    const cutSelects = [];
-    const mctx = document.createElement('canvas').getContext('2d');
-    for (const sel of document.querySelectorAll('select')) {
-      if (!mctx || !visible(sel)) continue;
-      const ss = getComputedStyle(sel);
-      mctx.font = `${ss.fontStyle} ${ss.fontWeight} ${ss.fontSize} ${ss.fontFamily}`;
-      const text = (sel.selectedOptions[0]?.textContent ?? '').trim().replace(/\s+/g, ' ');
-      if (!text) continue;
-      const need = mctx.measureText(text).width;
-      const has = sel.clientWidth - parseFloat(ss.paddingLeft) - parseFloat(ss.paddingRight);
-      if (need > has + 1) cutSelects.push(`${describe(sel)} cuts "${text}" (${Math.round(need)}px of text in ${Math.round(has)}px)`);
-    }
+    const cutSelects = selectCuts();
 
     // Containers that cut their content: overflow hidden or clip with more content than box (S1, G5).
     const clipped = [];
@@ -1080,6 +1102,7 @@ export function installLib() {
     return {
       focus: Boolean(shell),
       covered,
+      cutSelects: (() => { const c = selectCuts(); return { count: c.length, list: c.slice(0, 5) }; })(),
       enterInside: [...document.querySelectorAll('[data-focus-shell] [data-focus-enter]')].filter(visible).length,
       app: Boolean(document.querySelector('[data-workbench], [data-surface]')),
       caseId: stage ? stage.getAttribute('data-case') : null,
