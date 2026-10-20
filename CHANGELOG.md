@@ -15,6 +15,11 @@
 ### Changed
 
 - `UPlotChart`: a log x axis labels decades whatever uPlot's tick filter does (`decadeOnly`, SHC-030 to SHC-033, CAOS_APP_SHELL#65): with uPlot 1.6.32 the labels are those of 0.16.0 (it already labelled only the ticks whose mantissa is 1) except a non-decade tick whose mantissa is 1, such as 0.15 on a 0.15 to 15 axis, which loses its label; the host declares the labels shown in `data-log-labels`. An axis whose range holds no power of ten keeps uPlot's labels.
+- The `katex` peer range accepts 0.16 to 0.19 (`^0.16.0 || ^0.17.0 || ^0.18.0 || ^0.19.0`; it was `^0.16.0`, so a product pinning katex 0.19.0,
+  its current release, failed `npm ci` with ERESOLVE, CAOS_Fragmenta 0.09.000's dependency round). The shell develops and tests on katex 0.19.0,
+  which ships its own types (`@types/katex` dropped). 0.18.0 prefixed katex's internal classes; the classes the shell's stylesheet and the gate
+  select (`.katex`, `.katex-display`, `.katex-mathml`) are unchanged in 0.19.0, and the build, `npm test` 220, `test:browser` 110 and
+  `test:gate` 223 pass on it.
 
 ### Fixed
 
