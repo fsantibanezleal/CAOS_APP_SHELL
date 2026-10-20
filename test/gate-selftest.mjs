@@ -42,8 +42,8 @@ const PLANTS = [
   { id: 'truncated', check: 'G5', re: /truncated text/, opts: { routes: '/app' } },
   { id: 'select-cut', check: 'G5', re: /select\(s\) cut the selected text.*A planted case name far too long/, opts: { routes: '/app' } },
   // the review of 0.17.0: the text fits the content box by 2px and ends under the native arrow (M1); the Focus rail's select is cut (M2)
-  { id: 'select-arrow', check: 'G5', re: /select\(s\) cut the selected text.*Low contact/, opts: { routes: '/app' } },
-  { id: 'select-focus-rail', check: 'G5', re: /select\(s\) cut the selected text.*Low contact/, trail: /Focus/, opts: { routes: '/app', requireFocus: true } },
+  { id: 'select-arrow', check: 'G5', re: /select\(s\) cut the selected text.*Low contact.*arrow/, opts: { routes: '/app' } },
+  { id: 'select-focus-rail', check: 'G5', re: /select\(s\) cut the selected text.*A planted case name far too long/, trail: /Focus/, opts: { routes: '/app', requireFocus: true } },
   { id: 'deep-defect', check: 'G5', re: /scrolls sideways/, trail: /validation > table/, opts: { routes: '/app' } },
   { id: 'shrunk-tabs', check: 'G5', re: /cuts its tabs by \d+px/, trail: /validation > daily/, opts: { routes: '/app' } },
   { id: 'blank', check: 'G6', re: /is blank/, opts: { routes: '/app' } },
@@ -262,6 +262,8 @@ const PLANTS = [
 
 /** Legitimate pages that the gate once failed (ADR-0017 2.1 allows them): each must pass every check, in both languages. */
 const LEGIT = [
+  // a long case name that fits the two lines of the shell's case select display (the consumer trial of 0.17.0: names of 241 and 311 px in 181 px of room)
+  { id: 'legit-select-two-lines', opts: { routes: '/app', requireFocus: true } },
   { id: 'legit-engine-subtabs', opts: { routes: '/app,/implementation' } },
   { id: 'legit-method-view-tabs', opts: { routes: '/app,/methodology' } },
 ];

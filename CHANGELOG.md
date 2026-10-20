@@ -5,8 +5,10 @@
 - `UPlotChart`: draggable reference lines. A `yMarks` entry takes `drag: { min, max, step? }` and the chart `onYMarkChange(index, y)`; the line carries a slider handle the reader drags or moves with the arrows, Page keys, Home and End, inside its range, and the chart is redrawn, not rebuilt, while it moves (SHC-037 to SHC-041, BL-029). New exports `clampMark`, `nudgeMark`, type `YMarkDrag`; the host declares `data-y-drag`.
 - `UPlotChart`: a `points` series with an `x` of its own is drawn over the plot on its own x values, the axes taking its extent in; the host declares `data-overlay` and `data-overlay-drawn` (SHC-042 to SHC-044, BL-029). New export `overlayExtent`.
 - `parityBox` (the side of the square parity box, SHC-034 and SHC-035), `decadeOnly`; the gate fixture has a Forms view of each new form (a log x axis with a draggable percentile line, measured points on their own sizes and marks apart; a log axis with a draggable limit).
-- Gate: G5 fails a select, in the App or in Focus, whose selected text is wider than its content box less the native arrow (measured with a probe
-  select, 0 with `appearance: none`), naming the route, the state and the text (SHG-072, plants `select-cut`, `select-arrow`, `select-focus-rail`).
+- Gate: G5 fails a select, in the App or in Focus, whose selected text does not fit the room it leaves, naming the route, the state, the text and
+  what was measured: for a case select with the shell's display, a name that needs more than its two lines; for any other select, a text wider
+  than its content box less the native arrow (measured with a probe select, 0 with `appearance: none`). SHG-072, plants `select-cut`,
+  `select-arrow`, `select-focus-rail`, and the page that must pass, `legit-select-two-lines`.
 - Gate: under `--require-focus`, G18 fails a workbench route (`--workbench`) that is not among the measured routes, as 0.16.0 does for a
   surface App route, so a run cannot measure no Focus at all (SHG-073, plant `workbench-route-unwalked`).
 
@@ -24,6 +26,14 @@
   is no control, as before. `CaseSelectorProps.accessory` stays for a product's own control and still shares the select's row.
 - `CaseWorkbench` no longer drops a product's own `cases.accessory` while `focus` is on: in 0.16.0 and before, a select picker with `focus` replaced the
   accessory by the Focus control, so the accessory never showed in the App. It now shows on the select's row, and the Focus control is in the tab row.
+- The case select shows real case names whole (SHW-043; the consumer trial of 0.17.0 at a584b08: CAOS_Fragmenta failed 112 states and CAOS_Contraste 413,
+  all `select.cs-select[data-control="case"]`, with names of 202 to 311 px in 181 px of room, such as "Degenerate design: the negative control" at
+  241 px and "Corporate PD across 1 to 5 year horizons (planned)" at 311 px; the template passed with short names). `CaseSelector` with
+  `layout: 'select'` now shows the selected name in a display of up to two wrapped lines (`.cs-select-display`, `aria-hidden`) with the native
+  `select` kept in place on top of it, transparent by colour: the keyboard, the screen reader (accessible name and value) and the native list are
+  unchanged. The second line is reserved only when some case of the list needs it at the current width (measured once per width), so the rail head
+  never moves when the reader switches cases, and a list whose names all fit keeps one line as tall as before. Same in the App rail and the Focus rail.
+  A name that needs a third line is cut and G5 fails it.
 
 ## [0.16.000] - 2026-10-20
 
