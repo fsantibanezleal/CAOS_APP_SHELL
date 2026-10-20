@@ -6,6 +6,19 @@
 - `UPlotChart`: draggable reference lines. A `yMarks` entry takes `drag: { min, max, step? }` and the chart `onYMarkChange(index, y)`; the line carries a slider handle the reader drags or moves with the arrows, Page keys, Home and End, inside its range, and the chart is redrawn, not rebuilt, while it moves (SHC-037 to SHC-041, BL-029). New exports `clampMark`, `nudgeMark`, type `YMarkDrag`; the host declares `data-y-drag`.
 - `UPlotChart`: a `points` series with an `x` of its own is drawn over the plot on its own x values, the axes taking its extent in; the host declares `data-overlay` and `data-overlay-drawn` (SHC-042 to SHC-044, BL-029). New export `overlayExtent`.
 - `parityBox` (the side of the square parity box, SHC-034 and SHC-035), `decadeOnly`; the gate fixture has a Forms view of each new form (a log x axis with a draggable percentile line, measured points on their own sizes and marks apart; a log axis with a draggable limit).
+- Gate: G5 fails a select whose selected text is wider than its content box, naming the route, the state and the text (SHG-072, plant
+  `select-cut`).
+- Gate: under `--require-focus`, G18 fails a workbench route (`--workbench`) that is not among the measured routes, as 0.16.0 does for a
+  surface App route, so a run cannot measure no Focus at all (SHG-073, plant `workbench-route-unwalked`).
+
+### Fixed
+
+- The workbench's case select no longer cuts a case name (SHW-041, SHW-042, BL-074). Since 0.14.1 the **Focus** control shared the select's
+  row and, at 1280x800, a name was cut inside the native select with no ellipsis (CAOS_Fragmenta 0.08.001: "Mina de cob"). The control now ends
+  the group tab row, in the slot `Tabs` reserves (`trailing`), as a surface's does since 0.16.0, whatever the case picker (select, chips or
+  none); the select takes the rail head's whole width. Measured at 390, 768 and 1280 px: the rail head, the tab row and the panel start are the
+  same with and without `focus`. Focus keeps its URL, Escape, exit button and return to the same case, group and sub-view; inside Focus there
+  is no control, as before. `CaseSelectorProps.accessory` stays for a product's own control and still shares the select's row.
 
 ## [0.16.000] - 2026-10-20
 

@@ -272,6 +272,21 @@ export function installLib() {
       if (!named) truncated.push(describe(el));
     }
 
+    // A select whose selected option is wider than the select's content box cuts the text with no ellipsis and no other place to read it
+    // (BL-074, shell 0.17.0): measured with the select's own font, on the same canvas for every select.
+    const cutSelects = [];
+    const mctx = document.createElement('canvas').getContext('2d');
+    for (const sel of document.querySelectorAll('select')) {
+      if (!mctx || !visible(sel)) continue;
+      const ss = getComputedStyle(sel);
+      mctx.font = `${ss.fontStyle} ${ss.fontWeight} ${ss.fontSize} ${ss.fontFamily}`;
+      const text = (sel.selectedOptions[0]?.textContent ?? '').trim().replace(/\s+/g, ' ');
+      if (!text) continue;
+      const need = mctx.measureText(text).width;
+      const has = sel.clientWidth - parseFloat(ss.paddingLeft) - parseFloat(ss.paddingRight);
+      if (need > has + 1) cutSelects.push(`${describe(sel)} cuts "${text}" (${Math.round(need)}px of text in ${Math.round(has)}px)`);
+    }
+
     // Containers that cut their content: overflow hidden or clip with more content than box (S1, G5).
     const clipped = [];
     const containers = new Set([de, body, document.getElementById('root'), ...document.querySelectorAll('main, .page, .page-body, [data-instrument], [data-rail], .tabpanel, .caos-cw, [data-plot]')]);
@@ -415,6 +430,8 @@ export function installLib() {
       rail,
       truncated: truncated.slice(0, 5),
       truncatedCount: truncated.length,
+      cutSelects: cutSelects.slice(0, 5),
+      cutSelectCount: cutSelects.length,
       clipped,
       instrument,
       surfaces,
