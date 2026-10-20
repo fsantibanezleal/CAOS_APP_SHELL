@@ -835,6 +835,7 @@ function Console() {
         } else if (!['engine', 'runs'].includes(open) && here) here.remove();
       });
     }
+    if (PLANT === 'surface-tall-control') return styled('.caos-focus-enter { min-height: 90px !important; }');
     if (PLANT === 'surface-empty-head') {
       // a head row with nothing in it, permanently, on a headless surface
       return plantDom(() => {

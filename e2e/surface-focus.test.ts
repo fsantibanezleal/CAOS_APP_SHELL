@@ -11,7 +11,7 @@ before(async () => {
   h = await startHarness(`
     import { useState } from 'react';
     import { createRoot } from 'react-dom/client';
-    import { SurfacePage, SubTabs, Knob, CaseWorkbench, useLangStore, useShellLang } from './src/index';
+    import { SurfacePage, SubTabs, Tabs, Knob, CaseWorkbench, useLangStore, useShellLang } from './src/index';
     window.__setLang = (l) => useLangStore.getState().setLang(l);
     function Bench() {
       const lang = useShellLang();
@@ -55,8 +55,17 @@ before(async () => {
         </main>
       );
     }
+    // a workbench, or a surface, placed inside a Tabs panel: the frame must find the memory of the rows at the same place
+    function Nested() {
+      const kind = new URLSearchParams(location.search).get('nest');
+      const inner = kind === 'wb'
+        ? <CaseWorkbench caseId="c1" focus groups={[{ id: 'alpha', label: { en: 'Alpha', es: 'Alfa' }, content: <SubTabs ariaLabel="Alpha views" tabs={rowTabs('nested')} /> }]} context={{ content: <p>CONTEXT</p> }} />
+        : <SurfacePage title={{ en: 'Inner', es: 'Interior' }} focus tabs={[{ id: 'alpha', label: 'Alpha', focus: true, content: <SubTabs ariaLabel="Alpha views" tabs={rowTabs('nested')} /> }]} />;
+      return <main><Tabs ariaLabel="Outer" tabs={[{ id: 'app', label: 'App', content: inner }, { id: 'other', label: 'Other', content: <p>OTHER</p> }]} /></main>;
+    }
     function App() {
       const lang = useShellLang();
+      if (new URLSearchParams(location.search).get('nest')) return <Nested />;
       if (new URLSearchParams(location.search).get('twin') === '1') return <Twin />;
       if (new URLSearchParams(location.search).get('bench2') === '1') return <Bench2 />;
       if (new URLSearchParams(location.search).get('workbench') === '1') return <main><Bench /></main>;
@@ -89,9 +98,9 @@ before(async () => {
           <header><a id="bg-head" href="#top">header link</a></header>
           <main id="app-main" style={{ flex: '1 1 auto', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
             <SurfacePage
-              title={shape === 'headless' ? undefined : { en: 'Console', es: 'Consola' }}
+              title={shape === 'headless' || shape === 'nullactions' ? undefined : { en: 'Console', es: 'Consola' }}
               lede={shape === 'full' || shape === 'lede' ? 'What the console runs.' : undefined}
-              actions={shape === 'full' || shape === 'actions' ? <button type="button" id="export">Export</button> : undefined}
+              actions={shape === 'full' || shape === 'actions' ? <button type="button" id="export">Export</button> : shape === 'nullactions' ? null : undefined}
               tabs={tabs}
               instrument
               focus={nofocus ? undefined : { param, onChange: (on) => { window.__focusEvents = [...(window.__focusEvents ?? []), on]; } }}
@@ -410,4 +419,28 @@ test('the Focus frame names its focus parameter for the gate (data-focus-param),
   await bench.locator('[data-focus-enter]').click();
   assert.equal(await bench.locator('.caos-cw-focus').getAttribute('data-focus-param'), 'focus');
   await bench.close();
+});
+
+test('a CaseWorkbench, and a SurfacePage, placed inside a Tabs panel keep the sub-view entering and leaving Focus, and a choice made in Focus survives the return', async () => {
+  for (const nest of ['wb', 'sf']) {
+    const page = await h.browser.newPage({ viewport: { width: 1280, height: 800 } });
+    await page.goto(`${h.address}/?nest=${nest}`);
+    await page.getByRole('tab', { name: 'Table', exact: true }).click();
+    assert.match(await probe(page), /TABLE nested/, `${nest}: Table chosen in the App`);
+    await page.locator('[data-focus-enter]').click();
+    assert.match(await probe(page), /TABLE nested/, `${nest}: Focus opens on the sub-view the App had`);
+    await page.getByRole('tab', { name: 'Chart', exact: true }).click();
+    await page.keyboard.press('Escape');
+    assert.match(await probe(page), /CHART nested/, `${nest}: the choice made in Focus survives the return`);
+    await page.close();
+  }
+});
+
+test('a surface whose product passes actions={null} renders no empty actions element, and one with Focus and no head content gets no head', async () => {
+  const page = await h.browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await page.goto(`${h.address}/?shape=nullactions`);
+  await page.waitForSelector('[data-surface]');
+  assert.equal(await page.locator('.caos-surface-actions').count(), 0);
+  assert.equal(await page.locator('.caos-surface-head').count(), 0);
+  await page.close();
 });

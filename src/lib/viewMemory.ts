@@ -10,8 +10,9 @@ export const ViewMemoryContext = createContext<Map<string, string> | null>(null)
 
 /**
  * The place of a tab row: the path of the open panels above it (`/<open tab id>/<open sub-tab id>...`), provided by `Tabs` and
- * `SubTabs` around their open panel. A focus frame that mounts a view again (`CaseWorkbench`, `SurfacePage`) provides the same
- * path the row's panel would have, so a row finds its memory there. Ids only, never a localized name.
+ * `SubTabs` around their open panel. A focus frame that mounts a view again (`CaseWorkbench`, `SurfacePage`) provides the path it
+ * inherits plus the open id, which is the path the row's panel had wherever the component sits in the page (inside another `Tabs`
+ * panel too), so a row finds its memory there. Ids only, never a localized name.
  */
 export const PanelPathContext = createContext<string>('');
 
