@@ -8,20 +8,24 @@
 //   npx caos-shell-gate --url https://contraste.fasl-work.com --expect-brand "Contraste"     the deployed origin
 // Options:
 //   --base-path /Repo/           the site's base path with --serve (a project page); default /
+//   --spa-fallback               with --serve, answer as nginx does for a single-page app (try_files $uri $uri/ /index.html): an extensionless
+//                                path that matches no file gets index.html with 200; a path with an extension stays 404; default off (Pages)
 //   --routes /,/methodology      the routes; default: read from the header navigation
-//   --workbench /app             the routes that carry the case workbench; default /app
+//   --workbench /app             the routes that carry the case workbench; default /app; '' for a product whose App is a SurfacePage
+//   --app-route /app             the App route measured as a surface when --workbench is '' (G18 walks its views' Focus mode); default /app
 //   --sizes 390x844,...,2560x1440  --themes light,dark  --langs en,es
 //   --case-sample id1,id2        cases walked outside the primary mode; default the first and the last
 //   --single-case                the workbench has one case and no case control
 //   --idle-ms 3000  --settle-ms 15000  --text-floor 400  --instrument-min 0.5  --stage-fill-min 0.3  --stage-floor 140
 //   --wide-font-sizes 390x844,1280x800   the sizes of the wide-font pass (G10); --no-wide-font skips it
-//   --require-focus              fail an App without a Focus control (G18; ADR-0070 requires one in a product with simulations)
+//   --require-focus              fail an App without a Focus control (G18; ADR-0070 requires one in a product with simulations); on a surface
+//                                App, one with no view that offers it
 //   --out gate-output            report (gate-report.json), screenshots (shots/) and the capture index (index.html)
 // Needs `playwright` in the consuming project (optional peer dependency). Exit 1 on any failure, 2 on misuse.
 
 import { runGate } from '../gate/run.mjs';
 
-const FLAGS = new Set(['single-case', 'no-wide-font', 'require-focus']);
+const FLAGS = new Set(['single-case', 'no-wide-font', 'require-focus', 'spa-fallback']);
 const args = {};
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i += 1) {
@@ -40,12 +44,14 @@ const options = {
   expectBrand: args['expect-brand'],
   routes: args.routes,
   workbench: args.workbench,
+  appRoute: args['app-route'],
   sizes: args.sizes,
   themes: args.themes,
   langs: args.langs,
   caseSample: args['case-sample'],
   singleCase: args['single-case'] === true,
   requireFocus: args['require-focus'] === true,
+  spaFallback: args['spa-fallback'] === true,
   idleMs: num('idle-ms'),
   settleMs: num('settle-ms'),
   textFloor: num('text-floor'),

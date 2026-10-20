@@ -69,9 +69,9 @@ it is re-exported.
 | `src/content/Figure.tsx` | `Figure` | 12 | documents |
 | `src/content/FlipCard.tsx` | `FLIP_LIMITS`, `FLIP_TEXT`, `FlipCardProps`, `FlipCard` | 136 | documents |
 | `src/content/SubTabs.tsx` | `SubTabDef`, `SubTabsProps`, `SubTabs` | 119 | frame-and-navigation |
-| `src/content/SurfacePage.tsx` | `SurfacePageProps`, `SurfacePage` | 59 | frame-and-navigation |
+| `src/content/SurfacePage.tsx` | `SurfacePageProps`, `SurfacePage` | 152 | frame-and-navigation |
 | `src/content/TabGroups.tsx` | `TabGroupDef`, `TabGroupsProps`, `TabGroups` | 61 | frame-and-navigation |
-| `src/content/Tabs.tsx` | `TabDef`, `MAX_PEER_TABS`, `TabsProps`, `Tabs` | 111 | frame-and-navigation |
+| `src/content/Tabs.tsx` | `TabDef`, `MAX_PEER_TABS`, `TabsProps`, `Tabs` | 117 | frame-and-navigation |
 | `src/index.ts` | the public barrel (see Contracts) | 115 | (barrel) |
 | `src/lib/breakpoints.ts` | `BREAKPOINTS` | 15 | frame-and-navigation |
 | `src/lib/chrome.ts` | `ChromeStrings`, `chrome` | 39 | frame-and-navigation |
@@ -89,13 +89,14 @@ it is re-exported.
 | `src/lib/viewMemory.ts` | `ViewMemoryContext`, `memoryKey` | 12 | workbench |
 | `src/shell/AppShell.tsx` | `ShellRoute`, `ShellConfig`, `AppShell` | 270 | frame-and-navigation |
 | `src/shell/ArchitectureModal.tsx` | `ArchTab`, `ArchitectureConfig`, `validateArchitectureConfig`, `ArchitectureModal` | 196 | architecture-modal |
-| `src/shell/FocusShell.tsx` | `FocusShellProps`, `FocusShell` | 37 | frame-and-navigation |
+| `src/shell/FocusShell.tsx` | `FocusShellProps`, `FocusShell` | 111 | frame-and-navigation |
+| `src/shell/useFocusMode.ts` | `FocusModeConfig`, `FocusModeOptions`, `FocusMode`, `useFocusMode` | 106 | workbench |
 | `src/shell/LanguageToggle.tsx` | `LanguageToggle` | 16 | theme-and-language |
 | `src/shell/routes.ts` | `STANDARD_ROUTES` | 22 | frame-and-navigation |
 | `src/shell/ThemeToggle.tsx` | `ThemeToggle` | 17 | theme-and-language |
 | `src/shell/WorkbenchShell.tsx` | `WorkbenchRoute`, `WorkbenchShellProps`, `WorkbenchShell` | 85 | frame-and-navigation |
-| `src/workbench/CaseWorkbench.tsx` | `WorkbenchGroup`, `CaseWorkbenchProps`, `MAX_WORKBENCH_GROUPS`, `CaseWorkbench` | 267 | workbench |
-| `src/workbench/focus.ts` | `FOCUS_TEXT`, `FOCUS_PARAM`, `CaseFocusConfig` | 26 | workbench |
+| `src/workbench/CaseWorkbench.tsx` | `WorkbenchGroup`, `CaseWorkbenchProps`, `MAX_WORKBENCH_GROUPS`, `CaseWorkbench` | 226 | workbench |
+| `src/workbench/focus.ts` | `FOCUS_TEXT`, `FOCUS_PARAM`, `CaseFocusConfig`, `SurfaceFocusConfig`, `ViewFocusConfig` | 54 | workbench |
 | `src/workbench/Controls.tsx` | `KnobProps`, `Knob`, `ChipOption`, `ChipGroupProps`, `ChipGroup` | 97 | controls-and-readouts |
 | `src/workbench/LaneBadge.tsx` | `Lane`, `LaneBadge` | 37 | workbench |
 | `src/workbench/Readouts.tsx` | `Tone`, `ReadoutItem`, `ReadoutProps`, `Readout`, `GaugeZone`, `GaugeProps`, `Gauge`, `VerdictProps`, `Verdict`, `PlotCardProps`, `PlotCard` | 249 | controls-and-readouts |
@@ -238,6 +239,9 @@ Public API of the main entry by group, with the module that declares each value 
 | Small cards (0.14.0) | types | `CardDeckProps`, `DeckCard` | `src/content/CardDeck.tsx` |
 | Focus mode for the App (0.14.0) | values | `FOCUS_TEXT`, `FOCUS_PARAM` | `src/workbench/focus.ts` |
 | Focus mode for the App (0.14.0) | types | `CaseFocusConfig` | `src/workbench/focus.ts` |
+| Focus mode for a surface App (0.16.0) | types | `SurfaceFocusConfig`, `ViewFocusConfig` | `src/workbench/focus.ts` |
+| Focus mode for a surface App (0.16.0) | values | `useFocusMode` | `src/shell/useFocusMode.ts` |
+| Focus mode for a surface App (0.16.0) | types | `FocusMode`, `FocusModeConfig`, `FocusModeOptions` | `src/shell/useFocusMode.ts` |
 | Navigation and views in the URL | types | `SubTabDef` | `src/content/SubTabs.tsx` |
 | Navigation and views in the URL | types | `SubTabsProps` | `src/content/SubTabs.tsx` |
 | Navigation and views in the URL | values | `SurfacePage` | `src/content/SurfacePage.tsx` |
@@ -312,9 +316,9 @@ One paragraph each; the rows are in the area file.
 - Documents (SHD). `DocPage`, `DocSection`, `Cite`, `CitationsProvider`, `DocReferences`, `DocRefsScope`, `Equation`, `Figure`, `Callout`, `FlipCard` and `CardDeck` (0.14.0: a small card that turns, and a row or carousel of cards; the executive view's four flip groups and its animated illustrations). A document route is a prose page whose sections declare
   their citations; the references are one block at the end of the scope that shows them, each once, in order of first appearance (0.11.0). Text blocks take the full column and captions keep a measure.
   See [`features/documents/requirements.md`](features/documents/requirements.md).
-- Frame and navigation (SHF). `AppShell`, `STANDARD_ROUTES`, `FocusShell`, `WorkbenchShell`, `Tabs`, `SubTabs`, `TabGroups`, `SurfacePage`, `BREAKPOINTS`, `useUrlView`, `useOverflowFade` (internal).
+- Frame and navigation (SHF). `AppShell`, `STANDARD_ROUTES`, `FocusShell`, `WorkbenchShell`, `Tabs`, `SubTabs`, `TabGroups`, `SurfacePage` (with Focus mode for a view with a stage since 0.16.0, `TabDef.focus`), `BREAKPOINTS`, `useUrlView`, `useOverflowFade` (internal).
   The frame, its three modes, the three route types and every row of links or tabs as one scrolling line. See [`features/frame-and-navigation/requirements.md`](features/frame-and-navigation/requirements.md).
-- Workbench (SHW). `WorkbenchLayout`, `CaseWorkbench` (with Focus mode for the App since 0.14.0, through `FocusShell`), `CaseSelector`, the case model helpers, `VariantBar`, `LaneBadge`, `Stage`, `ViewsRow`, the state key, `PanelBoundary`, the viz loop. The App route of
+- Workbench (SHW). `WorkbenchLayout`, `CaseWorkbench` (with Focus mode for the App since 0.14.0, through `FocusShell`; the behaviour is `useFocusMode`, shared with `SurfacePage` since 0.16.0), `CaseSelector`, the case model helpers, `VariantBar`, `LaneBadge`, `Stage`, `ViewsRow`, the state key, `PanelBoundary`, the viz loop. The App route of
   a product about cases: a rail beside an instrument of at most six views, all computed for one state key. See [`features/workbench/requirements.md`](features/workbench/requirements.md).
 - Charts (SHC). `UPlotChart` (line, point, log and parity plots, marks and toned reference lines), `BarChart`, and the text kit. Drawings that size their own margins from measured text and declare themselves
   to the gate. See [`features/charts/requirements.md`](features/charts/requirements.md).
@@ -325,7 +329,7 @@ One paragraph each; the rows are in the area file.
 - Theme and language (SHT). Tokens (`SHELL_TOKENS`, `resolveToken`, `useThemeTokens`), the theme and language stores and toggles, `THEME_BOOT_SCRIPT`, the storage keys, `pick`. Both themes at WCAG AA, English by default. See
   [`features/theme-and-language/requirements.md`](features/theme-and-language/requirements.md).
 - Architecture modal (SHA). `ArchitectureModal` and `validateArchitectureConfig`. The in-app "how it works" dialog (ADR-0058). See [`features/architecture-modal/requirements.md`](features/architecture-modal/requirements.md).
-- The gate (SHG). `caos-shell-gate`, G1 to G19 (G16 flip cards and card decks, G17 animated drawings, G18 Focus mode, 0.14.0; G19 values whole, 0.15.0) and the ADR checks, and its self-test. See [`features/gate/requirements.md`](features/gate/requirements.md).
+- The gate (SHG). `caos-shell-gate`, G1 to G19 (G16 flip cards and card decks, G17 animated drawings, G18 Focus mode, 0.14.0, on a surface App too since 0.16.0 (`--app-route`); G19 values whole, 0.15.0) and the ADR checks, and its self-test. See [`features/gate/requirements.md`](features/gate/requirements.md).
 
 ## Degradation and dependency states
 
