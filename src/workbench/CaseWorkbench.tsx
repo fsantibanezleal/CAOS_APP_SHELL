@@ -60,7 +60,7 @@ export interface CaseWorkbenchProps {
   deepLinkView?: boolean | string;
   ariaLabel?: BiText;
   /**
-   * Focus mode for the App (ADR-0070, shell 0.14.0): a Focus button in the rail head opens the selected case's open group in
+   * Focus mode for the App (ADR-0070, shell 0.14.0): a Focus control at the end of the group tab row opens the selected case's open group in
    * the full viewport through `FocusShell` (the stage is the view, the rail stays), holds `?focus=1` beside `?case=` and
    * `?view=` in the URL, and returns with Escape or the exit button to the same case, group and sub-view. `true` takes all
    * the defaults. Omit it and the App is exactly what it was.
@@ -138,31 +138,19 @@ export function CaseWorkbench(props: CaseWorkbenchProps) {
       <span>{FOCUS_TEXT.enter[lang]}</span>
     </button>
   );
-  // the Focus button sits on the case select's row when there is one (shell 0.14.1: on a row of its own it added 37px to the rail
-  // head, and a rail with little slack, as two of Contraste's, scrolled: ADR-0071 rule 6); otherwise on its own row as before
-  const besideSelect = Boolean(cases && (cases.layout ?? 'chips') === 'select');
+  // The Focus control sits at the end of the group tab row, in the slot Tabs reserves beside the tab list (shell 0.17.0, BL-074, the place
+  // the surface's has had since 0.16.0): the case select takes the rail head's whole width, so no case name is cut, and the rail head and
+  // the tab row are no taller than without the control (ADR-0071 rule 6). In 0.14.1 it shared the select's row and cut the names.
   const pickers =
     cases || variants ? (
       <>
-        {cases && <CaseSelector lang={lang} {...cases} accessory={besideSelect ? enter : cases.accessory} />}
+        {cases && <CaseSelector lang={lang} {...cases} />}
         {variants && <VariantBar {...variants} />}
       </>
     ) : null;
-  // inside Focus the same pickers, never the Focus control (it would open the mode the reader is already in; shell 0.14.3)
-  const focusPickers =
-    cases || variants ? (
-      <>
-        {cases && <CaseSelector lang={lang} {...cases} accessory={cases.accessory} />}
-        {variants && <VariantBar {...variants} />}
-      </>
-    ) : null;
-  const railHead =
-    pickers || enter ? (
-      <>
-        {pickers}
-        {besideSelect ? null : enter}
-      </>
-    ) : null;
+  // inside Focus the same pickers; the Focus control is not among them (it would open the mode the reader is already in; shell 0.14.3)
+  const railHead = pickers;
+  const focusPickers = pickers;
   const instrumentData = {
     'data-case-workbench': '',
     'data-group-count': tabs.length,
@@ -221,6 +209,7 @@ export function CaseWorkbench(props: CaseWorkbenchProps) {
               value={openGroup}
               onChange={selectGroup}
               ariaLabel={pick(ariaLabel ?? { en: 'Case views', es: 'Vistas del caso' }, lang)}
+              trailing={enter || undefined}
             />
           </div>
         </WorkbenchLayout>

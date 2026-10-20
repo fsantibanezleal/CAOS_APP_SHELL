@@ -620,7 +620,8 @@ function Workbench() {
   // The case list arrives asynchronously, as a product's index does: the deep link must survive that (G9).
   const [caseList, setCaseList] = useState<typeof CASES>([]);
   useEffect(() => {
-    const t = setTimeout(() => setCaseList(CASES), 60);
+    // the plant that cuts the select (BL-074, G5): the first case's name is far wider than the rail's select
+    const t = setTimeout(() => setCaseList(PLANT === 'select-cut' ? CASES.map((c, i) => (i === 0 ? { ...c, name: 'A planted case name far too long for the rail select to show whole' } : c)) : CASES), 60);
     return () => clearTimeout(t);
   }, []);
   const idx = Math.max(0, CASES.findIndex((c) => c.id === caseId));
