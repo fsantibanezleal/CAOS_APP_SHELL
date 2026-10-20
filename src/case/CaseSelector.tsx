@@ -152,25 +152,39 @@ export function CaseSelector(props: CaseSelectorProps) {
   const groups = groupByCategory(visible);
   const modified = cases.find((c) => c.id === modifiedFromId) ?? null;
 
-  // The select shows the selected name in a display of up to two wrapped lines, with the native select on top of it, transparent (shell
-  // 0.17.0, the consumer trial: real case names are 200 to 310 px and a rail leaves a select 181 px of room). The second line is reserved
-  // only when some case of the list needs it at the current width, measured once per width and so the same for every case: the
-  // rail head never moves when the reader switches cases, and a list whose names all fit keeps one line.
+  // The select shows the selected name whole, at any length, in a display with the native select on top of it, transparent (shell 0.17.0, the
+  // consumer trial: real case names are 200 to 400 px and a rail leaves a select 181 px of room). There is no line cap: the name wraps to the lines
+  // it needs (a token wider than the room breaks inside), and the display is as tall as the longest name of the visible list needs at the current
+  // width, measured in the DOM (the display's own font, padding and content width), so the rail head never moves when the reader switches cases
+  // and a list whose names all fit keeps one line, as tall as a plain select. A product that finds the head too tall shortens its names.
   const wrapRef = useRef<HTMLDivElement>(null);
-  const [twoLines, setTwoLines] = useState(false);
-  const nameKey = visible.map((c) => c.name).join('');
+  const [minHeight, setMinHeight] = useState<number | null>(null);
+  const nameKey = visible.map((c) => c.name).join('\u0001');
   useLayoutEffect(() => {
     const wrap = wrapRef.current;
     const display = wrap?.querySelector<HTMLElement>('.cs-select-display');
     if (!wrap || !display) return undefined;
-    const names = nameKey ? nameKey.split('') : [];
+    const names = nameKey ? nameKey.split('\u0001') : [];
     const measure = () => {
       const st = getComputedStyle(display);
-      const ctx = document.createElement('canvas').getContext('2d');
-      if (!ctx) return;
-      ctx.font = `${st.fontStyle} ${st.fontWeight} ${st.fontSize} ${st.fontFamily}`;
       const room = display.clientWidth - parseFloat(st.paddingLeft) - parseFloat(st.paddingRight);
-      setTwoLines(room > 0 && names.some((n) => ctx.measureText(n).width > room));
+      if (!(room > 0)) return;
+      // a temporary unclamped copy of the text element, inside the display (so the cascade is the real one), at the display's content width
+      const copy = document.createElement('span');
+      copy.className = 'cs-select-text';
+      copy.setAttribute('aria-hidden', 'true');
+      copy.setAttribute('style', `position:absolute;visibility:hidden;left:0;top:0;width:${room}px;display:block;overflow:visible;max-height:none;-webkit-line-clamp:unset;line-clamp:unset`);
+      display.append(copy);
+      let tallest = 0;
+      for (const n of names) {
+        copy.textContent = n;
+        tallest = Math.max(tallest, copy.getBoundingClientRect().height);
+      }
+      const line = parseFloat(getComputedStyle(copy).lineHeight) || parseFloat(st.fontSize) * 1.25;
+      copy.remove();
+      const frame = parseFloat(st.paddingTop) + parseFloat(st.paddingBottom) + parseFloat(st.borderTopWidth) + parseFloat(st.borderBottomWidth);
+      const next = tallest > line * 1.5 ? Math.ceil((tallest + frame) * 100) / 100 : null;
+      setMinHeight((prev) => (prev === next ? prev : next));
     };
     measure();
     let width = wrap.getBoundingClientRect().width;
@@ -185,7 +199,9 @@ export function CaseSelector(props: CaseSelectorProps) {
     void document.fonts?.ready.then(measure);
     return () => ro?.disconnect();
   }, [layout, nameKey]);
-  const selectedName = visible.find((c) => c.id === selectedId)?.name ?? cases.find((c) => c.id === selectedId)?.name ?? '';
+  // what the native select holds: React gives a controlled select whose value matches no option its first non-disabled option, in the order of the list
+  const options = groups.flatMap((g) => g.cases);
+  const selectedName = (options.find((c) => c.id === selectedId) ?? options.find((c) => !c.disabled))?.name ?? '';
 
   const select = (
     <select
@@ -208,7 +224,7 @@ export function CaseSelector(props: CaseSelectorProps) {
   );
   const selectBox = (
     <div className="cs-select-wrap" ref={wrapRef}>
-      <div className={`cs-select-display${twoLines ? ' cs-select-display-2' : ''}`} aria-hidden="true">
+      <div className="cs-select-display" style={minHeight === null ? undefined : { minHeight }} aria-hidden="true">
         <span className="cs-select-text">{selectedName}</span>
       </div>
       {select}

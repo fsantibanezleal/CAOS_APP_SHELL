@@ -68,6 +68,27 @@ function plantDom(mutate: () => void): () => void {
 }
 const WORDS = 'one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty';
 function flipPlant(plant: string): (() => void) | undefined {
+  // shell 0.17.0 round 3: a product stylesheet that clamps the case select's text to two lines (the name is three lines; `select-focus-rail` clamps
+  // only the Focus rail's), and a display that shows another name than the one the native select holds
+  if (plant === 'select-cut' || plant === 'select-cut-token' || plant === 'select-focus-rail') {
+    const scope = plant === 'select-focus-rail' ? '[data-focus-shell] ' : '';
+    const style = document.createElement('style');
+    style.textContent = `${scope}.cs-select-text { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }`;
+    document.head.append(style);
+    return () => style.remove();
+  }
+  // a product stylesheet that clamps the display's box (not its text) to one line's height on a three-line name
+  if (plant === 'select-cut-display') {
+    const style = document.createElement('style');
+    style.textContent = '.cs-select-display { height: 30px !important; min-height: 0 !important; overflow: hidden; }';
+    document.head.append(style);
+    return () => style.remove();
+  }
+  if (plant === 'select-display-stale') {
+    return plantDom(() => {
+      for (const t of document.querySelectorAll('.cs-select-text')) if (t.textContent !== 'A planted stale display name') t.textContent = 'A planted stale display name';
+    });
+  }
   // review of 0.17.0 (M1): a select of the product's own (a plain select, without the shell's display) whose text fits its content box by 2px
   // but ends under the native arrow
   if (plant === 'select-arrow') {
@@ -687,13 +708,17 @@ function Workbench() {
     const t = setTimeout(() => setCaseList(CASES), 60);
     return () => clearTimeout(t);
   }, []);
-  // The names of the case select. Plants: a name past the two lines the shell's display holds (`select-cut`, and `select-focus-rail` only while Focus
-  // is open, so the App is clean and the Focus rail is cut); `legit-select-two-lines` is a long name that fits them (the trial's Contraste name).
-  const LONG_NAME = 'A planted case name far too long for the rail select to show whole, and then a good deal longer than that, so that two lines are not enough to hold it either';
+  // The names of the case select (shell 0.17.0 round 3: the display shows a name whole at any length). The consumer trial's names need three lines in the
+  // rail: `select-cut` and `select-focus-rail` (only while Focus is open, so the App is clean) plant a product stylesheet that clamps them to two, `select-cut-token`
+  // the same on a name with no space; `legit-select-two-lines` and `legit-select-three-lines` are names the display shows whole.
+  const THREE_LINES = 'Lifetime PD, IFRS 9 staging and ECL on public small-business loans';
+  const TOKEN_NAME = 'fragmenta_escondida_bench_blast_pattern_07_full_resolution_run';
   const shownCases = caseList.map((c, i) => {
-    if (i !== 0) return c;
-    if (PLANT === 'select-cut' || (PLANT === 'select-focus-rail' && focusOn)) return { ...c, name: LONG_NAME };
+    if (i !== 0 && !(i === 1 && PLANT === 'legit-select-three-lines')) return c;
+    if (PLANT === 'select-cut' || PLANT === 'select-cut-display' || (PLANT === 'select-focus-rail' && focusOn)) return { ...c, name: THREE_LINES };
+    if (PLANT === 'select-cut-token') return { ...c, name: TOKEN_NAME };
     if (PLANT === 'legit-select-two-lines') return { ...c, name: 'Corporate PD across 1 to 5 year horizons (planned)' };
+    if (PLANT === 'legit-select-three-lines') return { ...c, name: i === 0 ? 'Granite mine, northeastern China: the extrapolation control' : THREE_LINES };
     return c;
   });
   const idx = Math.max(0, CASES.findIndex((c) => c.id === caseId));
