@@ -2,7 +2,6 @@
 
 ### Added
 
-- `UPlotChart`: the log x axis labels the powers of ten only, in the interface language's number format, and draws the ticks between them without a label (`decadeOnly`; an axis whose range holds no power of ten keeps uPlot's labels); the host declares the labels in `data-log-labels` (SHC-030 to SHC-033, CAOS_APP_SHELL#65). A log x axis that showed 2, 3 and 5 between the decades now shows the decades only.
 - `UPlotChart`: draggable reference lines. A `yMarks` entry takes `drag: { min, max, step? }` and the chart `onYMarkChange(index, y)`; the line carries a slider handle the reader drags or moves with the arrows, Page keys, Home and End, inside its range, and the chart is redrawn, not rebuilt, while it moves (SHC-037 to SHC-041, BL-029). New exports `clampMark`, `nudgeMark`, type `YMarkDrag`; the host declares `data-y-drag`.
 - `UPlotChart`: a `points` series with an `x` of its own is drawn over the plot on its own x values, the axes taking its extent in; the host declares `data-overlay` and `data-overlay-drawn` (SHC-042 to SHC-044, BL-029). New export `overlayExtent`.
 - `parityBox` (the side of the square parity box, SHC-034 and SHC-035), `decadeOnly`; the gate fixture has a Forms view of each new form (a log x axis with a draggable percentile line, measured points on their own sizes and marks apart; a log axis with a draggable limit).
@@ -19,6 +18,10 @@
   none); the select takes the rail head's whole width. Measured at 390, 768 and 1280 px: the rail head, the tab row and the panel start are the
   same with and without `focus`. Focus keeps its URL, Escape, exit button and return to the same case, group and sub-view; inside Focus there
   is no control, as before. `CaseSelectorProps.accessory` stays for a product's own control and still shares the select's row.
+
+### Changed
+
+- `UPlotChart`: a log x axis labels decades whatever uPlot's tick filter does (`decadeOnly`, SHC-030 to SHC-033, CAOS_APP_SHELL#65): with uPlot 1.6.32 the labels are those of 0.16.0 (it already labelled only the ticks whose mantissa is 1) except a non-decade tick whose mantissa is 1, such as 0.15 on a 0.15 to 15 axis, which loses its label; the host declares the labels shown in `data-log-labels`. An axis whose range holds no power of ten keeps uPlot's labels.
 
 ## [0.16.000] - 2026-10-20
 
