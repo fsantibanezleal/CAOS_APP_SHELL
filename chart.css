@@ -22,3 +22,8 @@
 .caos-chart.fill[data-parity] > .caos-chart-plot { display: flex; align-items: center; justify-content: center; }
 .caos-chart[data-pick] .u-over { cursor: pointer; }
 .caos-chart .u-cursor-x, .caos-chart .u-cursor-y { border-color: var(--color-fg-faint) !important; }
+/* The key that solos a series (`solo`, 0.18.0): each entry is a button. At rest it reads as the plain key; the soloed one is
+   set off by a border and bold text, in the text colour, never by colour alone. */
+.caos-chart-key-button { display: inline-flex; align-items: center; gap: 0.3rem; min-width: 0; margin: 0; padding: 0.15rem 0.45rem; border: 1px solid transparent; border-radius: 0.4rem; background: none; color: inherit; font: inherit; line-height: inherit; text-align: start; cursor: pointer; }
+.caos-chart-key-button:hover { border-color: var(--color-border); }
+.caos-chart-key-button[aria-pressed="true"] { border-color: var(--color-fg-subtle); color: var(--color-fg); font-weight: 600; }

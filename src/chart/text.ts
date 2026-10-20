@@ -10,6 +10,15 @@
  * give the whole label as its title. Ported from CAOS_Fragmenta `viz/text.ts` (0.07.000).
  */
 
+import type { Lang } from '../lib/lang';
+
+/** The name of a reference line that has no label, for the handle a reader drags (a screen reader says it): numbered when
+ * several unlabelled lines of one chart can be dragged, so each handle has a name of its own. */
+export function referenceLineName(lang: Lang, n: number, of: number): string {
+  const base = lang === 'es' ? 'Línea de referencia' : 'Reference line';
+  return of > 1 ? `${base} ${n}` : base;
+}
+
 let context: CanvasRenderingContext2D | null | undefined;
 
 /** The page's sans-serif stack as the shell token resolves it. */
