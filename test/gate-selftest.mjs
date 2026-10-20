@@ -43,6 +43,7 @@ const PLANTS = [
   // shell 0.17.0 (round 3): the case select shows the name whole at any length; a product stylesheet that clamps the display's text, or a display that
   // names another case than the one the select holds, is a cut or stale case name. The names are the consumer trial's (three lines in the rail).
   { id: 'select-cut', check: 'G5', re: /select\(s\) cut the selected text.*cuts the case name "Lifetime PD, IFRS 9 staging/, opts: { routes: '/app' } },
+  { id: 'select-cut-display', check: 'G5', re: /select\(s\) cut the selected text.*cuts the case name "Lifetime PD, IFRS 9 staging[^"]*" in its display/, opts: { routes: '/app' } },
   { id: 'select-cut-token', check: 'G5', re: /select\(s\) cut the selected text.*cuts the case name "fragmenta_escondida_bench/, opts: { routes: '/app' } },
   { id: 'select-display-stale', check: 'G5', re: /select\(s\) cut the selected text.*shows "A planted stale display name" while the select holds "[^"]+" \(a stale display\)/, opts: { routes: '/app' } },
   // the review of 0.17.0: a product's own plain select whose text fits its content box by 2px and ends under the native arrow (M1); the Focus rail's select is cut (M2)

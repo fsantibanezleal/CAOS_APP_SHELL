@@ -77,6 +77,13 @@ function flipPlant(plant: string): (() => void) | undefined {
     document.head.append(style);
     return () => style.remove();
   }
+  // a product stylesheet that clamps the display's box (not its text) to one line's height on a three-line name
+  if (plant === 'select-cut-display') {
+    const style = document.createElement('style');
+    style.textContent = '.cs-select-display { height: 30px !important; min-height: 0 !important; overflow: hidden; }';
+    document.head.append(style);
+    return () => style.remove();
+  }
   if (plant === 'select-display-stale') {
     return plantDom(() => {
       for (const t of document.querySelectorAll('.cs-select-text')) if (t.textContent !== 'A planted stale display name') t.textContent = 'A planted stale display name';
@@ -659,7 +666,7 @@ function Workbench() {
   const TOKEN_NAME = 'fragmenta_escondida_bench_blast_pattern_07_full_resolution_run';
   const shownCases = caseList.map((c, i) => {
     if (i !== 0 && !(i === 1 && PLANT === 'legit-select-three-lines')) return c;
-    if (PLANT === 'select-cut' || (PLANT === 'select-focus-rail' && focusOn)) return { ...c, name: THREE_LINES };
+    if (PLANT === 'select-cut' || PLANT === 'select-cut-display' || (PLANT === 'select-focus-rail' && focusOn)) return { ...c, name: THREE_LINES };
     if (PLANT === 'select-cut-token') return { ...c, name: TOKEN_NAME };
     if (PLANT === 'legit-select-two-lines') return { ...c, name: 'Corporate PD across 1 to 5 year horizons (planned)' };
     if (PLANT === 'legit-select-three-lines') return { ...c, name: i === 0 ? 'Granite mine, northeastern China: the extrapolation control' : THREE_LINES };
