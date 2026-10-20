@@ -7,7 +7,7 @@ import executiveData from './executive/executive.json';
 import { SECTION_TITLES } from '../../src/content/executive';
 
 type Lang = 'en' | 'es';
-const REFS = ['km1927', 'hethcote2000'];
+const REFS = ['km1927', 'hethcote2000', 'eneuro2020'];
 
 export const PARAGRAPH = {
   en: 'The model divides the population into those who can be infected, those who are infected, and those who have recovered. Each day, contacts between the first two groups produce new infections in proportion to the contact rate, and a fixed share of the infected recover. The epidemic grows while the effective reproduction number stays above one, peaks when the susceptible share falls to the inverse of the basic reproduction number, and ends with part of the population never infected.',

@@ -95,7 +95,10 @@ export { CaseWorkbench, MAX_WORKBENCH_GROUPS } from './workbench/CaseWorkbench';
 export type { CaseWorkbenchProps, WorkbenchGroup } from './workbench/CaseWorkbench';
 // Focus mode for the App (0.14.0): the words, the URL parameter and the product's say over it.
 export { FOCUS_PARAM, FOCUS_TEXT } from './workbench/focus';
-export type { CaseFocusConfig } from './workbench/focus';
+export type { CaseFocusConfig, SurfaceFocusConfig, ViewFocusConfig } from './workbench/focus';
+// The one Focus behaviour `CaseWorkbench` and `SurfacePage` share (0.16.0), for a product with a frame of its own.
+export { useFocusMode } from './shell/useFocusMode';
+export type { FocusMode, FocusModeConfig, FocusModeOptions } from './shell/useFocusMode';
 export { VariantBar } from './workbench/VariantBar';
 export type { VariantBarProps, VariantDef } from './workbench/VariantBar';
 export { LaneBadge } from './workbench/LaneBadge';
