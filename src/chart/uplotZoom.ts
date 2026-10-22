@@ -19,8 +19,8 @@ export interface ZoomContext {
   enabled: () => boolean;
   /** The range the chart opened with. */
   full: () => { x: Range; y: Range } | null;
-  /** Called when a range was changed by one of these operations or by the brush, with whether the chart is now zoomed. */
-  changed: (zoomed: boolean) => void;
+  /** Set while a range is being set by these operations: a scale with a fixed range (`x.range`, `y.range`) lets an explicit range through only then. */
+  explicit: { current: boolean };
 }
 
 export interface ZoomControls {
@@ -39,11 +39,17 @@ export interface ZoomControls {
 const rangeOf = (u: uPlot, key: 'x' | 'y'): [number, number] => [u.scales[key].min ?? 0, u.scales[key].max ?? 1];
 
 export function createZoom(u: uPlot, ctx: ZoomContext): ZoomControls {
-  const apply = (nx: Range | null, ny: Range | null) =>
-    u.batch(() => {
-      if (nx) u.setScale('x', { min: nx[0], max: nx[1] });
-      if (ny) u.setScale('y', { min: ny[0], max: ny[1] });
-    });
+  const apply = (nx: Range | null, ny: Range | null) => {
+    ctx.explicit.current = true;
+    try {
+      u.batch(() => {
+        if (nx) u.setScale('x', { min: nx[0], max: nx[1] });
+        if (ny) u.setScale('y', { min: ny[0], max: ny[1] });
+      });
+    } finally {
+      ctx.explicit.current = false;
+    }
+  };
   const isNow = (): boolean => {
     const full = ctx.full();
     if (!full) return false;

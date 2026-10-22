@@ -590,6 +590,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
   const h = parity ? width : fill ? box.height : height;
   const uRef = useRef<uPlot | null>(null);
   const ctlRef = useRef<ZoomControls | null>(null);
+  const explicitRef = useRef(false);
   // the host, whose data-ticks-repeat the tick formatters keep current (set on the element: a formatter runs inside
   // uPlot's draw, where a state update would loop)
   const hostRef = useRef<HTMLDivElement | null>(null);
@@ -756,6 +757,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
     };
     const xSteps = x.time || x.log ? undefined : tickSteps(x.format);
     const ySteps = y.log ? undefined : tickSteps(y.format);
+    const fixedRange = (r: readonly [number, number]) => (_u: uPlot, min: number | null, max: number | null): uPlot.Range.MinMax => (explicitRef.current && min !== null && max !== null ? [min, max] : [r[0], r[1]]);
     const opts: uPlot.Options = {
       width,
       height: h,
@@ -772,14 +774,16 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
         x: {
           time: Boolean(x.time),
           distr: x.log ? 3 : 1,
-          ...(range ? { range } : xExt ? { range: xExt } : x.log ? { range: (_u: uPlot, min: number, max: number): uPlot.Range.MinMax => [min, max] } : {}),
+          // a fixed range is a function that gives way to a zoom: uPlot passes even an explicit range through the scale's range, so a constant
+          // (or an array) undid every zoom of a chart with `x.range` or `y.range` (Tier A, 0.19.0)
+          ...(range ? { range: fixedRange(range) } : xExt ? { range: fixedRange(xExt) } : x.log ? { range: (_u: uPlot, min: number, max: number): uPlot.Range.MinMax => [min, max] } : {}),
         },
         y: {
           distr: y.log ? 3 : 1,
           ...(range
-            ? { range }
+            ? { range: fixedRange(range) }
             : y.range
-              ? { range: y.range }
+              ? { range: fixedRange(y.range) }
               : yLevels
                 ? {
                     // uPlot's own range of the data and the levels: its padding, its decade snap on a log axis
@@ -1030,7 +1034,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
     const f = { x: [u.scales.x.min ?? 0, u.scales.x.max ?? 1] as [number, number], y: [u.scales.y.min ?? 0, u.scales.y.max ?? 1] as [number, number] };
     fullRef.current = f;
     hostRef.current?.setAttribute('data-view-x', `${f.x[0]},${f.x[1]}`);
-    const ctl = createZoom(u, { plot: el, log: { x: Boolean(x.log), y: Boolean(y.log) }, both, enabled: () => zoomableRef.current, full: () => fullRef.current, changed: () => undefined });
+    const ctl = createZoom(u, { plot: el, log: { x: Boolean(x.log), y: Boolean(y.log) }, both, enabled: () => zoomableRef.current, full: () => fullRef.current, explicit: explicitRef });
     ctlRef.current = ctl;
     u.over.style.touchAction = zoomable ? 'pan-y' : '';
     const held = zoomRef.current;
@@ -1038,10 +1042,12 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
     const hx = zoomable ? meets(held.x, f.x) : null;
     const hy = zoomable && both ? meets(held.y, f.y) : null;
     if (hx || hy) {
+      explicitRef.current = true;
       u.batch(() => {
         if (hx) u.setScale('x', { min: hx[0], max: hx[1] });
         if (hy) u.setScale('y', { min: hy[0], max: hy[1] });
       });
+      explicitRef.current = false;
     } else {
       zoomRef.current = { x: null, y: null };
       if (zoomedRef.current) {
