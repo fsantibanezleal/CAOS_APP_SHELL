@@ -72,6 +72,13 @@ const PLANTS = [
   { id: 'chart-dead-brush', check: 'G20', re: /a drag across the plot does not zoom the chart \(the brush is dead\)/, opts: { routes: '/app' } },
   { id: 'zoom-off-empty', check: 'G20', re: /zoom is turned off with a reason of fewer than 12 letters and digits \(""\)/, opts: { routes: '/app', langs: 'es' } },
   { id: 'zoom-off-unexplained', check: 'G20', re: /zoom is turned off with a reason of fewer than 12 letters and digits \("no"\)/, opts: { routes: '/app' } },
+  // shell 0.19.0 (D16-21): marks that overlap fail G20 through data-mark-overlaps; the floating and the grouped bars of the fixture are driven (the
+  // keyboard walks every bar, the readout reads the ends and the group, the legend is shown)
+  { id: 'mark-overlap', check: 'G20', re: /\d+ pair\(s\) of mark label\(s\) overlap \(data-mark-overlaps="\d+"/, opts: { routes: '/app' } },
+  { id: 'bar-keys-skip', check: 'G20', re: /\(bars chart\): the keyboard walk reached \d+ of \d+ bars/, opts: { routes: '/app' } },
+  { id: 'bar-ends-hidden', check: 'G20', re: /\(bars chart\): the readout of \d+ floating bar\(s\) does not read its two ends/, opts: { routes: '/app' } },
+  { id: 'bar-group-unread', check: 'G20', re: /\(bars chart\): the readout of \d+ grouped bar\(s\) does not read its group/, opts: { routes: '/app' } },
+  { id: 'bar-legend-hidden', check: 'G20', re: /\(bars chart\): the legend is not shown: the chart declares 3 entries and 0 are visible/, opts: { routes: '/app' } },
   { id: 'never-ready', check: 'G7', re: /data-state="loading"/, opts: { routes: '/app,/benchmark', settleMs: 3000 } },
   { id: 'raf-loop', check: 'G8', re: /animation frames/, opts: { routes: '/app' } },
   { id: 'mutation-loop', check: 'G8', re: /DOM mutations/, opts: { routes: '/app' } },
