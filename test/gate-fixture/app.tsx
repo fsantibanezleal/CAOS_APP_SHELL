@@ -70,18 +70,31 @@ const WORDS = 'one two three four five six seven eight nine ten eleven twelve th
 function flipPlant(plant: string): (() => void) | undefined {
   // shell 0.19.0 (G20): a chart that loses a part of Tier A after the shell drew it (a product script, a stylesheet): its tab stop, its name, its data
   // table, or a keyboard handler of the product that takes the zoom key
-  if (plant === 'chart-not-focusable' || plant === 'chart-no-name' || plant === 'chart-no-table' || plant === 'chart-no-reset') {
+  if (plant === 'chart-not-focusable' || plant === 'chart-no-name' || plant === 'chart-no-table' || plant === 'chart-no-reset' || plant === 'chart-no-zero' || plant === 'chart-no-arrows' || plant === 'chart-dead-brush') {
     return plantDom(() => {
       for (const stop of document.querySelectorAll<HTMLElement>('[data-chart-focus]')) {
         if (plant === 'chart-not-focusable') stop.removeAttribute('tabindex');
         if (plant === 'chart-no-name') stop.removeAttribute('aria-label');
-        if (plant === 'chart-no-table') stop.setAttribute('aria-describedby', (stop.getAttribute('aria-describedby') ?? '').split(' ')[0]);
-        if (plant === 'chart-no-reset' && !stop.dataset.swallow) {
+        if (plant === 'chart-no-table') stop.removeAttribute('aria-details');
+        if (stop.dataset.swallow) continue;
+        // a product handler that takes a key (every key, only `0`, only the arrows) or the press that starts the brush, before the shell sees it
+        const swallow = (types: string[], keep: (e: Event) => boolean) => {
           stop.dataset.swallow = '1';
-          stop.addEventListener('keydown', (e) => e.stopPropagation(), true);
-        }
+          for (const type of types) stop.addEventListener(type, (e) => keep(e) && e.stopPropagation(), true);
+        };
+        if (plant === 'chart-no-reset') swallow(['keydown'], () => true);
+        if (plant === 'chart-no-zero') swallow(['keydown'], (e) => (e as KeyboardEvent).key === '0');
+        if (plant === 'chart-no-arrows') swallow(['keydown'], (e) => (e as KeyboardEvent).key.startsWith('Arrow'));
+        if (plant === 'chart-dead-brush') swallow(['mousedown', 'pointerdown'], () => true);
       }
     });
+  }
+  // the reset control hidden by a product stylesheet: the chart zooms and the reader is never shown the way back
+  if (plant === 'chart-reset-hidden') {
+    const style = document.createElement('style');
+    style.textContent = '[data-chart-reset] { display: none !important; }';
+    document.head.append(style);
+    return () => style.remove();
   }
   // shell 0.17.0 round 3: a product stylesheet that clamps the case select's text to two lines (the name is three lines; `select-focus-rail` clamps
   // only the Focus rail's), and a display that shows another name than the one the native select holds
@@ -367,7 +380,7 @@ function ModelView({ sim }: { sim: Sim }) {
         ) : (
           <UPlotChart
             height="fill"
-            zoomOff={PLANT === 'zoom-off-unexplained' ? 'no' : PLANT === 'legit-zoom-off' ? { en: 'The whole epidemic curve is the finding and must stay in view', es: 'La curva epidémica completa es el hallazgo y debe verse entera' } : undefined}
+            zoomOff={PLANT === 'zoom-off-unexplained' ? 'no' : PLANT === 'zoom-off-empty' ? { en: 'The whole epidemic curve is the finding and must stay in view', es: '' } : PLANT === 'legit-zoom-off' ? { en: 'The whole epidemic curve is the finding and must stay in view', es: 'La curva epidémica completa es el hallazgo y debe verse entera' } : undefined}
             x={{ values: sim.t, label: { en: 'Day', es: 'Día' }, unit: 'd' }}
             y={{ label: { en: 'People', es: 'Personas' } }}
             series={[
