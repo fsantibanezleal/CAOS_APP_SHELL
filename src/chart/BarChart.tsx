@@ -149,8 +149,10 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
   const [brush, setBrush] = useState<{ a: number; b: number } | null>(null);
   const [s0, e0] = windowRange(n, win);
   const zoomed = windowZoomed(n, win);
-  const zoomable = !zoomOff && n >= 3;
-  const zoomWhy = zoomOff ? pick(zoomOff, lang) : '';
+  // zoom is off whenever `zoomOff` is given, whatever its text: an empty reason in a language still turns zoom off and is still reported (the gate fails it)
+  const zoomIsOff = zoomOff !== undefined && zoomOff !== null;
+  const zoomable = !zoomIsOff && n >= 3;
+  const zoomWhy = zoomIsOff ? pick(zoomOff, lang) : '';
   const kbRef = useRef(false);
   const geoRef = useRef<Geometry | null>(null);
   const live = useRef({ win: win as [number, number] | null, n, zoomable, cursor: cursor as number | null });
@@ -212,7 +214,7 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
       const barH = Math.min(rowH * 0.5, 40);
       geoRef.current = { horizontal: true, start: top, end: plotBottom };
       drawing = (
-        <svg width={width} height={drawnHeight} role="img" aria-label={name} data-chart="" data-chart-kind="bars">
+        <svg width={width} height={drawnHeight} role="presentation" data-chart="" data-chart-kind="bars">
           <title>{name}</title>
           {ticks.map((t, i) => (
             <g key={`t${i}`}>
@@ -266,7 +268,8 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
       const probe = widestLabel(formatTicks([lo, hi], lang, fmt), PX);
       const left = probe + 12;
       const right = 8;
-      const band = (width - left - right) / count;
+      // a drawing narrower than its value column has no room for a bar: the band is 0, never negative (an SVG rect refuses a negative width)
+      const band = Math.max(0, (width - left - right) / count);
       const fitted = rowsShown.map((d) => fitLabel(pick(d.label, lang), Math.max(24, band - 6), PX, 2));
       const bottom = Math.max(...fitted.map((f) => f.lines.length)) * LINE + 10;
       const y0 = titleRow + valueRow;
@@ -276,11 +279,11 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
       const t1 = ticks[ticks.length - 1];
       tickLabels = formatTicks(ticks, lang, fmt);
       const sy = (v: number) => y1 - ((v - t0) / (t1 - t0 || 1)) * (y1 - y0);
-      const barW = Math.min(band * 0.62, 56);
+      const barW = Math.max(0, Math.min(band * 0.62, 56));
       drawnHeight = h;
       geoRef.current = { horizontal: false, start: left, end: width - right };
       drawing = (
-        <svg width={width} height={h} role="img" aria-label={name} data-chart="" data-chart-kind="bars">
+        <svg width={width} height={h} role="presentation" data-chart="" data-chart-kind="bars">
           <title>{name}</title>
           <Lines x={0} y={LINE - 2} lines={titleLines} anchor="start" fill="var(--color-fg-subtle)" />
           {ticks.map((t, i) => (
@@ -367,18 +370,21 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
   // A key press (`discrete`) steps whole bars; the wheel and the pinch make many small steps, which are kept as fractions of a bar
   // until they add up to one, so a slow wheel zooms slowly instead of not at all.
   const fine = useRef<[number, number] | null>(null);
-  const zoomAround = (factor: number, anchorBar: number, discrete = false) => {
+  const zoomAround = (factor: number, anchorBar: number, discrete = false): boolean => {
     const cur = windowRange(n, live.current.win);
     if (discrete) {
       fine.current = null;
-      setWindow(stepWindow(cur, n, anchorBar, factor));
-      return;
+      const next = stepWindow(cur, n, anchorBar, factor);
+      setWindow(next);
+      return next[0] !== cur[0] || next[1] !== cur[1];
     }
     const held = fine.current;
     const base = held && held[0] > cur[0] - 1 && held[1] < cur[1] + 1 && roundWindow(held, n)[0] === cur[0] && roundWindow(held, n)[1] === cur[1] ? held : cur;
     const next = zoomRange(base, [0, n], anchorBar, factor, { minSpan: Math.min(2, n) });
     fine.current = next;
     setWindow(next);
+    // the many small steps of a slow wheel count while they add up: the range moved when the fraction of a bar did
+    return Math.abs(next[0] - base[0]) > 1e-9 || Math.abs(next[1] - base[1]) > 1e-9;
   };
   const barAt = (pos: number | null): number | null => {
     const g = geoRef.current;
@@ -397,12 +403,12 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
     if (!el || !wheelOn) return;
     const onWheel = (e: WheelEvent) => {
       if (!live.current.zoomable) return;
-      // as the line chart: the wheel zooms the chart that holds the focus, and always with Ctrl or Meta (a trackpad pinch)
-      if (!(el.contains(document.activeElement) || e.ctrlKey || e.metaKey)) return;
-      e.preventDefault();
+      // as the line chart: the wheel (with Ctrl or Meta too, a trackpad pinch) zooms the chart that holds the focus, and only while that
+      // changes the window; otherwise the wheel and the browser's page zoom are the page's
+      if (!el.contains(document.activeElement)) return;
       const pos = along(e);
       if (pos === null) return;
-      zoomAround(wheelFactor(e.deltaY, e.deltaMode), barFloat(pos));
+      if (zoomAround(wheelFactor(e.deltaY, e.deltaMode), barFloat(pos))) e.preventDefault();
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
@@ -570,7 +576,7 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
       data-points={drawn ? String(n) : undefined}
       data-zoomable={drawn ? (zoomable ? '1' : '0') : undefined}
       data-zoomed={drawn && zoomed ? '1' : undefined}
-      data-zoom-off={drawn && zoomWhy ? zoomWhy : undefined}
+      data-zoom-off={drawn && zoomIsOff ? zoomWhy : undefined}
       data-window={drawn ? `${s0},${e0}` : undefined}
     >
       <div
@@ -587,7 +593,8 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
               role: 'group',
               'aria-roledescription': CHART_ROLE[lang],
               'aria-label': name,
-              'aria-describedby': `${summaryId} ${tableId}`,
+              'aria-describedby': summaryId,
+              'aria-details': tableId,
               'data-chart-focus': '',
               'data-zoomed': zoomed ? '1' : undefined,
               onKeyDown,

@@ -7,13 +7,16 @@ import { CHART_ROLE, ChartDataTable, ChartSummary, ResetZoomButton, ZOOM_HINT } 
 import {
   axisTitleFits,
   chartSummary,
-  dataFingerprint,
   defaultChartName,
+  DRAG_THRESHOLD,
   firstVisible,
+  formatTime,
   isZoomed,
   KEY_PAN,
   KEY_ZOOM,
   keyAction,
+  leastLabelSpan,
+  sameData,
   stepIndex,
   thinRows,
 } from './interaction';
@@ -605,7 +608,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
   const zoomRef = useRef<{ x: [number, number] | null; y: [number, number] | null }>({ x: null, y: null });
   const zoomedRef = useRef(false);
   const kbRef = useRef<number | null>(null);
-  const dataFpRef = useRef('');
+  const dataRef = useRef<uPlot.AlignedData | null>(null);
   const [forced, setForced] = useState('');
   // the soloed series (its index in `series`); a press redraws the chart, so it is held here and read by the drawing
   // held by the series key, not by position: a series dropped from the list releases it, and it is not given back when it returns
@@ -672,8 +675,10 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
   // ---- Tier A (0.19.0) ----
   const drawn = width > 0 && h > 0;
   const name = title ? pick(title, lang) : defaultChartName(lang, yLabel, xLabel);
-  const zoomWhy = zoomOff ? pick(zoomOff, lang) : '';
-  const zoomable = !zoomOff && xs.length >= 2 && xs[xs.length - 1] > xs[0];
+  // zoom is off whenever `zoomOff` is given, whatever its text: an empty reason in a language still turns zoom off and is still reported (the gate fails it)
+  const zoomIsOff = zoomOff !== undefined && zoomOff !== null;
+  const zoomWhy = zoomIsOff ? pick(zoomOff, lang) : '';
+  const zoomable = !zoomIsOff && xs.length >= 2 && xs[xs.length - 1] > xs[0];
   const both = Boolean(zoomY || parity);
   const zoomableRef = useRef(zoomable);
   zoomableRef.current = zoomable;
@@ -703,6 +708,17 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
     ta: [yAbove, xBelow, zoomable, both],
   });
   const data = useMemo(() => [xs, ...ys] as uPlot.AlignedData, [xs, ys]);
+  // the least span an axis can be zoomed to before its labels (significant digits) could not tell the ticks apart; the chart reads the
+  // plot's size as it is now. Axes with their own tick rules (fixed decimals, a time axis, named ticks, a log axis) have no bound here.
+  const leastSpan = (axis: 'x' | 'y'): number | undefined => {
+    const u = uRef.current;
+    const f = fullRef.current;
+    if (!u || !f) return undefined;
+    if (axis === 'x' ? x.time || x.log || Boolean(ticks) : Boolean(y.log)) return undefined;
+    const pr = uPlot.pxRatio || 1;
+    const room = (axis === 'x' ? u.bbox.width : u.bbox.height) / pr;
+    return leastLabelSpan(axis === 'x' ? x.format : y.format, f[axis], room, range ? PARITY_TICK_SPACE : axis === 'x' ? 50 : 30);
+  };
   // a chart of points only (a scatter, a parity plot): the cursor takes the point nearest the pointer in the plane
   const scatter = baseEntries.length > 0 && baseEntries.every(({ s }) => s.mode === 'points');
 
@@ -764,8 +780,10 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
       legend: { show: false },
       cursor: {
         ...(scatter ? { dataIdx: (u: uPlot, sIdx: number, closest: number) => (sIdx === 0 ? closest : (nearest(u) ?? closest)) } : {}),
-        // the brush: a drag along x (and y where both axes zoom); a drag under 5 px is a click, not a zoom
-        drag: zoomable ? { x: true, y: both, dist: 5 } : { x: false, y: false, setScale: false },
+        // the brush: a drag along x (and y where both axes zoom); a drag under DRAG_THRESHOLD px is a click, not a zoom. uPlot's own setScale
+        // is off: a fixed range (`range`, `x.range`) turns the scale it sets back into the fixed one, so the selection is applied by the
+        // `setSelect` hook below, through the same operation as the wheel and the keys
+        drag: zoomable ? { x: true, y: both, dist: DRAG_THRESHOLD, setScale: false } : { x: false, y: false, setScale: false },
       },
       // a log axis labels the ticks uPlot keeps and passes null for the rest, which formatTicks leaves blank
       scales: {
@@ -921,6 +939,18 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
             if (dragCount) queueMicrotask(() => uRef.current === u && u.redraw(false));
           },
         ],
+        setSelect: [
+          (u: uPlot) => {
+            const sel = { left: u.select.left, top: u.select.top, width: u.select.width, height: u.select.height };
+            if (!(sel.width > 0 || sel.height > 0)) return;
+            const x0 = u.posToVal(sel.left, 'x');
+            const x1 = u.posToVal(sel.left + sel.width, 'x');
+            const y0 = u.posToVal(sel.top + sel.height, 'y');
+            const y1 = u.posToVal(sel.top, 'y');
+            u.setSelect({ left: 0, top: 0, width: 0, height: 0 }, false);
+            ctlRef.current?.brush(sel.width > 0 ? [x0, x1] : null, bothRef.current && sel.height > 0 ? [y0, y1] : undefined);
+          },
+        ],
         setScale: [
           (u: uPlot, key: string) => {
             if (key !== 'x' && key !== 'y') return;
@@ -1024,7 +1054,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
     }
     uRef.current?.destroy();
     fullRef.current = null;
-    dataFpRef.current = dataFingerprint(data as (number | null)[][]);
+    dataRef.current = data;
     const u = new uPlot(opts, data, el);
     uRef.current = u;
     // uPlot sets its scales in a microtask after it is built: settle them now, so the range read below is the real one
@@ -1034,7 +1064,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
     const f = { x: [u.scales.x.min ?? 0, u.scales.x.max ?? 1] as [number, number], y: [u.scales.y.min ?? 0, u.scales.y.max ?? 1] as [number, number] };
     fullRef.current = f;
     hostRef.current?.setAttribute('data-view-x', `${f.x[0]},${f.x[1]}`);
-    const ctl = createZoom(u, { plot: el, log: { x: Boolean(x.log), y: Boolean(y.log) }, both, enabled: () => zoomableRef.current, full: () => fullRef.current, explicit: explicitRef });
+    const ctl = createZoom(u, { plot: el, log: { x: Boolean(x.log), y: Boolean(y.log) }, both, enabled: () => zoomableRef.current, full: () => fullRef.current, explicit: explicitRef, least: leastSpan });
     ctlRef.current = ctl;
     u.over.style.touchAction = zoomable ? 'pan-y' : '';
     const held = zoomRef.current;
@@ -1076,9 +1106,8 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
   useEffect(() => {
     const u = uRef.current;
     if (!u) return;
-    const fp = dataFingerprint(data as (number | null)[][]);
-    if (fp === dataFpRef.current) return;
-    dataFpRef.current = fp;
+    if (dataRef.current && sameData(dataRef.current as (number | null)[][], data as (number | null)[][])) return;
+    dataRef.current = data;
     fullRef.current = null;
     zoomRef.current = { x: null, y: null };
     u.batch(() => u.setData(data));
@@ -1111,6 +1140,9 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
     u.redraw(false);
   }, [soloIdx, baseEntries]);
 
+  // an x as text: a date in the page language on a time axis (epoch seconds read as numbers were meaningless), else a formatted number
+  const timeSpan = xs.length > 1 ? Math.abs(xs[xs.length - 1] - xs[0]) : 0;
+  const xValue = (v: number): string => (x.time ? formatTime(v, lang, timeSpan) : formatNumber(v, lang, x.format ?? { digits: 4 }));
   const read =
     cursor !== null && readout
       ? readout(order ? order[cursor] : cursor)
@@ -1119,7 +1151,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
           // an x that sits on a named tick is named by it, not by its number
           tickLabelAt(ticks, xs[cursor], lang, xSpan) !== null
             ? `${xLabel} ${tickLabelAt(ticks, xs[cursor], lang, xSpan)}`
-            : `${xLabel} ${formatNumber(xs[cursor], lang, x.format ?? { digits: 4 })}${xUnit ? `${NBSP}${xUnit}` : ''}`,
+            : `${xLabel} ${xValue(xs[cursor])}${xUnit && !x.time ? `${NBSP}${xUnit}` : ''}`,
           ...baseEntries
             .map(({ s }, k) => ({ s, v: ys[k][cursor] ?? null }))
             // a scatter's series are sets of points: name only the ones that have this point
@@ -1133,7 +1165,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
           : 'Hover the chart to read the values';
 
   // ---- Tier A: the keyboard, the data table and the summary ----
-  const xText = (v: number): string => tickLabelAt(ticks, v, lang, xSpan) ?? formatNumber(v, lang, x.format ?? { digits: 4 });
+  const xText = (v: number): string => tickLabelAt(ticks, v, lang, xSpan) ?? xValue(v);
   const yText = (v: number | null | undefined): string => (v === null || v === undefined || !Number.isFinite(v) ? '' : `${formatNumber(v, lang, y.format ?? { digits: 4 })}`);
   const xFormatKey = JSON.stringify(x.format ?? null);
   const yFormatKey = JSON.stringify(y.format ?? null);
@@ -1181,7 +1213,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
     });
     return { head, rows, summary, thinned: kept.length < xs.length };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [drawn, xs, ys, baseEntries, overlays, series, lang, ticks, xSpan, xTitle, yTitle, xLabel, yUnit, name, xFormatKey, yFormatKey]);
+  }, [drawn, xs, ys, baseEntries, overlays, series, lang, ticks, xSpan, xTitle, yTitle, xLabel, yUnit, name, xFormatKey, yFormatKey, x.time, timeSpan]);
 
   const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
     // a key that reaches the plot from a draggable line's handle is the handle's
@@ -1284,7 +1316,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
       data-points={drawn ? String(xs.length) : undefined}
       data-zoomable={drawn ? (zoomable ? '1' : '0') : undefined}
       data-zoomed={drawn && zoomed ? '1' : undefined}
-      data-zoom-off={drawn && zoomWhy ? zoomWhy : undefined}
+      data-zoom-off={drawn && zoomIsOff ? zoomWhy : undefined}
       data-axis-title-moved={drawn && moved ? moved : undefined}
     >
       {drawn && yAbove && yTitle && (
@@ -1301,7 +1333,8 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
               role: 'group',
               'aria-roledescription': CHART_ROLE[lang],
               'aria-label': name,
-              'aria-describedby': `${summaryId} ${tableId}`,
+              'aria-describedby': summaryId,
+              'aria-details': tableId,
               'aria-description': zoomable ? ZOOM_HINT[lang] : undefined,
               'data-chart-focus': '',
               onKeyDown,

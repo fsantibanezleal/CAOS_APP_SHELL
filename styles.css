@@ -670,12 +670,14 @@ svg.lucide { flex: none; }
 .caos-bars-cursor { fill: var(--color-accent); fill-opacity: 0.1; pointer-events: none; }
 /* Tier A of the shell charts (0.19.0): the tab stop's ring, an axis title that moved off the axis, the foot with the reset control. */
 .caos-chart-plot[data-chart-focus]:focus-visible, .caos-bars[data-chart-focus]:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+/* A chart that holds the focus takes the wheel (a click gives it the focus, however it was given): the ring says so, in both themes. */
+.caos-chart[data-zoomable="1"] > .caos-chart-plot[data-chart-focus]:focus, .caos-bars-host[data-zoomable="1"] > .caos-bars[data-chart-focus]:focus { outline: 2px solid var(--color-accent); outline-offset: -2px; }
 .caos-chart-axis-title { margin: 0 0 0.15rem; font-size: 0.73rem; line-height: 1.3; color: var(--color-fg-subtle); overflow-wrap: anywhere; }
 .caos-chart-axis-title[data-axis-title="x"] { margin: 0.1rem 0 0; text-align: center; }
 .caos-chart.fill > .caos-chart-axis-title, .caos-chart.fill > .caos-chart-foot { flex: none; }
 .caos-chart-foot { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
 .caos-chart-foot > .caos-chart-readout { flex: 1 1 0; min-width: 0; }
-.caos-chart-reset { flex: none; margin: 0.15rem 0 0; padding: 0 0.5rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface-2); color: var(--color-fg); font: inherit; font-size: 0.72rem; line-height: 1.15; cursor: pointer; }
+.caos-chart-reset { flex: none; box-sizing: border-box; min-width: 24px; min-height: 24px; margin: 0.15rem 0 0; padding: 0.15rem 0.5rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface-2); color: var(--color-fg); font: inherit; font-size: 0.72rem; line-height: 1.15; cursor: pointer; }
 .caos-chart-reset:hover { border-color: var(--color-fg-subtle); }
 .caos-chart-reset:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
 /* A view whose data is not there yet says so (and declares data-state="loading" for the gate). */
