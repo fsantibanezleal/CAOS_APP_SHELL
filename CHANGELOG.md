@@ -1,3 +1,25 @@
+## [Unreleased]
+
+### Added
+
+- Tier A of the interactive-visualization rubric on every shell chart (the Contraste 1.00.000 capture review, U16-R2). On by default, no change at a call site (SHC-063 to SHC-085):
+  - `UPlotChart`: zoom by the wheel (while the chart holds the focus, or with Ctrl or Meta; otherwise the wheel scrolls the page), by the brush (a drag under 5 px is a click) and by pinch; pan by Shift and drag and by touch; a visible **Reset zoom** control while zoomed, double-click, `0` and Escape; the keyboard model (arrows move the crosshair and its readout, Home and End, `+` and `-`, Shift and the arrows, Enter picks); one tab stop with an accessible name; a hidden data table and a one-line summary; the zoom survives a theme, a language and a size change. New props `title`, `zoomY` and `zoomOff` (the reason zoom is turned off, 12 letters and digits at least).
+  - `BarChart`: a crosshair band and a readout per bar (pointer and keyboard), zoom and pan by category (wheel, brush, Shift and drag, pinch, keys), the reset control, the same tab stop, table and summary; new prop `zoomOff`. Its markup is wrapped in `.caos-bars-host`, with the foot (readout and reset control) under the drawing.
+  - Gate G20: every chart is a tab stop with a name, a table and a summary and resets; a chart that turns zoom off is listed among the waivers (a short reason fails). Plants `chart-not-focusable`, `chart-no-name`, `chart-no-table`, `chart-no-reset`, `zoom-off-unexplained` and `bar-repeat-ticks`.
+  - Text kit: `niceStepAt`; `repeatedLabels` moves to it (still exported from `chart`); the interaction rules live in `src/chart/interaction.ts`.
+
+### Fixed
+
+- `BarChart`: a value axis of counts ticked at fractions and rounded them ("0, 1, 1, 2, 2"): it now ticks at whole numbers, and an axis of fixed decimals at multiples of their unit (SHC-078); it declares `data-ticks-repeat` and the gate fails a repeated label under G6, as for `UPlotChart` (SHC-079).
+- `.prose svg { height: auto }` collapsed KaTeX's square-root SVG to under 2 px, so every root of a documentation page vanished: `.prose .katex svg` keeps its own height (SHC-080).
+- An axis title never cuts: a rotated y title longer than the plot moves above it as a horizontal line, an x title wider than the chart wraps below it, and a `BarChart` title wraps over as many lines as it needs (SHC-081, SHC-082).
+
+### Changed
+
+- The plot of a `UPlotChart` is now the first tab stop of the chart, before the series key (SHC-052 says so); the brush needs a 5 px drag, so a click that moves a pixel no longer zooms.
+- `UPlotChart` and `BarChart` draw their Tier A markup only once the chart has a size; before that they render as in 0.18.0 (SHC-085).
+- Styles: `styles.css` gains `.caos-bars-host`, `.caos-bars-foot`, `.caos-bars-readout`, `.caos-bars-brush`, `.caos-bars-cursor`, `.caos-chart-axis-title`, `.caos-chart-foot` and `.caos-chart-reset`; `reserved-classes.json` lists them.
+
 ## [0.18.000] - 2026-10-20
 
 ### Added

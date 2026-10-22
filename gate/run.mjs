@@ -32,6 +32,9 @@
 //                            on a surface App (--workbench '', --app-route; 0.16.0) the same for the views of its tab row: another view or
 //                            sub-view in Focus or after the return, no ?focus=1 and view in the URL, no view that offers the control
 //   G19 values whole         a short value (number, percentage, amount, unit) sits on one line in every state
+//   G20 chart interactions   every chart is one tab stop with an accessible name, described by a table of its values and a one-line summary,
+//                            and a zoomed chart resets (the + key zooms, the visible control shows, the 0 key resets); a chart that turns zoom
+//                            off says why (12 letters and digits at least) and is listed among the waivers (0.19.0)
 // plus the ADR-0071 and ADR-0017 measures (viewport, one-row tabs, rail without scroll, centred prose, captions,
 // references).
 
@@ -484,6 +487,14 @@ export async function runGate(o) {
       // named x ticks (UPlotChart declares the repeated names): a name used twice, wherever the two ticks sit on the axis
       if (r.names) fail('G6', where, `${r.label}: ${r.n} named x tick label(s) repeat another tick's label (${r.names.split('|').map((n) => `"${n}"`).join(', ')}); give every named tick a label of its own`);
       else fail('G6', where, `${r.label}: ${r.n} axis tick label(s) repeat the label before them (give the axis fixed decimals)`);
+    }
+    // G20 (0.19.0): every chart is a tab stop with a name, a table of its values, a summary and a reset; one that turns zoom off is listed with its reason
+    for (const c of await page.evaluate((drive) => window.__caosGate.chartsTierA(drive), Boolean(s.interact))) {
+      for (const m of c.problems) fail('G20', where, `${c.label} (${c.kind} chart): ${m}`);
+      if (c.zoomOff) {
+        waivers.push({ route: where.route, lang: s.lang, floor: 'chart zoom off', reason: c.zoomOff, valid: c.zoomOffValid });
+        if (!c.zoomOffValid) fail('G20', where, `${c.label}: zoom is turned off with a reason of fewer than 12 letters and digits ("${c.zoomOff}"); say why the chart cannot be zoomed`);
+      }
     }
     // a filling card whose note leaves its drawing under the floor (CAOS_APP_SHELL#95); below 1280 px the document scrolls
     if (big) for (const c of f.fillStages ?? []) if (c.h < opt.stageFloor) fail('G6', where, `the drawing of ${c.label} keeps ${Math.round(c.h)} px under its note (floor ${opt.stageFloor} px)`);

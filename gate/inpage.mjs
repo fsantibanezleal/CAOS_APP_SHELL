@@ -1580,4 +1580,60 @@ export function installLib() {
     }
     return out.slice(0, 10);
   };
+
+  // ---- G20 (0.19.0): every chart host carries Tier A: one tab stop with a name, the table of the values, a summary, a reset --------------
+  const reasonWords = (t) => (String(t).match(/[\p{L}\p{Nd}]/gu) || []).length;
+  G.chartsTierA = async (drive) => {
+    const out = [];
+    const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+    for (const host of document.querySelectorAll('[data-chart-host]')) {
+      if (!visible(host)) continue;
+      const kind = host.getAttribute('data-chart-host');
+      const label = describe(host.closest('[data-plot]') || host);
+      const problems = [];
+      const stop = host.querySelector('[data-chart-focus]');
+      const entry = { label, kind, problems, zoomOff: host.getAttribute('data-zoom-off') || '', zoomOffValid: true };
+      if (entry.zoomOff) entry.zoomOffValid = reasonWords(entry.zoomOff) >= 12;
+      out.push(entry);
+      if (!stop) {
+        problems.push('the chart is not a tab stop (no element with data-chart-focus): the keyboard cannot reach its crosshair, zoom or reset');
+        continue;
+      }
+      if (stop.tabIndex < 0) problems.push('the plot is not a tab stop (tabindex is below 0)');
+      const labelledBy = (stop.getAttribute('aria-labelledby') || '').split(/\s+/).filter(Boolean).map((id) => document.getElementById(id)?.textContent || '').join(' ');
+      const name = (stop.getAttribute('aria-label') || labelledBy || '').trim();
+      if (name.length < 2) problems.push('the plot has no accessible name (aria-label or aria-labelledby)');
+      const ids = (stop.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
+      const described = ids.map((id) => document.getElementById(id)).filter(Boolean);
+      const table = described.find((el) => el.tagName === 'TABLE');
+      const points = Number(host.getAttribute('data-points') || '0');
+      if (!table) problems.push('the plot is not described by a data table (aria-describedby must name a table of the plotted values)');
+      else {
+        const rows = table.querySelectorAll('tbody tr').length;
+        if (points > 0 && rows === 0) problems.push('the data table has no rows');
+        if (table.querySelectorAll('thead th').length < 2) problems.push('the data table has no header for the values');
+      }
+      const summary = described.find((el) => el.tagName !== 'TABLE');
+      if (!summary || !(summary.textContent || '').trim()) problems.push('the plot has no one-line text summary (aria-describedby must name it)');
+      // resets: zoom in by the keyboard, see the visible control, come back by the keyboard (a chart that is zoomed already, or cannot be, is not driven)
+      if (drive && host.getAttribute('data-zoomable') === '1' && !host.hasAttribute('data-zoomed')) {
+        const key = (k) => stop.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+        key('+');
+        await pause(80);
+        if (!host.hasAttribute('data-zoomed')) problems.push('the + key does not zoom the chart');
+        else {
+          const control = [...host.querySelectorAll('[data-chart-reset]')].filter(visible);
+          if (control.length !== 1) problems.push(`a zoomed chart shows ${control.length} reset controls, it must show exactly one`);
+          key('0');
+          await pause(80);
+          if (host.hasAttribute('data-zoomed')) {
+            problems.push('the 0 key does not reset the zoom');
+            key('Escape');
+            await pause(80);
+          }
+        }
+      }
+    }
+    return out;
+  };
 }

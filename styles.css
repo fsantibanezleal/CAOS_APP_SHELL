@@ -356,6 +356,9 @@ code, kbd { font-family: var(--font-mono); }
 .prose table { display: block; max-width: 100%; overflow-x: auto; }
 .prose pre { max-width: 100%; overflow-x: auto; }
 .prose img, .prose svg, .prose video { max-width: 100%; height: auto; }
+/* KaTeX draws a square root, a wide accent and a stretchy arrow as an SVG sized by its own rule (height: inherit, width 100% of
+   a span the glyph sizes); the media rule above made it height: auto, which collapsed it to under 2 px (shell 0.19.0, Contraste b11 and b13). */
+.prose .katex svg { height: inherit; max-width: none; }
 
 .fig-row { display: grid; grid-template-columns: 1.1fr 1fr; gap: 1.5rem; align-items: center; margin-block: 1.5rem; }
 .fig-row.rev { grid-template-columns: 1fr 1.1fr; }
@@ -652,6 +655,29 @@ svg.lucide { flex: none; }
 .caos-bars { position: relative; width: 100%; min-width: 0; }
 .caos-bars.fill { height: 100%; min-height: 0; overflow-y: auto; }
 .caos-bars > svg { display: block; }
+/* The bar chart's host holds the drawing, the hidden table, the readout and the reset control (shell 0.19.0, Tier A); a filling
+   chart gives the drawing the height the foot leaves. */
+.caos-bars-host { position: relative; width: 100%; min-width: 0; display: flex; flex-direction: column; }
+.caos-bars-host.fill { height: 100%; min-height: 0; }
+.caos-bars-host.fill > .caos-bars { flex: 1 1 0; height: auto; min-height: 0; }
+.caos-bars-host > .caos-bars { flex: none; }
+.caos-bars-host.fill > .caos-bars-foot, .caos-bars-host.fill > .caos-chart-axis-title { flex: none; }
+.caos-bars-foot { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+.caos-bars-readout { flex: 1 1 0; min-width: 0; margin: 0.15rem 0 0; font-family: var(--font-mono); font-size: 0.74rem; line-height: 1.3; color: var(--color-fg-subtle); min-height: 1.3em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.caos-bars[data-chart-focus] { outline-offset: -2px; border-radius: var(--radius-sm); touch-action: pan-y; }
+.caos-bars[data-chart-focus][data-zoomed] { touch-action: none; }
+.caos-bars-brush { fill: var(--color-accent); fill-opacity: 0.16; stroke: var(--color-accent); stroke-width: 1; pointer-events: none; }
+.caos-bars-cursor { fill: var(--color-accent); fill-opacity: 0.1; pointer-events: none; }
+/* Tier A of the shell charts (0.19.0): the tab stop's ring, an axis title that moved off the axis, the foot with the reset control. */
+.caos-chart-plot[data-chart-focus]:focus-visible, .caos-bars[data-chart-focus]:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+.caos-chart-axis-title { margin: 0 0 0.15rem; font-size: 0.73rem; line-height: 1.3; color: var(--color-fg-subtle); overflow-wrap: anywhere; }
+.caos-chart-axis-title[data-axis-title="x"] { margin: 0.1rem 0 0; text-align: center; }
+.caos-chart.fill > .caos-chart-axis-title, .caos-chart.fill > .caos-chart-foot { flex: none; }
+.caos-chart-foot { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+.caos-chart-foot > .caos-chart-readout { flex: 1 1 0; min-width: 0; }
+.caos-chart-reset { flex: none; margin: 0.15rem 0 0; padding: 0 0.5rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface-2); color: var(--color-fg); font: inherit; font-size: 0.72rem; line-height: 1.15; cursor: pointer; }
+.caos-chart-reset:hover { border-color: var(--color-fg-subtle); }
+.caos-chart-reset:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
 /* A view whose data is not there yet says so (and declares data-state="loading" for the gate). */
 .caos-pending { margin: auto; padding: var(--space-5); color: var(--color-fg-faint); font-size: 0.86rem; text-align: center; }
 /* A failed view (PanelBoundary): an inline message in its own frame, never a blank page. */
