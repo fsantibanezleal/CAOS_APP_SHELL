@@ -26,6 +26,10 @@ rebuilt on a theme or language change; compared by value, so a parent re-render 
   alignment (uPlot leaves the canvas right-aligned after its last axis, which put the template's "peak" label on the
   wrong side of its line), on the side of the line where it fits inside the plot, on the next row when it would
   overlap the label before it, with a halo in the surface colour. A mark outside the x range is not drawn.
+- **Mark labels that avoid each other** (0.19.0, SHC-094, SHC-095): the labels of `marks` and of `yMarks` share one set of placed boxes. An x label goes
+  right of its line on the first row as before, and one row down for each label of either kind in the way, never below the plot; when no row clears it
+  the label is cut with an ellipsis and its whole text stays in the plot's title, the readout and a table of marks (`aria-details`). The host declares
+  `data-mark-overlaps` (0 when none overlap, which G20 reads), `data-mark-boxes` and `data-mark-cut`.
 - **Reference lines** (`yMarks: [{ y, label }]`, 0.10.0) are drawn by `drawYMarks`: a dotted line across the plot at
   a y value (a null model's constant prediction, a target, a limit), its label at the right end above the line (below
   it when the line runs along the top), inside the plot, haloed; a label that would overlap the one before it moves
@@ -186,6 +190,36 @@ bar by meaning; `highlight` marks the bar the reader is on (the others turn fain
   with fixed decimals at multiples of their unit, so "0, 1, 1, 2, 2" cannot happen; the host declares the labels that repeat
   (`data-ticks-repeat`, which an axis of significant digits can still produce) and the gate fails them under G6.
 - *Long titles.* The axis title wraps over as many lines as it needs, never cut.
+
+**Floating bars, grouped bars and a legend (0.19.0, SHC-090 to SHC-093).** The two forms the products drew by hand:
+
+```tsx
+// a bridge from one total to another through signed steps: `span` is the bar's two ends, `value` the number it states
+<BarChart
+  title={{ en: 'Capital bridge', es: 'Puente de capital' }}
+  axis={{ label: { en: 'Capital', es: 'Capital' }, unit: 'USD m', range: [100, 140] }}   // with a span the range is the axis as given
+  data={[
+    { id: 'open', label: 'Opening', value: 120, span: [120, 120], tone: 'accent' },       // a span of zero length is a dot
+    { id: 'in', label: 'Inflows', value: 15, span: [120, 135], tone: 'good' },
+    { id: 'out', label: 'Outflows', value: -22, span: [135, 113], tone: 'bad' },         // ends in any order: the same bar
+  ]}
+/>
+
+// provision by segment under three regimes: consecutive data with one group.id share a band
+<BarChart
+  title={...} axis={...} orientation="vertical"
+  data={segments.flatMap((g) => regimes.map((r) => ({ id: `${g.id}-${r.id}`, label: r.label, group: g, value: v(g, r), tone: r.tone })))}
+  legend={regimes.map((r) => ({ tone: r.tone, label: r.label }))}
+/>
+```
+
+| Prop | Meaning |
+|---|---|
+| `BarDatum.span?: [a, b]` | the bar's two ends on the value axis, in any order; without it the bar spans zero to `value`. `value` stays what the bar states: it is written at the bar (`values`), read in the readout, the table and the summary, which add the ends ("from a to b"; the table gains From and To). A span of zero length is a dot as thick as a bar. The axis covers every span; `axis.range` is then the axis as given (it may exclude zero), a span outside it is cut to it and one wholly outside draws nothing. A span with a missing end, or a missing `value`, draws nothing and reads "not available". Host: `data-spans`. |
+| `BarDatum.group?: { id, label }` | consecutive data with the same `group.id` share one category band, side by side (vertical) or one under another (horizontal); the category axis prints the group label once and `label` names the member (read as "Retail, Stress: 18"). The table gains a Group column; the keyboard walks group by group, member by member; zoom, pan and brush are over whole groups (`data-window`, `data-groups`). Groups may differ in size: bars keep one width and a smaller group is centred. |
+| `BarChartProps.legend?: { tone, label }[]` | what each tone means, as a list under the bars (`data-legend`); a tone no bar uses is drawn anyway and warned about in development. |
+
+A `BarChart` without the new props renders the same markup as before.
 
 ## The text kit
 
