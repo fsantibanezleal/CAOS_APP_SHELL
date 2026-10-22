@@ -345,8 +345,11 @@ test('solo: Tab reaches the first key button, Enter solos it, Space releases it,
     assert.equal(await buttons.count(), 3);
     for (let i = 0; i < 3; i++) assert.equal(await buttons.nth(i).getAttribute('aria-pressed'), 'false');
     const rest = await hash(page);
+    // 0.19.0 (SHC-069): the plot is the first tab stop of a chart, the key follows it
     await page.keyboard.press('Tab');
-    assert.equal(await page.evaluate(`document.activeElement.textContent`), 'Alpha', 'Tab lands on the first entry of the key');
+    assert.equal(await page.evaluate(`document.activeElement.hasAttribute('data-chart-focus')`), true, 'Tab lands on the plot first');
+    await page.keyboard.press('Tab');
+    assert.equal(await page.evaluate(`document.activeElement.textContent`), 'Alpha', 'the next Tab lands on the first entry of the key');
     await page.keyboard.press('Enter');
     assert.equal(await buttons.nth(0).getAttribute('aria-pressed'), 'true');
     assert.equal(await buttons.nth(1).getAttribute('aria-pressed'), 'false');

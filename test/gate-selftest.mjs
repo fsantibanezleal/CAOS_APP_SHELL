@@ -59,6 +59,13 @@ const PLANTS = [
   { id: 'named-ticks-repeat', check: 'G6', re: /named x tick label\(s\) repeat another tick's label \("deduplicated"\)/, opts: { routes: '/app' } },
   // the review of 0.18.0 (M1): a name used by the first and the last tick, not neighbours, is a repeat too
   { id: 'named-ticks-far', check: 'G6', re: /named x tick label\(s\) repeat another tick's label \("random"\)/, opts: { routes: '/app' } },
+  // shell 0.19.0 (G20): every chart is a tab stop with a name, a table of its values and a reset; a chart that turns zoom off says why
+  { id: 'bar-repeat-ticks', check: 'G6', re: /axis tick label\(s\) repeat the label before them/, opts: { routes: '/app' } },
+  { id: 'chart-not-focusable', check: 'G20', re: /\(line chart\): the plot is not a tab stop \(tabindex is below 0\)/, opts: { routes: '/app' } },
+  { id: 'chart-no-name', check: 'G20', re: /the plot has no accessible name/, opts: { routes: '/app' } },
+  { id: 'chart-no-table', check: 'G20', re: /the plot is not described by a data table/, opts: { routes: '/app' } },
+  { id: 'chart-no-reset', check: 'G20', re: /the \+ key does not zoom the chart/, opts: { routes: '/app' } },
+  { id: 'zoom-off-unexplained', check: 'G20', re: /zoom is turned off with a reason of fewer than 12 letters and digits \("no"\)/, opts: { routes: '/app' } },
   { id: 'never-ready', check: 'G7', re: /data-state="loading"/, opts: { routes: '/app,/benchmark', settleMs: 3000 } },
   { id: 'raf-loop', check: 'G8', re: /animation frames/, opts: { routes: '/app' } },
   { id: 'mutation-loop', check: 'G8', re: /DOM mutations/, opts: { routes: '/app' } },

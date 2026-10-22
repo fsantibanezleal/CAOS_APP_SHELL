@@ -68,6 +68,21 @@ function plantDom(mutate: () => void): () => void {
 }
 const WORDS = 'one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty';
 function flipPlant(plant: string): (() => void) | undefined {
+  // shell 0.19.0 (G20): a chart that loses a part of Tier A after the shell drew it (a product script, a stylesheet): its tab stop, its name, its data
+  // table, or a keyboard handler of the product that takes the zoom key
+  if (plant === 'chart-not-focusable' || plant === 'chart-no-name' || plant === 'chart-no-table' || plant === 'chart-no-reset') {
+    return plantDom(() => {
+      for (const stop of document.querySelectorAll<HTMLElement>('[data-chart-focus]')) {
+        if (plant === 'chart-not-focusable') stop.removeAttribute('tabindex');
+        if (plant === 'chart-no-name') stop.removeAttribute('aria-label');
+        if (plant === 'chart-no-table') stop.setAttribute('aria-describedby', (stop.getAttribute('aria-describedby') ?? '').split(' ')[0]);
+        if (plant === 'chart-no-reset' && !stop.dataset.swallow) {
+          stop.dataset.swallow = '1';
+          stop.addEventListener('keydown', (e) => e.stopPropagation(), true);
+        }
+      }
+    });
+  }
   // shell 0.17.0 round 3: a product stylesheet that clamps the case select's text to two lines (the name is three lines; `select-focus-rail` clamps
   // only the Focus rail's), and a display that shows another name than the one the native select holds
   if (plant === 'select-cut' || plant === 'select-cut-token' || plant === 'select-focus-rail') {
@@ -340,9 +355,19 @@ function ModelView({ sim }: { sim: Sim }) {
             y={{ label: { en: 'Share', es: 'Fracción' } }}
             series={[{ label: { en: 'Planted', es: 'Plantada' }, values: [0.1, 0.2, 0.4, 0.8], color: '--color-accent' }]}
           />
+        ) : PLANT === 'bar-repeat-ticks' ? (
+          // shell 0.19.0: a bar chart whose value axis is formatted by one significant digit: the tick at 1.5 reads "2" beside the tick at 2,
+          // and the bar chart declares its repeated labels for G6 as the line chart does
+          <BarChart
+            title={{ en: 'Planted bars', es: 'Barras plantadas' }}
+            height="fill"
+            axis={{ label: { en: 'Share', es: 'Fracción' }, format: { digits: 1 } }}
+            data={[0.5, 1, 1.5, 2].map((value, i) => ({ id: `b${i}`, label: `Bar ${i + 1}`, value }))}
+          />
         ) : (
           <UPlotChart
             height="fill"
+            zoomOff={PLANT === 'zoom-off-unexplained' ? 'no' : undefined}
             x={{ values: sim.t, label: { en: 'Day', es: 'Día' }, unit: 'd' }}
             y={{ label: { en: 'People', es: 'Personas' } }}
             series={[
@@ -746,6 +771,7 @@ function CompareView({ peaks }: { peaks: { id: string; label: string; peak: numb
     <PlotCard fill title={{ en: 'Peak infected by variant', es: 'Pico de infectados por variante' }} lane="live" provenance="synthetic" dataKey={useWorkbenchState().stateKey}>
       <BarChart
         title={{ en: 'Peak infected by variant', es: 'Pico de infectados por variante' }}
+        zoomOff={PLANT === 'zoom-off-unexplained' ? 'no' : undefined}
         height="fill"
         axis={{ label: { en: 'Peak infected', es: 'Pico de infectados' }, unit: { en: 'people', es: 'personas' }, format: { decimals: 0 } }}
         data={peaks.map((p, i) => ({ id: p.id, label: p.label, value: p.peak, highlight: i === 0 }))}

@@ -1,9 +1,25 @@
-import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type CSSProperties, type FocusEvent, type KeyboardEvent as ReactKeyboardEvent, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import uPlot from 'uplot';
 import { type FormatOptions, formatNumber, formatTicks, NBSP } from '../lib/format';
 import { type Lang, useShellLang } from '../lib/lang';
 import { type BiText, pick } from '../lib/text';
-import { referenceLineName } from './text';
+import { CHART_ROLE, ChartDataTable, ChartSummary, ResetZoomButton, ZOOM_HINT } from './ChartA11y';
+import {
+  axisTitleFits,
+  chartSummary,
+  dataFingerprint,
+  defaultChartName,
+  firstVisible,
+  isZoomed,
+  KEY_PAN,
+  KEY_ZOOM,
+  keyAction,
+  stepIndex,
+  thinRows,
+} from './interaction';
+import { referenceLineName, repeatedLabels } from './text';
+export { repeatedLabels };
+import { createZoom, type ZoomControls } from './uplotZoom';
 import { resolveToken, type ShellColorToken } from '../lib/tokens';
 import { useThemeStore } from '../lib/theme';
 import { useStageSize } from '../workbench/Stage';
@@ -119,6 +135,15 @@ export interface UPlotChartProps {
    * other series (alpha 0.12, 1 px) and leaves the chosen one as drawn; pressing it again releases it, pressing another
    * moves the solo. The chart is redrawn, not rebuilt. A chart of one series shows the key too. Off by default. */
   solo?: boolean;
+  /** The chart's accessible name and the name of its data table (0.19.0); by default the y axis by the x axis. */
+  title?: BiText;
+  /** Zoom and pan the y axis too (0.19.0): the wheel, the pinch, the brush and the keys then work on both axes (a parity plot
+   * always does, its two axes share one range). Off by default: x zooms and y follows the visible data. */
+  zoomY?: boolean;
+  /** Turn zoom, pan and the brush off (0.19.0), with the reason, in both languages when the page is bilingual (a chart whose
+   * range is the finding). It names a reason of at least 12 characters, or the gate fails it; the gate lists every chart that
+   * sets it. The keyboard crosshair, the readout, the data table and the summary cannot be turned off. */
+  zoomOff?: BiText;
 }
 
 const ROTATION: ShellColorToken[] = ['--color-accent', '--color-magenta', '--color-accent-2', '--color-good', '--color-warn', '--color-bad'];
@@ -402,13 +427,6 @@ const PARITY_TICK_SPACE = 40;
 /** The height of the handle on a draggable line, in CSS pixels: a band the pointer can take hold of. */
 const HANDLE_HEIGHT = 14;
 
-/** How many tick labels repeat the label before them (empty labels apart); the gate fails a chart with any (G6). */
-export function repeatedLabels(labels: readonly (string | null | undefined)[]): number {
-  let n = 0;
-  for (let i = 1; i < labels.length; i++) if (labels[i] && labels[i] === labels[i - 1]) n++;
-  return n;
-}
-
 /** A placed mark label, in device pixels. */
 interface Placed {
   x0: number;
@@ -553,7 +571,7 @@ export function nearestPoint(xs: readonly number[], ys: readonly (readonly (numb
  * 0.18.0: named x ticks (`x.ticks`, declared in `data-x-tick-labels`), an x range (`x.range`), a key that solos a series
  * (`solo`, declared in `data-solo`), dots on a line (`ChartSeries.dots`) and reference lines without a label.
  */
-export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height = 280, onCursor, onPick, parity, readout, hint, solo }: UPlotChartProps) {
+export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height = 280, onCursor, onPick, parity, readout, hint, solo, title, zoomY, zoomOff }: UPlotChartProps) {
   const lang = useShellLang();
   const theme = useThemeStore((s) => s.theme);
   const fill = height === 'fill';
@@ -571,10 +589,23 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
   const width = parity ? parityBox(box.width, box.height, typeof height === 'number' ? height : 0, fill) : box.width;
   const h = parity ? width : fill ? box.height : height;
   const uRef = useRef<uPlot | null>(null);
+  const ctlRef = useRef<ZoomControls | null>(null);
   // the host, whose data-ticks-repeat the tick formatters keep current (set on the element: a formatter runs inside
   // uPlot's draw, where a state update would loop)
   const hostRef = useRef<HTMLDivElement | null>(null);
   const [cursor, setCursor] = useState<number | null>(null);
+  // Tier A (0.19.0): the range the chart opened with, the range now, and the point the keyboard stands on. They are refs the
+  // handlers of the plot read, because the plot is built once and its handlers must see the latest.
+  const ids = useId();
+  const tableId = `${ids}-table`;
+  const summaryId = `${ids}-summary`;
+  const [zoomed, setZoomed] = useState(false);
+  const fullRef = useRef<{ x: [number, number]; y: [number, number] } | null>(null);
+  const zoomRef = useRef<{ x: [number, number] | null; y: [number, number] | null }>({ x: null, y: null });
+  const zoomedRef = useRef(false);
+  const kbRef = useRef<number | null>(null);
+  const dataFpRef = useRef('');
+  const [forced, setForced] = useState('');
   // the soloed series (its index in `series`); a press redraws the chart, so it is held here and read by the drawing
   // held by the series key, not by position: a series dropped from the list releases it, and it is not given back when it returns
   const [soloPick, setSoloPick] = useState<string | null>(null);
@@ -637,6 +668,23 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
   const dragCount = (yMarks ?? []).filter((m) => m.drag).length;
   const xUnit = x.unit ? pick(x.unit, lang) : '';
   const yUnit = y.unit ? pick(y.unit, lang) : '';
+  // ---- Tier A (0.19.0) ----
+  const drawn = width > 0 && h > 0;
+  const name = title ? pick(title, lang) : defaultChartName(lang, yLabel, xLabel);
+  const zoomWhy = zoomOff ? pick(zoomOff, lang) : '';
+  const zoomable = !zoomOff && xs.length >= 2 && xs[xs.length - 1] > xs[0];
+  const both = Boolean(zoomY || parity);
+  const zoomableRef = useRef(zoomable);
+  zoomableRef.current = zoomable;
+  const bothRef = useRef(both);
+  bothRef.current = both;
+  // An axis title never cuts: a rotated y title longer than the plot is high moves above the plot as a horizontal line, and an
+  // x title wider than the chart moves below it, where it wraps. The decision is made on an estimate of the plot (the x axis
+  // takes about 60 px) and, once the chart is built, on its real height, which can only move a title out.
+  const xTitle = xUnit ? `${xLabel} (${xUnit})` : xLabel;
+  const yTitle = yUnit ? `${yLabel} (${yUnit})` : yLabel;
+  const yAbove = !axisTitleFits(yTitle, h - 44) || forced === yTitle;
+  const xBelow = !axisTitleFits(xTitle, width - 16);
   // Everything that changes the plot's structure, by value.
   const structure = JSON.stringify({
     s: series.map((s, i) => [pick(s.label, lang), seriesStyle(s, i), s.width ?? 2, s.mode ?? 'line', s.size ?? 9, isOverlay(s), Boolean(s.dots)]),
@@ -651,6 +699,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
     lang,
     h,
     w: width,
+    ta: [yAbove, xBelow, zoomable, both],
   });
   const data = useMemo(() => [xs, ...ys] as uPlot.AlignedData, [xs, ys]);
   // a chart of points only (a scatter, a parity plot): the cursor takes the point nearest the pointer in the plane
@@ -711,7 +760,11 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
       width,
       height: h,
       legend: { show: false },
-      ...(scatter ? { cursor: { dataIdx: (u: uPlot, sIdx: number, closest: number) => (sIdx === 0 ? closest : (nearest(u) ?? closest)) } } : {}),
+      cursor: {
+        ...(scatter ? { dataIdx: (u: uPlot, sIdx: number, closest: number) => (sIdx === 0 ? closest : (nearest(u) ?? closest)) } : {}),
+        // the brush: a drag along x (and y where both axes zoom); a drag under 5 px is a click, not a zoom
+        drag: zoomable ? { x: true, y: both, dist: 5 } : { x: false, y: false, setScale: false },
+      },
       // a log axis labels the ticks uPlot keeps and passes null for the rest, which formatTicks leaves blank
       scales: {
         // a log x axis spans the data, not the decades around it (uPlot rounds out to the next decade, which left an
@@ -745,7 +798,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
           grid: { stroke: grid, width: 1 },
           ticks: { stroke: grid },
           font,
-          label: xUnit ? `${xLabel} (${xUnit})` : xLabel,
+          label: xBelow ? undefined : xTitle,
           labelFont: font,
           // a log x axis labels the decades only; the ticks between stay drawn, unlabelled
           values: x.time ? undefined : ticks ? namedTicks : tick(x.format, 'x', x.log && !tiny.x ? decadeOnly : undefined),
@@ -763,7 +816,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
           grid: { stroke: grid, width: 1 },
           ticks: { stroke: grid },
           font,
-          label: yUnit ? `${yLabel} (${yUnit})` : yLabel,
+          label: yAbove ? undefined : yTitle,
           labelFont: font,
           values: tick(y.format, 'y'),
           ...(ySteps ? { incrs: ySteps } : {}),
@@ -777,7 +830,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
             const pr = uPlot.pxRatio || 1;
             u.ctx.font = `${Math.round(11 * pr)}px ${family}`;
             const widest = Math.max(...values.map((v) => u.ctx.measureText(v ?? '').width));
-            return Math.ceil(widest / pr) + 30;
+            return Math.ceil(widest / pr) + (yAbove ? 18 : 30);
           },
         },
       ],
@@ -864,6 +917,27 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
             if (dragCount) queueMicrotask(() => uRef.current === u && u.redraw(false));
           },
         ],
+        setScale: [
+          (u: uPlot, key: string) => {
+            if (key !== 'x' && key !== 'y') return;
+            const f = fullRef.current;
+            if (!f) return;
+            const rx: [number, number] = [u.scales.x.min ?? f.x[0], u.scales.x.max ?? f.x[1]];
+            const ry: [number, number] = [u.scales.y.min ?? f.y[0], u.scales.y.max ?? f.y[1]];
+            // the x range in view, declared for the gate and the shell's own tests
+            hostRef.current?.setAttribute('data-view-x', `${rx[0]},${rx[1]}`);
+            const zx = isZoomed(rx, f.x);
+            const zy = bothRef.current && isZoomed(ry, f.y);
+            zoomRef.current = { x: zx ? rx : null, y: zy ? ry : null };
+            const z = zx || zy;
+            if (z !== zoomedRef.current) {
+              zoomedRef.current = z;
+              setZoomed(z);
+            }
+            // a finger drags a zoomed chart; an unzoomed one leaves the vertical scroll to the page
+            u.over.style.touchAction = zoomableRef.current ? (z ? 'none' : 'pan-y') : '';
+          },
+        ],
         draw: [
           (u: uPlot) => {
             if (range) {
@@ -945,8 +1019,45 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
       hostRef.current?.removeAttribute('data-ticks-repeated');
     }
     uRef.current?.destroy();
-    uRef.current = new uPlot(opts, data, el);
+    fullRef.current = null;
+    dataFpRef.current = dataFingerprint(data as (number | null)[][]);
+    const u = new uPlot(opts, data, el);
+    uRef.current = u;
+    // uPlot sets its scales in a microtask after it is built: settle them now, so the range read below is the real one
+    u.batch(() => undefined);
+    // Tier A: the range the chart opens with is the one to come back to; a zoom held before a rebuild (a theme or language
+    // change, a resize) is put back when it still meets the new range
+    const f = { x: [u.scales.x.min ?? 0, u.scales.x.max ?? 1] as [number, number], y: [u.scales.y.min ?? 0, u.scales.y.max ?? 1] as [number, number] };
+    fullRef.current = f;
+    hostRef.current?.setAttribute('data-view-x', `${f.x[0]},${f.x[1]}`);
+    const ctl = createZoom(u, { plot: el, log: { x: Boolean(x.log), y: Boolean(y.log) }, both, enabled: () => zoomableRef.current, full: () => fullRef.current, changed: () => undefined });
+    ctlRef.current = ctl;
+    u.over.style.touchAction = zoomable ? 'pan-y' : '';
+    const held = zoomRef.current;
+    const meets = (r: [number, number] | null, full: [number, number]) => (r && r[1] > full[0] && r[0] < full[1] ? ([Math.max(r[0], full[0]), Math.min(r[1], full[1])] as [number, number]) : null);
+    const hx = zoomable ? meets(held.x, f.x) : null;
+    const hy = zoomable && both ? meets(held.y, f.y) : null;
+    if (hx || hy) {
+      u.batch(() => {
+        if (hx) u.setScale('x', { min: hx[0], max: hx[1] });
+        if (hy) u.setScale('y', { min: hy[0], max: hy[1] });
+      });
+    } else {
+      zoomRef.current = { x: null, y: null };
+      if (zoomedRef.current) {
+        zoomedRef.current = false;
+        setZoomed(false);
+      }
+    }
+    // an axis title that the built chart cannot hold moves above it (the estimate that chose the layout was too generous)
+    if (!yAbove && yTitle) {
+      const pr = uPlot.pxRatio || 1;
+      const cy = (u.bbox.top + u.bbox.height / 2) / pr;
+      if (!axisTitleFits(yTitle, 2 * Math.min(cy, h - cy) - 4)) setForced(yTitle);
+    }
     return () => {
+      ctl.detach();
+      ctlRef.current = null;
       uRef.current?.destroy();
       uRef.current = null;
     };
@@ -954,8 +1065,22 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [structure]);
 
+  // New data redraws the chart from its full range; the same data handed in again as a fresh array (a parent that renders
+  // often) changes nothing, so a zoom the reader made is not thrown away.
   useEffect(() => {
-    uRef.current?.setData(data);
+    const u = uRef.current;
+    if (!u) return;
+    const fp = dataFingerprint(data as (number | null)[][]);
+    if (fp === dataFpRef.current) return;
+    dataFpRef.current = fp;
+    fullRef.current = null;
+    zoomRef.current = { x: null, y: null };
+    u.batch(() => u.setData(data));
+    fullRef.current = { x: [u.scales.x.min ?? 0, u.scales.x.max ?? 1], y: [u.scales.y.min ?? 0, u.scales.y.max ?? 1] };
+    if (zoomedRef.current) {
+      zoomedRef.current = false;
+      setZoomed(false);
+    }
   }, [data]);
 
   // a line moved or relabelled by the caller, and overlays given anew, are drawn again without a rebuild
@@ -1001,6 +1126,138 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
           ? 'Pase el cursor sobre el gráfico para leer los valores'
           : 'Hover the chart to read the values';
 
+  // ---- Tier A: the keyboard, the data table and the summary ----
+  const xText = (v: number): string => tickLabelAt(ticks, v, lang, xSpan) ?? formatNumber(v, lang, x.format ?? { digits: 4 });
+  const yText = (v: number | null | undefined): string => (v === null || v === undefined || !Number.isFinite(v) ? '' : `${formatNumber(v, lang, y.format ?? { digits: 4 })}`);
+  const xFormatKey = JSON.stringify(x.format ?? null);
+  const yFormatKey = JSON.stringify(y.format ?? null);
+  const a11y = useMemo(() => {
+    if (!drawn) return null;
+    const head = [xTitle, ...baseEntries.map(({ s: one }) => (yUnit ? `${pick(one.label, lang)} (${yUnit})` : pick(one.label, lang))), ...overlays.map(({ s: one }) => (yUnit ? `${pick(one.label, lang)} (${yUnit})` : pick(one.label, lang)))];
+    const kept = thinRows(xs.length);
+    const blanks = (n: number) => Array.from({ length: n }, () => '');
+    const rows: string[][] = kept.map((i) => [xText(xs[i]), ...ys.map((col) => yText(col[i])), ...blanks(overlays.length)]);
+    overlays.forEach(({ s: one }, o) => {
+      const ox = one.x ?? [];
+      for (const k of thinRows(Math.min(ox.length, one.values.length))) {
+        if (!Number.isFinite(ox[k]) || one.values[k] === null || one.values[k] === undefined) continue;
+        const cells = [...blanks(ys.length), ...blanks(overlays.length)];
+        cells[ys.length + o] = yText(one.values[k]);
+        rows.push([xText(ox[k]), ...cells]);
+      }
+    });
+    const multi = baseEntries.length + overlays.length > 1;
+    let low: { v: number; at: string } | null = null;
+    let high: { v: number; at: string } | null = null;
+    baseEntries.forEach(({ s: one }, k) => {
+      for (let i = 0; i < xs.length; i++) {
+        const v = ys[k][i];
+        if (v === null || v === undefined || !Number.isFinite(v)) continue;
+        const at = `${multi ? `${pick(one.label, lang)}, ` : ''}${xLabel} ${xText(xs[i])}`;
+        if (!low || v < low.v) low = { v, at };
+        if (!high || v > high.v) high = { v, at };
+      }
+    });
+    const unit = yUnit ? `${NBSP}${yUnit}` : '';
+    const lo = low as { v: number; at: string } | null;
+    const hi = high as { v: number; at: string } | null;
+    const summary = chartSummary(lang, {
+      kind: 'line',
+      name,
+      count: xs.length,
+      series: series.map((one) => pick(one.label, lang)),
+      xLabel,
+      xFrom: xs.length ? xText(xs[0]) : undefined,
+      xTo: xs.length ? xText(xs[xs.length - 1]) : undefined,
+      yLabel: yTitle,
+      low: lo ? { text: `${yText(lo.v)}${unit}`, at: lo.at } : undefined,
+      high: hi ? { text: `${yText(hi.v)}${unit}`, at: hi.at } : undefined,
+    });
+    return { head, rows, summary, thinned: kept.length < xs.length };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drawn, xs, ys, baseEntries, overlays, series, lang, ticks, xSpan, xTitle, yTitle, xLabel, yUnit, name, xFormatKey, yFormatKey]);
+
+  const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    // a key that reaches the plot from a draggable line's handle is the handle's
+    if (e.target !== e.currentTarget) return;
+    const u = uRef.current;
+    const ctl = ctlRef.current;
+    if (!u || !ctl) return;
+    const act = keyAction(e.key, { shift: e.shiftKey, ctrl: e.ctrlKey, meta: e.metaKey, alt: e.altKey });
+    if (!act) return;
+    const n = xs.length;
+    const stand = kbRef.current;
+    switch (act) {
+      case 'prev':
+      case 'next':
+      case 'first':
+      case 'last': {
+        let idx: number | null;
+        if (stand === null && zoomedRef.current && (act === 'next' || act === 'prev')) {
+          // a zoomed chart starts at the edge of what is in view, not at the far end of the data
+          const v = ctl.view().x;
+          let last: number | null = null;
+          for (let i = n - 1; i >= 0; i--) {
+            if (xs[i] >= v[0] && xs[i] <= v[1]) {
+              last = i;
+              break;
+            }
+          }
+          idx = act === 'next' ? firstVisible(xs, v[0], v[1]) : last;
+        } else idx = stepIndex(stand, act, n);
+        if (idx === null) return;
+        kbRef.current = idx;
+        ctl.reveal(xs[idx]);
+        ctl.place(idx);
+        break;
+      }
+      case 'zoomIn':
+      case 'zoomOut': {
+        if (!zoomableRef.current) return;
+        const v = ctl.view();
+        const ax = stand !== null ? xs[stand] : x.log && v.x[0] > 0 ? Math.sqrt(v.x[0] * v.x[1]) : (v.x[0] + v.x[1]) / 2;
+        const firstY = stand !== null ? ys.map((col) => col[stand]).find((val) => val !== null && val !== undefined && Number.isFinite(val)) : undefined;
+        const ay = firstY ?? (y.log && v.y[0] > 0 ? Math.sqrt(v.y[0] * v.y[1]) : (v.y[0] + v.y[1]) / 2);
+        ctl.zoomBy(act === 'zoomIn' ? KEY_ZOOM : 1 / KEY_ZOOM, ax, ay);
+        if (stand !== null) ctl.place(stand);
+        break;
+      }
+      case 'panPrev':
+      case 'panNext':
+        if (!zoomableRef.current || !zoomedRef.current) return;
+        ctl.panBy(act === 'panNext' ? KEY_PAN : -KEY_PAN);
+        break;
+      case 'reset':
+        if (e.key === 'Escape' && !zoomedRef.current) return;
+        ctl.reset();
+        if (stand !== null) ctl.place(stand);
+        e.stopPropagation();
+        break;
+      case 'activate': {
+        if (stand === null || !onPickRef.current) return;
+        onPickRef.current(orderRef.current ? orderRef.current[stand] : stand);
+        break;
+      }
+    }
+    e.preventDefault();
+  };
+  const onBlur = (e: FocusEvent<HTMLDivElement>) => {
+    if (e.relatedTarget instanceof Node && e.currentTarget.contains(e.relatedTarget)) return;
+    if (kbRef.current === null) return;
+    kbRef.current = null;
+    ctlRef.current?.clear();
+  };
+  const resetZoom = () => {
+    ctlRef.current?.reset();
+    plotRef.current?.focus({ preventScroll: true });
+  };
+  const moved = [xBelow ? 'x' : '', yAbove ? 'y' : ''].filter(Boolean).join('');
+  const readoutEl = (
+    <p className="caos-chart-readout" aria-live="polite" title={read}>
+      {read}
+    </p>
+  );
+
   return (
     <div
       ref={hostRef}
@@ -1017,8 +1274,42 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
       data-y-drag={dragCount ? String(dragCount) : undefined}
       data-overlay={overlays.length ? String(overlays.length) : undefined}
       data-solo={soloIdx !== null ? String(soloIdx) : undefined}
+      data-chart-host={drawn ? 'line' : undefined}
+      data-points={drawn ? String(xs.length) : undefined}
+      data-zoomable={drawn ? (zoomable ? '1' : '0') : undefined}
+      data-zoomed={drawn && zoomed ? '1' : undefined}
+      data-zoom-off={drawn && zoomWhy ? zoomWhy : undefined}
+      data-axis-title-moved={drawn && moved ? moved : undefined}
     >
-      <div ref={setPlot} className="caos-chart-plot" />
+      {drawn && yAbove && yTitle && (
+        <p className="caos-chart-axis-title" data-axis-title="y">
+          {yTitle}
+        </p>
+      )}
+      <div
+        ref={setPlot}
+        className="caos-chart-plot"
+        {...(drawn
+          ? {
+              tabIndex: 0,
+              role: 'group',
+              'aria-roledescription': CHART_ROLE[lang],
+              'aria-label': name,
+              'aria-describedby': `${summaryId} ${tableId}`,
+              'aria-description': zoomable ? ZOOM_HINT[lang] : undefined,
+              'data-chart-focus': '',
+              onKeyDown,
+              onBlur,
+            }
+          : {})}
+      />
+      {drawn && xBelow && (
+        <p className="caos-chart-axis-title" data-axis-title="x">
+          {xTitle}
+        </p>
+      )}
+      {drawn && a11y && <ChartSummary id={summaryId} text={a11y.summary} />}
+      {drawn && a11y && <ChartDataTable id={tableId} caption={a11y.thinned ? `${name} (${lang === 'es' ? 'una de cada varias filas' : 'every few rows'})` : name} head={a11y.head} rows={a11y.rows} />}
       {(series.length > 1 || solo) && (
         <ul className="caos-chart-legend" aria-label={lang === 'es' ? 'Series del gráfico' : 'Series of the chart'}>
           {series.map((s, i) => (
@@ -1038,9 +1329,14 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
           ))}
         </ul>
       )}
-      <p className="caos-chart-readout" aria-live="polite" title={read}>
-        {read}
-      </p>
+      {drawn ? (
+        <div className="caos-chart-foot">
+          {readoutEl}
+          {zoomed && zoomable && <ResetZoomButton lang={lang} onReset={resetZoom} />}
+        </div>
+      ) : (
+        readoutEl
+      )}
     </div>
   );
 }
