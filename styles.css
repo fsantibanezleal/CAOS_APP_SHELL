@@ -668,6 +668,10 @@ svg.lucide { flex: none; }
 .caos-bars[data-chart-focus][data-zoomed] { touch-action: none; }
 .caos-bars-brush { fill: var(--color-accent); fill-opacity: 0.16; stroke: var(--color-accent); stroke-width: 1; pointer-events: none; }
 .caos-bars-cursor { fill: var(--color-accent); fill-opacity: 0.1; pointer-events: none; }
+/* grouped bars (0.19.0): the legend of what each tone means, under the bars; a square swatch in the tone's colour */
+.caos-bars-legend { list-style: none; margin: 0.25rem 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.1rem 0.8rem; font-size: 0.74rem; line-height: 1.35; color: var(--color-fg-subtle); }
+.caos-bars-key { display: inline-flex; align-items: center; gap: 0.35rem; min-width: 0; }
+.caos-bars-swatch { flex: none; width: 10px; height: 10px; border-radius: 2px; background: var(--swatch); }
 /* Tier A of the shell charts (0.19.0): the tab stop's ring, an axis title that moved off the axis, the foot with the reset control. */
 .caos-chart-plot[data-chart-focus]:focus-visible, .caos-bars[data-chart-focus]:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
 /* A chart that holds the focus takes the wheel (a click gives it the focus, however it was given): the ring says so, in both themes. */

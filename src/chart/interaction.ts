@@ -400,3 +400,48 @@ export function clipExtent(e: BarExtent | null, lo: number, hi: number): BarExte
   const c = (v: number) => Math.min(hi, Math.max(lo, v));
   return { ...e, a: c(e.a), b: c(e.b) };
 }
+
+/** A category band of a bar chart: the data `from` (included) `to` (excluded) that share it, and the group id they share (if any). */
+export interface Band {
+  from: number;
+  to: number;
+  group?: string;
+}
+
+/**
+ * The category bands of a list of data, given each datum's group id (or none): consecutive data with the same group id share one band
+ * (side by side, or one under another); a datum with no group is a band of its own. Data of one group that are not consecutive make a band each.
+ */
+export function bandsOf(groups: readonly (string | null | undefined)[]): Band[] {
+  const out: Band[] = [];
+  groups.forEach((g, i) => {
+    const last = out[out.length - 1];
+    if (g !== null && g !== undefined && last && last.group === g && last.to === i) last.to = i + 1;
+    else out.push({ from: i, to: i + 1, ...(g !== null && g !== undefined ? { group: g } : {}) });
+  });
+  return out;
+}
+
+/** The share of a band left empty on each side of its members when the band holds a group. */
+export const GROUP_MARGIN = 0.1;
+
+/**
+ * Where the members of a band lie inside it, as fractions of the band along the category axis: every member has a slot of the same size
+ * (the band is shared out as if every band held `most` members) and the members of a smaller group are centred.
+ */
+export function memberSlots(count: number, most: number): { size: number; start: number } {
+  const size = (1 - 2 * GROUP_MARGIN) / Math.max(1, most);
+  return { size, start: 0.5 - (count * size) / 2 };
+}
+
+/** The member of a band of `count` members a position `frac` (0 to 1 along the band) lies on: the nearest slot when it is in a margin. */
+export function memberAt(frac: number, count: number, most: number): number {
+  const { size, start } = memberSlots(count, most);
+  return Math.max(0, Math.min(count - 1, Math.floor((frac - start) / size)));
+}
+
+/** The tones a legend names that no bar uses, in the order of the legend. */
+export function unusedLegendTones(used: readonly string[], legend: readonly { tone: string }[]): string[] {
+  const set = new Set(used);
+  return [...new Set(legend.map((l) => l.tone))].filter((t) => !set.has(t));
+}
