@@ -6,7 +6,11 @@ import {
   brushWindow,
   categoryAt,
   chartSummary,
-  dataFingerprint,
+  brushRange,
+  DRAG_THRESHOLD,
+  formatTime,
+  leastLabelSpan,
+  sameData,
   defaultChartName,
   firstVisible,
   isZoomed,
@@ -237,12 +241,57 @@ test('allIntegers: counts are whole, a fraction or a missing value is judged by 
   assert.equal(allIntegers([]), true);
 });
 
-test('dataFingerprint: the same values in a fresh array match, a changed value or a changed length does not', () => {
+test('sameData: the same values in a fresh array match; any changed value, a swap, a tiny relative change or a changed length does not (M6)', () => {
   const a = [[1, 2, 3], [4, null, 6]];
-  assert.equal(dataFingerprint(a), dataFingerprint([[1, 2, 3], [4, null, 6]]));
-  assert.notEqual(dataFingerprint(a), dataFingerprint([[1, 2, 3], [4, null, 7]]));
-  assert.notEqual(dataFingerprint(a), dataFingerprint([[1, 2, 3], [4, 6, null]]));
-  assert.notEqual(dataFingerprint(a), dataFingerprint([[1, 2, 3, 4], [4, null, 6, 7]]));
+  assert.equal(sameData(a, [[1, 2, 3], [4, null, 6]]), true);
+  assert.equal(sameData(a, [[1, 2, 3], [4, undefined, 6]]), true, 'a missing value is a missing value');
+  assert.equal(sameData(a, [[1, 2, 3], [4, null, 7]]), false);
+  assert.equal(sameData(a, [[1, 2, 3], [4, 6, null]]), false);
+  assert.equal(sameData(a, [[1, 2, 3, 4], [4, null, 6, 7]]), false);
+  assert.equal(sameData(a, [[1, 2, 3]]), false, 'a column fewer');
+  const col = Array.from({ length: 120 }, (_, i) => i * i);
+  const swapped = [...col];
+  [swapped[0], swapped[97]] = [swapped[97], swapped[0]];
+  assert.equal(sameData([col], [swapped]), false, 'the values at 0 and 97 swapped (the old fingerprint weighed both by 1)');
+  assert.equal(sameData([[1e17, 3]], [[1e17 + 16, 3]]), false, 'a change far below the sum of the column');
+  const same = [1, 2, 3];
+  assert.equal(sameData([same], [same]), true, 'the same array');
+});
+
+test('leastLabelSpan: the least span at which an axis of significant digits still labels its ticks apart (M2)', () => {
+  // depth 1000 to 1490 with the default four digits: labels are whole numbers, so ticks must be at least 1 apart; a 600 px axis holds 12 ticks
+  const least = leastLabelSpan(undefined, [1000, 1490], 600, 50);
+  assert.ok(least >= 12 && least <= 14, String(least));
+  assert.equal(leastLabelSpan({ decimals: 1 }, [1000, 1490], 600, 50), 0, 'fixed decimals have their own tick steps');
+  const small = leastLabelSpan({ digits: 3 }, [1, 1.5], 600, 50);
+  assert.ok(Math.abs(small - 0.13) < 1e-9, String(small));
+  assert.equal(leastLabelSpan({ percent: true }, [0.1, 0.9], 600, 50) > 0, true);
+  assert.equal(leastLabelSpan(undefined, [0, 0], 600, 50), 0);
+  assert.equal(leastLabelSpan(undefined, [1e-9, 5e-9], 600, 50), 0, 'scientific notation has no fixed resolution');
+});
+
+test('formatTime: a date in the page language, with the time of day only when the span is under three days (M3)', () => {
+  const en = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(1704067200 * 1000));
+  const es = new Intl.DateTimeFormat('es-CL', { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(1704067200 * 1000));
+  assert.equal(formatTime(1704067200, 'en', 30 * 86400), en);
+  assert.equal(formatTime(1704067200, 'es', 30 * 86400), es);
+  assert.ok(formatTime(1704067200, 'en', 3600).length > en.length, 'the time of day shows on a short span');
+  assert.ok(!/1,704/.test(formatTime(1704067200, 'en', 1)));
+});
+
+test('brushRange: the dragged range, in order, inside the full range and never narrower than the least span', () => {
+  assert.deepEqual(brushRange([30, 20], [0, 100], 0), [20, 30]);
+  assert.deepEqual(brushRange([-10, 20], [0, 100], 0), [0, 20]);
+  assert.deepEqual(brushRange([95, 140], [0, 100], 0), [95, 100]);
+  const [lo, hi] = brushRange([50, 50.001], [0, 100], 1);
+  assert.ok(Math.abs(hi - lo - 1) < 1e-9 && lo < 50.001 && hi > 50, `${lo} ${hi}`);
+  const edge = brushRange([99.9999, 100], [0, 100], 1);
+  assert.ok(edge[1] <= 100 && Math.abs(edge[1] - edge[0] - 1) < 1e-9, `${edge}`);
+  assert.deepEqual(brushRange([1, 99], [0, 100], 500), [0, 100], 'a least span past the full span is the full range');
+});
+
+test('DRAG_THRESHOLD: one threshold of 5 px for the bars and the lines (m2)', () => {
+  assert.equal(DRAG_THRESHOLD, 5);
 });
 
 test('chartSummary: one line in the page language with the series, the x range and the extremes', () => {
