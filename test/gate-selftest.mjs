@@ -283,6 +283,8 @@ const LEGIT = [
   { id: 'legit-select-three-lines', opts: { routes: '/app', requireFocus: true } },
   { id: 'legit-engine-subtabs', opts: { routes: '/app,/implementation' } },
   { id: 'legit-method-view-tabs', opts: { routes: '/app,/methodology' } },
+  // shell 0.19.0: a chart that turns zoom off with a reason passes every check and is listed among the waivers
+  { id: 'legit-zoom-off', opts: { routes: '/app' }, waiver: /whole epidemic curve is the finding/ },
 ];
 
 /** A static server with an SPA fallback: every unknown path answers index.html with 200 (the G4 plant). */
@@ -380,6 +382,7 @@ describe('a legitimate page passes the gate', { concurrency: 3 }, () => {
       const r = await runGate({ ...QUICK, langs: 'en,es', serve: dir, expectBrand: BRAND, out: join(work, `out-${p.id}`), ...p.opts });
       assert.equal(r.failures.length, 0, `the legitimate page ${p.id} failed:
 ${show(r)}`);
+      if (p.waiver) assert.ok((r.waivers ?? []).some((w) => w.floor === 'chart zoom off' && w.valid && p.waiver.test(w.reason)), `the waiver of ${p.id} is not listed: ${JSON.stringify(r.waivers)}`);
     });
   }
 });
