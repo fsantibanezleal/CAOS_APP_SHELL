@@ -1596,6 +1596,17 @@ export function installLib() {
       const entry = { label, kind, problems, zoomOffSet: host.hasAttribute('data-zoom-off'), zoomOff: host.getAttribute('data-zoom-off') || '', zoomOffValid: true };
       if (entry.zoomOffSet) entry.zoomOffValid = reasonWords(entry.zoomOff) >= 12;
       out.push(entry);
+      // the labels of a chart's marks (x and y) share one set of boxes, and none lies over another (0.19.0): the chart says how many do
+      const overlaps = host.getAttribute('data-mark-overlaps');
+      if (overlaps !== null && Number(overlaps) > 0) {
+        let which = '';
+        try {
+          which = JSON.parse(host.getAttribute('data-mark-boxes') || '[]').map((b) => `"${b.t}"`).slice(0, 4).join(', ');
+        } catch {
+          which = '';
+        }
+        problems.push(`${overlaps} pair(s) of mark label(s) overlap (data-mark-overlaps="${overlaps}"${which ? `; placed: ${which}` : ''}): an x mark's label lies over a y mark's label or another x label`);
+      }
       if (!stop) {
         problems.push('the chart is not a tab stop (no element with data-chart-focus): the keyboard cannot reach its crosshair, zoom or reset');
         continue;
@@ -1617,6 +1628,19 @@ export function installLib() {
       }
       const summary = described.find((el) => el.tagName !== 'TABLE');
       if (!summary || !(summary.textContent || '').trim()) problems.push('the plot has no one-line text summary (aria-describedby must name it)');
+      // the bar forms of 0.19.0: a floating bar adds the two ends to the table (From, To), grouped bars add the group; a legend is drawn when one is declared
+      const spans = Number(host.getAttribute('data-spans') || '0');
+      const groups = Number(host.getAttribute('data-groups') || '0');
+      const legend = Number(host.getAttribute('data-legend') || '0');
+      if (kind === 'bars' && table) {
+        const want = 3 + (spans > 0 ? 2 : 0) + (groups > 0 ? 1 : 0);
+        const have = table.querySelectorAll('thead th').length;
+        if (have !== want) problems.push(`the data table of ${spans > 0 ? 'floating' : 'grouped'} bars has ${have} columns, it must have ${want} (${[groups > 0 ? 'group' : '', 'category', 'value', spans > 0 ? 'from, to' : '', 'note'].filter(Boolean).join(', ')})`);
+      }
+      if (kind === 'bars' && legend > 0) {
+        const keys = [...host.querySelectorAll('.caos-bars-legend li')].filter(visible);
+        if (keys.length !== legend) problems.push(`the legend is not shown: the chart declares ${legend} entries and ${keys.length} are visible`);
+      }
       // driven (the `interact` state): the arrow keys move the crosshair and change the readout, a scripted brush zooms, `+` zooms, the one
       // visible control and `0` reset. A chart that is zoomed already, or cannot be zoomed, is not driven for the zoom
       if (drive) {
@@ -1632,6 +1656,28 @@ export function installLib() {
           key('End');
           key('Home');
           await pause(40);
+          // floating and grouped bars: the keyboard walks every bar, each readout reads the bar's two ends (a floating bar) and its group (a grouped one)
+          if (kind === 'bars' && (spans > 0 || groups > 0) && points > 1 && points <= 60) {
+            const cells = table ? [...table.querySelectorAll('tbody tr')].map((tr) => [...tr.querySelectorAll('th, td')].map((c) => (c.textContent || '').trim())) : [];
+            const seen = new Set();
+            let unread = 0;
+            let ungrouped = 0;
+            for (let k = 0; k < points; k++) {
+              if (k > 0) key('ArrowRight');
+              await pause(30);
+              const text = (readout.textContent || '').trim();
+              seen.add(text);
+              const row = cells[k] || [];
+              const offset = groups > 0 ? 1 : 0;
+              if (spans > 0 && row[offset + 2] && row[offset + 3] && !(text.includes(row[offset + 2]) && text.includes(row[offset + 3]))) unread += 1;
+              if (groups > 0 && row[0] && !text.includes(row[0])) ungrouped += 1;
+            }
+            if (seen.size !== points) problems.push(`the keyboard walk reached ${seen.size} of ${points} bars (the arrow keys skip bars, or two bars read the same)`);
+            if (unread > 0) problems.push(`the readout of ${unread} floating bar(s) does not read its two ends (the table has them: From and To)`);
+            if (ungrouped > 0) problems.push(`the readout of ${ungrouped} grouped bar(s) does not read its group`);
+            key('Home');
+            await pause(40);
+          }
         }
         if (host.getAttribute('data-zoomable') === '1' && !host.hasAttribute('data-zoomed')) {
           key('+');

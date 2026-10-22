@@ -89,6 +89,47 @@ function flipPlant(plant: string): (() => void) | undefined {
       }
     });
   }
+  // shell 0.19.0 (D16-21), the bar forms: a product handler that takes every second arrow key (the keyboard skips bars), a readout that loses a
+  // floating bar's ends or a group's name (a product script rewrites its text), a stylesheet that hides the legend
+  if (plant === 'bar-keys-skip') {
+    return plantDom(() => {
+      for (const stop of document.querySelectorAll<HTMLElement>('.caos-bars[data-chart-focus]')) {
+        if (stop.dataset.swallow) continue;
+        stop.dataset.swallow = '1';
+        let n = 0;
+        stop.addEventListener('keydown', (e) => {
+          if ((e as KeyboardEvent).key === 'ArrowRight' && ++n % 2 === 0) e.stopPropagation();
+        }, true);
+      }
+    });
+  }
+  if (plant === 'bar-ends-hidden' || plant === 'bar-group-unread') {
+    // the readout's text node is rewritten by React in place (a change of characterData), so this watches that too
+    const rewrite = () => {
+      for (const p of document.querySelectorAll('.caos-bars-readout')) {
+        const node = p.firstChild;
+        if (!node || node.nodeType !== 3) continue;
+        const text = node.nodeValue ?? '';
+        const next = plant === 'bar-ends-hidden' ? text.replace(/ · (from|de) .*$/, '') : text.replace(/^[^,:]+, /, '');
+        if (next !== text) node.nodeValue = next;
+      }
+    };
+    const watch = { subtree: true, childList: true, characterData: true } as const;
+    const observer = new MutationObserver(() => {
+      observer.disconnect();
+      rewrite();
+      observer.observe(document.body, watch);
+    });
+    rewrite();
+    observer.observe(document.body, watch);
+    return () => observer.disconnect();
+  }
+  if (plant === 'bar-legend-hidden') {
+    const style = document.createElement('style');
+    style.textContent = '.caos-bars-legend { display: none !important; }';
+    document.head.append(style);
+    return () => style.remove();
+  }
   // the reset control hidden by a product stylesheet: the chart zooms and the reader is never shown the way back
   if (plant === 'chart-reset-hidden') {
     const style = document.createElement('style');
@@ -389,6 +430,15 @@ function ModelView({ sim }: { sim: Sim }) {
               { label: { en: 'Recovered', es: 'Recuperados' }, values: sim.R, color: '--color-good' },
             ]}
             marks={[{ x: sim.peakDay, label: { en: 'peak', es: 'pico' } }]}
+            // shell 0.19.0 (G20): two reference lines at one level whose labels are each wider than the plot's half: the second lies over the first
+            yMarks={
+              PLANT === 'mark-overlap'
+                ? [
+                    { y: Math.max(...sim.S) * 0.5, label: { en: 'the planted level that carries a very long first label of the reference line, written out in full so that it takes more than half of the plot whatever its size', es: 'el nivel plantado que lleva una primera etiqueta muy larga de la línea de referencia, escrita completa para que ocupe más de la mitad del gráfico sea cual sea su tamaño' } },
+                    { y: Math.max(...sim.S) * 0.5, label: { en: 'and a second label as long as the first one, at the very same level of the plot, so that the two cannot both be placed without lying over one another', es: 'y una segunda etiqueta tan larga como la primera, en el mismo nivel del gráfico, de modo que las dos no puedan ubicarse sin quedar una sobre otra' } },
+                  ]
+                : undefined
+            }
           />
         )}
       </PlotCard>
@@ -641,6 +691,52 @@ function ValidationView({ sim, focusOn }: { sim: Sim; focusOn?: boolean }) {
         },
       ]}
     />
+  );
+}
+
+/** The bar forms of 0.19.0 (D16-21): a bridge from one total to another through signed steps (floating bars, the totals as dots on an axis that does
+ * not start at zero) and the provision of three segments under three regimes (grouped bars with a legend). */
+function BarFormsView() {
+  const { stateKey } = useWorkbenchState();
+  const bridge = [
+    { id: 'open', label: { en: 'Opening', es: 'Apertura' }, value: 120, span: [120, 120] as [number, number], tone: 'accent' as const },
+    { id: 'a', label: { en: 'Inflows', es: 'Entradas' }, value: 15, span: [120, 135] as [number, number], tone: 'good' as const },
+    { id: 'b', label: { en: 'Outflows', es: 'Salidas' }, value: -22, span: [135, 113] as [number, number], tone: 'bad' as const },
+    { id: 'c', label: { en: 'Transfers', es: 'Traspasos' }, value: 6, span: [113, 119] as [number, number], tone: 'good' as const },
+    { id: 'close', label: { en: 'Closing', es: 'Cierre' }, value: 119, span: [119, 119] as [number, number], tone: 'accent' as const },
+  ];
+  const segments = [
+    { id: 'retail', label: { en: 'Retail', es: 'Minorista' } },
+    { id: 'corp', label: { en: 'Corporate', es: 'Corporativo' } },
+    { id: 'sov', label: { en: 'Sovereign', es: 'Soberano' } },
+  ];
+  const regimes = [
+    { id: 'base', label: { en: 'Base', es: 'Base' }, tone: 'accent' as const },
+    { id: 'stress', label: { en: 'Stress', es: 'Estrés' }, tone: 'warn' as const },
+    { id: 'severe', label: { en: 'Severe', es: 'Severo' }, tone: 'good' as const },
+  ];
+  const provision = [[12, 18, 25], [30, 41, 55], [8, 9, 14]];
+  const grouped = segments.flatMap((g, gi) => regimes.map((r, ri) => ({ id: `${g.id}-${r.id}`, label: r.label, group: g, value: provision[gi][ri], tone: r.tone })));
+  return (
+    <ViewsRow shares={[1, 1]}>
+      <PlotCard fill title={{ en: 'A bridge between two totals', es: 'Un puente entre dos totales' }} lane="live" provenance="synthetic" dataKey={stateKey}>
+        <BarChart
+          title={{ en: 'A bridge between two totals', es: 'Un puente entre dos totales' }}
+          height="fill"
+          axis={{ label: { en: 'Capital', es: 'Capital' }, unit: { en: 'USD m', es: 'MUSD' }, format: { decimals: 0 }, range: [100, 140] }}
+          data={bridge}
+        />
+      </PlotCard>
+      <PlotCard fill title={{ en: 'Provision by segment under three regimes', es: 'Provisión por segmento bajo tres regímenes' }} lane="live" provenance="synthetic" dataKey={stateKey}>
+        <BarChart
+          title={{ en: 'Provision by segment under three regimes', es: 'Provisión por segmento bajo tres regímenes' }}
+          height="fill"
+          axis={{ label: { en: 'Provision', es: 'Provisión' }, unit: { en: 'USD m', es: 'MUSD' }, format: { decimals: 0 } }}
+          data={grouped}
+          legend={regimes.map((r) => ({ tone: r.tone, label: r.label }))}
+        />
+      </PlotCard>
+    </ViewsRow>
   );
 }
 
@@ -943,6 +1039,8 @@ function Workbench() {
         groups={[
           { id: 'model', label: { en: 'Model', es: 'Modelo' }, content: <ModelView sim={sim} /> },
           { id: 'validation', label: { en: 'Validation', es: 'Validación' }, content: <ValidationView sim={sim} focusOn={focusOn} /> },
+          // the bar forms of 0.19.0 (D16-21): a floating bar (a bridge between two totals) and grouped bars with a legend; G20 drives both
+          { id: 'bars', label: { en: 'Bar forms', es: 'Formas de barras' }, content: <BarFormsView /> },
           { id: 'pending', label: { en: 'Pending', es: 'Pendiente' }, content: <PendingView /> },
         ]}
         group={PLANT === 'focus-drops-group' && focusOn ? 'model' : undefined}
