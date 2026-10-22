@@ -67,7 +67,13 @@ before(async () => {
     function Scatter() {
       return page(<UPlotChart height={360} x={{ values: [3, 1, 2, 5, 4], label: 'Observed' }} y={yAxis} series={[{ label: 'Predicted', values: [3.1, 0.8, 2.2, 5.3, 3.9], mode: 'points' }]} onPick={(i) => w.__picked.push(i)} />);
     }
-    const forms: Record<string, () => React.ReactNode> = { line: Line, es: Es, one: One, empty: Empty, log: Log, off: Off, both: Both, drag: Drag, rerender: Rerender, ticks: Ticks, scatter: Scatter };
+    function Ranged() {
+      return page(<UPlotChart height={360} x={{ values: [0, 1, 2], label: 'Protocol', ticks: [0, 1, 2].map((v) => ({ value: v, label: 'p' + v })), range: [-0.5, 2.5] }} y={{ label: 'Error', range: [10, 40], format: { decimals: 0 } }} series={[{ label: 'Model', values: [12, 24, 39], dots: true }]} />);
+    }
+    function OverlayLog() {
+      return page(<UPlotChart height={360} zoomY x={{ values: [0.01, 0.1, 1, 10], label: 'Size', log: true }} y={{ label: 'Passing', range: [0, 100], format: { decimals: 0 } }} series={[{ label: 'Model', values: [5, 30, 70, 99] }, { label: 'Measured', values: [3, 19, 51, 99], x: [0.015, 0.07, 0.3, 3], mode: 'points' }]} yMarks={[{ y: 50, label: 'P50', drag: { min: 5, max: 95, step: 1 } }]} onYMarkChange={() => undefined} />);
+    }
+    const forms: Record<string, () => React.ReactNode> = { ranged: Ranged, overlaylog: OverlayLog, line: Line, es: Es, one: One, empty: Empty, log: Log, off: Off, both: Both, drag: Drag, rerender: Rerender, ticks: Ticks, scatter: Scatter };
     const App = forms[form] ?? Line;
     createRoot(document.getElementById('root')!).render(<App />);
   `);
@@ -615,6 +621,29 @@ test('zoom is kept across a theme and a language change, and across a parent tha
     assert.equal(await page.locator('.caos-chart-reset').count(), 0);
   } finally {
     await page.close();
+  }
+});
+
+test('fixed ranges: a chart with x.range, y.range, overlays on a log axis or a draggable line zooms and resets like any other (the gate fixture charts)', async () => {
+  for (const form of ['ranged', 'overlaylog']) {
+    const { page, errors } = await open(`form=${form}`);
+    try {
+      const full = await view(page);
+      await page.focus('[data-chart-focus]');
+      await page.keyboard.press('+');
+      await page.waitForTimeout(100);
+      assert.equal(await zoomed(page), true, `${form}: + zooms`);
+      const [lo, hi] = await view(page);
+      assert.ok(hi - lo < full[1] - full[0] || (form === 'overlaylog' && hi / lo < full[1] / full[0]), `${form}: narrower ${lo}..${hi} than ${full}`);
+      assert.equal(await page.locator('.caos-chart-reset').count(), 1);
+      await page.keyboard.press('0');
+      await page.waitForTimeout(100);
+      assert.equal(await zoomed(page), false, `${form}: 0 resets`);
+      assert.deepEqual(await view(page), full);
+      assert.deepEqual(errors, [], form);
+    } finally {
+      await page.close();
+    }
   }
 });
 
