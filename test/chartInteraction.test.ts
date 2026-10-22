@@ -5,6 +5,10 @@ import {
   axisTitleFits,
   bandsOf,
   barExtent,
+  boxesOverlap,
+  countOverlaps,
+  ellipsize,
+  placeXLabel,
   brushWindow,
   categoryAt,
   chartSummary,
@@ -431,4 +435,46 @@ test('unusedLegendTones: the tones a legend names that no bar uses, once each, i
   assert.deepEqual(unusedLegendTones(['accent', 'warn'], [{ tone: 'accent' }, { tone: 'warn' }, { tone: 'good' }, { tone: 'good' }, { tone: 'bad' }]), ['good', 'bad']);
   assert.deepEqual(unusedLegendTones(['accent'], [{ tone: 'accent' }]), []);
   assert.deepEqual(unusedLegendTones([], []), []);
+});
+
+// ---- mark labels that avoid each other (0.19.0, D16-21, S3) ----
+
+const SPACE = { px: 100, left: 0, right: 330, bottom: 280, gap: 4, rowH: 14, textH: 11, first: 12, measure: (t: string) => t.length * 6 };
+
+test('placeXLabel: with nothing in the way the label is right of its line on the first row, as before 0.19.0', () => {
+  const at = placeXLabel('LCR window: 30 days', { ...SPACE, boxes: [] });
+  assert.deepEqual(at && [at.x0, at.y, at.cut], [104, 12, false]);
+});
+
+test('placeXLabel: a label meets a y label at the top (the C16 form at 390 px) and goes down to a row that clears it', () => {
+  const yLabel = { x0: 136, x1: 326, y0: 10, y1: 21 };
+  const at = placeXLabel('LCR window: 30 days', { ...SPACE, boxes: [yLabel] })!;
+  const box = { x0: at.x0, x1: at.x0 + at.w, y0: at.y - 11, y1: at.y };
+  assert.equal(boxesOverlap(box, yLabel), false);
+  assert.ok(at.y > 12, `a lower row than the first: ${at.y}`);
+  // the first row alone would have overlapped it: the labels of the two kinds did not see each other before
+  assert.equal(boxesOverlap({ x0: 104, x1: 104 + 19 * 6, y0: 1, y1: 12 }, yLabel), true);
+});
+
+test('placeXLabel: two x labels that would overlap take two rows, as before; a row below the plot is no row', () => {
+  const first = placeXLabel('first', { ...SPACE, px: 100, boxes: [] })!;
+  const b1 = { x0: first.x0, x1: first.x0 + first.w, y0: first.y - 11, y1: first.y };
+  const second = placeXLabel('second', { ...SPACE, px: 110, boxes: [b1] })!;
+  assert.equal(second.y - first.y, 14);
+  assert.equal(placeXLabel('x', { ...SPACE, bottom: 5, boxes: [{ x0: 0, x1: 330, y0: 0, y1: 20 }] }), null);
+});
+
+test('placeXLabel: a label wider than the plot is cut with an ellipsis until a row has room; one that fits nowhere is not written', () => {
+  const long = 'Regulatory liquidity window of thirty days';
+  const at = placeXLabel(long, { ...SPACE, right: 150, boxes: [] })!;
+  assert.ok(at.cut && at.text.endsWith('…') && at.x0 + at.w <= 150 + 1e-9 && at.x0 >= 0, `${at.text}`);
+  const walled = placeXLabel(long, { ...SPACE, boxes: [{ x0: 0, x1: 330, y0: 0, y1: 300 }] });
+  assert.equal(walled, null);
+});
+
+test('countOverlaps and ellipsize', () => {
+  assert.equal(countOverlaps([{ x0: 0, x1: 10, y0: 0, y1: 10 }, { x0: 5, x1: 15, y0: 5, y1: 15 }, { x0: 10, x1: 20, y0: 0, y1: 10 }]), 2);
+  assert.equal(countOverlaps([{ x0: 0, x1: 10, y0: 0, y1: 10 }, { x0: 10, x1: 20, y0: 0, y1: 10 }]), 0, 'touching edges do not overlap');
+  assert.equal(ellipsize('Regulatory', 4), 'Regu…');
+  assert.equal(ellipsize('Reg ulatory', 3), 'Reg…');
 });
