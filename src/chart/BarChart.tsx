@@ -1,4 +1,4 @@
-import { type FocusEvent, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { type CSSProperties, type FocusEvent, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { type FormatOptions, formatNumber, formatTicks, NBSP, NOT_AVAILABLE } from '../lib/format';
 import { useShellLang } from '../lib/lang';
 import { type BiText, pick } from '../lib/text';
@@ -8,6 +8,7 @@ import { CHART_ROLE, ChartDataTable, ChartSummary, ResetZoomButton } from './Cha
 import {
   allIntegers,
   axisTitleFits,
+  bandsOf,
   barExtent,
   brushWindow,
   categoryAt,
@@ -15,13 +16,17 @@ import {
   clipExtent,
   DRAG_THRESHOLD,
   KEY_PAN,
+  GROUP_MARGIN,
   KEY_ZOOM,
   keyAction,
+  memberAt,
+  memberSlots,
   panRange,
   pinchState,
   roundWindow,
   stepIndex,
   stepWindow,
+  unusedLegendTones,
   wheelFactor,
   windowRange,
   windowZoomed,
@@ -46,6 +51,10 @@ export interface BarDatum {
    * readout and the table, which add the two ends. A span of zero length is drawn as a dot as thick as a bar (a total on a bridge); a span with
    * a missing end draws nothing; a span outside `axis.range` is cut to it. */
   span?: [number | null | undefined, number | null | undefined];
+  /** Grouped bars (0.19.0): consecutive data with the same `group.id` share one category band, side by side (vertical) or one under another
+   * (horizontal), and the category axis prints the group label once; `label` then names the member (a regime, a year), read with its group
+   * ("Retail, Stress: 18"). Data of one group that are not consecutive make a band each. */
+  group?: { id: string; label: BiText };
 }
 
 export interface BarChartProps {
@@ -68,7 +77,12 @@ export interface BarChartProps {
   /** Turn zoom and pan by category off (0.19.0), with the reason (at least 12 characters; the gate lists every chart that sets it).
    * The crosshair, the readout, the keyboard, the data table and the summary cannot be turned off. */
   zoomOff?: BiText;
+  /** What each tone means (0.19.0), drawn as a legend under the bars: grouped bars name their members by tone. A tone no bar uses is drawn
+   * anyway and warned about in development. */
+  legend?: Array<{ tone: Tone; label: BiText }>;
 }
+
+declare const process: { env: { NODE_ENV?: string } };
 
 const PX = 11;
 const LINE = 13;
@@ -116,7 +130,7 @@ interface Geometry {
  * 0 and Escape), a hidden table of the values and a one-line summary. A value axis of counts ticks at whole numbers only
  * (`data-ticks-repeat` declares the labels that repeat, for the gate), and a long axis title wraps instead of being cut.
  */
-export function BarChart({ title, data, axis, orientation = 'horizontal', values = true, height, onSelect, zoomOff }: BarChartProps) {
+export function BarChart({ title, data, axis, orientation = 'horizontal', values = true, height, onSelect, zoomOff, legend }: BarChartProps) {
   const lang = useShellLang();
   const [measureRef, box] = useStageSize();
   const innerRef = useRef<HTMLDivElement | null>(null);
@@ -163,23 +177,44 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
   const [win, setWin] = useState<[number, number] | null>(null);
   const [cursor, setCursor] = useState<number | null>(null);
   const [brush, setBrush] = useState<{ a: number; b: number } | null>(null);
-  const [s0, e0] = windowRange(n, win);
-  const zoomed = windowZoomed(n, win);
+  // the category bands: one per datum, or one per group of consecutive data (0.19.0); the window, the zoom and the pan are over bands
+  const bands = useMemo(() => bandsOf(data.map((d) => d.group?.id)), [data]);
+  const nb = bands.length;
+  const grouped = data.some((d) => d.group !== undefined && d.group !== null);
+  const most = Math.max(1, ...bands.map((b) => b.to - b.from));
+  const bandOf = (i: number): number => bands.findIndex((b) => i >= b.from && i < b.to);
+  const bandLabel = (b: (typeof bands)[number]): string => pick(b.group !== undefined ? data[b.from].group!.label : data[b.from].label, lang);
+  const [s0, e0] = windowRange(nb, win);
+  const zoomed = windowZoomed(nb, win);
   // zoom is off whenever `zoomOff` is given, whatever its text: an empty reason in a language still turns zoom off and is still reported (the gate fails it)
   const zoomIsOff = zoomOff !== undefined && zoomOff !== null;
-  const zoomable = !zoomIsOff && n >= 3;
+  const zoomable = !zoomIsOff && nb >= 3;
   const zoomWhy = zoomIsOff ? pick(zoomOff, lang) : '';
   const kbRef = useRef(false);
   const geoRef = useRef<Geometry | null>(null);
-  const live = useRef({ win: win as [number, number] | null, n, zoomable, cursor: cursor as number | null });
-  live.current = { win, n, zoomable, cursor };
+  const live = useRef({ win: win as [number, number] | null, n: nb, zoomable, cursor: cursor as number | null });
+  live.current = { win, n: nb, zoomable, cursor };
   // the bars the chart is drawn for: a new list of ids starts from the whole of it
-  const idKey = data.map((d) => d.id).join('\u0001');
+  const idKey = data.map((d) => (d.group ? `${d.id}\u0002${d.group.id}` : d.id)).join('\u0001');
   useEffect(() => {
     setWin(null);
     setCursor(null);
     setBrush(null);
   }, [idKey]);
+
+  // a legend that names a tone no bar uses is drawn anyway; in development it is said once for each such legend
+  const unusedTones = legend ? unusedLegendTones(data.map((d) => d.tone ?? (anyHighlight && !d.highlight ? 'neutral' : 'accent')), legend) : [];
+  const unusedKey = unusedTones.join(',');
+  useEffect(() => {
+    let dev = false;
+    try {
+      // written out in full so a bundler can replace it; a page with no `process` has no development mode to warn in
+      dev = process.env.NODE_ENV !== 'production';
+    } catch {
+      dev = false;
+    }
+    if (dev && unusedKey) console.warn(`BarChart "${name}": the legend names the tone(s) ${unusedKey}, which no bar uses`);
+  }, [unusedKey, name]);
 
   const select = (id: string) => onSelect?.(id);
   const keyed = (id: string) => (e: KeyboardEvent<SVGGElement>) => {
@@ -202,15 +237,22 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
     const e = barExtent(d.value, d.span);
     return e && e.given ? (lang === 'es' ? `de ${formatNumber(d.span![0] as number, lang, fmt)} a ${formatNumber(d.span![1] as number, lang, fmt)}` : `from ${formatNumber(d.span![0] as number, lang, fmt)} to ${formatNumber(d.span![1] as number, lang, fmt)}`) : '';
   });
+  // a member of a group is read with its group ("Retail, Stress")
+  const fullName = (d: BarDatum): string => (d.group ? `${pick(d.group.label, lang)}, ${pick(d.label, lang)}` : pick(d.label, lang));
   if (width > 0 && n > 0) {
     const count = e0 - s0;
     const valueCol = values ? widestLabel(valueLabels, PX) + 8 : 0;
-    const rowsShown = data.slice(s0, e0);
+    const vis = bands.slice(s0, e0);
+    // the members of the bands in view, in order, with the band each stands in and its place in it
+    const items = vis.flatMap((b, kb) => Array.from({ length: b.to - b.from }, (_, j) => ({ b, kb, j, i: b.from + j, c: b.to - b.from })));
+    const slots = (c: number) => memberSlots(c, most);
     if (orientation === 'horizontal') {
-      const labelCol = Math.min(widestLabel(data.map((d) => pick(d.label, lang)), PX), Math.max(80, 0.38 * width));
-      const fittedAll = data.map((d) => fitLabel(pick(d.label, lang), labelCol, PX, 2));
+      const bandTexts = bands.map(bandLabel);
+      const labelCol = Math.min(widestLabel(bandTexts, PX), Math.max(80, 0.38 * width));
+      const fittedAll = bandTexts.map((t) => fitLabel(t, labelCol, PX, 2));
       const fitted = fittedAll.slice(s0, e0);
-      const need = Math.max(22, Math.max(...fittedAll.map((f) => f.lines.length)) * LINE + 8);
+      // a group needs a slot of 18 px for each of its members
+      const need = Math.max(22, Math.max(...fittedAll.map((f) => f.lines.length)) * LINE + 8, grouped ? (most * 18) / (1 - 2 * GROUP_MARGIN) : 0);
       const x0 = labelCol + 10;
       const x1 = Math.max(x0 + 40, width - valueCol - 6);
       // the axis title stays on one line under the plot while it fits there, and wraps over the drawing's width when it does not
@@ -227,13 +269,16 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
       // filling its card, the rows share the height (a capped row height left three bars on a quarter of the card,
       // under the gate's stage-fill floor); a bar keeps a readable thickness and its label stays centred on it. A zoomed
       // chart keeps the height of the whole one, so the page does not move: fewer rows take the same room.
-      const rowFull = fill && box.height > 0 ? Math.max(need, (box.height - axisH - 4) / n) : need;
-      const rowH = (n * rowFull) / count;
+      const rowFull = fill && box.height > 0 ? Math.max(need, (box.height - axisH - 4) / nb) : need;
+      const rowH = (nb * rowFull) / count;
       const top = 4;
-      const plotBottom = top + n * rowFull;
+      const plotBottom = top + nb * rowFull;
       drawnHeight = fill && box.height > 0 ? Math.max(box.height, plotBottom + axisH) : plotBottom + axisH;
-      const barH = Math.min(rowH * 0.5, 40);
+      // a group shares its band out in slots, one for each member of the largest group; a plain chart has a bar to a band
+      const barH = grouped ? Math.min(rowH * slots(most).size * 0.8, 40) : Math.min(rowH * 0.5, 40);
+      const centre = (it: (typeof items)[number]) => top + it.kb * rowH + (grouped ? rowH * (slots(it.c).start + (it.j + 0.5) * slots(it.c).size) : rowH / 2);
       geoRef.current = { horizontal: true, start: top, end: plotBottom };
+      const cb = cursor !== null ? bandOf(cursor) : -1;
       drawing = (
         <svg width={width} height={drawnHeight} role="presentation" data-chart="" data-chart-kind="bars">
           <title>{name}</title>
@@ -246,11 +291,24 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
             </g>
           ))}
           <Lines x={titleFits ? cx : width / 2} y={plotBottom + 6 + LINE + 4 + LINE - 2} lines={titleLines} anchor="middle" fill="var(--color-fg-subtle)" />
-          {cursor !== null && cursor >= s0 && cursor < e0 && <rect className="caos-bars-cursor" data-bar-cursor="" x={0} y={top + (cursor - s0) * rowH} width={width} height={rowH} />}
-          {rowsShown.map((d, k) => {
-            const i = s0 + k;
-            const cy = top + k * rowH + rowH / 2;
-            const f = fitted[k];
+          {cursor !== null && cb >= s0 && cb < e0 && (grouped ? (
+            <rect className="caos-bars-cursor" data-bar-cursor="" x={0} y={top + (cb - s0) * rowH + rowH * (slots(bands[cb].to - bands[cb].from).start + (cursor - bands[cb].from) * slots(1).size)} width={width} height={rowH * slots(1).size} />
+          ) : (
+            <rect className="caos-bars-cursor" data-bar-cursor="" x={0} y={top + (cursor - s0) * rowH} width={width} height={rowH} />
+          ))}
+          {vis.map((b, kb) =>
+            b.group !== undefined ? (
+              <g key={`grp${s0 + kb}`} data-group={b.group}>
+                <title>{bandTexts[s0 + kb]}</title>
+                <Lines x={x0 - 8} y={top + kb * rowH + rowH / 2 - ((fitted[kb].lines.length - 1) * LINE) / 2 + 4} lines={fitted[kb].lines} anchor="end" fill="var(--color-fg)" />
+              </g>
+            ) : null,
+          )}
+          {items.map((it) => {
+            const { i, kb } = it;
+            const d = data[i];
+            const cy = centre(it);
+            const f = fitted[kb];
             const v = d.value;
             const ok = v !== null && v !== undefined && Number.isFinite(v);
             const ex = extents[i];
@@ -262,8 +320,8 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
             const far = Math.max(xa, xb);
             return (
               <g key={d.id} data-bar={d.id} data-cursor={cursor === i ? '1' : undefined} {...interactive(d)}>
-                <title>{[pick(d.label, lang), labelText, pick(d.hint, lang), endsText[i]].filter(Boolean).join(': ')}</title>
-                <Lines x={x0 - 8} y={cy - ((f.lines.length - 1) * LINE) / 2 + 4} lines={f.lines} anchor="end" fill={d.highlight ? 'var(--color-fg)' : 'var(--color-fg-subtle)'} />
+                <title>{[fullName(d), labelText, pick(d.hint, lang), endsText[i]].filter(Boolean).join(': ')}</title>
+                {!d.group && <Lines x={x0 - 8} y={cy - ((f.lines.length - 1) * LINE) / 2 + 4} lines={f.lines} anchor="end" fill={d.highlight ? 'var(--color-fg)' : 'var(--color-fg-subtle)'} />}
                 {ex && ex.dot && <circle cx={xa} cy={cy} r={barH / 2} fill={colour(d)} />}
                 {ex && !ex.dot && <rect x={Math.min(xa, xb)} y={cy - barH / 2} width={Math.max(1, Math.abs(xb - xa))} height={barH} rx={2} fill={colour(d)} />}
                 {values && (
@@ -295,7 +353,7 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
       const right = 8;
       // a drawing narrower than its value column has no room for a bar: the band is 0, never negative (an SVG rect refuses a negative width)
       const band = Math.max(0, (width - left - right) / count);
-      const fitted = rowsShown.map((d) => fitLabel(pick(d.label, lang), Math.max(24, band - 6), PX, 2));
+      const fitted = vis.map((b) => fitLabel(bandLabel(b), Math.max(24, band - 6), PX, 2));
       const bottom = Math.max(...fitted.map((f) => f.lines.length)) * LINE + 10;
       const y0 = titleRow + valueRow;
       const y1 = Math.max(y0 + 40, h - bottom);
@@ -304,9 +362,15 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
       const t1 = ticks[ticks.length - 1];
       tickLabels = formatTicks(ticks, lang, fmt);
       const sy = (v: number) => y1 - ((v - t0) / (t1 - t0 || 1)) * (y1 - y0);
-      const barW = Math.max(0, Math.min(band * 0.62, 56));
+      // a group shares its band out in slots, one for each member of the largest group; a plain chart has a bar to a band
+      const slotW = band * slots(most).size;
+      const barW = grouped ? Math.max(0, Math.min(slotW * 0.84, 56)) : Math.max(0, Math.min(band * 0.62, 56));
+      // value labels wider than a slot are set on two rows, alternately, so neighbours do not run into each other
+      const crowded = grouped && values && widestLabel(valueLabels, PX) > slotW - 2;
+      const centre = (it: (typeof items)[number]) => left + band * it.kb + (grouped ? band * (slots(it.c).start + (it.j + 0.5) * slots(it.c).size) : band / 2);
       drawnHeight = h;
       geoRef.current = { horizontal: false, start: left, end: width - right };
+      const cb = cursor !== null ? bandOf(cursor) : -1;
       drawing = (
         <svg width={width} height={h} role="presentation" data-chart="" data-chart-kind="bars">
           <title>{name}</title>
@@ -319,27 +383,40 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
               </text>
             </g>
           ))}
-          {cursor !== null && cursor >= s0 && cursor < e0 && <rect className="caos-bars-cursor" data-bar-cursor="" x={left + band * (cursor - s0)} y={y0} width={band} height={h - y0} />}
-          {rowsShown.map((d, k) => {
-            const i = s0 + k;
-            const cx = left + band * k + band / 2;
+          {cursor !== null && cb >= s0 && cb < e0 && (grouped ? (
+            <rect className="caos-bars-cursor" data-bar-cursor="" x={left + band * (cb - s0) + band * (slots(bands[cb].to - bands[cb].from).start + (cursor - bands[cb].from) * slots(1).size)} y={y0} width={band * slots(1).size} height={h - y0} />
+          ) : (
+            <rect className="caos-bars-cursor" data-bar-cursor="" x={left + band * (cursor - s0)} y={y0} width={band} height={h - y0} />
+          ))}
+          {vis.map((b, kb) =>
+            b.group !== undefined ? (
+              <g key={`grp${s0 + kb}`} data-group={b.group}>
+                <title>{bandLabel(b)}</title>
+                <Lines x={left + band * kb + band / 2} y={y1 + LINE + 2} lines={fitted[kb].lines} anchor="middle" fill="var(--color-fg)" />
+              </g>
+            ) : null,
+          )}
+          {items.map((it) => {
+            const { i, kb } = it;
+            const d = data[i];
+            const cx = centre(it);
             const v = d.value;
             const ok = v !== null && v !== undefined && Number.isFinite(v);
             const ex = extents[i];
             const ya = ex ? sy(ex.a) : sy(0);
             const yb = ex ? sy(ex.b) : ya;
-            const f = fitted[k];
+            const f = fitted[kb];
             return (
               <g key={d.id} data-bar={d.id} data-cursor={cursor === i ? '1' : undefined} {...interactive(d)}>
-                <title>{[pick(d.label, lang), valueLabels[i], pick(d.hint, lang), endsText[i]].filter(Boolean).join(': ')}</title>
+                <title>{[fullName(d), valueLabels[i], pick(d.hint, lang), endsText[i]].filter(Boolean).join(': ')}</title>
                 {ex && ex.dot && <circle cx={cx} cy={ya} r={barW / 2} fill={colour(d)} />}
                 {ex && !ex.dot && <rect x={cx - barW / 2} y={Math.min(ya, yb)} width={barW} height={Math.max(1, Math.abs(yb - ya))} rx={2} fill={colour(d)} />}
                 {values && (
-                  <text x={cx} y={Math.min(ya, yb) - 5 - (ex?.dot ? barW / 2 : 0)} textAnchor="middle" fontSize={PX} fill={ok ? 'var(--color-fg)' : 'var(--color-fg-faint)'} fontStyle={ok ? undefined : 'italic'} style={{ fontFamily: 'var(--font-sans)', fontVariantNumeric: 'tabular-nums' }}>
+                  <text x={cx} y={Math.min(ya, yb) - 5 - (ex?.dot ? barW / 2 : 0) - (crowded && it.j % 2 === 1 ? LINE : 0)} textAnchor="middle" fontSize={PX} fill={ok ? 'var(--color-fg)' : 'var(--color-fg-faint)'} fontStyle={ok ? undefined : 'italic'} style={{ fontFamily: 'var(--font-sans)', fontVariantNumeric: 'tabular-nums' }}>
                     {valueLabels[i]}
                   </text>
                 )}
-                <Lines x={cx} y={y1 + LINE + 2} lines={f.lines} anchor="middle" fill={d.highlight ? 'var(--color-fg)' : 'var(--color-fg-subtle)'} />
+                {!d.group && <Lines x={cx} y={y1 + LINE + 2} lines={f.lines} anchor="middle" fill={d.highlight ? 'var(--color-fg)' : 'var(--color-fg-subtle)'} />}
               </g>
             );
           })}
@@ -356,6 +433,7 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
     if (!drawn) return null;
     // a chart with a floating bar adds the two ends of every bar to the table
     const head = [
+      ...(grouped ? [lang === 'es' ? 'Grupo' : 'Group'] : []),
       lang === 'es' ? 'Categoría' : 'Category',
       unit ? `${pick(axis.label, lang)} (${unit})` : pick(axis.label, lang),
       ...(floating ? (lang === 'es' ? ['Desde', 'Hasta'] : ['From', 'To']) : []),
@@ -364,7 +442,7 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
     const rows = data.map((d, i) => {
       const e = barExtent(d.value, d.span);
       const end = (v: number | undefined) => (e && v !== undefined ? formatNumber(v, lang, fmt) : '');
-      return [pick(d.label, lang), valueLabels[i], ...(floating ? [end(e?.a), end(e?.b)] : []), pick(d.hint, lang)];
+      return [...(grouped ? [d.group ? pick(d.group.label, lang) : ''] : []), pick(d.label, lang), valueLabels[i], ...(floating ? [end(e?.a), end(e?.b)] : []), pick(d.hint, lang)];
     });
     let low = -1;
     let high = -1;
@@ -379,16 +457,16 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
       name,
       count: n,
       yLabel: axisTitle,
-      low: low >= 0 ? { text: withUnit(low), at: pick(data[low].label, lang) } : undefined,
-      high: high >= 0 ? { text: withUnit(high), at: pick(data[high].label, lang) } : undefined,
+      low: low >= 0 ? { text: withUnit(low), at: fullName(data[low]) } : undefined,
+      high: high >= 0 ? { text: withUnit(high), at: fullName(data[high]) } : undefined,
     });
     return { head, rows, summary };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [drawn, data, lang, unit, name, axisTitle, axis.label, floating]);
+  }, [drawn, data, lang, unit, name, axisTitle, axis.label, floating, grouped]);
   const rest = lang === 'es' ? REST.es : REST.en;
   const read =
     cursor !== null && cursor < n
-      ? [`${pick(data[cursor].label, lang)}: ${valueLabels[cursor]}${data[cursor].value === null || data[cursor].value === undefined || !unit ? '' : `${NBSP}${unit}`}`, pick(data[cursor].hint, lang), endsText[cursor]].filter(Boolean).join(' · ')
+      ? [`${fullName(data[cursor])}: ${valueLabels[cursor]}${data[cursor].value === null || data[cursor].value === undefined || !unit ? '' : `${NBSP}${unit}`}`, pick(data[cursor].hint, lang), endsText[cursor]].filter(Boolean).join(' · ')
       : rest;
 
   // ---- the gestures ----
@@ -400,36 +478,44 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
     return g.horizontal ? e.clientY - r.top : e.clientX - r.left;
   };
   const setWindow = (r: [number, number] | null) => {
-    if (!r || (r[0] <= 0 && r[1] >= n)) setWin(null);
-    else setWin(roundWindow(r, n));
+    if (!r || (r[0] <= 0 && r[1] >= nb)) setWin(null);
+    else setWin(roundWindow(r, nb));
   };
   // zoom `factor` around a position, in fractions of a bar: the bar under it keeps its place on the screen
   // A key press (`discrete`) steps whole bars; the wheel and the pinch make many small steps, which are kept as fractions of a bar
   // until they add up to one, so a slow wheel zooms slowly instead of not at all.
   const fine = useRef<[number, number] | null>(null);
   const zoomAround = (factor: number, anchorBar: number, discrete = false): boolean => {
-    const cur = windowRange(n, live.current.win);
+    const cur = windowRange(nb, live.current.win);
     if (discrete) {
       fine.current = null;
-      const next = stepWindow(cur, n, anchorBar, factor);
+      const next = stepWindow(cur, nb, anchorBar, factor);
       setWindow(next);
       return next[0] !== cur[0] || next[1] !== cur[1];
     }
     const held = fine.current;
-    const base = held && held[0] > cur[0] - 1 && held[1] < cur[1] + 1 && roundWindow(held, n)[0] === cur[0] && roundWindow(held, n)[1] === cur[1] ? held : cur;
-    const next = zoomRange(base, [0, n], anchorBar, factor, { minSpan: Math.min(2, n) });
+    const base = held && held[0] > cur[0] - 1 && held[1] < cur[1] + 1 && roundWindow(held, nb)[0] === cur[0] && roundWindow(held, nb)[1] === cur[1] ? held : cur;
+    const next = zoomRange(base, [0, nb], anchorBar, factor, { minSpan: Math.min(2, nb) });
     fine.current = next;
     setWindow(next);
     // the many small steps of a slow wheel count while they add up: the range moved when the fraction of a bar did
     return Math.abs(next[0] - base[0]) > 1e-9 || Math.abs(next[1] - base[1]) > 1e-9;
   };
+  // the datum under a position along the category axis: its band, then the member of a group the position lies on
   const barAt = (pos: number | null): number | null => {
     const g = geoRef.current;
-    return pos === null || !g ? null : categoryAt(pos, g.start, g.end, windowRange(n, live.current.win), n);
+    if (pos === null || !g) return null;
+    const win2 = windowRange(nb, live.current.win);
+    const bi = categoryAt(pos, g.start, g.end, win2, nb);
+    if (bi === null) return null;
+    const b = bands[bi];
+    if (b.to - b.from === 1) return b.from;
+    const scaled = ((pos - g.start) / (g.end - g.start || 1)) * (win2[1] - win2[0]);
+    return b.from + memberAt(scaled - Math.floor(scaled), b.to - b.from, most);
   };
   const barFloat = (pos: number): number => {
     const g = geoRef.current;
-    const [s, e] = windowRange(n, live.current.win);
+    const [s, e] = windowRange(nb, live.current.win);
     return g ? s + ((pos - g.start) / (g.end - g.start || 1)) * (e - s) : s;
   };
 
@@ -451,7 +537,7 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
     return () => el.removeEventListener('wheel', onWheel);
     // the handler reads the latest state through refs
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wheelOn, n]);
+  }, [wheelOn, nb]);
 
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const gesture = useRef<{ kind: 'brush' | 'pan' | 'pinch' | null; id: number; start: number; last: number; moved: boolean; f: [number, number]; dist: number }>({ kind: null, id: -1, start: 0, last: 0, moved: false, f: [0, 0], dist: 0 });
@@ -464,14 +550,14 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
     const g = gesture.current;
     if (e.pointerType === 'mouse') {
       if (e.button !== 0 || pos === null) return;
-      Object.assign(g, { kind: e.shiftKey ? 'pan' : 'brush', id: e.pointerId, start: pos, last: pos, moved: false, f: windowRange(n, live.current.win) });
+      Object.assign(g, { kind: e.shiftKey ? 'pan' : 'brush', id: e.pointerId, start: pos, last: pos, moved: false, f: windowRange(nb, live.current.win) });
       return;
     }
     if (pointers.current.size === 2) {
       const [a, b] = [...pointers.current.values()];
       Object.assign(g, { kind: 'pinch', dist: pinchState(a, b).dist });
-    } else if (pointers.current.size === 1 && windowZoomed(n, live.current.win) && pos !== null) {
-      Object.assign(g, { kind: 'pan', id: e.pointerId, start: pos, last: pos, moved: false, f: windowRange(n, live.current.win) });
+    } else if (pointers.current.size === 1 && windowZoomed(nb, live.current.win) && pos !== null) {
+      Object.assign(g, { kind: 'pan', id: e.pointerId, start: pos, last: pos, moved: false, f: windowRange(nb, live.current.win) });
     }
   };
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -502,10 +588,10 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
       if (g.kind === 'brush') setBrush({ a: g.start, b: pos });
       else {
         // a drag along the bars moves the window by the bars it passes
-        const [s, en] = windowRange(n, live.current.win);
+        const [s, en] = windowRange(nb, live.current.win);
         const bars = ((g.last - pos) / (gap || 1)) * (en - s);
         g.last = pos;
-        g.f = panRange(g.f, [0, n], bars / (g.f[1] - g.f[0] || 1));
+        g.f = panRange(g.f, [0, nb], bars / (g.f[1] - g.f[0] || 1));
         setWindow(g.f);
       }
       return;
@@ -532,7 +618,7 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
       const geo = geoRef.current;
       const pos = along(e);
       if (geo && pos !== null) {
-        const w = brushWindow(g.start, pos, geo.start, geo.end, windowRange(n, live.current.win), n);
+        const w = brushWindow(g.start, pos, geo.start, geo.end, windowRange(nb, live.current.win), nb);
         if (w) setWindow(w);
       }
     }
@@ -548,42 +634,44 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     // a key on a bar that takes a choice (`onSelect`) moves the crosshair and zooms as on the chart, but Enter and Space are the bar's own
     const onBar = e.target !== e.currentTarget && e.target instanceof Element && e.target.closest('[data-bar]') !== null;
-    if ((e.target !== e.currentTarget && !onBar) || n === 0) return;
+    if ((e.target !== e.currentTarget && !onBar) || nb === 0) return;
     const act = keyAction(e.key, { shift: e.shiftKey, ctrl: e.ctrlKey, meta: e.metaKey, alt: e.altKey });
     if (!act || (onBar && act === 'activate')) return;
-    const [s, en] = windowRange(n, win);
+    const [s, en] = windowRange(nb, win);
     const stand = cursor;
     switch (act) {
       case 'prev':
       case 'next':
       case 'first':
       case 'last': {
-        const from = stand !== null && stand >= s && stand < en ? stand : null;
+        const standBand = stand !== null ? bandOf(stand) : -1;
+        const from = stand !== null && standBand >= s && standBand < en ? stand : null;
         let idx: number | null;
-        if (from === null && (act === 'next' || act === 'prev') && windowZoomed(n, win)) idx = act === 'next' ? s : en - 1;
+        if (from === null && (act === 'next' || act === 'prev') && windowZoomed(nb, win)) idx = act === 'next' ? bands[s].from : bands[en - 1].to - 1;
         else idx = stepIndex(from, act, n);
         if (idx === null) return;
         kbRef.current = true;
         setCursor(idx);
         // the window follows the crosshair when it steps off its edge
-        if (idx < s) setWindow([idx, idx + (en - s)]);
-        else if (idx >= en) setWindow([idx + 1 - (en - s), idx + 1]);
+        const into = bandOf(idx);
+        if (into < s) setWindow([into, into + (en - s)]);
+        else if (into >= en) setWindow([into + 1 - (en - s), into + 1]);
         break;
       }
       case 'zoomIn':
       case 'zoomOut':
         if (!zoomable) return;
-        zoomAround(act === 'zoomIn' ? KEY_ZOOM : 1 / KEY_ZOOM, stand !== null ? stand + 0.5 : (s + en) / 2, true);
+        zoomAround(act === 'zoomIn' ? KEY_ZOOM : 1 / KEY_ZOOM, stand !== null ? bandOf(stand) + 0.5 : (s + en) / 2, true);
         break;
       case 'panPrev':
       case 'panNext': {
-        if (!zoomable || !windowZoomed(n, win)) return;
+        if (!zoomable || !windowZoomed(nb, win)) return;
         const bars = Math.max(1, Math.round((en - s) * KEY_PAN));
-        setWindow(panRange([s, en], [0, n], ((act === 'panNext' ? 1 : -1) * bars) / (en - s)));
+        setWindow(panRange([s, en], [0, nb], ((act === 'panNext' ? 1 : -1) * bars) / (en - s)));
         break;
       }
       case 'reset':
-        if (e.key === 'Escape' && !windowZoomed(n, win)) return;
+        if (e.key === 'Escape' && !windowZoomed(nb, win)) return;
         setWin(null);
         e.stopPropagation();
         break;
@@ -611,6 +699,8 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
       className={fill ? 'caos-bars-host fill' : 'caos-bars-host'}
       data-chart-host={drawn ? 'bars' : undefined}
       data-points={drawn ? String(n) : undefined}
+      data-groups={drawn && grouped ? String(nb) : undefined}
+      data-legend={drawn && legend && legend.length > 0 ? String(legend.length) : undefined}
       data-spans={drawn && floating ? String(data.filter((d) => d.span !== undefined && d.span !== null).length) : undefined}
       data-zoomable={drawn ? (zoomable ? '1' : '0') : undefined}
       data-zoomed={drawn && zoomed ? '1' : undefined}
@@ -649,6 +739,16 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
       >
         {drawing}
       </div>
+      {drawn && legend && legend.length > 0 && (
+        <ul className="caos-bars-legend" aria-label={lang === 'es' ? 'Leyenda' : 'Legend'}>
+          {legend.map((l, k) => (
+            <li key={k} className="caos-bars-key" data-tone={l.tone}>
+              <span className="caos-bars-swatch" style={{ '--swatch': TONE[l.tone] } as CSSProperties} aria-hidden="true" />
+              {pick(l.label, lang)}
+            </li>
+          ))}
+        </ul>
+      )}
       {drawn && a11y && <ChartSummary id={summaryId} text={a11y.summary} />}
       {drawn && a11y && <ChartDataTable id={tableId} caption={name} head={a11y.head} rows={a11y.rows} />}
       {drawn && (

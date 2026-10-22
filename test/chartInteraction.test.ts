@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
   allIntegers,
   axisTitleFits,
+  bandsOf,
   barExtent,
   brushWindow,
   categoryAt,
@@ -17,6 +18,9 @@ import {
   firstVisible,
   isZoomed,
   keyAction,
+  memberAt,
+  memberSlots,
+  unusedLegendTones,
   panRange,
   revealValue,
   roundWindow,
@@ -395,4 +399,36 @@ test('clipExtent: a floating bar is cut to the range and a bar wholly outside dr
   assert.equal(clipExtent(barExtent(0, [90, 90]), 100, 140), null);
   assert.deepEqual(clipExtent(barExtent(500), 0, 10), { a: 0, b: 500, dot: false, given: false });
   assert.equal(clipExtent(null, 0, 10), null);
+});
+
+// ---- grouped bars (0.19.0, D16-21, S2) ----
+
+test('bandsOf: consecutive data with one group id share a band; no group is a band of its own; a group split in two is two bands', () => {
+  assert.deepEqual(bandsOf(['a', 'a', 'a', 'b', 'c', 'c']), [
+    { from: 0, to: 3, group: 'a' },
+    { from: 3, to: 4, group: 'b' },
+    { from: 4, to: 6, group: 'c' },
+  ]);
+  assert.deepEqual(bandsOf([undefined, null, undefined]), [{ from: 0, to: 1 }, { from: 1, to: 2 }, { from: 2, to: 3 }]);
+  assert.deepEqual(bandsOf(['a', 'b', 'a']).map((b) => b.group), ['a', 'b', 'a']);
+  assert.deepEqual(bandsOf([]), []);
+});
+
+test('memberSlots and memberAt: the slots of a band are equal, a smaller group is centred, a position in a margin takes the nearest member', () => {
+  const full = memberSlots(3, 3);
+  assert.ok(Math.abs(full.size - 0.8 / 3) < 1e-12 && Math.abs(full.start - 0.1) < 1e-12);
+  const one = memberSlots(1, 3);
+  assert.ok(Math.abs(one.start + one.size / 2 - 0.5) < 1e-12, 'a group of one is in the middle of its band');
+  assert.equal(memberAt(0.02, 3, 3), 0);
+  assert.equal(memberAt(0.5, 3, 3), 1);
+  assert.equal(memberAt(0.98, 3, 3), 2);
+  assert.equal(memberAt(0.1, 1, 3), 0);
+  assert.equal(memberAt(0.9, 1, 3), 0);
+  assert.equal(memberAt(0.5, 2, 3), 1);
+});
+
+test('unusedLegendTones: the tones a legend names that no bar uses, once each, in legend order', () => {
+  assert.deepEqual(unusedLegendTones(['accent', 'warn'], [{ tone: 'accent' }, { tone: 'warn' }, { tone: 'good' }, { tone: 'good' }, { tone: 'bad' }]), ['good', 'bad']);
+  assert.deepEqual(unusedLegendTones(['accent'], [{ tone: 'accent' }]), []);
+  assert.deepEqual(unusedLegendTones([], []), []);
 });
