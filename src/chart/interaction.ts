@@ -445,3 +445,82 @@ export function unusedLegendTones(used: readonly string[], legend: readonly { to
   const set = new Set(used);
   return [...new Set(legend.map((l) => l.tone))].filter((t) => !set.has(t));
 }
+
+// ---- mark labels that avoid each other (0.19.0, D16-21, S3) ------------------------------------------------------------------------
+
+/** A placed mark label, in device pixels: the box its text occupies (`y1` is the baseline). */
+export interface LabelBox {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+
+/** Whether two boxes share any area (touching edges do not count). */
+export function boxesOverlap(a: LabelBox, b: LabelBox): boolean {
+  return a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+}
+
+/** How many pairs of boxes overlap. */
+export function countOverlaps(boxes: readonly LabelBox[]): number {
+  let n = 0;
+  for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) if (boxesOverlap(boxes[i], boxes[j])) n += 1;
+  return n;
+}
+
+/** The text cut to `k` characters with an ellipsis. */
+export function ellipsize(text: string, k: number): string {
+  return `${text.slice(0, Math.max(0, k)).trimEnd()}…`;
+}
+
+export interface XLabelSpace {
+  /** The pixel the mark's line is at. */
+  px: number;
+  /** The plot's left and right edges and its bottom: a label lies wholly inside them. */
+  left: number;
+  right: number;
+  bottom: number;
+  /** The room kept between two labels, the distance between two rows, the height of the text, and the baseline of the first row. */
+  gap: number;
+  rowH: number;
+  textH: number;
+  first: number;
+  /** Every label placed so far, of both kinds: the new one lies over none of them. */
+  boxes: readonly LabelBox[];
+  /** The width of a text in these pixels. */
+  measure: (text: string) => number;
+}
+
+/**
+ * Where the label of an x mark goes, or null when nothing of it fits. It goes right of its line when it fits (else left of it, else clamped inside
+ * the plot), on the first row, and one row down for each label (of either kind) in the way; a row below the plot is no row. When no row clears,
+ * the other sides of the line are tried, and then the label is cut with an ellipsis, a character at a time, until some row has room for it.
+ * With no label in the way the place is the one the first row gives, as before 0.19.0.
+ */
+export function placeXLabel(text: string, s: XLabelSpace): { text: string; x0: number; y: number; w: number; cut: boolean } | null {
+  const clear = (x0: number, w: number, y: number): boolean =>
+    x0 >= s.left - 1e-6 && x0 + w <= s.right + 1e-6 && !s.boxes.some((b) => x0 < b.x1 + s.gap && x0 + w + s.gap > b.x0 && y - s.textH < b.y1 && y > b.y0);
+  const primary = (w: number): number => {
+    let x0 = s.px + s.gap;
+    if (x0 + w > s.right) x0 = s.px - s.gap - w;
+    if (x0 < s.left) x0 = Math.max(s.left, Math.min(s.right - w, s.px - w / 2));
+    return x0;
+  };
+  const others = (w: number): number[] => [s.px - s.gap - w, s.px + s.gap, Math.max(s.left, Math.min(s.right - w, s.px - w / 2))];
+  const attempt = (candidate: string): { text: string; x0: number; y: number; w: number; cut: boolean } | null => {
+    const w = s.measure(candidate);
+    for (const pass of [[primary(w)], others(w)]) {
+      for (let y = s.first; y <= s.bottom + 1e-6; y += s.rowH) {
+        for (const x0 of pass) if (clear(x0, w, y)) return { text: candidate, x0, y, w, cut: candidate !== text };
+      }
+    }
+    return null;
+  };
+  const whole = attempt(text);
+  if (whole) return whole;
+  for (let k = text.length - 1; k >= 1; k--) {
+    const cut = attempt(ellipsize(text, k));
+    if (cut) return cut;
+  }
+  return null;
+}

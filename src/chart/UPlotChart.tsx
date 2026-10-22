@@ -7,6 +7,7 @@ import { CHART_ROLE, ChartDataTable, ChartSummary, ResetZoomButton, ZOOM_HINT } 
 import {
   axisTitleFits,
   chartSummary,
+  countOverlaps,
   defaultChartName,
   DRAG_THRESHOLD,
   firstVisible,
@@ -15,7 +16,9 @@ import {
   KEY_PAN,
   KEY_ZOOM,
   keyAction,
+  type LabelBox,
   leastLabelSpan,
+  placeXLabel,
   sameData,
   stepIndex,
   thinRows,
@@ -430,28 +433,36 @@ const PARITY_TICK_SPACE = 40;
 /** The height of the handle on a draggable line, in CSS pixels: a band the pointer can take hold of. */
 const HANDLE_HEIGHT = 14;
 
-/** A placed mark label, in device pixels. */
-interface Placed {
-  x0: number;
-  x1: number;
-  row: number;
+/** What separates the whole texts of the cut mark labels in `cutKey`. */
+const CUT_SEP = String.fromCharCode(1);
+
+/** A placed mark label, in device pixels: its box (`y1` is the baseline), the kind of mark, the text drawn and the whole text it stands for. */
+export interface MarkBox extends LabelBox {
+  kind: 'x' | 'y';
+  text: string;
+  full: string;
 }
 
 /**
  * The vertical marks of a chart and their labels. Every label is drawn with an explicit alignment (uPlot leaves the
  * context right-aligned after its last axis, so a label meant to start at its line ended there and ran off the plot
  * near the left edge, CAOS_Fragmenta 2026-10-06), on the side of its line where it fits inside the plot, on the next
- * row down when it would overlap the label before it, with a halo in the surface colour so a curve under it does not
+ * row down when it would overlap a label before it, with a halo in the surface colour so a curve under it does not
  * cross its letters. A mark outside the x range is not drawn.
+ *
+ * Since 0.19.0 the labels of x marks and of y marks share one set of boxes (`boxes`, to which `drawYMarks` adds its own first): no x
+ * label lies over a y label or another x label. A label for which no row inside the plot has room is cut with an ellipsis, and one
+ * that fits nowhere is not written; the whole texts of those are returned, and every label placed is added to `boxes`.
  */
-export function drawMarks(u: uPlot, marks: { x: number; label: string }[], style: { color: string; halo: string; family: string }): void {
+export function drawMarks(u: uPlot, marks: { x: number; label: string }[], style: { color: string; halo: string; family: string }, boxes: MarkBox[] = []): string[] {
   const ctx = u.ctx;
   const pr = uPlot.pxRatio || 1;
   const left = u.bbox.left;
   const right = u.bbox.left + u.bbox.width;
   const gap = 4 * pr;
   const rowH = 14 * pr;
-  const placed: Placed[] = [];
+  const textH = 11 * pr;
+  const cut: string[] = [];
   ctx.save();
   ctx.font = `${Math.round(11 * pr)}px ${style.family}`;
   ctx.textBaseline = 'alphabetic';
@@ -467,32 +478,31 @@ export function drawMarks(u: uPlot, marks: { x: number; label: string }[], style
     ctx.lineTo(px, u.bbox.top + u.bbox.height);
     ctx.stroke();
     ctx.setLineDash([]);
-    const w = ctx.measureText(m.label).width;
-    // right of the line when it fits, else left of it, else clamped inside the plot
-    let x0 = px + gap;
-    if (x0 + w > right) x0 = px - gap - w;
-    if (x0 < left) x0 = Math.max(left, Math.min(right - w, px - w / 2));
-    let row = 0;
-    while (placed.some((p) => p.row === row && x0 < p.x1 + gap && x0 + w + gap > p.x0)) row += 1;
-    placed.push({ x0, x1: x0 + w, row });
-    const y = u.bbox.top + 12 * pr + row * rowH;
+    const at = placeXLabel(m.label, { px, left, right, bottom: u.bbox.top + u.bbox.height, gap, rowH, textH, first: u.bbox.top + 12 * pr, boxes, measure: (t) => ctx.measureText(t).width });
+    if (!at) {
+      cut.push(m.label);
+      continue;
+    }
+    if (at.cut) cut.push(m.label);
+    boxes.push({ kind: 'x', text: at.text, full: m.label, x0: at.x0, x1: at.x0 + at.w, y0: at.y - textH, y1: at.y });
     ctx.textAlign = 'left';
     ctx.lineWidth = 3 * pr;
     ctx.strokeStyle = style.halo;
-    ctx.strokeText(m.label, x0, y);
+    ctx.strokeText(at.text, at.x0, at.y);
     ctx.fillStyle = style.color;
-    ctx.fillText(m.label, x0, y);
+    ctx.fillText(at.text, at.x0, at.y);
   }
   ctx.restore();
+  return cut;
 }
 
 /**
  * The horizontal reference lines of a chart and their labels: a dashed line across the plot, its label at the right
  * end above the line (below it when the line runs along the top), inside the plot, haloed; a label that would overlap
- * the one placed before it moves left of it. A line outside the y range is not drawn; a line without a label is drawn alone. A mark's `color` (the tone's) draws
+ * the one placed before it moves left of it (`boxes`, when given, collects what is placed, for `drawMarks` to avoid). A line outside the y range is not drawn; a line without a label is drawn alone. A mark's `color` (the tone's) draws
  * its line and its label; without one `style.color` does.
  */
-export function drawYMarks(u: uPlot, marks: { y: number; label?: string; color?: string }[], style: { color: string; halo: string; family: string }): void {
+export function drawYMarks(u: uPlot, marks: { y: number; label?: string; color?: string }[], style: { color: string; halo: string; family: string }, boxes?: MarkBox[]): void {
   const ctx = u.ctx;
   const pr = uPlot.pxRatio || 1;
   const left = u.bbox.left;
@@ -501,7 +511,7 @@ export function drawYMarks(u: uPlot, marks: { y: number; label?: string; color?:
   const bottom = u.bbox.top + u.bbox.height;
   const gap = 4 * pr;
   const textH = 11 * pr;
-  const placed: { x0: number; x1: number; y0: number; y1: number }[] = [];
+  const placed: LabelBox[] = [];
   ctx.save();
   ctx.font = `${Math.round(11 * pr)}px ${style.family}`;
   ctx.textBaseline = 'alphabetic';
@@ -529,6 +539,7 @@ export function drawYMarks(u: uPlot, marks: { y: number; label?: string; color?:
     }
     const x0 = Math.max(left + gap, x1 - w);
     placed.push({ x0, x1: x0 + w, y0: base - textH, y1: base });
+    boxes?.push({ kind: 'y', text: m.label, full: m.label, x0, x1: x0 + w, y0: base - textH, y1: base });
     ctx.textAlign = 'left';
     ctx.lineWidth = 3 * pr;
     ctx.strokeStyle = style.halo;
@@ -610,6 +621,8 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
   const kbRef = useRef<number | null>(null);
   const dataRef = useRef<uPlot.AlignedData | null>(null);
   const [forced, setForced] = useState('');
+  // the whole texts of the mark labels the drawing had to cut (joined), kept for the readout, the plot's title and the table of marks
+  const [cutKey, setCutKey] = useState('');
   // the soloed series (its index in `series`); a press redraws the chart, so it is held here and read by the drawing
   // held by the series key, not by position: a series dropped from the list releases it, and it is not given back when it returns
   const [soloPick, setSoloPick] = useState<string | null>(null);
@@ -1024,7 +1037,9 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
             const markStyle = { color: resolveToken('--color-warn', '#c80'), halo: surface, family };
             // the lines as the caller last gave them (a dragged line has a new y and label, not a new chart)
             const lines = yMarksRef.current ?? [];
-            if (lines.length) drawYMarks(u, lines.map((m, i) => ({ y: liveRef.current[i] ?? m.y, label: m.label ? pick(m.label, lang) : undefined, color: resolveToken(YMARK_TONE_TOKENS[m.tone ?? 'warn'], '#c80') })), markStyle);
+            // the labels of the y marks and of the x marks share one set of boxes (0.19.0): the x labels go where no label is
+            const boxes: MarkBox[] = [];
+            if (lines.length) drawYMarks(u, lines.map((m, i) => ({ y: liveRef.current[i] ?? m.y, label: m.label ? pick(m.label, lang) : undefined, color: resolveToken(YMARK_TONE_TOKENS[m.tone ?? 'warn'], '#c80') })), markStyle, boxes);
             // each handle sits on its line, and says its value to a screen reader
             u.over.querySelectorAll<HTMLElement>('[data-y-handle]').forEach((el) => {
               const i = Number(el.getAttribute('data-y-handle'));
@@ -1042,7 +1057,17 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
               el.setAttribute('aria-valuenow', String(Number(v.toPrecision(12))));
               el.setAttribute('aria-valuetext', label ? `${label}: ${shown}` : shown);
             });
-            if (marks?.length) drawMarks(u, marks.map((m) => ({ x: m.x, label: pick(m.label, lang) })), markStyle);
+            const cut = marks?.length ? drawMarks(u, marks.map((m) => ({ x: m.x, label: pick(m.label, lang) })), markStyle, boxes) : [];
+            // what was placed, in CSS pixels from the canvas' corner, and how many labels overlap: declared for the gate (G20) and the shell's own tests
+            const pr = uPlot.pxRatio || 1;
+            const rounded = (v: number) => Math.round((v / pr) * 10) / 10;
+            hostRef.current?.setAttribute('data-mark-overlaps', String(countOverlaps(boxes)));
+            if (boxes.length) hostRef.current?.setAttribute('data-mark-boxes', JSON.stringify(boxes.map((b) => ({ k: b.kind, t: b.text, x0: rounded(b.x0), y0: rounded(b.y0), x1: rounded(b.x1), y1: rounded(b.y1), ...(b.text !== b.full ? { cut: true } : {}) }))));
+            else hostRef.current?.removeAttribute('data-mark-boxes');
+            if (cut.length) hostRef.current?.setAttribute('data-mark-cut', cut.join('|'));
+            else hostRef.current?.removeAttribute('data-mark-cut');
+            const now = cut.join(CUT_SEP);
+            setCutKey((prev) => (prev === now ? prev : now));
           },
         ],
       },
@@ -1163,6 +1188,9 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
         : lang === 'es'
           ? 'Pase el cursor sobre el gráfico para leer los valores'
           : 'Hover the chart to read the values';
+  // a mark label the drawing had to cut is read whole here, in the plot's title and in the table of marks
+  const cutTexts = cutKey ? cutKey.split(CUT_SEP) : [];
+  const readFull = cutTexts.length ? [read, ...cutTexts].join(' · ') : read;
 
   // ---- Tier A: the keyboard, the data table and the summary ----
   const xText = (v: number): string => tickLabelAt(ticks, v, lang, xSpan) ?? xValue(v);
@@ -1214,6 +1242,16 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
     return { head, rows, summary, thinned: kept.length < xs.length };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drawn, xs, ys, baseEntries, overlays, series, lang, ticks, xSpan, xTitle, yTitle, xLabel, yUnit, name, xFormatKey, yFormatKey, x.time, timeSpan]);
+
+  // the table of marks: every vertical and horizontal mark with its position, whole (0.19.0)
+  const marksId = `${ids}-marks`;
+  const markRows = useMemo(() => {
+    const unnamed = (yMarks ?? []).flatMap((m, k) => (m.label ? [] : [k]));
+    const xs2 = (marks ?? []).map((m) => [pick(m.label, lang), `${xLabel} ${xText(m.x)}${xUnit && !x.time && tickLabelAt(ticks, m.x, lang, xSpan) === null ? `${NBSP}${xUnit}` : ''}`]);
+    const ys2 = (yMarks ?? []).map((m, k) => [m.label ? pick(m.label, lang) : referenceLineName(lang, unnamed.indexOf(k) + 1, unnamed.length), `${yText(m.y)}${yUnit ? `${NBSP}${yUnit}` : ''}`]);
+    return [...xs2, ...ys2];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [marks, yMarks, lang, xLabel, xUnit, yUnit, ticks, xSpan, xFormatKey, yFormatKey, x.time, timeSpan]);
 
   const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
     // a key that reaches the plot from a draggable line's handle is the handle's
@@ -1291,8 +1329,8 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
   };
   const moved = [xBelow ? 'x' : '', yAbove ? 'y' : ''].filter(Boolean).join('');
   const readoutEl = (
-    <p className="caos-chart-readout" aria-live="polite" title={read}>
-      {read}
+    <p className="caos-chart-readout" aria-live="polite" title={readFull}>
+      {readFull}
     </p>
   );
 
@@ -1327,6 +1365,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
       <div
         ref={setPlot}
         className="caos-chart-plot"
+        title={cutTexts.length ? cutTexts.join('; ') : undefined}
         {...(drawn
           ? {
               tabIndex: 0,
@@ -1334,7 +1373,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
               'aria-roledescription': CHART_ROLE[lang],
               'aria-label': name,
               'aria-describedby': summaryId,
-              'aria-details': tableId,
+              'aria-details': markRows.length ? `${tableId} ${marksId}` : tableId,
               'aria-description': zoomable ? ZOOM_HINT[lang] : undefined,
               'data-chart-focus': '',
               onKeyDown,
@@ -1348,6 +1387,27 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
         </p>
       )}
       {drawn && a11y && <ChartSummary id={summaryId} text={a11y.summary} />}
+      {drawn && markRows.length > 0 && (
+        <div className="sr-only" data-chart-marks-box="">
+          <table id={marksId} className="caos-chart-table" data-chart-marks="">
+            <caption>{lang === 'es' ? `Marcas de ${name}` : `Marks of ${name}`}</caption>
+            <thead>
+              <tr>
+                <th scope="col">{lang === 'es' ? 'Marca' : 'Mark'}</th>
+                <th scope="col">{lang === 'es' ? 'Posición' : 'Position'}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {markRows.map((row, r) => (
+                <tr key={r}>
+                  <th scope="row">{row[0]}</th>
+                  <td>{row[1]}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
       {drawn && a11y && <ChartDataTable id={tableId} caption={a11y.thinned ? `${name} (${lang === 'es' ? 'una de cada varias filas' : 'every few rows'})` : name} head={a11y.head} rows={a11y.rows} />}
       {(series.length > 1 || solo) && (
         <ul className="caos-chart-legend" aria-label={lang === 'es' ? 'Series del gráfico' : 'Series of the chart'}>
