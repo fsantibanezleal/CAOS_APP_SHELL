@@ -578,6 +578,7 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
       data-zoomed={drawn && zoomed ? '1' : undefined}
       data-zoom-off={drawn && zoomIsOff ? zoomWhy : undefined}
       data-window={drawn ? `${s0},${e0}` : undefined}
+      data-orientation={drawn ? orientation : undefined}
     >
       <div
         ref={setInner}

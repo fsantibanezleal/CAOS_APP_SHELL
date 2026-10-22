@@ -1592,8 +1592,9 @@ export function installLib() {
       const label = describe(host.closest('[data-plot]') || host);
       const problems = [];
       const stop = host.querySelector('[data-chart-focus]');
-      const entry = { label, kind, problems, zoomOff: host.getAttribute('data-zoom-off') || '', zoomOffValid: true };
-      if (entry.zoomOff) entry.zoomOffValid = reasonWords(entry.zoomOff) >= 12;
+      // a chart that turns zoom off declares data-zoom-off, an empty reason included (the attribute is there, its text is the reason)
+      const entry = { label, kind, problems, zoomOffSet: host.hasAttribute('data-zoom-off'), zoomOff: host.getAttribute('data-zoom-off') || '', zoomOffValid: true };
+      if (entry.zoomOffSet) entry.zoomOffValid = reasonWords(entry.zoomOff) >= 12;
       out.push(entry);
       if (!stop) {
         problems.push('the chart is not a tab stop (no element with data-chart-focus): the keyboard cannot reach its crosshair, zoom or reset');
@@ -1603,11 +1604,12 @@ export function installLib() {
       const labelledBy = (stop.getAttribute('aria-labelledby') || '').split(/\s+/).filter(Boolean).map((id) => document.getElementById(id)?.textContent || '').join(' ');
       const name = (stop.getAttribute('aria-label') || labelledBy || '').trim();
       if (name.length < 2) problems.push('the plot has no accessible name (aria-label or aria-labelledby)');
-      const ids = (stop.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
+      // the summary describes the plot (aria-describedby); the table of the values is linked by aria-details (or, as in 0.19.0, described by)
+      const ids = `${stop.getAttribute('aria-describedby') || ''} ${stop.getAttribute('aria-details') || ''}`.split(/\s+/).filter(Boolean);
       const described = ids.map((id) => document.getElementById(id)).filter(Boolean);
       const table = described.find((el) => el.tagName === 'TABLE');
       const points = Number(host.getAttribute('data-points') || '0');
-      if (!table) problems.push('the plot is not described by a data table (aria-describedby must name a table of the plotted values)');
+      if (!table) problems.push('the plot is not linked to a data table (aria-details must name a table of the plotted values)');
       else {
         const rows = table.querySelectorAll('tbody tr').length;
         if (points > 0 && rows === 0) problems.push('the data table has no rows');
@@ -1615,23 +1617,69 @@ export function installLib() {
       }
       const summary = described.find((el) => el.tagName !== 'TABLE');
       if (!summary || !(summary.textContent || '').trim()) problems.push('the plot has no one-line text summary (aria-describedby must name it)');
-      // resets: zoom in by the keyboard, see the visible control, come back by the keyboard (a chart that is zoomed already, or cannot be, is not driven)
-      if (drive && host.getAttribute('data-zoomable') === '1' && !host.hasAttribute('data-zoomed')) {
+      // driven (the `interact` state): the arrow keys move the crosshair and change the readout, a scripted brush zooms, `+` zooms, the one
+      // visible control and `0` reset. A chart that is zoomed already, or cannot be zoomed, is not driven for the zoom
+      if (drive) {
         const key = (k) => stop.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
-        key('+');
-        await pause(80);
-        if (!host.hasAttribute('data-zoomed')) problems.push('the + key does not zoom the chart');
-        else {
-          const control = [...host.querySelectorAll('[data-chart-reset]')].filter(visible);
-          if (control.length !== 1) problems.push(`a zoomed chart shows ${control.length} reset controls, it must show exactly one`);
-          key('0');
+        let zeroDead = false;
+        const readout = host.querySelector('.caos-chart-readout, .caos-bars-readout');
+        if (readout && points > 0) {
+          const rest = (readout.textContent || '').trim();
+          key('ArrowRight');
           await pause(80);
-          if (host.hasAttribute('data-zoomed')) {
-            problems.push('the 0 key does not reset the zoom');
-            key('Escape');
+          const moved = (readout.textContent || '').trim();
+          if (!moved || moved === rest) problems.push('the arrow keys do not move the crosshair (the readout does not change on ArrowRight)');
+          key('End');
+          key('Home');
+          await pause(40);
+        }
+        if (host.getAttribute('data-zoomable') === '1' && !host.hasAttribute('data-zoomed')) {
+          key('+');
+          await pause(80);
+          if (!host.hasAttribute('data-zoomed')) problems.push('the + key does not zoom the chart');
+          else {
+            const control = [...host.querySelectorAll('[data-chart-reset]')].filter(visible);
+            if (control.length !== 1) problems.push(`a zoomed chart shows ${control.length} reset controls, it must show exactly one`);
+            key('0');
             await pause(80);
+            if (host.hasAttribute('data-zoomed')) {
+              zeroDead = true;
+              key('Escape');
+              await pause(80);
+            }
+          }
+          // a scripted brush across the plot: the mouse events uPlot listens for, the pointer events the bar chart listens for (it brushes along its
+          // category axis: down the rows of a horizontal chart, across the columns of a vertical one)
+          const target = kind === 'bars' ? host.querySelector('[data-chart-focus]') : host.querySelector('.u-over');
+          if (target && visible(target) && !host.hasAttribute('data-zoomed')) {
+            const r = target.getBoundingClientRect();
+            const bars = kind === 'bars';
+            const down = bars && host.getAttribute('data-orientation') !== 'vertical';
+            const at = (f) => (down ? { x: r.left + r.width * 0.5, y: r.top + r.height * (0.15 + 0.4 * f) } : { x: r.left + r.width * (0.3 + 0.3 * f), y: r.top + r.height * 0.5 });
+            const fire = (type, f) => {
+              const p = at(f);
+              // uPlot ignores a mouse move with no movement while it drags (a Chrome-on-Windows stray event), so the scripted ones carry some
+              const init = { bubbles: true, cancelable: true, clientX: p.x, clientY: p.y, button: 0, buttons: type.endsWith('up') ? 0 : 1, view: window, movementX: down ? 0 : 3, movementY: down ? 3 : 0 };
+              target.dispatchEvent(bars ? new PointerEvent(type.replace('mouse', 'pointer'), { ...init, pointerId: 41, pointerType: 'mouse', isPrimary: true }) : new MouseEvent(type, init));
+            };
+            if (!bars) target.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false, clientX: at(0).x, clientY: at(0).y }));
+            fire('mousedown', 0);
+            for (let k = 1; k <= 6; k++) fire('mousemove', k / 6);
+            fire('mouseup', 1);
+            await pause(120);
+            if (!host.hasAttribute('data-zoomed')) problems.push('a drag across the plot does not zoom the chart (the brush is dead)');
+            else {
+              key('0');
+              await pause(80);
+              if (host.hasAttribute('data-zoomed')) {
+                zeroDead = true;
+                key('Escape');
+                await pause(80);
+              }
+            }
           }
         }
+        if (zeroDead) problems.push('the 0 key does not reset the zoom');
       }
     }
     return out;
