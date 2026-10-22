@@ -319,6 +319,12 @@ test('touch on bars: two fingers pinch the bars in and out, and one finger drags
     const cx = b.x + b.width / 2;
     const cy = b.y + b.height / 2;
     const touch = (type: string, pts: { x: number; y: number; id: number }[]) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts });
+    // a tap on a bar reads it: touch has no hover
+    const bar = (await page.locator('svg [data-bar="gamma"] rect').first().boundingBox())!;
+    await touch('touchStart', [{ x: bar.x + bar.width / 2, y: bar.y + bar.height / 2, id: 0 }]);
+    await touch('touchEnd', []);
+    await page.waitForTimeout(150);
+    assert.match(await readout(page), /^Gamma: 19 people/);
     await touch('touchStart', [{ x: cx - 30, y: cy, id: 0 }, { x: cx + 30, y: cy, id: 1 }]);
     for (let s = 1; s <= 8; s++) await touch('touchMove', [{ x: cx - 30 - s * 14, y: cy, id: 0 }, { x: cx + 30 + s * 14, y: cy, id: 1 }]);
     await touch('touchEnd', []);

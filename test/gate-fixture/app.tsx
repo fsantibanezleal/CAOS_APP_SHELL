@@ -367,7 +367,7 @@ function ModelView({ sim }: { sim: Sim }) {
         ) : (
           <UPlotChart
             height="fill"
-            zoomOff={PLANT === 'zoom-off-unexplained' ? 'no' : undefined}
+            zoomOff={PLANT === 'zoom-off-unexplained' ? 'no' : PLANT === 'legit-zoom-off' ? { en: 'The whole epidemic curve is the finding and must stay in view', es: 'La curva epidémica completa es el hallazgo y debe verse entera' } : undefined}
             x={{ values: sim.t, label: { en: 'Day', es: 'Día' }, unit: 'd' }}
             y={{ label: { en: 'People', es: 'Personas' } }}
             series={[

@@ -477,6 +477,14 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
   const endPointer = (e: ReactPointerEvent<HTMLDivElement>) => {
     const g = gesture.current;
     pointers.current.delete(e.pointerId);
+    // a tap on a bar reads it (touch has no hover): the crosshair goes to the bar and its readout follows
+    if (e.pointerType === 'touch' && e.type === 'pointerup' && !g.moved && g.kind !== 'pinch') {
+      const bar = barAt(along(e));
+      if (bar !== null) {
+        kbRef.current = false;
+        setCursor(bar);
+      }
+    }
     if (g.kind === 'brush' && g.id === e.pointerId && g.moved) {
       const geo = geoRef.current;
       const pos = along(e);
@@ -489,8 +497,9 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
     setBrush(null);
     if (g.kind !== 'pinch' || pointers.current.size < 2) gesture.current = { ...g, kind: null, moved: false };
   };
-  const onPointerLeave = () => {
-    if (!kbRef.current) setCursor(null);
+  const onPointerLeave = (e: ReactPointerEvent<HTMLDivElement>) => {
+    // a finger that lifts leaves too, and the bar it tapped stays read
+    if (e.pointerType !== 'touch' && !kbRef.current) setCursor(null);
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {

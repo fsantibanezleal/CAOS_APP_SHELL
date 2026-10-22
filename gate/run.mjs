@@ -492,7 +492,8 @@ export async function runGate(o) {
     for (const c of await page.evaluate((drive) => window.__caosGate.chartsTierA(drive), Boolean(s.interact))) {
       for (const m of c.problems) fail('G20', where, `${c.label} (${c.kind} chart): ${m}`);
       if (c.zoomOff) {
-        waivers.push({ route: where.route, lang: s.lang, floor: 'chart zoom off', reason: c.zoomOff, valid: c.zoomOffValid });
+        // listed once per route and language (the first state), failed in every state while the reason is too short
+        if (s.interact) waivers.push({ route: where.route, lang: s.lang, floor: 'chart zoom off', reason: c.zoomOff, valid: c.zoomOffValid });
         if (!c.zoomOffValid) fail('G20', where, `${c.label}: zoom is turned off with a reason of fewer than 12 letters and digits ("${c.zoomOff}"); say why the chart cannot be zoomed`);
       }
     }
