@@ -2,7 +2,7 @@ import type { Lang } from '../lib/lang';
 
 /**
  * The parts of Tier A that both shell charts draw the same way (shell 0.19.0): the visually hidden table of the plotted
- * values a screen reader reads (referenced by the plot through `aria-describedby`), the one-line summary, and the
+ * values a screen reader reads (linked from the plot by `aria-details`; the summary is its `aria-describedby`), the one-line summary, and the
  * reset-zoom control that is shown only while the chart is zoomed.
  */
 
