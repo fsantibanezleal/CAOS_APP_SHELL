@@ -74,25 +74,28 @@ const boxesOf = async (page: Page): Promise<Box[]> => JSON.parse((await page.loc
 const overlap = (a: Box, b: Box) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
 const anyOverlap = (boxes: Box[]) => boxes.flatMap((a, i) => boxes.slice(i + 1).filter((b) => overlap(a, b)).map((b) => `${a.t} / ${b.t}`));
 
-for (const [form, width] of [['c16', 390], ['c16', 640], ['c04', 390], ['c04', 640]] as const) {
-  test(`S3 ${form} at ${width}: no x label lies over a y label or another x label (the host says 0 and the boxes agree)`, async () => {
-    const { page, errors } = await open(`form=${form}&w=${width}`, { width, height: 700 });
-    try {
-      assert.equal(await page.locator('.caos-chart').getAttribute('data-mark-overlaps'), '0');
-      const boxes = await boxesOf(page);
-      const labels = boxes.map((b) => b.t).join(' | ');
-      assert.ok(boxes.some((b) => b.k === 'x') && boxes.some((b) => b.k === 'y'), `both kinds are placed: ${labels}`);
-      assert.deepEqual(anyOverlap(boxes), [], `placed: ${JSON.stringify(boxes)}`);
-      // every label is inside the plot
-      const plot = (await page.locator('.u-over').boundingBox())!;
-      const host = (await page.locator('.caos-chart canvas').first().boundingBox())!;
-      for (const b of boxes) assert.ok(b.x0 >= -0.5 && b.x1 <= plot.width + (plot.x - host.x) + 8 && b.y0 >= -0.5, `${b.t} is inside the canvas: ${JSON.stringify(b)}`);
-      assert.deepEqual(errors, []);
-    } finally {
-      await page.close();
-    }
-  });
+async function noOverlap(form: string, width: number) {
+  const { page, errors } = await open(`form=${form}&w=${width}`, { width, height: 700 });
+  try {
+    assert.equal(await page.locator('.caos-chart').getAttribute('data-mark-overlaps'), '0');
+    const boxes = await boxesOf(page);
+    const labels = boxes.map((b) => b.t).join(' | ');
+    assert.ok(boxes.some((b) => b.k === 'x') && boxes.some((b) => b.k === 'y'), `both kinds are placed: ${labels}`);
+    assert.deepEqual(anyOverlap(boxes), [], `placed: ${JSON.stringify(boxes)}`);
+    // every label is inside the plot
+    const plot = (await page.locator('.u-over').boundingBox())!;
+    const host = (await page.locator('.caos-chart canvas').first().boundingBox())!;
+    for (const b of boxes) assert.ok(b.x0 >= -0.5 && b.x1 <= plot.width + (plot.x - host.x) + 8 && b.y0 >= -0.5, `${b.t} is inside the canvas: ${JSON.stringify(b)}`);
+    assert.deepEqual(errors, []);
+  } finally {
+    await page.close();
+  }
 }
+
+test('S3 c16 at 390: no x label lies over a y label or another x label (the host says 0 and the boxes agree)', () => noOverlap('c16', 390));
+test('S3 c16 at 640: no x label lies over a y label or another x label (the host says 0 and the boxes agree)', () => noOverlap('c16', 640));
+test('S3 c04 at 390: no x label lies over a y label or another x label (the host says 0 and the boxes agree)', () => noOverlap('c04', 390));
+test('S3 c04 at 640: no x label lies over a y label or another x label (the host says 0 and the boxes agree)', () => noOverlap('c04', 640));
 
 test('S3: a chart with no y marks places its x labels as before: right of the line, a row down past a label that is in the way', async () => {
   const { page } = await open('form=plain', { width: 700, height: 700 });
