@@ -3,9 +3,11 @@ import { test } from 'node:test';
 import {
   allIntegers,
   axisTitleFits,
+  barExtent,
   brushWindow,
   categoryAt,
   chartSummary,
+  clipExtent,
   brushRange,
   DRAG_THRESHOLD,
   formatTime,
@@ -364,4 +366,33 @@ test('niceTicks with a resolution of a tenth: ticks of fixed decimals never repe
   const labels = formatTicks(t, 'en', { decimals: 1 });
   assert.equal(new Set(labels).size, labels.length, `no repeat: ${labels}`);
   assert.ok(t[0] <= 0 && t[t.length - 1] >= 0.04);
+});
+
+// ---- floating bars (0.19.0, D16-21, S1) ----
+
+test('barExtent: a plain bar spans zero to its value; a span keeps its ends in the order given; a zero length is a dot', () => {
+  assert.deepEqual(barExtent(5), { a: 0, b: 5, dot: false, given: false });
+  assert.deepEqual(barExtent(-3), { a: 0, b: -3, dot: false, given: false });
+  assert.deepEqual(barExtent(25, [40, 65]), { a: 40, b: 65, dot: false, given: true });
+  assert.deepEqual(barExtent(-22, [135, 113]), { a: 135, b: 113, dot: false, given: true });
+  assert.deepEqual(barExtent(0, [35, 35]), { a: 35, b: 35, dot: true, given: true });
+});
+
+test('barExtent: a missing value or a missing end draws nothing', () => {
+  assert.equal(barExtent(null), null);
+  assert.equal(barExtent(undefined, [1, 2]), null);
+  assert.equal(barExtent(NaN), null);
+  assert.equal(barExtent(4, [10, null]), null);
+  assert.equal(barExtent(4, [undefined, 3]), null);
+  assert.equal(barExtent(4, [Infinity, 3]), null);
+});
+
+test('clipExtent: a floating bar is cut to the range and a bar wholly outside draws nothing; a plain bar is left alone', () => {
+  assert.deepEqual(clipExtent(barExtent(60, [90, 150]), 100, 140), { a: 100, b: 140, dot: false, given: true });
+  assert.deepEqual(clipExtent(barExtent(60, [150, 90]), 100, 140), { a: 140, b: 100, dot: false, given: true });
+  assert.equal(clipExtent(barExtent(5, [80, 95]), 100, 140), null);
+  assert.equal(clipExtent(barExtent(5, [145, 160]), 100, 140), null);
+  assert.equal(clipExtent(barExtent(0, [90, 90]), 100, 140), null);
+  assert.deepEqual(clipExtent(barExtent(500), 0, 10), { a: 0, b: 500, dot: false, given: false });
+  assert.equal(clipExtent(null, 0, 10), null);
 });

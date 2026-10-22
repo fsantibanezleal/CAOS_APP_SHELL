@@ -370,3 +370,33 @@ export function chartSummary(lang: Lang, p: SummaryParts): string {
 export function defaultChartName(lang: Lang, yLabel: string, xLabel: string): string {
   return lang === 'es' ? `${yLabel} según ${xLabel}` : `${yLabel} by ${xLabel}`;
 }
+
+// ---- floating bars, grouped bars (0.19.0, D16-21) ----------------------------------------------------------------------------------
+
+/** Where a bar lies on the value axis: its two ends as given (`dot` when they coincide). `given` is false for a plain bar from zero to its value. */
+export interface BarExtent {
+  a: number;
+  b: number;
+  dot: boolean;
+  given: boolean;
+}
+
+/**
+ * The extent of a bar. A datum without a value draws nothing; a plain bar spans zero to its value; a bar with a `span` spans it, in the order
+ * given (a span with its ends reversed is the same bar), and a span with a missing end draws nothing. A span of zero length is a `dot`.
+ */
+export function barExtent(value: number | null | undefined, span?: readonly (number | null | undefined)[] | null): BarExtent | null {
+  if (value === null || value === undefined || !Number.isFinite(value)) return null;
+  if (!span) return { a: 0, b: value, dot: false, given: false };
+  const [a, b] = span;
+  if (a === null || a === undefined || b === null || b === undefined || !Number.isFinite(a) || !Number.isFinite(b)) return null;
+  return { a, b, dot: a === b, given: true };
+}
+
+/** A floating bar cut to the axis' range: wholly outside it, it draws nothing. A plain bar is left as it is. */
+export function clipExtent(e: BarExtent | null, lo: number, hi: number): BarExtent | null {
+  if (!e || !e.given) return e;
+  if (Math.max(e.a, e.b) < lo || Math.min(e.a, e.b) > hi) return null;
+  const c = (v: number) => Math.min(hi, Math.max(lo, v));
+  return { ...e, a: c(e.a), b: c(e.b) };
+}
