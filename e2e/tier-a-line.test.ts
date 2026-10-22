@@ -106,9 +106,10 @@ test('Tier A: the plot is one tab stop with the chart title as its name, a hidde
     assert.equal(await plot.getAttribute('aria-label'), 'Growth');
     assert.equal(await plot.getAttribute('role'), 'group');
     assert.equal(await plot.getAttribute('aria-roledescription'), 'interactive chart');
+    // the summary describes the plot; the data table is linked by aria-details (m7), so a screen reader does not read it on every focus
     const described = (await plot.getAttribute('aria-describedby'))!.split(' ');
-    assert.equal(described.length, 2);
-    for (const id of described) assert.equal(await page.locator(`[id="${id}"]`).count(), 1, `the description ${id} exists`);
+    assert.equal(described.length, 1);
+    for (const id of [...described, (await plot.getAttribute('aria-details'))!]) assert.equal(await page.locator(`[id="${id}"]`).count(), 1, `the description ${id} exists`);
     const table = page.locator('table[data-chart-table]');
     assert.equal(await table.locator('tbody tr').count(), 12);
     assert.deepEqual(await table.locator('thead th').allTextContents(), ['Year', 'Alpha (kg)', 'Beta (kg)']);
@@ -189,7 +190,7 @@ test('wheel: a chart that holds the focus zooms with the wheel around the pointe
   }
 });
 
-test('wheel: with Ctrl held (a trackpad pinch) an unfocused chart zooms, and the browser is not zoomed', async () => {
+test('wheel: with Ctrl held (a trackpad pinch) a focused chart zooms and the browser is not zoomed; an unfocused chart is left to the browser (m6)', async () => {
   const { page } = await open('form=line');
   try {
     const b = await plotBox(page);
@@ -198,7 +199,13 @@ test('wheel: with Ctrl held (a trackpad pinch) an unfocused chart zooms, and the
     await page.mouse.wheel(0, -400);
     await page.keyboard.up('Control');
     await page.waitForTimeout(200);
-    assert.equal(await zoomed(page), true);
+    assert.equal(await zoomed(page), false, 'unfocused: the page zoom keeps working over the chart');
+    await page.keyboard.press('Tab');
+    await page.keyboard.down('Control');
+    await page.mouse.wheel(0, -400);
+    await page.keyboard.up('Control');
+    await page.waitForTimeout(200);
+    assert.equal(await zoomed(page), true, 'focused: the chart zooms');
     assert.equal(await page.evaluate(`window.scrollY`), 0);
   } finally {
     await page.close();
