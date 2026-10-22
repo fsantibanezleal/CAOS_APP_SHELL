@@ -220,7 +220,7 @@ test('keyboard zoom: the crosshair stepping past the edge of the window slides t
   }
 });
 
-test('wheel on bars: an unfocused chart leaves the wheel to the page; a focused one, or Ctrl, zooms and the page does not scroll', async () => {
+test('wheel on bars: an unfocused chart leaves the wheel to the page; a focused one zooms, with Ctrl too, and the page does not scroll', async () => {
   const { page } = await open('form=h');
   try {
     const b = await svgBox(page);
@@ -244,7 +244,13 @@ test('wheel on bars: an unfocused chart leaves the wheel to the page; a focused 
     await page.mouse.wheel(0, -400);
     await page.keyboard.up('Control');
     await page.waitForTimeout(200);
-    assert.equal(await zoomed(page), true, 'Ctrl and wheel zooms an unfocused chart');
+    assert.equal(await zoomed(page), false, 'Ctrl and wheel over an unfocused chart is the page zoom of the browser, not the zoom of the chart (m6)');
+    await page.locator('[data-chart-focus]').focus();
+    await page.keyboard.down('Control');
+    await page.mouse.wheel(0, -400);
+    await page.keyboard.up('Control');
+    await page.waitForTimeout(200);
+    assert.equal(await zoomed(page), true, 'Ctrl and wheel zooms the chart that holds the focus');
   } finally {
     await page.close();
   }

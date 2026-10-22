@@ -23,7 +23,7 @@ export const KEY_ZOOM = 0.7;
 export const KEY_PAN = 0.1;
 
 /** The least a pointer moves before a press becomes a drag (a click stays a click). */
-export const DRAG_THRESHOLD = 6;
+export const DRAG_THRESHOLD = 5;
 
 const forward = (v: number, log: boolean): number => (log ? Math.log10(v) : v);
 const back = (v: number, log: boolean): number => (log ? 10 ** v : v);
@@ -258,25 +258,79 @@ export function allIntegers(values: readonly (number | null | undefined)[]): boo
   return values.every((v) => v === null || v === undefined || !Number.isFinite(v) || Number.isInteger(v));
 }
 
-/** A cheap fingerprint of aligned data, to tell new data from the same data handed in again as a fresh array. */
-export function dataFingerprint(data: readonly (readonly (number | null | undefined)[])[]): string {
-  return data
-    .map((col) => {
-      let s1 = 0;
-      let s2 = 0;
-      let nulls = 0;
-      for (let i = 0; i < col.length; i++) {
-        const v = col[i];
-        if (v === null || v === undefined || !Number.isFinite(v)) {
-          nulls += 1;
-          continue;
-        }
-        s1 += v;
-        s2 += v * ((i % 97) + 1);
-      }
-      return `${col.length}:${nulls}:${s1}:${s2}`;
-    })
-    .join('|');
+/**
+ * Whether new aligned data is the data already drawn (the same values, whether or not in the same array): an element-wise compare, so a
+ * swap of two values or a change too small for a sum to hold is never taken for the same data. A missing value (null, undefined, NaN
+ * or infinite) equals any other missing value.
+ */
+export function sameData(a: readonly (readonly (number | null | undefined)[])[], b: readonly (readonly (number | null | undefined)[])[]): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let k = 0; k < a.length; k++) {
+    const x = a[k];
+    const y = b[k];
+    if (x === y) continue;
+    if (x.length !== y.length) return false;
+    for (let i = 0; i < x.length; i++) {
+      const u = x[i];
+      const v = y[i];
+      if (u === v) continue;
+      const mu = u === null || u === undefined || !Number.isFinite(u);
+      const mv = v === null || v === undefined || !Number.isFinite(v);
+      if (mu && mv) continue;
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * The least span an axis can be zoomed to before two of its tick labels read alike. An axis with fixed `decimals` ticks only at
+ * multiples of its decimals (`tickSteps`), so it has no bound (0); an axis of significant digits writes a value at or above
+ * 10^(digits-1) as a whole number and a smaller one to `digits` digits, so its labels cannot tell apart ticks closer than that
+ * resolution, and an axis `plotPx` long holds about `plotPx / spacePx` ticks. Scientific notation has no fixed resolution (0).
+ */
+export function leastLabelSpan(fmt: { decimals?: number; digits?: number; percent?: boolean } | undefined, full: Range, plotPx: number, spacePx: number): number {
+  if (fmt && fmt.decimals !== undefined) return 0;
+  const scale = fmt?.percent ? 100 : 1;
+  const digits = fmt?.digits ?? 4;
+  const top = Math.max(Math.abs(full[0]), Math.abs(full[1])) * scale;
+  if (!(top > 0) || !Number.isFinite(top) || top < SCIENTIFIC_FLOOR) return 0;
+  const res = top >= 10 ** (digits - 1) ? 1 : 10 ** (Math.floor(Math.log10(top)) - digits + 1);
+  return ((res * (Math.ceil(Math.max(0, plotPx) / Math.max(1, spacePx)) + 1)) / scale);
+}
+
+/** Below this magnitude `formatTicks` writes an axis in scientific notation (the shell's own floor, `SCIENTIFIC_BELOW` in `lib/format`). */
+const SCIENTIFIC_FLOOR = 1e-4;
+
+/** A time of an axis (epoch seconds) in the page language: the date, with the time of day when the span shown is under three days. */
+export function formatTime(seconds: number, lang: Lang, spanSeconds: number): string {
+  const short = spanSeconds < 3 * 86400;
+  const opts: Intl.DateTimeFormatOptions = short ? { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' } : { year: 'numeric', month: 'short', day: 'numeric' };
+  return new Intl.DateTimeFormat(lang === 'es' ? 'es-CL' : 'en-US', opts).format(new Date(seconds * 1000));
+}
+
+/** The range a brush from `a` to `b` selects: in order, inside `full`, and never narrower than `least` (widened around its middle, slid back inside). */
+export function brushRange(sel: Range, full: Range, least: number): [number, number] {
+  const f0 = Math.min(full[0], full[1]);
+  const f1 = Math.max(full[0], full[1]);
+  if (least >= f1 - f0) return [f0, f1];
+  let lo = Math.max(f0, Math.min(sel[0], sel[1]));
+  let hi = Math.min(f1, Math.max(sel[0], sel[1]));
+  if (hi - lo < least) {
+    const mid = (lo + hi) / 2;
+    lo = mid - least / 2;
+    hi = mid + least / 2;
+    if (lo < f0) {
+      hi += f0 - lo;
+      lo = f0;
+    }
+    if (hi > f1) {
+      lo -= hi - f1;
+      hi = f1;
+    }
+  }
+  return [lo, hi];
 }
 
 /** The words of the one-line summary a screen reader gets for a chart (every number already written in the page language). */

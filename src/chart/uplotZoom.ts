@@ -1,10 +1,10 @@
 import type uPlot from 'uplot';
-import { isZoomed, panRange, pinchState, revealValue, wheelFactor, zoomRange, type Range } from './interaction';
+import { brushRange, isZoomed, MIN_SPAN_SHARE, panRange, pinchState, revealValue, wheelFactor, zoomRange, type Range } from './interaction';
 
 /**
  * Zoom, pan and the crosshair of a uPlot chart (shell 0.19.0, Tier A). `createZoom` returns the operations the keyboard of
- * the chart uses and attaches the pointer gestures to the plot: the wheel (when the chart has the focus, or with Ctrl, which
- * is how a trackpad pinch arrives), Shift with the mouse drag, one finger on a zoomed chart, two fingers to pinch and pan.
+ * the chart uses and attaches the pointer gestures to the plot: the wheel (only while the chart has the focus; with Ctrl or Meta too,
+ * which is how a trackpad pinch arrives, and only while it can change the range), Shift with the mouse drag, one finger on a zoomed chart, two fingers to pinch and pan.
  * The plain mouse drag stays uPlot's own brush. The state it needs from the chart is read through `ctx`, so the handlers
  * always see the chart as it is now.
  */
@@ -19,13 +19,18 @@ export interface ZoomContext {
   enabled: () => boolean;
   /** The range the chart opened with. */
   full: () => { x: Range; y: Range } | null;
+  /** The least span an axis can be zoomed to, in the axis's units, beyond the default thousandth of the full span (labels that would repeat); undefined for none. */
+  least?: (axis: 'x' | 'y') => number | undefined;
   /** Set while a range is being set by these operations: a scale with a fixed range (`x.range`, `y.range`) lets an explicit range through only then. */
   explicit: { current: boolean };
 }
 
 export interface ZoomControls {
-  zoomBy: (factor: number, ax: number, ay?: number) => void;
-  panBy: (shareX: number, shareY?: number) => void;
+  /** Each returns whether the range changed (a zoom out at the full range, or in at the least span, changes nothing). */
+  zoomBy: (factor: number, ax: number, ay?: number) => boolean;
+  panBy: (shareX: number, shareY?: number) => boolean;
+  /** Zoom to a brushed range (y only where both axes zoom). */
+  brush: (x: Range | null, y?: Range) => boolean;
   reveal: (x: number) => void;
   reset: () => void;
   view: () => { x: [number, number]; y: [number, number] };
@@ -39,7 +44,17 @@ export interface ZoomControls {
 const rangeOf = (u: uPlot, key: 'x' | 'y'): [number, number] => [u.scales[key].min ?? 0, u.scales[key].max ?? 1];
 
 export function createZoom(u: uPlot, ctx: ZoomContext): ZoomControls {
-  const apply = (nx: Range | null, ny: Range | null) => {
+  const differs = (a: Range, b: Range, full: Range) => {
+    const tol = Math.abs(full[1] - full[0]) * 1e-9;
+    return Math.abs(a[0] - b[0]) > tol || Math.abs(a[1] - b[1]) > tol;
+  };
+  /** Sets the ranges asked for and tells whether either one moved the view. */
+  const apply = (nx: Range | null, ny: Range | null): boolean => {
+    const full = ctx.full();
+    const cx = rangeOf(u, 'x');
+    const cy = rangeOf(u, 'y');
+    const moved = Boolean((nx && differs(nx, cx, full ? full.x : cx)) || (ny && differs(ny, cy, full ? full.y : cy)));
+    if (!moved) return false;
     ctx.explicit.current = true;
     try {
       u.batch(() => {
@@ -49,26 +64,39 @@ export function createZoom(u: uPlot, ctx: ZoomContext): ZoomControls {
     } finally {
       ctx.explicit.current = false;
     }
+    return true;
   };
   const isNow = (): boolean => {
     const full = ctx.full();
     if (!full) return false;
     return isZoomed(rangeOf(u, 'x'), full.x) || (ctx.both && isZoomed(rangeOf(u, 'y'), full.y));
   };
-
-  const zoomBy = (factor: number, ax: number, ay?: number) => {
-    const full = ctx.full();
-    if (!full || !ctx.enabled()) return;
-    const nx = zoomRange(rangeOf(u, 'x'), full.x, ax, factor, { log: ctx.log.x });
-    const ny = ctx.both && ay !== undefined ? zoomRange(rangeOf(u, 'y'), full.y, ay, factor, { log: ctx.log.y }) : null;
-    apply(nx, ny);
+  // the least span of an axis: a thousandth of the full span, or more where the labels could not tell the ticks apart (never on a log axis)
+  const leastOf = (axis: 'x' | 'y', full: Range): number | undefined => {
+    if (ctx.log[axis]) return undefined;
+    return Math.max(Math.abs(full[1] - full[0]) * MIN_SPAN_SHARE, ctx.least?.(axis) ?? 0);
   };
-  const panBy = (shareX: number, shareY = 0) => {
+
+  const zoomBy = (factor: number, ax: number, ay?: number): boolean => {
     const full = ctx.full();
-    if (!full || !ctx.enabled()) return;
+    if (!full || !ctx.enabled()) return false;
+    const nx = zoomRange(rangeOf(u, 'x'), full.x, ax, factor, { log: ctx.log.x, minSpan: leastOf('x', full.x) });
+    const ny = ctx.both && ay !== undefined ? zoomRange(rangeOf(u, 'y'), full.y, ay, factor, { log: ctx.log.y, minSpan: leastOf('y', full.y) }) : null;
+    return apply(nx, ny);
+  };
+  const panBy = (shareX: number, shareY = 0): boolean => {
+    const full = ctx.full();
+    if (!full || !ctx.enabled()) return false;
     const nx = shareX ? panRange(rangeOf(u, 'x'), full.x, shareX, ctx.log.x) : null;
     const ny = ctx.both && shareY ? panRange(rangeOf(u, 'y'), full.y, shareY, ctx.log.y) : null;
-    apply(nx, ny);
+    return apply(nx, ny);
+  };
+  const brush = (sx: Range | null, sy?: Range): boolean => {
+    const full = ctx.full();
+    if (!full || !ctx.enabled()) return false;
+    const nx = sx ? brushRange(sx, full.x, leastOf('x', full.x) ?? 0) : null;
+    const ny = ctx.both && sy ? brushRange(sy, full.y, leastOf('y', full.y) ?? 0) : null;
+    return apply(nx, ny);
   };
   const reveal = (x: number) => {
     const full = ctx.full();
@@ -113,17 +141,17 @@ export function createZoom(u: uPlot, ctx: ZoomContext): ZoomControls {
     'wheel',
     (e) => {
       if (!ctx.enabled()) return;
-      // The rule: the wheel zooms the chart that holds the focus (a click or a Tab gives it), and always with Ctrl or Meta, which
-      // is how a trackpad pinch arrives. Otherwise the wheel is the page's, so a chart in a long document never traps the scroll.
-      const engaged = ctx.plot.contains(document.activeElement) || e.ctrlKey || e.metaKey;
-      if (!engaged) return;
-      e.preventDefault();
+      // The rule: the wheel (with Ctrl or Meta too, which is how a trackpad pinch arrives) zooms the chart that holds the focus (a click or
+      // a Tab gives it), and only while that changes the range: at the full range a wheel out, and at the least span a wheel in, is the
+      // page's, so a chart in a long document never traps the scroll. Over a chart without the focus the wheel and the browser's own
+      // page zoom (Ctrl and the wheel) are left alone.
+      if (!ctx.plot.contains(document.activeElement)) return;
       const s = sizeOf();
-      if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && isNow()) {
-        panBy(e.deltaX / s.w);
-        return;
-      }
-      zoomBy(wheelFactor(e.deltaY, e.deltaMode), u.posToVal(e.clientX - s.left, 'x'), ctx.both ? u.posToVal(e.clientY - s.top, 'y') : undefined);
+      const changed =
+        Math.abs(e.deltaX) > Math.abs(e.deltaY) && isNow()
+          ? panBy(e.deltaX / s.w)
+          : zoomBy(wheelFactor(e.deltaY, e.deltaMode), u.posToVal(e.clientX - s.left, 'x'), ctx.both ? u.posToVal(e.clientY - s.top, 'y') : undefined);
+      if (changed) e.preventDefault();
     },
     { ...opt, passive: false },
   );
@@ -224,6 +252,7 @@ export function createZoom(u: uPlot, ctx: ZoomContext): ZoomControls {
   return {
     zoomBy,
     panBy,
+    brush,
     reveal,
     reset,
     view: () => ({ x: rangeOf(u, 'x'), y: rangeOf(u, 'y') }),
