@@ -8,9 +8,11 @@ import { CHART_ROLE, ChartDataTable, ChartSummary, ResetZoomButton } from './Cha
 import {
   allIntegers,
   axisTitleFits,
+  barExtent,
   brushWindow,
   categoryAt,
   chartSummary,
+  clipExtent,
   DRAG_THRESHOLD,
   KEY_PAN,
   KEY_ZOOM,
@@ -39,13 +41,19 @@ export interface BarDatum {
   highlight?: boolean;
   /** One line shown as the bar's title. */
   hint?: BiText;
+  /** A floating bar (0.19.0): the bar's two ends on the value axis, in any order (a waterfall layer, a bridge step). Without it the bar spans
+   * zero to `value`. `value` stays the number the bar states (a layer's size, a step's amount, a total): it is written at the bar, read in the
+   * readout and the table, which add the two ends. A span of zero length is drawn as a dot as thick as a bar (a total on a bridge); a span with
+   * a missing end draws nothing; a span outside `axis.range` is cut to it. */
+  span?: [number | null | undefined, number | null | undefined];
 }
 
 export interface BarChartProps {
   /** The chart's accessible name. */
   title: BiText;
   data: BarDatum[];
-  /** The value axis: its title, unit and number format; `range` fixes the domain (it always includes zero). */
+  /** The value axis: its title, unit and number format; `range` fixes the domain (it includes zero, unless a datum has a `span`: then
+   * the range is the axis, a bridge's from 100 to 140 for instance). */
   axis: { label: BiText; unit?: BiText; format?: FormatOptions; range?: [number, number] };
   /** Horizontal bars (the default) give every category label its own line, so long labels never collide;
    * vertical bars suit a few short categories. */
@@ -126,13 +134,21 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
   const fmt = axis.format ?? { digits: 3 };
   const n = data.length;
   const finite = data.map((d) => d.value).filter((v): v is number => v !== null && v !== undefined && Number.isFinite(v));
-  const lo = Math.min(0, axis.range ? axis.range[0] : Math.min(0, ...finite));
-  const hi = Math.max(0, axis.range ? axis.range[1] : Math.max(0, ...finite));
+  // a floating bar's ends are on the axis too; with a span the range is the axis as given (a bridge need not start at zero)
+  const spanEnds = data.flatMap((d) => {
+    const e = barExtent(d.value, d.span);
+    return e && e.given ? [e.a, e.b] : [];
+  });
+  const floating = data.some((d) => d.span !== undefined && d.span !== null);
+  const reach = [...finite, ...spanEnds];
+  const lo = floating && axis.range ? Math.min(axis.range[0], axis.range[1]) : Math.min(0, axis.range ? axis.range[0] : Math.min(0, ...reach));
+  const hi = floating && axis.range ? Math.max(axis.range[0], axis.range[1]) : Math.max(0, axis.range ? axis.range[1] : Math.max(0, ...reach));
+  const extents = data.map((d) => clipExtent(barExtent(d.value, d.span), lo, hi));
   // A value axis of counts ticks at whole numbers (known shell defect, Contraste b05 to b09: "0, 1, 1, 2, 2"): fixed zero decimals,
   // or whole values with no decimals asked for, on a domain whose ends are whole.
   // The smallest step the axis may tick at is the least difference its labels can show: a whole number for counts, a unit of the last
   // fixed decimal otherwise (a percent shows hundredths of the value), so the labels never repeat and none is a rounded fraction.
-  const countAxis = fmt.decimals === undefined && finite.length > 0 && allIntegers(finite) && allIntegers(axis.range ?? []);
+  const countAxis = fmt.decimals === undefined && reach.length > 0 && allIntegers(reach) && allIntegers(axis.range ?? []);
   const resolution = fmt.decimals !== undefined ? 10 ** -fmt.decimals / (fmt.percent ? 100 : 1) : countAxis ? 1 : 0;
   const anyHighlight = data.some((d) => d.highlight);
   const colour = (d: BarDatum) => (d.tone ? TONE[d.tone] : !anyHighlight || d.highlight ? 'var(--color-accent)' : 'var(--color-fg-faint)');
@@ -181,6 +197,11 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
   let drawnHeight = 0;
   let tickLabels: string[] = [];
   const valueLabels = data.map(shown);
+  // a floating bar reads its two ends, in the order given ("from 40 to 65"); a bar with no span or a missing end has none to read
+  const endsText = data.map((d) => {
+    const e = barExtent(d.value, d.span);
+    return e && e.given ? (lang === 'es' ? `de ${formatNumber(d.span![0] as number, lang, fmt)} a ${formatNumber(d.span![1] as number, lang, fmt)}` : `from ${formatNumber(d.span![0] as number, lang, fmt)} to ${formatNumber(d.span![1] as number, lang, fmt)}`) : '';
+  });
   if (width > 0 && n > 0) {
     const count = e0 - s0;
     const valueCol = values ? widestLabel(valueLabels, PX) + 8 : 0;
@@ -232,18 +253,22 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
             const f = fitted[k];
             const v = d.value;
             const ok = v !== null && v !== undefined && Number.isFinite(v);
-            const xa = sx(0);
-            const xb = ok ? sx(v as number) : xa;
+            const ex = extents[i];
+            const xa = ex ? sx(ex.a) : sx(0);
+            const xb = ex ? sx(ex.b) : xa;
             const labelText = valueLabels[i];
-            const negative = ok && (v as number) < 0;
+            const negative = ok && !ex?.given && (v as number) < 0;
+            // a floating bar's value is written past its far end, whichever way the bar runs
+            const far = Math.max(xa, xb);
             return (
               <g key={d.id} data-bar={d.id} data-cursor={cursor === i ? '1' : undefined} {...interactive(d)}>
-                <title>{[pick(d.label, lang), labelText, pick(d.hint, lang)].filter(Boolean).join(': ')}</title>
+                <title>{[pick(d.label, lang), labelText, pick(d.hint, lang), endsText[i]].filter(Boolean).join(': ')}</title>
                 <Lines x={x0 - 8} y={cy - ((f.lines.length - 1) * LINE) / 2 + 4} lines={f.lines} anchor="end" fill={d.highlight ? 'var(--color-fg)' : 'var(--color-fg-subtle)'} />
-                {ok && <rect x={Math.min(xa, xb)} y={cy - barH / 2} width={Math.max(1, Math.abs(xb - xa))} height={barH} rx={2} fill={colour(d)} />}
+                {ex && ex.dot && <circle cx={xa} cy={cy} r={barH / 2} fill={colour(d)} />}
+                {ex && !ex.dot && <rect x={Math.min(xa, xb)} y={cy - barH / 2} width={Math.max(1, Math.abs(xb - xa))} height={barH} rx={2} fill={colour(d)} />}
                 {values && (
                   <text
-                    x={ok ? (negative ? Math.max(x0 + textWidth(labelText, PX) + 2, xb - 4) : xb + 4) : xa + 4}
+                    x={ok ? (negative ? Math.max(x0 + textWidth(labelText, PX) + 2, xb - 4) : (ex?.given ? far : xb) + 4 + (ex?.dot ? barH / 2 : 0)) : xa + 4}
                     y={cy + 4}
                     textAnchor={negative ? 'end' : 'start'}
                     fontSize={PX}
@@ -300,15 +325,17 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
             const cx = left + band * k + band / 2;
             const v = d.value;
             const ok = v !== null && v !== undefined && Number.isFinite(v);
-            const ya = sy(0);
-            const yb = ok ? sy(v as number) : ya;
+            const ex = extents[i];
+            const ya = ex ? sy(ex.a) : sy(0);
+            const yb = ex ? sy(ex.b) : ya;
             const f = fitted[k];
             return (
               <g key={d.id} data-bar={d.id} data-cursor={cursor === i ? '1' : undefined} {...interactive(d)}>
-                <title>{[pick(d.label, lang), valueLabels[i], pick(d.hint, lang)].filter(Boolean).join(': ')}</title>
-                {ok && <rect x={cx - barW / 2} y={Math.min(ya, yb)} width={barW} height={Math.max(1, Math.abs(yb - ya))} rx={2} fill={colour(d)} />}
+                <title>{[pick(d.label, lang), valueLabels[i], pick(d.hint, lang), endsText[i]].filter(Boolean).join(': ')}</title>
+                {ex && ex.dot && <circle cx={cx} cy={ya} r={barW / 2} fill={colour(d)} />}
+                {ex && !ex.dot && <rect x={cx - barW / 2} y={Math.min(ya, yb)} width={barW} height={Math.max(1, Math.abs(yb - ya))} rx={2} fill={colour(d)} />}
                 {values && (
-                  <text x={cx} y={Math.min(ya, yb) - 5} textAnchor="middle" fontSize={PX} fill={ok ? 'var(--color-fg)' : 'var(--color-fg-faint)'} fontStyle={ok ? undefined : 'italic'} style={{ fontFamily: 'var(--font-sans)', fontVariantNumeric: 'tabular-nums' }}>
+                  <text x={cx} y={Math.min(ya, yb) - 5 - (ex?.dot ? barW / 2 : 0)} textAnchor="middle" fontSize={PX} fill={ok ? 'var(--color-fg)' : 'var(--color-fg-faint)'} fontStyle={ok ? undefined : 'italic'} style={{ fontFamily: 'var(--font-sans)', fontVariantNumeric: 'tabular-nums' }}>
                     {valueLabels[i]}
                   </text>
                 )}
@@ -327,8 +354,18 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
   // ---- the data table, the summary and the readout ----
   const a11y = useMemo(() => {
     if (!drawn) return null;
-    const head = [lang === 'es' ? 'Categoría' : 'Category', unit ? `${pick(axis.label, lang)} (${unit})` : pick(axis.label, lang), lang === 'es' ? 'Nota' : 'Note'];
-    const rows = data.map((d, i) => [pick(d.label, lang), valueLabels[i], pick(d.hint, lang)]);
+    // a chart with a floating bar adds the two ends of every bar to the table
+    const head = [
+      lang === 'es' ? 'Categoría' : 'Category',
+      unit ? `${pick(axis.label, lang)} (${unit})` : pick(axis.label, lang),
+      ...(floating ? (lang === 'es' ? ['Desde', 'Hasta'] : ['From', 'To']) : []),
+      lang === 'es' ? 'Nota' : 'Note',
+    ];
+    const rows = data.map((d, i) => {
+      const e = barExtent(d.value, d.span);
+      const end = (v: number | undefined) => (e && v !== undefined ? formatNumber(v, lang, fmt) : '');
+      return [pick(d.label, lang), valueLabels[i], ...(floating ? [end(e?.a), end(e?.b)] : []), pick(d.hint, lang)];
+    });
     let low = -1;
     let high = -1;
     data.forEach((d, i) => {
@@ -347,11 +384,11 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
     });
     return { head, rows, summary };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [drawn, data, lang, unit, name, axisTitle, axis.label]);
+  }, [drawn, data, lang, unit, name, axisTitle, axis.label, floating]);
   const rest = lang === 'es' ? REST.es : REST.en;
   const read =
     cursor !== null && cursor < n
-      ? [`${pick(data[cursor].label, lang)}: ${valueLabels[cursor]}${data[cursor].value === null || data[cursor].value === undefined || !unit ? '' : `${NBSP}${unit}`}`, pick(data[cursor].hint, lang)].filter(Boolean).join(' · ')
+      ? [`${pick(data[cursor].label, lang)}: ${valueLabels[cursor]}${data[cursor].value === null || data[cursor].value === undefined || !unit ? '' : `${NBSP}${unit}`}`, pick(data[cursor].hint, lang), endsText[cursor]].filter(Boolean).join(' · ')
       : rest;
 
   // ---- the gestures ----
@@ -574,6 +611,7 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
       className={fill ? 'caos-bars-host fill' : 'caos-bars-host'}
       data-chart-host={drawn ? 'bars' : undefined}
       data-points={drawn ? String(n) : undefined}
+      data-spans={drawn && floating ? String(data.filter((d) => d.span !== undefined && d.span !== null).length) : undefined}
       data-zoomable={drawn ? (zoomable ? '1' : '0') : undefined}
       data-zoomed={drawn && zoomed ? '1' : undefined}
       data-zoom-off={drawn && zoomIsOff ? zoomWhy : undefined}
