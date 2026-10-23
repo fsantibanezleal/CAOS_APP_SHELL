@@ -214,24 +214,24 @@ async function inkedOverlaps(page: Page, labels: string[]) {
 
 // m2 (re-review of 0.19.0): the shell's own c04 form drew the same pixels before and after S3, so it could not show V04-2 fixed. This is
 // Contraste's drawing at its widths (a card at 390 and at 1280) and its heights; the overlap is measured on the ink the canvas writes.
-for (const [w, h] of [[358, 300], [390, 280], [640, 300], [640, 420]]) {
-  test(`S3 c04real at ${w}x${h}: the run "2020-2021" and the threshold labels do not overlap on the canvas (V04-2 as Contraste drew it)`, async () => {
+test('m2 c04real: the run "2020-2021" and the threshold labels do not overlap on the canvas at 358x300, 390x280, 640x300 and 640x420 (V04-2 as Contraste drew it)', async () => {
+  for (const [w, h] of [[358, 300], [390, 280], [640, 300], [640, 420]]) {
     const { page, errors } = await open(`form=c04real&w=${w}&h=${h}`, { width: w + 40, height: 900 });
     try {
       const { boxes, pairs } = await inkedOverlaps(page, ['2002', '2020-2021', 'Amber threshold 0.05', 'Red threshold 0.01']);
-      assert.equal(boxes.length, 4, `every label is written: ${JSON.stringify(boxes)}`);
-      assert.deepEqual(pairs, [], `inked: ${JSON.stringify(boxes)}`);
+      assert.equal(boxes.length, 4, `${w}x${h}: every label is written: ${JSON.stringify(boxes)}`);
+      assert.deepEqual(pairs, [], `${w}x${h}: inked: ${JSON.stringify(boxes)}`);
       assert.deepEqual(errors, []);
     } finally {
       await page.close();
     }
-  });
-}
+  }
+});
 
 // m1 (re-review of 0.19.0): y-mark labels are placed against the shared boxes as x labels are, on rows near their line, cut with an ellipsis
 // when no row has room: three reference lines one unit apart with long labels overlapped each other at 390 px.
-for (const wd of [390, 640]) {
-  test(`m1 ytwin at ${wd}: close reference lines keep their labels apart, on the canvas and in what the chart declares`, async () => {
+test('m1 ytwin: close reference lines keep their labels apart at 390 and 640, on the canvas and in what the chart declares', async () => {
+  for (const wd of [390, 640]) {
     const { page, errors } = await open(`form=ytwin&w=${wd}`, { width: wd + 40, height: 800 });
     try {
       const labels = ['Lower zone limit of the board', 'Supervisory early-warning level', 'Upper zone limit of the board'];
@@ -249,5 +249,5 @@ for (const wd of [390, 640]) {
     } finally {
       await page.close();
     }
-  });
-}
+  }
+});

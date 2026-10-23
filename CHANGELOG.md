@@ -12,6 +12,9 @@
     - Grouped bars: `BarDatum.group` puts consecutive data in one band (side by side when vertical, one under another when horizontal) with the group label printed once, `BarChartProps.legend` draws what each tone means, the readout reads "group, label: value", the table gains a Group column, and the keyboard, zoom, pan and brush go group by group.
   - `UPlotChart`: the labels of x marks and y marks share one set of placed boxes (SHC-094, SHC-095): no x label lies over a y label or another x label (the Contraste U16-R2 forms V04-2 and V16-3), a label that fits no row is cut with an ellipsis and kept whole in the plot's title, the readout and a new table of marks. The host declares `data-mark-overlaps`, `data-mark-boxes` and `data-mark-cut`; `drawMarks` and `drawYMarks` take an optional `boxes` array and `drawMarks` returns the labels it cut.
   - Gate G20 fails a chart whose `data-mark-overlaps` is above 0, and drives the floating and the grouped bars (the walk reaches every bar and reads its ends and its group; the table has From, To and Group; a declared legend is visible); five plants prove it (SHC-096).
+- The re-review of 0.19.0: `BarDatum.format` (optional `FormatOptions`): the format of one bar's value, readout, ends and table cells, over `axis.format` (SHC-097).
+- `placeYLabel` in the chart's interaction rules; `drawYMarks` returns the labels it cut or could not write.
+- The gate's legit page `legit-bar-adoption` (the forms CAOS_Contraste adopted).
 
 ### Fixed
 
@@ -25,6 +28,14 @@
   - `zoomOff` of any text, an empty reason in one language included, sets `data-zoom-off`, and G20 fails an empty or short reason (it passed silently before).
   - New data is drawn even when it differs from the data on show only by a swap of two values or by a change too small for a sum (the fingerprint is replaced by an element-wise `sameData`).
   - The reset control is at least 24 by 24 px; the drawing of a `BarChart` is `role="presentation"` beside the named group (its name was said twice); the plot is described by its summary only and linked to its table by `aria-details`, so a screen reader no longer reads up to 1000 rows on every focus.
+- The re-review of 0.19.0 (Opus, 2026-10-22) and the CAOS_Contraste adoption of the bar forms (U16-F8), fixed before the release (SHC-090 to SHC-098):
+  - A dot total at an end of `axis.range` ran past the plot: its value label was cut and the dot covered its category label. With a dot the value axis is inset by its radius at both ends (MJ1).
+  - A plain bar beside floating bars, on an axis that excludes zero, was drawn from zero across the category labels: it is cut to the axis (MJ2), and it reads its two ends as the table writes them, so G20 passes a chart that mixes the two (F8-2).
+  - A floating or grouped bar that takes a choice (`onSelect`) failed G5: the middle of its box was empty drawing. It is now a target over its whole slot (`rect[data-bar-hit]`) (F8-1).
+  - G20's scripted brush dragged a fixed share of the drawing, which on a short horizontal chart of three or four bars spanned every category, so it reported a working brush as dead: it drags between the bars (F8-3). The chart's brush was right.
+  - Reference-line labels close together overlapped (they were clamped at the left edge): a y label is placed against the shared boxes, on rows near its line, and cut with an ellipsis when no place clears (`placeYLabel`); G20 names each overlapping pair with its kind, x or y (m1). An x mark with an empty label no longer takes a row.
+  - The shell's test of V04-2 drew the same pixels before and after the mark labels of 0.19.0; it now draws Contraste's C04 chart and measures the ink (m2).
+  - Grouped members were told apart by colour alone: each is named on the drawing when its slot has room (m4). The summary of a floating chart compared a step with a total: it states the first and the last ends (m5). A highlighted bar with a tone looked like its neighbours: it is outlined (m3).
 - `.prose svg { height: auto }` collapsed KaTeX's square-root SVG to under 2 px, so every root of a documentation page vanished: `.prose .katex svg` keeps its own height (SHC-080).
 - An axis title never cuts: a rotated y title longer than the plot moves above it as a horizontal line, an x title wider than the chart wraps below it, and a `BarChart` title wraps over as many lines as it needs (SHC-081, SHC-082).
 

@@ -28,12 +28,15 @@ rebuilt on a theme or language change; compared by value, so a parent re-render 
   overlap the label before it, with a halo in the surface colour. A mark outside the x range is not drawn.
 - **Mark labels that avoid each other** (0.19.0, SHC-094, SHC-095): the labels of `marks` and of `yMarks` share one set of placed boxes. An x label goes
   right of its line on the first row as before, and one row down for each label of either kind in the way, never below the plot; when no row clears it
-  the label is cut with an ellipsis and its whole text stays in the plot's title, the readout and a table of marks (`aria-details`). The host declares
-  `data-mark-overlaps` (0 when none overlap, which G20 reads), `data-mark-boxes` and `data-mark-cut`.
+  the label is cut with an ellipsis and its whole text stays in the plot's title, the readout and a table of marks (`aria-details`). A y label is placed
+  against the same boxes (`placeYLabel`): at the right end of its line, above it (below it at the top) when nothing is in the way, else left of the
+  label in the way, then on the other side of its line, then one row further; when no place clears it is cut with an ellipsis and kept whole in the
+  same places, never drawn over another label. An x mark with an empty label (the later years of a run named once) draws its line only. The host
+  declares `data-mark-overlaps` (0 when none overlap, which G20 reads), `data-mark-boxes` and `data-mark-cut`.
 - **Reference lines** (`yMarks: [{ y, label }]`, 0.10.0) are drawn by `drawYMarks`: a dotted line across the plot at
   a y value (a null model's constant prediction, a target, a limit), its label at the right end above the line (below
-  it when the line runs along the top), inside the plot, haloed; a label that would overlap the one before it moves
-  left of it. A line outside a given `y.range` is not drawn. The host declares `data-y-marks`. Since 0.11.0
+  it when the line runs along the top), inside the plot, haloed; a label that would overlap one placed before it moves
+  left of it, to the other side of its line or a row further, or is cut with an ellipsis (0.19.0). A line outside a given `y.range` is not drawn. The host declares `data-y-marks`. Since 0.11.0
   (CAOS_APP_SHELL#94) a line has a `tone`, which colours the line and its label (the line stays dotted): `warn` (the
   default, `--color-warn`, an amber threshold), `bad` (`--color-bad`, a red threshold), `good` (`--color-good`, a level
   to reach) and `neutral` (`--color-fg-subtle`, a level that is no alarm: a test's nominal size, "no bias"). On any
@@ -215,11 +218,17 @@ bar by meaning; `highlight` marks the bar the reader is on (the others turn fain
 
 | Prop | Meaning |
 |---|---|
-| `BarDatum.span?: [a, b]` | the bar's two ends on the value axis, in any order; without it the bar spans zero to `value`. `value` stays what the bar states: it is written at the bar (`values`), read in the readout, the table and the summary, which add the ends ("from a to b"; the table gains From and To). A span of zero length is a dot as thick as a bar. The axis covers every span; `axis.range` is then the axis as given (it may exclude zero), a span outside it is cut to it and one wholly outside draws nothing. A span with a missing end, or a missing `value`, draws nothing and reads "not available". Host: `data-spans`. |
-| `BarDatum.group?: { id, label }` | consecutive data with the same `group.id` share one category band, side by side (vertical) or one under another (horizontal); the category axis prints the group label once and `label` names the member (read as "Retail, Stress: 18"). The table gains a Group column; the keyboard walks group by group, member by member; zoom, pan and brush are over whole groups (`data-window`, `data-groups`). Groups may differ in size: bars keep one width and a smaller group is centred. |
+| `BarDatum.span?: [a, b]` | the bar's two ends on the value axis, in any order; without it the bar spans zero to `value`. `value` stays what the bar states: it is written at the bar (`values`), read in the readout and the table, which add the ends ("from a to b"; the table gains From and To). A span of zero length is a dot as thick as a bar; when a chart has a dot the value axis is inset by its radius at both ends, so a total at an end of `axis.range` is drawn whole with its value label, clear of the category labels. The axis covers every span; `axis.range` is then the axis as given (it may exclude zero), a span outside it is cut to it and one wholly outside draws nothing. A plain bar (no `span`) beside floating ones is cut to the same axis (it is never drawn from zero over the category labels) and reads its ends too, zero and its value, as the table writes them. A span with a missing end, or a missing `value`, draws nothing and reads "not available". The summary of a floating chart states its first and its last ends (a bridge's opening and closing totals, a waterfall's start and its total: "Capital (USD m): from 120 USD m at Opening to 119 USD m at Closing"), not its lowest and highest value. Host: `data-spans`. |
+| `BarDatum.group?: { id, label }` | consecutive data with the same `group.id` share one category band, side by side (vertical) or one under another (horizontal); the category axis prints the group label once and `label` names the member (read as "Retail, Stress: 18"). The table gains a Group column; the keyboard walks group by group, member by member; zoom, pan and brush are over whole groups (`data-window`, `data-groups`). Groups may differ in size: bars keep one width and a smaller group is centred. Each member is named on the drawing when its slot has room for a short label: the member label, else its first letters (`text[data-member]`), in a column between the group labels and the plot when horizontal and on a row under the bars when vertical, so the members are never told apart by colour alone; the legend keeps the tone. |
+| `BarDatum.format?: FormatOptions` | the number format of this bar, over `axis.format`: its value label, its readout, its ends and its table cells (a layer stated to three decimals in a stack written to two). The axis ticks keep `axis.format`. |
 | `BarChartProps.legend?: { tone, label }[]` | what each tone means, as a list under the bars (`data-legend`); a tone no bar uses is drawn anyway and warned about in development. |
 
-A `BarChart` without the new props renders the same markup as before.
+A highlighted bar (`highlight`) that carries a `tone` keeps its fill and is drawn with an outline, so it stands out from neighbours of the same
+tone (without a tone it is drawn in the accent and the others turn faint, as before). A floating or grouped bar that takes a choice (`onSelect`)
+is a pointer target over its whole slot (`rect[data-bar-hit]`, transparent): the middle of its box, which can be the empty space beside a
+floating bar or under a short bar's raised value, reaches the bar (G5).
+
+A `BarChart` without the new props renders the same markup as before, a highlighted bar with a tone excepted (its outline).
 
 ## The text kit
 
