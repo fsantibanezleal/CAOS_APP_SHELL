@@ -74,7 +74,8 @@ const PLANTS = [
   { id: 'zoom-off-unexplained', check: 'G20', re: /zoom is turned off with a reason of fewer than 12 letters and digits \("no"\)/, opts: { routes: '/app' } },
   // shell 0.19.0 (D16-21): marks that overlap fail G20 through data-mark-overlaps; the floating and the grouped bars of the fixture are driven (the
   // keyboard walks every bar, the readout reads the ends and the group, the legend is shown)
-  { id: 'mark-overlap', check: 'G20', re: /\d+ pair\(s\) of mark label\(s\) overlap \(data-mark-overlaps="\d+"/, opts: { routes: '/app' } },
+  // m1 (re-review of 0.19.0): the message names the labels that overlap and their kind, x or y
+  { id: 'mark-overlap', check: 'G20', re: /2 pair\(s\) of mark label\(s\) overlap \(data-mark-overlaps="2"\): "Upper limit" \(y\) lies over "Early warning" \(y\); "Early warning" \(y\) lies over "peak" \(x\)/, opts: { routes: '/app' } },
   { id: 'bar-keys-skip', check: 'G20', re: /\(bars chart\): the keyboard walk reached \d+ of \d+ bars/, opts: { routes: '/app' } },
   { id: 'bar-ends-hidden', check: 'G20', re: /\(bars chart\): the readout of \d+ floating bar\(s\) does not read its two ends/, opts: { routes: '/app' } },
   { id: 'bar-group-unread', check: 'G20', re: /\(bars chart\): the readout of \d+ grouped bar\(s\) does not read its group/, opts: { routes: '/app' } },
@@ -298,6 +299,9 @@ const LEGIT = [
   { id: 'legit-method-view-tabs', opts: { routes: '/app,/methodology' } },
   // shell 0.19.0: a chart that turns zoom off with a reason passes every check and is listed among the waivers
   { id: 'legit-zoom-off', opts: { routes: '/app' }, waiver: /whole epidemic curve is the finding/ },
+  // the re-review of 0.19.0 and the CAOS_Contraste adoption (U16-F8): floating bars that take a choice beside a plain total (G5, G20's readout of the
+  // ends), two short horizontal bar charts that fill their card (G20's brush), and two long reference-line labels at one level (G20's mark labels)
+  { id: 'legit-bar-adoption', opts: { routes: '/app' } },
 ];
 
 /** A static server with an SPA fallback: every unknown path answers index.html with 200 (the G4 plant). */
