@@ -14,6 +14,16 @@ before(async () => {
     import { UPlotChart } from './src/chart';
     import { useLangStore } from './src/lib/lang';
     const q = new URLSearchParams(location.search);
+    // every text the canvas writes, with the box of its ink: an overlap measured on the drawing itself, whatever the chart declares
+    const w = window as unknown as Record<string, any>;
+    w.__inked = [];
+    const fillText = CanvasRenderingContext2D.prototype.fillText;
+    CanvasRenderingContext2D.prototype.fillText = function (text: string, x: number, y: number, ...rest: number[]) {
+      const m = this.measureText(String(text));
+      const x0 = this.textAlign === 'left' || this.textAlign === 'start' ? x : this.textAlign === 'right' || this.textAlign === 'end' ? x - m.width : x - m.width / 2;
+      w.__inked.push({ t: String(text), x0, x1: x0 + m.width, y0: y - m.actualBoundingBoxAscent, y1: y + m.actualBoundingBoxDescent });
+      return fillText.call(this, text, x, y, ...rest);
+    };
     useLangStore.getState().setLang(q.get('lang') === 'es' ? 'es' : 'en');
     const form = q.get('form') ?? 'c16';
     const days = Array.from({ length: 91 }, (_, i) => i);
@@ -33,6 +43,30 @@ before(async () => {
           series={[{ label: 'Observed', values: [0.02, 0.03, 0.04, 0.045, 0.05, 0.048, 0.049] }]}
           marks={[{ x: 2020, label: 'Am2020-2021' }, { x: 2022, label: 'Am2022' }]}
           yMarks={[{ y: 0.05, label: 'old 0.05' }]} />
+      ),
+      // V04-2 as Contraste drew it (CAOS_Contraste C04 Findings, the S&P variant, before its labels were shortened): the 27 cited p-values on
+      // a log axis that ends at the floor 1e-16, the years the finding names marked at their numbers (2002 alone, 2020 and 2021 as one run), and
+      // the policy's two thresholds as reference lines. The capture read "Am2020-2021old 0.05": the run's label over "Amber threshold 0.05".
+      c04real: () => {
+        const ps = [0, 2.33599866e-43, 4.99976558e-62, 1.91374984e-124, 2.10364953e-30, 1.29364218e-21, 3.28090409e-31, 3.87415579e-38, 3.11010718e-40, 1.00550338e-24, 1.87731467e-59, 6.59198601e-18, 4.28405156e-12, 3.74968378e-6, 3.06889307e-11, 3.17928462e-17, 5.30716341e-7, 2.01734438e-19, 3.4457258e-34, 1.08791475e-33, 8.77722805e-56, 8.45040173e-95, 0, 2.15256685e-35, 5.01910564e-29, 1.37584523e-18, 1.62710272e-14];
+        const floor = 1e-16;
+        const xs = [0.5, ...ps.map((_, i) => i + 1), ps.length + 0.5];
+        const where = (f: (p: number) => boolean, at?: number) => [null, ...ps.map((p) => (f(p) ? (at ?? p) : null)), null];
+        return (
+          <UPlotChart height={Number(q.get('h') ?? 300)} x={{ values: xs, label: 'Cited test (the number in the table)', format: { decimals: 0 } }} y={{ label: 'p-value (log scale)', log: true, format: { digits: 2 } }}
+            series={[
+              { label: 'Red: p below 0.01', values: where((p) => p >= floor && p < 0.01), color: '--color-bad', mode: 'points' },
+              { label: 'Red, p below 1e-16: drawn at 1e-16', values: where((p) => p < floor, floor), color: '--color-magenta', mode: 'points' },
+            ]}
+            marks={[{ x: 4, label: '2002' }, { x: 22, label: '2020-2021' }, { x: 23, label: '' }]}
+            yMarks={[{ y: 0.05, label: 'Amber threshold 0.05', tone: 'warn' }, { y: 0.01, label: 'Red threshold 0.01', tone: 'bad' }]} />
+        );
+      },
+      // reference lines close together (zones, thresholds): three y marks one unit apart with long labels
+      ytwin: () => (
+        <UPlotChart height={280} x={{ values: days, label: 'Day', format: { decimals: 0 } }} y={{ label: 'Run', format: { decimals: 0 }, range: [0, 90] }}
+          series={[{ label: 'Run', values: run }]}
+          yMarks={[{ y: 50, label: 'Lower zone limit of the board' }, { y: 51, label: 'Supervisory early-warning level' }, { y: 52, label: 'Upper zone limit of the board' }]} />
       ),
       // no y marks: x labels are placed as before
       plain: () => (
@@ -163,3 +197,57 @@ test('S3 table of marks: every mark is listed, labelled or not, in the page lang
     await page.close();
   }
 });
+
+
+/** The ink of the last drawing of each mark label (a cut label counts as its label), read from the canvas calls, and the pairs that overlap. */
+async function inkedOverlaps(page: Page, labels: string[]) {
+  const inked: Box[] = await page.evaluate(() => (window as unknown as { __inked: Box[] }).__inked);
+  const last = new Map<string, Box>();
+  for (const b of inked) {
+    const stem = b.t.replace(/…$/, '');
+    const label = labels.find((l) => stem.length > 0 && l.startsWith(stem));
+    if (label) last.set(label, b);
+  }
+  const boxes = [...last.entries()].map(([t, b]) => ({ ...b, t }));
+  return { boxes, pairs: anyOverlap(boxes) };
+}
+
+// m2 (re-review of 0.19.0): the shell's own c04 form drew the same pixels before and after S3, so it could not show V04-2 fixed. This is
+// Contraste's drawing at its widths (a card at 390 and at 1280) and its heights; the overlap is measured on the ink the canvas writes.
+for (const [w, h] of [[358, 300], [390, 280], [640, 300], [640, 420]]) {
+  test(`S3 c04real at ${w}x${h}: the run "2020-2021" and the threshold labels do not overlap on the canvas (V04-2 as Contraste drew it)`, async () => {
+    const { page, errors } = await open(`form=c04real&w=${w}&h=${h}`, { width: w + 40, height: 900 });
+    try {
+      const { boxes, pairs } = await inkedOverlaps(page, ['2002', '2020-2021', 'Amber threshold 0.05', 'Red threshold 0.01']);
+      assert.equal(boxes.length, 4, `every label is written: ${JSON.stringify(boxes)}`);
+      assert.deepEqual(pairs, [], `inked: ${JSON.stringify(boxes)}`);
+      assert.deepEqual(errors, []);
+    } finally {
+      await page.close();
+    }
+  });
+}
+
+// m1 (re-review of 0.19.0): y-mark labels are placed against the shared boxes as x labels are, on rows near their line, cut with an ellipsis
+// when no row has room: three reference lines one unit apart with long labels overlapped each other at 390 px.
+for (const wd of [390, 640]) {
+  test(`m1 ytwin at ${wd}: close reference lines keep their labels apart, on the canvas and in what the chart declares`, async () => {
+    const { page, errors } = await open(`form=ytwin&w=${wd}`, { width: wd + 40, height: 800 });
+    try {
+      const labels = ['Lower zone limit of the board', 'Supervisory early-warning level', 'Upper zone limit of the board'];
+      assert.equal(await page.locator('.caos-chart').getAttribute('data-mark-overlaps'), '0');
+      const boxes = await boxesOf(page);
+      assert.equal(boxes.filter((b) => b.k === 'y').length, 3, `every label is written: ${JSON.stringify(boxes)}`);
+      assert.deepEqual(anyOverlap(boxes), [], `placed: ${JSON.stringify(boxes)}`);
+      for (const b of boxes) assert.ok(labels.includes(b.t) || (b.t.endsWith('…') && labels.some((l) => l.startsWith(b.t.slice(0, -1).trimEnd()))), `"${b.t}" is a label or its cut`);
+      const inked = await inkedOverlaps(page, labels);
+      assert.deepEqual(inked.pairs, [], `inked: ${JSON.stringify(inked.boxes)}`);
+      // a cut label keeps its whole text in the table of marks
+      const rows = await page.locator('table[data-chart-marks] tbody tr').allTextContents();
+      for (const l of labels) assert.ok(rows.some((r) => r.includes(l)), `the table of marks names "${l}"`);
+      assert.deepEqual(errors, []);
+    } finally {
+      await page.close();
+    }
+  });
+}
