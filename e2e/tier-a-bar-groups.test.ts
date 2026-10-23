@@ -45,6 +45,8 @@ before(async () => {
       vnarrow: () => box(<BarChart title={title} axis={axis} data={data} legend={legend} orientation="vertical" />, 340),
       floating: () => box(<BarChart title={title} axis={{ ...axis, range: [0, 80] }} data={data.map((d) => ({ ...d, span: [d.value / 2, d.value] as [number, number] }))} legend={legend} orientation="vertical" />),
       nolegend: () => box(<BarChart title={title} axis={axis} data={data} />),
+      // F8-1 (the Contraste adoption): short vertical grouped bars that take a choice; some bars are a few pixels tall
+      vselect: () => box(<BarChart title={title} axis={axis} height={160} data={data.map((d, i) => ({ ...d, value: [11473, 300, 12039][i % 3] }))} legend={legend} orientation="vertical" onSelect={() => undefined} />, Number(q.get('w') ?? 640)),
     };
     createRoot(document.getElementById('root')!).render((forms[form] ?? forms.h)());
   `);
@@ -286,5 +288,78 @@ test('S2 on a narrow band: three members of a group at 340 px keep their value l
     assert.deepEqual(errors, []);
   } finally {
     await page.close();
+  }
+});
+
+// ---- the re-review of 0.19.0 (m4) and the Contraste adoption (F8-1) ----
+
+type Rect = { l: number; r: number; t: number; b: number };
+/** Each member's name on the drawing (`text[data-member]`), the group labels and the value labels, in the drawing's pixels. */
+async function memberTexts(page: Page): Promise<{ w: number; members: (Rect & { id: string; name: string })[]; others: (Rect & { name: string })[] }> {
+  // a string, so the test runner's transform adds no helper the page does not have
+  return page.evaluate(`(() => {
+    const svg = document.querySelector('.caos-bars svg');
+    const s = svg.getBoundingClientRect();
+    function rel(r) { return { l: r.left - s.left, r: r.right - s.left, t: r.top - s.top, b: r.bottom - s.top }; }
+    const members = [...svg.querySelectorAll('[data-bar]')].map((g) => {
+      const m = g.querySelector('text[data-member]');
+      return { id: g.getAttribute('data-bar'), name: m ? m.textContent : '', ...(m ? rel(m.getBoundingClientRect()) : { l: 0, r: 0, t: 0, b: 0 }) };
+    });
+    const others = [...svg.querySelectorAll('text:not([data-member])')].map((x) => ({ name: x.textContent, ...rel(x.getBoundingClientRect()) }));
+    return { w: s.width, members, others };
+  })()`);
+}
+const overlaps = (a: Rect, b: Rect) => a.l < b.r - 0.5 && b.l < a.r - 0.5 && a.t < b.b - 0.5 && b.t < a.b - 0.5;
+
+test('m4: each member of a group is named on the drawing (its label, or its first letters when the slot is narrow), clear of every other text; the legend keeps the tone', async () => {
+  const MEMBERS = ['Base', 'Stress', 'Severe'];
+  for (const [form, wd, whole] of [['v', 640, true], ['h', 640, true], ['h', 390, true], ['vnarrow', 340, false]] as const) {
+    const { page, errors } = await open(`form=${form}`, { width: wd + 50, height: 900 });
+    try {
+      const d = await memberTexts(page);
+      assert.equal(d.members.length, 9, form);
+      d.members.forEach((m, i) => {
+        const label = MEMBERS[i % 3];
+        assert.ok(m.name.length > 0 && label.startsWith(m.name), `${form}: member ${m.id} is named "${m.name}" (its label is ${label})`);
+        if (whole) assert.equal(m.name, label, `${form}: there is room for the whole label of ${m.id}`);
+        assert.ok(m.l >= -0.5 && m.r <= d.w + 0.5, `${form}: ${m.id}'s name lies inside the drawing`);
+      });
+      for (let i = 0; i < d.members.length; i++) {
+        for (let j = i + 1; j < d.members.length; j++) assert.ok(!overlaps(d.members[i], d.members[j]), `${form}: the names of ${d.members[i].id} and ${d.members[j].id} overlap`);
+        for (const o of d.others) assert.ok(!overlaps(d.members[i], o), `${form}: the name of ${d.members[i].id} lies over "${o.name}"`);
+      }
+      assert.equal(await page.locator('.caos-bars-legend li').count(), 3, 'the legend is still drawn');
+      assert.deepEqual(errors, []);
+    } finally {
+      await page.close();
+    }
+  }
+  // the member names do not depend on the legend
+  const plain = await t.open('form=nolegend');
+  try {
+    await plain.page.waitForSelector('.caos-bars[data-drawn="1"] svg');
+    assert.equal(await plain.page.locator('svg text[data-member]').count(), 9, 'grouped without a legend: still named');
+  } finally {
+    await plain.page.close();
+  }
+});
+
+test('F8-1: short vertical grouped bars that take a choice (onSelect) receive the pointer at the centre of each bar box', async () => {
+  for (const wd of [390, 1280]) {
+    const { page, errors } = await open(`form=vselect&w=${wd}`, { width: wd + 40, height: 900 });
+    try {
+      assert.equal(await page.locator('svg [data-bar][role="button"]').count(), 9);
+      const missed = await page.evaluate(() =>
+        [...document.querySelectorAll('svg [data-bar][role="button"]')].flatMap((g) => {
+          const r = g.getBoundingClientRect();
+          const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+          return hit && (hit === g || g.contains(hit)) ? [] : [`${g.getAttribute('data-bar')} is covered by ${hit?.tagName}`];
+        }),
+      );
+      assert.deepEqual(missed, [], `${wd}`);
+      assert.deepEqual(errors, []);
+    } finally {
+      await page.close();
+    }
   }
 });

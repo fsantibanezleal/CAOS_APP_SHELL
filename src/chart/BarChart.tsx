@@ -42,7 +42,7 @@ export interface BarDatum {
   value: number | null | undefined;
   /** An explicit colour by meaning; otherwise the accent, or faint beside a highlighted bar. */
   tone?: Tone;
-  /** The bar the reader is on (the selected variant, the case asked about). */
+  /** The bar the reader is on (the selected variant, the case asked about). A bar with a `tone` keeps it and is outlined (0.19.0). */
   highlight?: boolean;
   /** One line shown as the bar's title. */
   hint?: BiText;
@@ -55,6 +55,9 @@ export interface BarDatum {
    * (horizontal), and the category axis prints the group label once; `label` then names the member (a regime, a year), read with its group
    * ("Retail, Stress: 18"). Data of one group that are not consecutive make a band each. */
   group?: { id: string; label: BiText };
+  /** The number format of this bar (0.19.0), over `axis.format`: its value label, its readout, its ends and its table cells (a layer stated to three
+   * decimals in a stack of two). The axis keeps `axis.format`. */
+  format?: FormatOptions;
 }
 
 export interface BarChartProps {
@@ -157,7 +160,11 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
   const reach = [...finite, ...spanEnds];
   const lo = floating && axis.range ? Math.min(axis.range[0], axis.range[1]) : Math.min(0, axis.range ? axis.range[0] : Math.min(0, ...reach));
   const hi = floating && axis.range ? Math.max(axis.range[0], axis.range[1]) : Math.max(0, axis.range ? axis.range[1] : Math.max(0, ...reach));
-  const extents = data.map((d) => clipExtent(barExtent(d.value, d.span), lo, hi));
+  // in a floating chart the range is the whole axis, so a plain bar is cut to it too (re-review of 0.19.0, MJ2: it ran from zero over the labels)
+  const extents = data.map((d) => clipExtent(barExtent(d.value, d.span), lo, hi, floating));
+  // the largest dot (a zero-length span) of the drawing: the value axis is inset by its radius at both ends, so a total at an end of
+  // `axis.range` is drawn whole, its value label too, and never over a category label (re-review of 0.19.0, MJ1)
+  const anyDot = extents.some((e) => e !== null && e.dot);
   // A value axis of counts ticks at whole numbers (known shell defect, Contraste b05 to b09: "0, 1, 1, 2, 2"): fixed zero decimals,
   // or whole values with no decimals asked for, on a domain whose ends are whole.
   // The smallest step the axis may tick at is the least difference its labels can show: a whole number for counts, a unit of the last
@@ -166,8 +173,11 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
   const resolution = fmt.decimals !== undefined ? 10 ** -fmt.decimals / (fmt.percent ? 100 : 1) : countAxis ? 1 : 0;
   const anyHighlight = data.some((d) => d.highlight);
   const colour = (d: BarDatum) => (d.tone ? TONE[d.tone] : !anyHighlight || d.highlight ? 'var(--color-accent)' : 'var(--color-fg-faint)');
+  // a highlighted bar that carries a tone keeps it and is outlined, so it stands out from neighbours of the same tone (re-review of 0.19.0, m3)
+  const outline = (d: BarDatum) => (d.tone && d.highlight ? { stroke: 'var(--color-fg)', strokeWidth: 2 } : {});
+  const fmtOf = (d: BarDatum): FormatOptions => d.format ?? fmt;
   const shown = (d: BarDatum) =>
-    d.value === null || d.value === undefined || !Number.isFinite(d.value) ? NOT_AVAILABLE[lang] : formatNumber(d.value, lang, fmt);
+    d.value === null || d.value === undefined || !Number.isFinite(d.value) ? NOT_AVAILABLE[lang] : formatNumber(d.value, lang, fmtOf(d));
   const width = box.width;
 
   // ---- Tier A state ----
@@ -227,16 +237,33 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
     onSelect
       ? { role: 'button', tabIndex: 0, onClick: () => select(d.id), onKeyDown: keyed(d.id), style: { cursor: 'pointer' } }
       : {};
+  // a floating or a grouped bar that takes a choice is a target over its whole slot: the middle of its box is often empty (a bar beside its
+  // label, a short bar under its raised value), and a pointer there met the drawing, not the bar (the Contraste adoption, F8-1; G5)
+  const hitArea = Boolean(onSelect) && (floating || grouped);
 
   let drawing: ReactNode = null;
   let drawnHeight = 0;
   let tickLabels: string[] = [];
   const valueLabels = data.map(shown);
-  // a floating bar reads its two ends, in the order given ("from 40 to 65"); a bar with no span or a missing end has none to read
+  // a floating bar reads its two ends, in the order given ("from 40 to 65"); a bar with a missing end has none to read. In a floating chart a plain
+  // bar reads its ends too (zero and its value), as the table writes them (the Contraste adoption, F8-2: G20 found the readout short of the table)
   const endsText = data.map((d) => {
     const e = barExtent(d.value, d.span);
-    return e && e.given ? (lang === 'es' ? `de ${formatNumber(d.span![0] as number, lang, fmt)} a ${formatNumber(d.span![1] as number, lang, fmt)}` : `from ${formatNumber(d.span![0] as number, lang, fmt)} to ${formatNumber(d.span![1] as number, lang, fmt)}`) : '';
+    if (!e || (!e.given && !floating)) return '';
+    const [a, b] = [formatNumber(e.a, lang, fmtOf(d)), formatNumber(e.b, lang, fmtOf(d))];
+    return lang === 'es' ? `de ${a} a ${b}` : `from ${a} to ${b}`;
   });
+  // a member of a group is named on the drawing when its slot has room for a short label: the label, else its first letters (re-review of
+  // 0.19.0, m4: the tone alone told the members apart); the legend keeps the tone
+  const memberName = (d: BarDatum, room: number): string => {
+    if (!d.group) return '';
+    const full = pick(d.label, lang);
+    for (let k = full.length; k >= 1; k--) {
+      const t = full.slice(0, k).trimEnd();
+      if (t && textWidth(t, PX) <= room) return t;
+    }
+    return '';
+  };
   // a member of a group is read with its group ("Retail, Stress")
   const fullName = (d: BarDatum): string => (d.group ? `${pick(d.group.label, lang)}, ${pick(d.label, lang)}` : pick(d.label, lang));
   if (width > 0 && n > 0) {
@@ -253,29 +280,39 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
       const fitted = fittedAll.slice(s0, e0);
       // a group needs a slot of 18 px for each of its members
       const need = Math.max(22, Math.max(...fittedAll.map((f) => f.lines.length)) * LINE + 8, grouped ? (most * 18) / (1 - 2 * GROUP_MARGIN) : 0);
-      const x0 = labelCol + 10;
-      const x1 = Math.max(x0 + 40, width - valueCol - 6);
+      // grouped members are named in a column of their own between the group labels and the plot, as wide as the widest name needs (at most a
+      // fifth of the drawing): the whole label when it fits, else its first letters
+      const memberRoom = grouped ? Math.min(widestLabel(data.map((d) => (d.group ? pick(d.label, lang) : '')), PX), Math.max(24, 0.2 * width)) : 0;
+      const memberCol = memberRoom > 0 ? memberRoom + 8 : 0;
+      const p0 = labelCol + 10 + memberCol;
+      const p1 = Math.max(p0 + 40, width - valueCol - 6);
       // the axis title stays on one line under the plot while it fits there, and wraps over the drawing's width when it does not
-      const cx = x0 + (x1 - x0) / 2;
+      const cx = p0 + (p1 - p0) / 2;
       const titleFits = axisTitleFits(axisTitle, 2 * Math.min(cx, width - cx) - 8, PX);
       const titleLines = titleFits ? [axisTitle] : wrapLines(axisTitle, width - 8, PX);
       const axisH = 6 + LINE + 4 + titleLines.length * LINE + 4;
+      // filling its card, the rows share the height (a capped row height left three bars on a quarter of the card,
+      // under the gate's stage-fill floor); a bar keeps a readable thickness and its label stays centred on it. A zoomed
+      // chart keeps the height of the whole one, so the page does not move: fewer rows take the same room.
+      const rowFull = fill && box.height > 0 ? Math.max(need, (box.height - axisH - 4) / nb) : need;
+      const rowH = (nb * rowFull) / count;
+      // a group shares its band out in slots, one for each member of the largest group; a plain chart has a bar to a band
+      const barH = grouped ? Math.min(rowH * slots(most).size * 0.8, 40) : Math.min(rowH * 0.5, 40);
+      // a dot is as thick as a bar: the value axis is inset by its radius at both ends (MJ1)
+      const inset = anyDot ? barH / 2 : 0;
+      const x0 = p0 + inset;
+      const x1 = Math.max(x0 + 40, p1 - inset);
       const tickProbe = widestLabel(formatTicks([lo, hi], lang, fmt), PX);
       const ticks = niceTicks(lo, hi, x1 - x0, tickProbe, 6, resolution);
       const t0 = ticks[0];
       const t1 = ticks[ticks.length - 1];
       tickLabels = formatTicks(ticks, lang, fmt);
       const sx = (v: number) => x0 + ((v - t0) / (t1 - t0 || 1)) * (x1 - x0);
-      // filling its card, the rows share the height (a capped row height left three bars on a quarter of the card,
-      // under the gate's stage-fill floor); a bar keeps a readable thickness and its label stays centred on it. A zoomed
-      // chart keeps the height of the whole one, so the page does not move: fewer rows take the same room.
-      const rowFull = fill && box.height > 0 ? Math.max(need, (box.height - axisH - 4) / nb) : need;
-      const rowH = (nb * rowFull) / count;
       const top = 4;
       const plotBottom = top + nb * rowFull;
       drawnHeight = fill && box.height > 0 ? Math.max(box.height, plotBottom + axisH) : plotBottom + axisH;
-      // a group shares its band out in slots, one for each member of the largest group; a plain chart has a bar to a band
-      const barH = grouped ? Math.min(rowH * slots(most).size * 0.8, 40) : Math.min(rowH * 0.5, 40);
+      // the height of one bar's slot: a row, or a member's share of a group's row
+      const slotH = grouped ? rowH * slots(1).size : rowH;
       const centre = (it: (typeof items)[number]) => top + it.kb * rowH + (grouped ? rowH * (slots(it.c).start + (it.j + 0.5) * slots(it.c).size) : rowH / 2);
       geoRef.current = { horizontal: true, start: top, end: plotBottom };
       const cb = cursor !== null ? bandOf(cursor) : -1;
@@ -300,7 +337,7 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
             b.group !== undefined ? (
               <g key={`grp${s0 + kb}`} data-group={b.group}>
                 <title>{bandTexts[s0 + kb]}</title>
-                <Lines x={x0 - 8} y={top + kb * rowH + rowH / 2 - ((fitted[kb].lines.length - 1) * LINE) / 2 + 4} lines={fitted[kb].lines} anchor="end" fill="var(--color-fg)" />
+                <Lines x={labelCol + 2} y={top + kb * rowH + rowH / 2 - ((fitted[kb].lines.length - 1) * LINE) / 2 + 4} lines={fitted[kb].lines} anchor="end" fill="var(--color-fg)" />
               </g>
             ) : null,
           )}
@@ -318,12 +355,13 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
             const negative = ok && !ex?.given && (v as number) < 0;
             // a floating bar's value is written past its far end, whichever way the bar runs
             const far = Math.max(xa, xb);
+            const member = memberName(d, memberRoom);
             return (
               <g key={d.id} data-bar={d.id} data-cursor={cursor === i ? '1' : undefined} {...interactive(d)}>
                 <title>{[fullName(d), labelText, pick(d.hint, lang), endsText[i]].filter(Boolean).join(': ')}</title>
-                {!d.group && <Lines x={x0 - 8} y={cy - ((f.lines.length - 1) * LINE) / 2 + 4} lines={f.lines} anchor="end" fill={d.highlight ? 'var(--color-fg)' : 'var(--color-fg-subtle)'} />}
-                {ex && ex.dot && <circle cx={xa} cy={cy} r={barH / 2} fill={colour(d)} />}
-                {ex && !ex.dot && <rect x={Math.min(xa, xb)} y={cy - barH / 2} width={Math.max(1, Math.abs(xb - xa))} height={barH} rx={2} fill={colour(d)} />}
+                {!d.group && <Lines x={labelCol + 2} y={cy - ((f.lines.length - 1) * LINE) / 2 + 4} lines={f.lines} anchor="end" fill={d.highlight ? 'var(--color-fg)' : 'var(--color-fg-subtle)'} />}
+                {ex && ex.dot && <circle cx={xa} cy={cy} r={barH / 2} fill={colour(d)} {...outline(d)} />}
+                {ex && !ex.dot && <rect x={Math.min(xa, xb)} y={cy - barH / 2} width={Math.max(1, Math.abs(xb - xa))} height={barH} rx={2} fill={colour(d)} {...outline(d)} />}
                 {values && (
                   <text
                     x={ok ? (negative ? Math.max(x0 + textWidth(labelText, PX) + 2, xb - 4) : (ex?.given ? far : xb) + 4 + (ex?.dot ? barH / 2 : 0)) : xa + 4}
@@ -337,6 +375,12 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
                     {labelText}
                   </text>
                 )}
+                {member && (
+                  <text data-member="" x={p0 - 8} y={cy + 4} textAnchor="end" fontSize={PX} fill="var(--color-fg-subtle)" style={{ fontFamily: 'var(--font-sans)' }}>
+                    {member}
+                  </text>
+                )}
+                {hitArea && <rect data-bar-hit="" x={0} y={cy - slotH / 2} width={width} height={slotH} fill="transparent" />}
               </g>
             );
           })}
@@ -354,17 +398,22 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
       // a drawing narrower than its value column has no room for a bar: the band is 0, never negative (an SVG rect refuses a negative width)
       const band = Math.max(0, (width - left - right) / count);
       const fitted = vis.map((b) => fitLabel(bandLabel(b), Math.max(24, band - 6), PX, 2));
-      const bottom = Math.max(...fitted.map((f) => f.lines.length)) * LINE + 10;
-      const y0 = titleRow + valueRow;
-      const y1 = Math.max(y0 + 40, h - bottom);
+      // a group shares its band out in slots, one for each member of the largest group; a plain chart has a bar to a band
+      const slotW = band * slots(most).size;
+      const barW = grouped ? Math.max(0, Math.min(slotW * 0.84, 56)) : Math.max(0, Math.min(band * 0.62, 56));
+      // grouped members are named on a row under their bars, above the group labels, when a slot has room for at least a letter (m4)
+      const memberRow = grouped && data.some((d) => memberName(d, slotW - 2) !== '') ? LINE + 3 : 0;
+      const bottom = Math.max(...fitted.map((f) => f.lines.length)) * LINE + 10 + memberRow;
+      // a dot is as thick as a bar: the value axis is inset by its radius at both ends (MJ1), and the labels under it keep their place
+      const inset = anyDot ? barW / 2 : 0;
+      const y0 = titleRow + valueRow + inset;
+      const y1 = Math.max(y0 + 40, h - bottom - inset);
+      const yl = y1 + inset;
       const ticks = niceTicks(lo, hi, y1 - y0, LINE, 6, resolution);
       const t0 = ticks[0];
       const t1 = ticks[ticks.length - 1];
       tickLabels = formatTicks(ticks, lang, fmt);
       const sy = (v: number) => y1 - ((v - t0) / (t1 - t0 || 1)) * (y1 - y0);
-      // a group shares its band out in slots, one for each member of the largest group; a plain chart has a bar to a band
-      const slotW = band * slots(most).size;
-      const barW = grouped ? Math.max(0, Math.min(slotW * 0.84, 56)) : Math.max(0, Math.min(band * 0.62, 56));
       // value labels wider than a slot are set on two rows, alternately, so neighbours do not run into each other
       const crowded = grouped && values && widestLabel(valueLabels, PX) > slotW - 2;
       const centre = (it: (typeof items)[number]) => left + band * it.kb + (grouped ? band * (slots(it.c).start + (it.j + 0.5) * slots(it.c).size) : band / 2);
@@ -392,7 +441,7 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
             b.group !== undefined ? (
               <g key={`grp${s0 + kb}`} data-group={b.group}>
                 <title>{bandLabel(b)}</title>
-                <Lines x={left + band * kb + band / 2} y={y1 + LINE + 2} lines={fitted[kb].lines} anchor="middle" fill="var(--color-fg)" />
+                <Lines x={left + band * kb + band / 2} y={yl + LINE + 2 + memberRow} lines={fitted[kb].lines} anchor="middle" fill="var(--color-fg)" />
               </g>
             ) : null,
           )}
@@ -406,17 +455,24 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
             const ya = ex ? sy(ex.a) : sy(0);
             const yb = ex ? sy(ex.b) : ya;
             const f = fitted[kb];
+            const member = memberName(d, slotW - 2);
             return (
               <g key={d.id} data-bar={d.id} data-cursor={cursor === i ? '1' : undefined} {...interactive(d)}>
                 <title>{[fullName(d), valueLabels[i], pick(d.hint, lang), endsText[i]].filter(Boolean).join(': ')}</title>
-                {ex && ex.dot && <circle cx={cx} cy={ya} r={barW / 2} fill={colour(d)} />}
-                {ex && !ex.dot && <rect x={cx - barW / 2} y={Math.min(ya, yb)} width={barW} height={Math.max(1, Math.abs(yb - ya))} rx={2} fill={colour(d)} />}
+                {ex && ex.dot && <circle cx={cx} cy={ya} r={barW / 2} fill={colour(d)} {...outline(d)} />}
+                {ex && !ex.dot && <rect x={cx - barW / 2} y={Math.min(ya, yb)} width={barW} height={Math.max(1, Math.abs(yb - ya))} rx={2} fill={colour(d)} {...outline(d)} />}
                 {values && (
                   <text x={cx} y={Math.min(ya, yb) - 5 - (ex?.dot ? barW / 2 : 0) - (crowded && it.j % 2 === 1 ? LINE : 0)} textAnchor="middle" fontSize={PX} fill={ok ? 'var(--color-fg)' : 'var(--color-fg-faint)'} fontStyle={ok ? undefined : 'italic'} style={{ fontFamily: 'var(--font-sans)', fontVariantNumeric: 'tabular-nums' }}>
                     {valueLabels[i]}
                   </text>
                 )}
-                {!d.group && <Lines x={cx} y={y1 + LINE + 2} lines={f.lines} anchor="middle" fill={d.highlight ? 'var(--color-fg)' : 'var(--color-fg-subtle)'} />}
+                {!d.group && <Lines x={cx} y={yl + LINE + 2} lines={f.lines} anchor="middle" fill={d.highlight ? 'var(--color-fg)' : 'var(--color-fg-subtle)'} />}
+                {member && (
+                  <text data-member="" x={cx} y={yl + LINE + 2} textAnchor="middle" fontSize={PX} fill="var(--color-fg-subtle)" style={{ fontFamily: 'var(--font-sans)' }}>
+                    {member}
+                  </text>
+                )}
+                {hitArea && <rect data-bar-hit="" x={cx - (grouped ? slotW : band) / 2} y={0} width={grouped ? slotW : band} height={h} fill="transparent" />}
               </g>
             );
           })}
@@ -441,7 +497,7 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
     ];
     const rows = data.map((d, i) => {
       const e = barExtent(d.value, d.span);
-      const end = (v: number | undefined) => (e && v !== undefined ? formatNumber(v, lang, fmt) : '');
+      const end = (v: number | undefined) => (e && v !== undefined ? formatNumber(v, lang, fmtOf(d)) : '');
       return [...(grouped ? [d.group ? pick(d.group.label, lang) : ''] : []), pick(d.label, lang), valueLabels[i], ...(floating ? [end(e?.a), end(e?.b)] : []), pick(d.hint, lang)];
     });
     let low = -1;
@@ -452,7 +508,15 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
       if (high < 0 || d.value > (data[high].value as number)) high = i;
     });
     const withUnit = (i: number) => `${valueLabels[i]}${unit ? `${NBSP}${unit}` : ''}`;
+    // a floating chart states its first and its last ends (a bridge's opening and closing totals, a waterfall's start and its total), not its
+    // lowest and highest value, which compare a step with a total (re-review of 0.19.0, m5)
+    const drawnExtents = data.map((d) => barExtent(d.value, d.span));
+    const firstAt = drawnExtents.findIndex((e) => e !== null);
+    const lastAt = drawnExtents.length - 1 - [...drawnExtents].reverse().findIndex((e) => e !== null);
+    const endOf = (i: number, v: number) => ({ text: `${formatNumber(v, lang, fmtOf(data[i]))}${unit ? `${NBSP}${unit}` : ''}`, at: fullName(data[i]) });
+    const ends = floating && firstAt >= 0 ? { first: endOf(firstAt, drawnExtents[firstAt]!.a), last: endOf(lastAt, drawnExtents[lastAt]!.b) } : {};
     const summary = chartSummary(lang, {
+      ...ends,
       kind: 'bars',
       name,
       count: n,

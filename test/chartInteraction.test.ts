@@ -9,6 +9,7 @@ import {
   countOverlaps,
   ellipsize,
   placeXLabel,
+  placeYLabel,
   brushWindow,
   categoryAt,
   chartSummary,
@@ -477,4 +478,47 @@ test('countOverlaps and ellipsize', () => {
   assert.equal(countOverlaps([{ x0: 0, x1: 10, y0: 0, y1: 10 }, { x0: 10, x1: 20, y0: 0, y1: 10 }]), 0, 'touching edges do not overlap');
   assert.equal(ellipsize('Regulatory', 4), 'Regu…');
   assert.equal(ellipsize('Reg ulatory', 3), 'Reg…');
+});
+
+// ---- the re-review of 0.19.0: MJ2, m1, m5 ----
+
+test('clipExtent with all (a floating chart): a plain bar from zero is cut to the axis range too, and one wholly outside draws nothing', () => {
+  assert.deepEqual(clipExtent(barExtent(120), 100, 140, true), { a: 100, b: 120, dot: false, given: false });
+  assert.equal(clipExtent(barExtent(50), 100, 140, true), null);
+  assert.deepEqual(clipExtent(barExtent(120), 100, 140), { a: 0, b: 120, dot: false, given: false }, 'without all, a plain bar is left alone');
+});
+
+test('chartSummary of floating bars: the first and the last ends, in both languages, instead of the lowest and the highest', () => {
+  const p = { kind: 'bars' as const, name: 'Bridge', count: 4, yLabel: 'Capital (USD m)', low: { text: '-5', at: 'Down' }, high: { text: '120', at: 'Open' }, first: { text: '120 USD m', at: 'Open' }, last: { text: '125 USD m', at: 'Close' } };
+  assert.equal(chartSummary('en', p), 'Bar chart, Bridge: 4 bars. Capital (USD m): from 120 USD m at Open to 125 USD m at Close.');
+  assert.equal(chartSummary('es', p), 'Gráfico de barras, Bridge: 4 barras. Capital (USD m): de 120 USD m en Open a 125 USD m en Close.');
+});
+
+const YSPACE = { py: 100, left: 0, right: 330, top: 0, bottom: 280, gap: 4, rowH: 14, textH: 11, measure: (t: string) => t.length * 6 };
+
+test('placeYLabel: with nothing in the way the label is at the right end above its line (below it at the top), as before 0.19.0', () => {
+  assert.deepEqual(placeYLabel('limit', { ...YSPACE, boxes: [] }), { text: 'limit', x0: 330 - 4 - 30, y: 96, w: 30, cut: false });
+  assert.deepEqual(placeYLabel('limit', { ...YSPACE, py: 5, boxes: [] })?.y, 5 + 4 + 11);
+});
+
+test('placeYLabel: a label in the way moves it left of it, then to another row; it never lies over a placed label', () => {
+  const first = { x0: 296, x1: 326, y0: 85, y1: 96 };
+  const at = placeYLabel('limit', { ...YSPACE, boxes: [first] })!;
+  assert.deepEqual([at.x0, at.y], [296 - 8 - 30, 96]);
+  // three long labels one pixel apart (the m1 form): each lies clear of the others
+  const boxes: { x0: number; x1: number; y0: number; y1: number }[] = [];
+  for (const [py, t] of [[100, 'Upper zone limit of the board'], [101, 'Supervisory early-warning level'], [102, 'Lower zone limit of the board']] as const) {
+    const p = placeYLabel(t, { ...YSPACE, right: 330, py, boxes })!;
+    const box = { x0: p.x0, x1: p.x0 + p.w, y0: p.y - 11, y1: p.y };
+    assert.ok(!boxes.some((b) => boxesOverlap(b, box)), `${p.text} at ${JSON.stringify(box)} over ${JSON.stringify(boxes)}`);
+    boxes.push(box);
+  }
+  assert.equal(countOverlaps(boxes), 0);
+});
+
+test('placeYLabel: a label that fits no place is cut with an ellipsis; one that fits nowhere is not written', () => {
+  const long = 'Regulatory liquidity window of thirty days';
+  const at = placeYLabel(long, { ...YSPACE, right: 150, boxes: [] })!;
+  assert.ok(at.cut && at.text.endsWith('…') && at.x0 >= 4 && at.x0 + at.w <= 146 + 1e-9, at.text);
+  assert.equal(placeYLabel(long, { ...YSPACE, boxes: [{ x0: 0, x1: 330, y0: 0, y1: 280 }] }), null);
 });
