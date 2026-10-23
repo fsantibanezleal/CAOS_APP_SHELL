@@ -59,6 +59,27 @@ const PLANTS = [
   { id: 'named-ticks-repeat', check: 'G6', re: /named x tick label\(s\) repeat another tick's label \("deduplicated"\)/, opts: { routes: '/app' } },
   // the review of 0.18.0 (M1): a name used by the first and the last tick, not neighbours, is a repeat too
   { id: 'named-ticks-far', check: 'G6', re: /named x tick label\(s\) repeat another tick's label \("random"\)/, opts: { routes: '/app' } },
+  // shell 0.19.0 (G20): every chart is a tab stop with a name, a table of its values and a reset; a chart that turns zoom off says why
+  { id: 'bar-repeat-ticks', check: 'G6', re: /axis tick label\(s\) repeat the label before them/, opts: { routes: '/app' } },
+  { id: 'chart-not-focusable', check: 'G20', re: /\(line chart\): the plot is not a tab stop \(tabindex is below 0\)/, opts: { routes: '/app' } },
+  { id: 'chart-no-name', check: 'G20', re: /the plot has no accessible name/, opts: { routes: '/app' } },
+  { id: 'chart-no-table', check: 'G20', re: /the plot is not linked to a data table/, opts: { routes: '/app' } },
+  { id: 'chart-no-reset', check: 'G20', re: /the \+ key does not zoom the chart/, opts: { routes: '/app' } },
+  // the review of 0.19.0 (m3, m4, M5): the control hidden, the `0` key alone swallowed, the arrows, the brush, and a reason empty in one language
+  { id: 'chart-reset-hidden', check: 'G20', re: /a zoomed chart shows 0 reset controls/, opts: { routes: '/app' } },
+  { id: 'chart-no-zero', check: 'G20', re: /the 0 key does not reset the zoom/, opts: { routes: '/app' } },
+  { id: 'chart-no-arrows', check: 'G20', re: /the arrow keys do not move the crosshair/, opts: { routes: '/app' } },
+  { id: 'chart-dead-brush', check: 'G20', re: /a drag across the plot does not zoom the chart \(the brush is dead\)/, opts: { routes: '/app' } },
+  { id: 'zoom-off-empty', check: 'G20', re: /zoom is turned off with a reason of fewer than 12 letters and digits \(""\)/, opts: { routes: '/app', langs: 'es' } },
+  { id: 'zoom-off-unexplained', check: 'G20', re: /zoom is turned off with a reason of fewer than 12 letters and digits \("no"\)/, opts: { routes: '/app' } },
+  // shell 0.19.0 (D16-21): marks that overlap fail G20 through data-mark-overlaps; the floating and the grouped bars of the fixture are driven (the
+  // keyboard walks every bar, the readout reads the ends and the group, the legend is shown)
+  // m1 (re-review of 0.19.0): the message names the labels that overlap and their kind, x or y
+  { id: 'mark-overlap', check: 'G20', re: /2 pair\(s\) of mark label\(s\) overlap \(data-mark-overlaps="2"\): "Upper limit" \(y\) lies over "Early warning" \(y\); "Early warning" \(y\) lies over "peak" \(x\)/, opts: { routes: '/app' } },
+  { id: 'bar-keys-skip', check: 'G20', re: /\(bars chart\): the keyboard walk reached \d+ of \d+ bars/, opts: { routes: '/app' } },
+  { id: 'bar-ends-hidden', check: 'G20', re: /\(bars chart\): the readout of \d+ floating bar\(s\) does not read its two ends/, opts: { routes: '/app' } },
+  { id: 'bar-group-unread', check: 'G20', re: /\(bars chart\): the readout of \d+ grouped bar\(s\) does not read its group/, opts: { routes: '/app' } },
+  { id: 'bar-legend-hidden', check: 'G20', re: /\(bars chart\): the legend is not shown: the chart declares 3 entries and 0 are visible/, opts: { routes: '/app' } },
   { id: 'never-ready', check: 'G7', re: /data-state="loading"/, opts: { routes: '/app,/benchmark', settleMs: 3000 } },
   { id: 'raf-loop', check: 'G8', re: /animation frames/, opts: { routes: '/app' } },
   { id: 'mutation-loop', check: 'G8', re: /DOM mutations/, opts: { routes: '/app' } },
@@ -276,6 +297,11 @@ const LEGIT = [
   { id: 'legit-select-three-lines', opts: { routes: '/app', requireFocus: true } },
   { id: 'legit-engine-subtabs', opts: { routes: '/app,/implementation' } },
   { id: 'legit-method-view-tabs', opts: { routes: '/app,/methodology' } },
+  // shell 0.19.0: a chart that turns zoom off with a reason passes every check and is listed among the waivers
+  { id: 'legit-zoom-off', opts: { routes: '/app' }, waiver: /whole epidemic curve is the finding/ },
+  // the re-review of 0.19.0 and the CAOS_Contraste adoption (U16-F8): floating bars that take a choice beside a plain total (G5, G20's readout of the
+  // ends), two short horizontal bar charts that fill their card (G20's brush), and two long reference-line labels at one level (G20's mark labels)
+  { id: 'legit-bar-adoption', opts: { routes: '/app' } },
 ];
 
 /** A static server with an SPA fallback: every unknown path answers index.html with 200 (the G4 plant). */
@@ -373,6 +399,7 @@ describe('a legitimate page passes the gate', { concurrency: 3 }, () => {
       const r = await runGate({ ...QUICK, langs: 'en,es', serve: dir, expectBrand: BRAND, out: join(work, `out-${p.id}`), ...p.opts });
       assert.equal(r.failures.length, 0, `the legitimate page ${p.id} failed:
 ${show(r)}`);
+      if (p.waiver) assert.ok((r.waivers ?? []).some((w) => w.floor === 'chart zoom off' && w.valid && p.waiver.test(w.reason)), `the waiver of ${p.id} is not listed: ${JSON.stringify(r.waivers)}`);
     });
   }
 });

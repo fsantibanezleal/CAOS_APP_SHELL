@@ -68,6 +68,91 @@ function plantDom(mutate: () => void): () => void {
 }
 const WORDS = 'one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty';
 function flipPlant(plant: string): (() => void) | undefined {
+  // shell 0.19.0 (G20): a chart that loses a part of Tier A after the shell drew it (a product script, a stylesheet): its tab stop, its name, its data
+  // table, or a keyboard handler of the product that takes the zoom key
+  if (plant === 'chart-not-focusable' || plant === 'chart-no-name' || plant === 'chart-no-table' || plant === 'chart-no-reset' || plant === 'chart-no-zero' || plant === 'chart-no-arrows' || plant === 'chart-dead-brush') {
+    return plantDom(() => {
+      for (const stop of document.querySelectorAll<HTMLElement>('[data-chart-focus]')) {
+        if (plant === 'chart-not-focusable') stop.removeAttribute('tabindex');
+        if (plant === 'chart-no-name') stop.removeAttribute('aria-label');
+        if (plant === 'chart-no-table') stop.removeAttribute('aria-details');
+        if (stop.dataset.swallow) continue;
+        // a product handler that takes a key (every key, only `0`, only the arrows) or the press that starts the brush, before the shell sees it
+        const swallow = (types: string[], keep: (e: Event) => boolean) => {
+          stop.dataset.swallow = '1';
+          for (const type of types) stop.addEventListener(type, (e) => keep(e) && e.stopPropagation(), true);
+        };
+        if (plant === 'chart-no-reset') swallow(['keydown'], () => true);
+        if (plant === 'chart-no-zero') swallow(['keydown'], (e) => (e as KeyboardEvent).key === '0');
+        if (plant === 'chart-no-arrows') swallow(['keydown'], (e) => (e as KeyboardEvent).key.startsWith('Arrow'));
+        if (plant === 'chart-dead-brush') swallow(['mousedown', 'pointerdown'], () => true);
+      }
+    });
+  }
+  // shell 0.19.0 (D16-21), the bar forms: a product handler that takes every second arrow key (the keyboard skips bars), a readout that loses a
+  // floating bar's ends or a group's name (a product script rewrites its text), a stylesheet that hides the legend
+  if (plant === 'bar-keys-skip') {
+    return plantDom(() => {
+      for (const stop of document.querySelectorAll<HTMLElement>('.caos-bars[data-chart-focus]')) {
+        if (stop.dataset.swallow) continue;
+        stop.dataset.swallow = '1';
+        let n = 0;
+        stop.addEventListener('keydown', (e) => {
+          if ((e as KeyboardEvent).key === 'ArrowRight' && ++n % 2 === 0) e.stopPropagation();
+        }, true);
+      }
+    });
+  }
+  if (plant === 'bar-ends-hidden' || plant === 'bar-group-unread') {
+    // the readout's text node is rewritten by React in place (a change of characterData), so this watches that too
+    const rewrite = () => {
+      for (const p of document.querySelectorAll('.caos-bars-readout')) {
+        const node = p.firstChild;
+        if (!node || node.nodeType !== 3) continue;
+        const text = node.nodeValue ?? '';
+        const next = plant === 'bar-ends-hidden' ? text.replace(/ · (from|de) .*$/, '') : text.replace(/^[^,:]+, /, '');
+        if (next !== text) node.nodeValue = next;
+      }
+    };
+    const watch = { subtree: true, childList: true, characterData: true } as const;
+    const observer = new MutationObserver(() => {
+      observer.disconnect();
+      rewrite();
+      observer.observe(document.body, watch);
+    });
+    rewrite();
+    observer.observe(document.body, watch);
+    return () => observer.disconnect();
+  }
+  // m1 (re-review of 0.19.0): the shell places every mark label clear of the others, so an overlap is planted as a chart that declares one (a
+  // product that draws its own labels over the canvas): a y label over a y label and an x label over a y label
+  if (plant === 'mark-overlap') {
+    const boxes = JSON.stringify([
+      { k: 'y', t: 'Upper limit', x0: 100, y0: 10, x1: 200, y1: 21 },
+      { k: 'y', t: 'Early warning', x0: 150, y0: 12, x1: 260, y1: 23 },
+      { k: 'x', t: 'peak', x0: 240, y0: 14, x1: 270, y1: 25 },
+    ]);
+    return plantDom(() => {
+      const host = document.querySelector('.caos-chart[data-mark-overlaps]');
+      if (host && host.getAttribute('data-mark-boxes') !== boxes) {
+        host.setAttribute('data-mark-boxes', boxes);
+        host.setAttribute('data-mark-overlaps', '2');
+      }
+    });
+  }
+  if (plant === 'bar-legend-hidden') {
+    const style = document.createElement('style');
+    style.textContent = '.caos-bars-legend { display: none !important; }';
+    document.head.append(style);
+    return () => style.remove();
+  }
+  // the reset control hidden by a product stylesheet: the chart zooms and the reader is never shown the way back
+  if (plant === 'chart-reset-hidden') {
+    const style = document.createElement('style');
+    style.textContent = '[data-chart-reset] { display: none !important; }';
+    document.head.append(style);
+    return () => style.remove();
+  }
   // shell 0.17.0 round 3: a product stylesheet that clamps the case select's text to two lines (the name is three lines; `select-focus-rail` clamps
   // only the Focus rail's), and a display that shows another name than the one the native select holds
   if (plant === 'select-cut' || plant === 'select-cut-token' || plant === 'select-focus-rail') {
@@ -340,9 +425,19 @@ function ModelView({ sim }: { sim: Sim }) {
             y={{ label: { en: 'Share', es: 'Fracción' } }}
             series={[{ label: { en: 'Planted', es: 'Plantada' }, values: [0.1, 0.2, 0.4, 0.8], color: '--color-accent' }]}
           />
+        ) : PLANT === 'bar-repeat-ticks' ? (
+          // shell 0.19.0: a bar chart whose value axis is formatted by one significant digit: the tick at 1.5 reads "2" beside the tick at 2,
+          // and the bar chart declares its repeated labels for G6 as the line chart does
+          <BarChart
+            title={{ en: 'Planted bars', es: 'Barras plantadas' }}
+            height="fill"
+            axis={{ label: { en: 'Share', es: 'Fracción' }, format: { digits: 1 } }}
+            data={[0.5, 1, 1.5, 2].map((value, i) => ({ id: `b${i}`, label: `Bar ${i + 1}`, value }))}
+          />
         ) : (
           <UPlotChart
             height="fill"
+            zoomOff={PLANT === 'zoom-off-unexplained' ? 'no' : PLANT === 'zoom-off-empty' ? { en: 'The whole epidemic curve is the finding and must stay in view', es: '' } : PLANT === 'legit-zoom-off' ? { en: 'The whole epidemic curve is the finding and must stay in view', es: 'La curva epidémica completa es el hallazgo y debe verse entera' } : undefined}
             x={{ values: sim.t, label: { en: 'Day', es: 'Día' }, unit: 'd' }}
             y={{ label: { en: 'People', es: 'Personas' } }}
             series={[
@@ -351,6 +446,16 @@ function ModelView({ sim }: { sim: Sim }) {
               { label: { en: 'Recovered', es: 'Recuperados' }, values: sim.R, color: '--color-good' },
             ]}
             marks={[{ x: sim.peakDay, label: { en: 'peak', es: 'pico' } }]}
+            // shell 0.19.0 (G20): two reference lines at one level whose labels are each wider than the plot's half; since the re-review's m1 the second
+            // is placed on another row or cut with an ellipsis, never over the first, so the page passes (the legit page `legit-bar-adoption`)
+            yMarks={
+              PLANT === 'legit-bar-adoption'
+                ? [
+                    { y: Math.max(...sim.S) * 0.5, label: { en: 'the planted level that carries a very long first label of the reference line, written out in full so that it takes more than half of the plot whatever its size', es: 'el nivel plantado que lleva una primera etiqueta muy larga de la línea de referencia, escrita completa para que ocupe más de la mitad del gráfico sea cual sea su tamaño' } },
+                    { y: Math.max(...sim.S) * 0.5, label: { en: 'and a second label as long as the first one, at the very same level of the plot, so that the two cannot both be placed without lying over one another', es: 'y una segunda etiqueta tan larga como la primera, en el mismo nivel del gráfico, de modo que las dos no puedan ubicarse sin quedar una sobre otra' } },
+                  ]
+                : undefined
+            }
           />
         )}
       </PlotCard>
@@ -606,6 +711,110 @@ function ValidationView({ sim, focusOn }: { sim: Sim; focusOn?: boolean }) {
   );
 }
 
+/** The bar forms of 0.19.0 (D16-21): a bridge from one total to another through signed steps (floating bars, the totals as dots on an axis that does
+ * not start at zero) and the provision of three segments under three regimes (grouped bars with a legend). */
+function BarFormsView() {
+  const { stateKey } = useWorkbenchState();
+  const lang = useShellLang();
+  const bridge = [
+    { id: 'open', label: { en: 'Opening', es: 'Apertura' }, value: 120, span: [120, 120] as [number, number], tone: 'accent' as const },
+    { id: 'a', label: { en: 'Inflows', es: 'Entradas' }, value: 15, span: [120, 135] as [number, number], tone: 'good' as const },
+    { id: 'b', label: { en: 'Outflows', es: 'Salidas' }, value: -22, span: [135, 113] as [number, number], tone: 'bad' as const },
+    { id: 'c', label: { en: 'Transfers', es: 'Traspasos' }, value: 6, span: [113, 119] as [number, number], tone: 'good' as const },
+    { id: 'close', label: { en: 'Closing', es: 'Cierre' }, value: 119, span: [119, 119] as [number, number], tone: 'accent' as const },
+  ];
+  const segments = [
+    { id: 'retail', label: { en: 'Retail', es: 'Minorista' } },
+    { id: 'corp', label: { en: 'Corporate', es: 'Corporativo' } },
+    { id: 'sov', label: { en: 'Sovereign', es: 'Soberano' } },
+  ];
+  const regimes = [
+    { id: 'base', label: { en: 'Base', es: 'Base' }, tone: 'accent' as const },
+    { id: 'stress', label: { en: 'Stress', es: 'Estrés' }, tone: 'warn' as const },
+    { id: 'severe', label: { en: 'Severe', es: 'Severo' }, tone: 'good' as const },
+  ];
+  const provision = [[12, 18, 25], [30, 41, 55], [8, 9, 14]];
+  const grouped = segments.flatMap((g, gi) => regimes.map((r, ri) => ({ id: `${g.id}-${r.id}`, label: r.label, group: g, value: provision[gi][ri], tone: r.tone })));
+  if (PLANT === 'legit-bar-adoption') {
+    // the forms CAOS_Contraste adopted from 0.19.0 that the gate once failed (U16-F8): floating bars that take a choice beside a plain total (G5's
+    // pointer reach, F8-1; G20's readout of the two ends, F8-2), and two short horizontal charts of three and four bars that fill their card
+    // (G20's scripted brush, F8-3: C21 four-fifths with a threshold bar on [0, 1.1], filling its card; C21 situation with no range, at the
+    // least height of three rows over its table)
+    return (
+      <ViewsRow shares={[1, 1, 1]}>
+        <PlotCard fill title={{ en: 'A bridge from a plain total', es: 'Un puente desde un total simple' }} lane="live" provenance="synthetic" dataKey={stateKey}>
+          <BarChart
+            title={{ en: 'A bridge from a plain total', es: 'Un puente desde un total simple' }}
+            height="fill"
+            axis={{ label: { en: 'Capital', es: 'Capital' }, unit: { en: 'USD m', es: 'MUSD' }, format: { decimals: 0 }, range: [100, 140] }}
+            data={[
+              { id: 'plain', label: { en: 'Opening total', es: 'Total de apertura' }, value: 125, tone: 'neutral' as const },
+              ...bridge.slice(1, 4),
+              { id: 'close', label: { en: 'Closing', es: 'Cierre' }, value: 119, span: [119, 119] as [number, number], tone: 'accent' as const },
+            ]}
+            onSelect={() => undefined}
+          />
+        </PlotCard>
+        <PlotCard fill title={{ en: 'Rate over the highest rate', es: 'Tasa sobre la mayor tasa' }} lane="live" provenance="synthetic" dataKey={stateKey}>
+          <BarChart
+            title={{ en: 'Rate over the highest rate', es: 'Tasa sobre la mayor tasa' }}
+            height="fill"
+            axis={{ label: { en: 'Rate over the highest group rate', es: 'Tasa sobre la mayor tasa de grupo' }, format: { decimals: 2 }, range: [0, 1.1] }}
+            data={[
+              { id: 'g1', label: { en: 'Group A', es: 'Grupo A' }, value: 1, tone: 'good' as const, highlight: true },
+              { id: 'g2', label: { en: 'Group B', es: 'Grupo B' }, value: 0.74, tone: 'bad' as const },
+              { id: 'g3', label: { en: 'Group C', es: 'Grupo C' }, value: 0.91, tone: 'good' as const },
+              { id: 'line', label: { en: 'Four-fifths line (employment benchmark)', es: 'Línea de cuatro quintos (referencia laboral)' }, value: 0.8, tone: 'neutral' as const },
+            ]}
+          />
+        </PlotCard>
+        <PlotCard fill title={{ en: 'Complainants, cases and significant cases', es: 'Demandantes, casos y casos significativos' }} lane="live" provenance="synthetic" dataKey={stateKey}>
+          {/* the chart over its table, at the least height of three rows (Contraste's LabelledOverTable with barMin(3)) */}
+          <div style={{ height: 120, flex: 'none' }}>
+          <BarChart
+            title={{ en: 'Complainants, cases and significant cases', es: 'Demandantes, casos y casos significativos' }}
+            height="fill"
+            axis={{ label: { en: 'Applications', es: 'Solicitudes' }, format: { decimals: 0 } }}
+            data={[
+              { id: 'complainants', label: { en: 'Complainants', es: 'Demandantes' }, value: 41 },
+              { id: 'cases', label: { en: 'Cases tested', es: 'Casos evaluados' }, value: 39 },
+              { id: 'significant', label: { en: 'Significant cases', es: 'Casos significativos' }, value: 6, tone: 'warn' as const },
+            ]}
+          />
+          </div>
+          <table className="caos-table">
+            <tbody>
+              <tr><td>{lang === 'es' ? 'Vecinos por grupo (k)' : 'Neighbours per group (k)'}</td><td>5</td></tr>
+              <tr><td>{lang === 'es' ? 'Nivel (alfa)' : 'Level (alpha)'}</td><td>{lang === 'es' ? '0,05' : '0.05'}</td></tr>
+            </tbody>
+          </table>
+        </PlotCard>
+      </ViewsRow>
+    );
+  }
+  return (
+    <ViewsRow shares={[1, 1]}>
+      <PlotCard fill title={{ en: 'A bridge between two totals', es: 'Un puente entre dos totales' }} lane="live" provenance="synthetic" dataKey={stateKey}>
+        <BarChart
+          title={{ en: 'A bridge between two totals', es: 'Un puente entre dos totales' }}
+          height="fill"
+          axis={{ label: { en: 'Capital', es: 'Capital' }, unit: { en: 'USD m', es: 'MUSD' }, format: { decimals: 0 }, range: [100, 140] }}
+          data={bridge}
+        />
+      </PlotCard>
+      <PlotCard fill title={{ en: 'Provision by segment under three regimes', es: 'Provisión por segmento bajo tres regímenes' }} lane="live" provenance="synthetic" dataKey={stateKey}>
+        <BarChart
+          title={{ en: 'Provision by segment under three regimes', es: 'Provisión por segmento bajo tres regímenes' }}
+          height="fill"
+          axis={{ label: { en: 'Provision', es: 'Provisión' }, unit: { en: 'USD m', es: 'MUSD' }, format: { decimals: 0 } }}
+          data={grouped}
+          legend={regimes.map((r) => ({ tone: r.tone, label: r.label }))}
+        />
+      </PlotCard>
+    </ViewsRow>
+  );
+}
+
 /** The forms of the chart added in 0.17.0 (CAOS_APP_SHELL#65): a log x axis labelled at its decades, a draggable reference
  * line, measured points on their own x, and marks that keep apart on a log axis. A synthetic size distribution (Rosin-Rammler). */
 function FormsView() {
@@ -746,6 +955,7 @@ function CompareView({ peaks }: { peaks: { id: string; label: string; peak: numb
     <PlotCard fill title={{ en: 'Peak infected by variant', es: 'Pico de infectados por variante' }} lane="live" provenance="synthetic" dataKey={useWorkbenchState().stateKey}>
       <BarChart
         title={{ en: 'Peak infected by variant', es: 'Pico de infectados por variante' }}
+        zoomOff={PLANT === 'zoom-off-unexplained' ? 'no' : undefined}
         height="fill"
         axis={{ label: { en: 'Peak infected', es: 'Pico de infectados' }, unit: { en: 'people', es: 'personas' }, format: { decimals: 0 } }}
         data={peaks.map((p, i) => ({ id: p.id, label: p.label, value: p.peak, highlight: i === 0 }))}
@@ -904,6 +1114,8 @@ function Workbench() {
         groups={[
           { id: 'model', label: { en: 'Model', es: 'Modelo' }, content: <ModelView sim={sim} /> },
           { id: 'validation', label: { en: 'Validation', es: 'Validación' }, content: <ValidationView sim={sim} focusOn={focusOn} /> },
+          // the bar forms of 0.19.0 (D16-21): a floating bar (a bridge between two totals) and grouped bars with a legend; G20 drives both
+          { id: 'bars', label: { en: 'Bar forms', es: 'Formas de barras' }, content: <BarFormsView /> },
           { id: 'pending', label: { en: 'Pending', es: 'Pendiente' }, content: <PendingView /> },
         ]}
         group={PLANT === 'focus-drops-group' && focusOn ? 'model' : undefined}
