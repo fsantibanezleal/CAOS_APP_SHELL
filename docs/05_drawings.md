@@ -26,10 +26,17 @@ rebuilt on a theme or language change; compared by value, so a parent re-render 
   alignment (uPlot leaves the canvas right-aligned after its last axis, which put the template's "peak" label on the
   wrong side of its line), on the side of the line where it fits inside the plot, on the next row when it would
   overlap the label before it, with a halo in the surface colour. A mark outside the x range is not drawn.
+- **Mark labels that avoid each other** (0.19.0, SHC-094, SHC-095): the labels of `marks` and of `yMarks` share one set of placed boxes. An x label goes
+  right of its line on the first row as before, and one row down for each label of either kind in the way, never below the plot; when no row clears it
+  the label is cut with an ellipsis and its whole text stays in the plot's title, the readout and a table of marks (`aria-details`). A y label is placed
+  against the same boxes (`placeYLabel`): at the right end of its line, above it (below it at the top) when nothing is in the way, else left of the
+  label in the way, then on the other side of its line, then one row further; when no place clears it is cut with an ellipsis and kept whole in the
+  same places, never drawn over another label. An x mark with an empty label (the later years of a run named once) draws its line only. The host
+  declares `data-mark-overlaps` (0 when none overlap, which G20 reads), `data-mark-boxes` and `data-mark-cut`.
 - **Reference lines** (`yMarks: [{ y, label }]`, 0.10.0) are drawn by `drawYMarks`: a dotted line across the plot at
   a y value (a null model's constant prediction, a target, a limit), its label at the right end above the line (below
-  it when the line runs along the top), inside the plot, haloed; a label that would overlap the one before it moves
-  left of it. A line outside a given `y.range` is not drawn. The host declares `data-y-marks`. Since 0.11.0
+  it when the line runs along the top), inside the plot, haloed; a label that would overlap one placed before it moves
+  left of it, to the other side of its line or a row further, or is cut with an ellipsis (0.19.0). A line outside a given `y.range` is not drawn. The host declares `data-y-marks`. Since 0.11.0
   (CAOS_APP_SHELL#94) a line has a `tone`, which colours the line and its label (the line stays dotted): `warn` (the
   default, `--color-warn`, an amber threshold), `bad` (`--color-bad`, a red threshold), `good` (`--color-good`, a level
   to reach) and `neutral` (`--color-fg-subtle`, a level that is no alarm: a test's nominal size, "no bias"). On any
@@ -110,6 +117,31 @@ rebuilt on a theme or language change; compared by value, so a parent re-render 
   the selected case goes in a series of its own, larger and in its own colour, so the key says which it is.
 - **More than six series:** the rotation has six colours; from the seventh, a repeated colour is drawn dashed, in the
   plot and in the key, so no two series look the same (`seriesStyle`).
+- **Tier A, every chart (0.19.0).** The interactions the rubric asks of any analytical chart are on by default, with no change at a
+  call site (SHC-063 to SHC-073):
+  - *Zoom and pan.* The wheel zooms x around the pointer **while the chart holds the focus** (a click or a Tab gives it), and always
+    with Ctrl or Meta (a trackpad pinch arrives as Ctrl and wheel); a chart that does not hold the focus leaves the wheel to the page,
+    so a chart in a long document never traps the scroll, and a chart that cannot be zoomed never takes it. A mouse drag along x is
+    uPlot's brush (under 5 px it is a click); Shift with the drag pans; two fingers pinch and pan, and one finger pans a zoomed chart
+    (an unzoomed chart leaves the vertical scroll to the page: `touch-action: pan-y`). `zoomY` zooms both axes (a parity plot always
+    does). On a log axis the zoom is made in decades. The zoom survives a theme, a language and a size change and a parent that hands
+    in the same data as new arrays; new data starts from the full range.
+  - *Reset.* While the chart is zoomed a visible **Reset zoom** control shows under the plot (none while it is not); a double-click and
+    the keys `0` and Escape reset too. The host declares the range in view (`data-view-x`) and `data-zoomed`.
+  - *Keyboard.* The plot is one tab stop with an accessible name (`title`, else "y by x"). Left and Right (Up and Down too) move the
+    crosshair from point to point and the readout, a polite live region, follows; Home and End go to the first and last point; `+`
+    and `-` zoom around the crosshair; Shift with the arrows pans; `0` and Escape reset (Escape is not taken when the chart is not
+    zoomed); Enter chooses the point as a click does (`onPick`). The handle of a draggable line keeps its own keys.
+  - *Screen reader.* The plot is described (`aria-describedby`) by a visually hidden table of every plotted value (x and each series,
+    in their units and the page language, thinned to 1000 rows) and by a one-line summary: series, x range and the y extremes.
+  - *Opting out.* `zoomOff` takes the reason, in both languages when the page is bilingual (at least 12 letters and digits): the
+    wheel, the brush, the pinch and the zoom keys go, the crosshair, the table and the summary stay, and the gate lists the chart
+    among its waivers (a short reason fails G20). Nothing else of Tier A can be turned off.
+- **Axis titles never cut (0.19.0, SHC-081).** A rotated y title longer than the plot is high moves above the plot as a horizontal
+  line (`data-axis-title-moved="y"`), with its unit; an x title wider than the chart moves below it and wraps. Estimated before the
+  chart is built and checked on the built chart, which can only move a title out.
+- **Integer ticks (defect 21, 0.19.0).** `niceStepAt` and `niceTicks` take a resolution, so a step is a multiple of the least difference
+  the labels can show; `tickSteps` already did this for `UPlotChart`.
 
 ## The filling card's stage floor
 
@@ -145,6 +177,58 @@ Margins come from the labels, measured in the page's font; a category label is b
 only then shortened, with the whole label as its title; ticks are round and share one notation; values are written in
 the interface language; a missing value reads "not available" at the zero line, never a bar of zero. `tone` colours a
 bar by meaning; `highlight` marks the bar the reader is on (the others turn faint).
+
+**Tier A (0.19.0, SHC-074 to SHC-079).** The bar chart carries the same interactions, by category:
+
+- *Crosshair and readout.* The pointer over a bar, or the keyboard standing on it, draws a band on it and reads its label, value, unit
+  and hint in a polite live region under the chart (`data-cursor` on the bar). The arrows (Left, Right, Up, Down), Home and End step bar
+  by bar; Enter chooses the bar (`onSelect`). A bar that takes a choice is also a button of its own, reached by Tab after the chart.
+- *Zoom and pan by category.* The wheel while the chart holds the focus (Ctrl or Meta always), a brush along the bars, Shift with a
+  drag, a pinch, and the keys `+` and `-` show a window of whole bars (at least two; the host declares it in `data-window`); the chart
+  keeps its height, so the page does not move, and the value axis keeps its domain from zero. Shift with the arrows pans, a
+  double-click, the **Reset zoom** control and the keys `0` and Escape return to every bar. `zoomOff` turns it off with a reason, as
+  on `UPlotChart`.
+- *Screen reader.* One tab stop named by `title`, described by a visually hidden table (category, value, note) and a one-line summary.
+- *Counts.* A value axis of counts (whole values with no `decimals` asked for, or `decimals: 0`) ticks at whole numbers only, and one
+  with fixed decimals at multiples of their unit, so "0, 1, 1, 2, 2" cannot happen; the host declares the labels that repeat
+  (`data-ticks-repeat`, which an axis of significant digits can still produce) and the gate fails them under G6.
+- *Long titles.* The axis title wraps over as many lines as it needs, never cut.
+
+**Floating bars, grouped bars and a legend (0.19.0, SHC-090 to SHC-093).** The two forms the products drew by hand:
+
+```tsx
+// a bridge from one total to another through signed steps: `span` is the bar's two ends, `value` the number it states
+<BarChart
+  title={{ en: 'Capital bridge', es: 'Puente de capital' }}
+  axis={{ label: { en: 'Capital', es: 'Capital' }, unit: 'USD m', range: [100, 140] }}   // with a span the range is the axis as given
+  data={[
+    { id: 'open', label: 'Opening', value: 120, span: [120, 120], tone: 'accent' },       // a span of zero length is a dot
+    { id: 'in', label: 'Inflows', value: 15, span: [120, 135], tone: 'good' },
+    { id: 'out', label: 'Outflows', value: -22, span: [135, 113], tone: 'bad' },         // ends in any order: the same bar
+  ]}
+/>
+
+// provision by segment under three regimes: consecutive data with one group.id share a band
+<BarChart
+  title={...} axis={...} orientation="vertical"
+  data={segments.flatMap((g) => regimes.map((r) => ({ id: `${g.id}-${r.id}`, label: r.label, group: g, value: v(g, r), tone: r.tone })))}
+  legend={regimes.map((r) => ({ tone: r.tone, label: r.label }))}
+/>
+```
+
+| Prop | Meaning |
+|---|---|
+| `BarDatum.span?: [a, b]` | the bar's two ends on the value axis, in any order; without it the bar spans zero to `value`. `value` stays what the bar states: it is written at the bar (`values`), read in the readout and the table, which add the ends ("from a to b"; the table gains From and To). A span of zero length is a dot as thick as a bar; when a chart has a dot the value axis is inset by its radius at both ends, so a total at an end of `axis.range` is drawn whole with its value label, clear of the category labels. The axis covers every span; `axis.range` is then the axis as given (it may exclude zero), a span outside it is cut to it and one wholly outside draws nothing. A plain bar (no `span`) beside floating ones is cut to the same axis (it is never drawn from zero over the category labels) and reads its ends too, zero and its value, as the table writes them. A span with a missing end, or a missing `value`, draws nothing and reads "not available". The summary of a floating chart states its first and its last ends (a bridge's opening and closing totals, a waterfall's start and its total: "Capital (USD m): from 120 USD m at Opening to 119 USD m at Closing"), not its lowest and highest value. Host: `data-spans`. |
+| `BarDatum.group?: { id, label }` | consecutive data with the same `group.id` share one category band, side by side (vertical) or one under another (horizontal); the category axis prints the group label once and `label` names the member (read as "Retail, Stress: 18"). The table gains a Group column; the keyboard walks group by group, member by member; zoom, pan and brush are over whole groups (`data-window`, `data-groups`). Groups may differ in size: bars keep one width and a smaller group is centred. Each member is named on the drawing when its slot has room for a short label: the member label, else its first letters (`text[data-member]`), in a column between the group labels and the plot when horizontal and on a row under the bars when vertical, so the members are never told apart by colour alone; the legend keeps the tone. |
+| `BarDatum.format?: FormatOptions` | the number format of this bar, over `axis.format`: its value label, its readout, its ends and its table cells (a layer stated to three decimals in a stack written to two). The axis ticks keep `axis.format`. |
+| `BarChartProps.legend?: { tone, label }[]` | what each tone means, as a list under the bars (`data-legend`); a tone no bar uses is drawn anyway and warned about in development. |
+
+A highlighted bar (`highlight`) that carries a `tone` keeps its fill and is drawn with an outline, so it stands out from neighbours of the same
+tone (without a tone it is drawn in the accent and the others turn faint, as before). A floating or grouped bar that takes a choice (`onSelect`)
+is a pointer target over its whole slot (`rect[data-bar-hit]`, transparent): the middle of its box, which can be the empty space beside a
+floating bar or under a short bar's raised value, reaches the bar (G5).
+
+A `BarChart` without the new props renders the same markup as before, a highlighted bar with a tone excepted (its outline).
 
 ## The text kit
 

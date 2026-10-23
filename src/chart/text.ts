@@ -90,16 +90,36 @@ export function niceStep(x: number): number {
 }
 
 /**
+ * The 1, 2, 2.5 or 5 times a power of ten at or above `x` that is a whole multiple of `resolution` (the least difference two
+ * labels of the axis can show: 1 for an axis of counts, 0.1 for one decimal). Without a resolution it is `niceStep`. A step that
+ * is not a multiple of the resolution is rounded by the labels (0.25 reads "0.3" at one decimal), which is how "0, 1, 1, 2, 2" came about.
+ */
+export function niceStepAt(x: number, resolution = 0): number {
+  if (!(resolution > 0)) return niceStep(x);
+  if (!(x > 0) || !Number.isFinite(x)) return resolution;
+  const start = Math.floor(Math.log10(Math.min(x, resolution))) - 1;
+  for (let e = start; e < start + 40; e++) {
+    for (const m of [1, 2, 2.5, 5]) {
+      const step = Number((m * 10 ** e).toPrecision(12));
+      const ratio = step / resolution;
+      if (step >= x * (1 - 1e-12) && step >= resolution * (1 - 1e-9) && Math.abs(ratio - Math.round(ratio)) < 1e-6) return step;
+    }
+  }
+  return Math.max(x, resolution);
+}
+
+/**
  * Round ticks covering [lo, hi], as many as leave room for labels about `labelSize` pixels along an axis of `room`
  * pixels (at least two, at most `most`). The first tick is at or below `lo` and the last at or above `hi`, so a bar
- * or a point never runs past the last labelled value.
+ * or a point never runs past the last labelled value. With a `resolution` (1 for an axis of counts, 10^-d for d fixed
+ * decimals) every step is a multiple of it, so no two labels read the same and none is a rounded fraction (0.19.0).
  */
-export function niceTicks(lo: number, hi: number, room: number, labelSize: number, most = 6): number[] {
+export function niceTicks(lo: number, hi: number, room: number, labelSize: number, most = 6, resolution = 0): number[] {
   if (!Number.isFinite(lo) || !Number.isFinite(hi)) return [0];
   if (hi < lo) [lo, hi] = [hi, lo];
   if (hi === lo) hi = lo === 0 ? 1 : lo + Math.abs(lo);
   const count = Math.max(2, Math.min(most, Math.floor(room / (labelSize + 16)) + 1));
-  const step = niceStep((hi - lo) / (count - 1));
+  const step = niceStepAt((hi - lo) / (count - 1), resolution);
   const first = Math.floor(lo / step + 1e-9) * step;
   const ticks: number[] = [];
   for (let k = 0; first + k * step <= hi + step * 1e-9 || ticks.length < 2; k += 1) {
@@ -108,4 +128,11 @@ export function niceTicks(lo: number, hi: number, room: number, labelSize: numbe
   }
   if (ticks[ticks.length - 1] < hi - step * 1e-9) ticks.push(Number((ticks[ticks.length - 1] + step).toPrecision(12)));
   return ticks;
+}
+
+/** How many tick labels repeat the label before them (empty labels apart); the gate fails a chart with any (G6). */
+export function repeatedLabels(labels: readonly (string | null | undefined)[]): number {
+  let n = 0;
+  for (let i = 1; i < labels.length; i++) if (labels[i] && labels[i] === labels[i - 1]) n++;
+  return n;
 }
