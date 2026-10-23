@@ -294,7 +294,7 @@ test('S1 edge cases: reversed ends draw the same bar; a zero length is a dot; a 
     assert.deepEqual(ext.map((e) => e.kind), ['rect', 'none', 'none']);
     await miss.page.focus('[data-chart-focus]');
     await miss.page.keyboard.press('End');
-    assert.match(await readout(miss.page), /^Null value: (not available|n\/a|—)/i);
+    assert.match(await readout(miss.page), /^Null value: (not available|n\/a)/i);
     assert.deepEqual(miss.errors, []);
   } finally {
     await miss.page.close();
