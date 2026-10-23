@@ -124,6 +124,22 @@ function flipPlant(plant: string): (() => void) | undefined {
     observer.observe(document.body, watch);
     return () => observer.disconnect();
   }
+  // m1 (re-review of 0.19.0): the shell places every mark label clear of the others, so an overlap is planted as a chart that declares one (a
+  // product that draws its own labels over the canvas): a y label over a y label and an x label over a y label
+  if (plant === 'mark-overlap') {
+    const boxes = JSON.stringify([
+      { k: 'y', t: 'Upper limit', x0: 100, y0: 10, x1: 200, y1: 21 },
+      { k: 'y', t: 'Early warning', x0: 150, y0: 12, x1: 260, y1: 23 },
+      { k: 'x', t: 'peak', x0: 240, y0: 14, x1: 270, y1: 25 },
+    ]);
+    return plantDom(() => {
+      const host = document.querySelector('.caos-chart[data-mark-overlaps]');
+      if (host && host.getAttribute('data-mark-boxes') !== boxes) {
+        host.setAttribute('data-mark-boxes', boxes);
+        host.setAttribute('data-mark-overlaps', '2');
+      }
+    });
+  }
   if (plant === 'bar-legend-hidden') {
     const style = document.createElement('style');
     style.textContent = '.caos-bars-legend { display: none !important; }';
@@ -430,9 +446,10 @@ function ModelView({ sim }: { sim: Sim }) {
               { label: { en: 'Recovered', es: 'Recuperados' }, values: sim.R, color: '--color-good' },
             ]}
             marks={[{ x: sim.peakDay, label: { en: 'peak', es: 'pico' } }]}
-            // shell 0.19.0 (G20): two reference lines at one level whose labels are each wider than the plot's half: the second lies over the first
+            // shell 0.19.0 (G20): two reference lines at one level whose labels are each wider than the plot's half; since the re-review's m1 the second
+            // is placed on another row or cut with an ellipsis, never over the first, so the page passes (the legit page `legit-bar-adoption`)
             yMarks={
-              PLANT === 'mark-overlap'
+              PLANT === 'legit-bar-adoption'
                 ? [
                     { y: Math.max(...sim.S) * 0.5, label: { en: 'the planted level that carries a very long first label of the reference line, written out in full so that it takes more than half of the plot whatever its size', es: 'el nivel plantado que lleva una primera etiqueta muy larga de la línea de referencia, escrita completa para que ocupe más de la mitad del gráfico sea cual sea su tamaño' } },
                     { y: Math.max(...sim.S) * 0.5, label: { en: 'and a second label as long as the first one, at the very same level of the plot, so that the two cannot both be placed without lying over one another', es: 'y una segunda etiqueta tan larga como la primera, en el mismo nivel del gráfico, de modo que las dos no puedan ubicarse sin quedar una sobre otra' } },
@@ -698,6 +715,7 @@ function ValidationView({ sim, focusOn }: { sim: Sim; focusOn?: boolean }) {
  * not start at zero) and the provision of three segments under three regimes (grouped bars with a legend). */
 function BarFormsView() {
   const { stateKey } = useWorkbenchState();
+  const lang = useShellLang();
   const bridge = [
     { id: 'open', label: { en: 'Opening', es: 'Apertura' }, value: 120, span: [120, 120] as [number, number], tone: 'accent' as const },
     { id: 'a', label: { en: 'Inflows', es: 'Entradas' }, value: 15, span: [120, 135] as [number, number], tone: 'good' as const },
@@ -717,6 +735,63 @@ function BarFormsView() {
   ];
   const provision = [[12, 18, 25], [30, 41, 55], [8, 9, 14]];
   const grouped = segments.flatMap((g, gi) => regimes.map((r, ri) => ({ id: `${g.id}-${r.id}`, label: r.label, group: g, value: provision[gi][ri], tone: r.tone })));
+  if (PLANT === 'legit-bar-adoption') {
+    // the forms CAOS_Contraste adopted from 0.19.0 that the gate once failed (U16-F8): floating bars that take a choice beside a plain total (G5's
+    // pointer reach, F8-1; G20's readout of the two ends, F8-2), and two short horizontal charts of three and four bars that fill their card
+    // (G20's scripted brush, F8-3: C21 four-fifths with a threshold bar on [0, 1.1], filling its card; C21 situation with no range, at the
+    // least height of three rows over its table)
+    return (
+      <ViewsRow shares={[1, 1, 1]}>
+        <PlotCard fill title={{ en: 'A bridge from a plain total', es: 'Un puente desde un total simple' }} lane="live" provenance="synthetic" dataKey={stateKey}>
+          <BarChart
+            title={{ en: 'A bridge from a plain total', es: 'Un puente desde un total simple' }}
+            height="fill"
+            axis={{ label: { en: 'Capital', es: 'Capital' }, unit: { en: 'USD m', es: 'MUSD' }, format: { decimals: 0 }, range: [100, 140] }}
+            data={[
+              { id: 'plain', label: { en: 'Opening total', es: 'Total de apertura' }, value: 125, tone: 'neutral' as const },
+              ...bridge.slice(1, 4),
+              { id: 'close', label: { en: 'Closing', es: 'Cierre' }, value: 119, span: [119, 119] as [number, number], tone: 'accent' as const },
+            ]}
+            onSelect={() => undefined}
+          />
+        </PlotCard>
+        <PlotCard fill title={{ en: 'Rate over the highest rate', es: 'Tasa sobre la mayor tasa' }} lane="live" provenance="synthetic" dataKey={stateKey}>
+          <BarChart
+            title={{ en: 'Rate over the highest rate', es: 'Tasa sobre la mayor tasa' }}
+            height="fill"
+            axis={{ label: { en: 'Rate over the highest group rate', es: 'Tasa sobre la mayor tasa de grupo' }, format: { decimals: 2 }, range: [0, 1.1] }}
+            data={[
+              { id: 'g1', label: { en: 'Group A', es: 'Grupo A' }, value: 1, tone: 'good' as const, highlight: true },
+              { id: 'g2', label: { en: 'Group B', es: 'Grupo B' }, value: 0.74, tone: 'bad' as const },
+              { id: 'g3', label: { en: 'Group C', es: 'Grupo C' }, value: 0.91, tone: 'good' as const },
+              { id: 'line', label: { en: 'Four-fifths line (employment benchmark)', es: 'Línea de cuatro quintos (referencia laboral)' }, value: 0.8, tone: 'neutral' as const },
+            ]}
+          />
+        </PlotCard>
+        <PlotCard fill title={{ en: 'Complainants, cases and significant cases', es: 'Demandantes, casos y casos significativos' }} lane="live" provenance="synthetic" dataKey={stateKey}>
+          {/* the chart over its table, at the least height of three rows (Contraste's LabelledOverTable with barMin(3)) */}
+          <div style={{ height: 120, flex: 'none' }}>
+          <BarChart
+            title={{ en: 'Complainants, cases and significant cases', es: 'Demandantes, casos y casos significativos' }}
+            height="fill"
+            axis={{ label: { en: 'Applications', es: 'Solicitudes' }, format: { decimals: 0 } }}
+            data={[
+              { id: 'complainants', label: { en: 'Complainants', es: 'Demandantes' }, value: 41 },
+              { id: 'cases', label: { en: 'Cases tested', es: 'Casos evaluados' }, value: 39 },
+              { id: 'significant', label: { en: 'Significant cases', es: 'Casos significativos' }, value: 6, tone: 'warn' as const },
+            ]}
+          />
+          </div>
+          <table className="caos-table">
+            <tbody>
+              <tr><td>{lang === 'es' ? 'Vecinos por grupo (k)' : 'Neighbours per group (k)'}</td><td>5</td></tr>
+              <tr><td>{lang === 'es' ? 'Nivel (alfa)' : 'Level (alpha)'}</td><td>{lang === 'es' ? '0,05' : '0.05'}</td></tr>
+            </tbody>
+          </table>
+        </PlotCard>
+      </ViewsRow>
+    );
+  }
   return (
     <ViewsRow shares={[1, 1]}>
       <PlotCard fill title={{ en: 'A bridge between two totals', es: 'Un puente entre dos totales' }} lane="live" provenance="synthetic" dataKey={stateKey}>

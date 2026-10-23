@@ -1599,13 +1599,20 @@ export function installLib() {
       // the labels of a chart's marks (x and y) share one set of boxes, and none lies over another (0.19.0): the chart says how many do
       const overlaps = host.getAttribute('data-mark-overlaps');
       if (overlaps !== null && Number(overlaps) > 0) {
-        let which = '';
+        // the pairs that overlap, each label named with its kind (an x mark or a y mark), from the boxes the chart declares (re-review of 0.19.0, m1)
+        let pairs = [];
         try {
-          which = JSON.parse(host.getAttribute('data-mark-boxes') || '[]').map((b) => `"${b.t}"`).slice(0, 4).join(', ');
+          const boxes = JSON.parse(host.getAttribute('data-mark-boxes') || '[]');
+          for (let i = 0; i < boxes.length; i++)
+            for (let j = i + 1; j < boxes.length; j++) {
+              const a = boxes[i];
+              const b = boxes[j];
+              if (a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1) pairs.push(`"${a.t}" (${a.k}) lies over "${b.t}" (${b.k})`);
+            }
         } catch {
-          which = '';
+          pairs = [];
         }
-        problems.push(`${overlaps} pair(s) of mark label(s) overlap (data-mark-overlaps="${overlaps}"${which ? `; placed: ${which}` : ''}): an x mark's label lies over a y mark's label or another x label`);
+        problems.push(`${overlaps} pair(s) of mark label(s) overlap (data-mark-overlaps="${overlaps}")${pairs.length ? `: ${pairs.slice(0, 4).join('; ')}` : ': the chart declares no boxes to name them'}`);
       }
       if (!stop) {
         problems.push('the chart is not a tab stop (no element with data-chart-focus): the keyboard cannot reach its crosshair, zoom or reset');
@@ -1701,7 +1708,19 @@ export function installLib() {
             const r = target.getBoundingClientRect();
             const bars = kind === 'bars';
             const down = bars && host.getAttribute('data-orientation') !== 'vertical';
-            const at = (f) => (down ? { x: r.left + r.width * 0.5, y: r.top + r.height * (0.15 + 0.4 * f) } : { x: r.left + r.width * (0.3 + 0.3 * f), y: r.top + r.height * 0.5 });
+            // a bar chart is brushed from the middle of its first bar to the middle of a bar a third of the way along (the Contraste adoption, F8-3):
+            // a fixed share of the drawing reached across every row of a short horizontal chart, whose axis and title take most of its height, and
+            // a brush over every category is no zoom. Without bars to aim at, a fixed share of the drawing is dragged
+            const drawnBars = bars ? [...host.querySelectorAll('svg [data-bar]')].map((g) => g.getBoundingClientRect()).filter((q) => q.width > 0 && q.height > 0) : [];
+            const aim = drawnBars.length >= 2 ? [drawnBars[0], drawnBars[Math.max(1, Math.floor(drawnBars.length / 3))]] : null;
+            const mid = (q) => ({ x: q.left + q.width / 2, y: q.top + q.height / 2 });
+            const at = (f) => {
+              if (aim) {
+                const [a, b] = [mid(aim[0]), mid(aim[1])];
+                return down ? { x: r.left + r.width * 0.5, y: a.y + (b.y - a.y) * f } : { x: a.x + (b.x - a.x) * f, y: r.top + r.height * 0.5 };
+              }
+              return down ? { x: r.left + r.width * 0.5, y: r.top + r.height * (0.15 + 0.4 * f) } : { x: r.left + r.width * (0.3 + 0.3 * f), y: r.top + r.height * 0.5 };
+            };
             const fire = (type, f) => {
               const p = at(f);
               // uPlot ignores a mouse move with no movement while it drags (a Chrome-on-Windows stray event), so the scripted ones carry some
