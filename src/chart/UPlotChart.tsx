@@ -19,6 +19,7 @@ import {
   type LabelBox,
   leastLabelSpan,
   placeXLabel,
+  placeYLabel,
   sameData,
   stepIndex,
   thinRows,
@@ -478,6 +479,8 @@ export function drawMarks(u: uPlot, marks: { x: number; label: string }[], style
     ctx.lineTo(px, u.bbox.top + u.bbox.height);
     ctx.stroke();
     ctx.setLineDash([]);
+    // a mark with an empty label (the later years of a run named once) draws its line only: an empty box took a row from the labels after it
+    if (!m.label) continue;
     const at = placeXLabel(m.label, { px, left, right, bottom: u.bbox.top + u.bbox.height, gap, rowH, textH, first: u.bbox.top + 12 * pr, boxes, measure: (t) => ctx.measureText(t).width });
     if (!at) {
       cut.push(m.label);
@@ -499,10 +502,12 @@ export function drawMarks(u: uPlot, marks: { x: number; label: string }[], style
 /**
  * The horizontal reference lines of a chart and their labels: a dashed line across the plot, its label at the right
  * end above the line (below it when the line runs along the top), inside the plot, haloed; a label that would overlap
- * the one placed before it moves left of it (`boxes`, when given, collects what is placed, for `drawMarks` to avoid). A line outside the y range is not drawn; a line without a label is drawn alone. A mark's `color` (the tone's) draws
+ * the one placed before it moves left of it, then to the other side of its line or a row further, and is cut with an ellipsis when no place
+ * clears (`placeYLabel`; `boxes`, when given, collects what is placed, for `drawMarks` to avoid). Returns the whole texts of the labels it cut
+ * or could not write. A line outside the y range is not drawn; a line without a label is drawn alone. A mark's `color` (the tone's) draws
  * its line and its label; without one `style.color` does.
  */
-export function drawYMarks(u: uPlot, marks: { y: number; label?: string; color?: string }[], style: { color: string; halo: string; family: string }, boxes?: MarkBox[]): void {
+export function drawYMarks(u: uPlot, marks: { y: number; label?: string; color?: string }[], style: { color: string; halo: string; family: string }, boxes?: MarkBox[]): string[] {
   const ctx = u.ctx;
   const pr = uPlot.pxRatio || 1;
   const left = u.bbox.left;
@@ -510,8 +515,10 @@ export function drawYMarks(u: uPlot, marks: { y: number; label?: string; color?:
   const top = u.bbox.top;
   const bottom = u.bbox.top + u.bbox.height;
   const gap = 4 * pr;
+  const rowH = 14 * pr;
   const textH = 11 * pr;
   const placed: LabelBox[] = [];
+  const cut: string[] = [];
   ctx.save();
   ctx.font = `${Math.round(11 * pr)}px ${style.family}`;
   ctx.textBaseline = 'alphabetic';
@@ -530,24 +537,25 @@ export function drawYMarks(u: uPlot, marks: { y: number; label?: string; color?:
     ctx.setLineDash([]);
     // a line with no label stops here: no box, nothing reserved
     if (!m.label) continue;
-    const w = ctx.measureText(m.label).width;
-    // above the line, or below it when there is no room above
-    const base = py - gap - textH < top ? py + gap + textH : py - gap;
-    let x1 = right - gap;
-    while (placed.some((p) => x1 - w < p.x1 + gap && x1 > p.x0 - gap && base - textH < p.y1 && base > p.y0)) {
-      x1 = Math.min(...placed.filter((p) => base - textH < p.y1 && base > p.y0).map((p) => p.x0)) - 2 * gap;
+    // at the right end above the line (below it at the top), left of a label in the way, on the other side of the line, a row further, and
+    // then cut with an ellipsis: never over another label of either kind (re-review of 0.19.0, m1; it was clamped at the left edge over the others)
+    const at = placeYLabel(m.label, { py, left, right, top, bottom, gap, rowH, textH, boxes: [...placed, ...(boxes ?? [])], measure: (t) => ctx.measureText(t).width });
+    if (!at) {
+      cut.push(m.label);
+      continue;
     }
-    const x0 = Math.max(left + gap, x1 - w);
-    placed.push({ x0, x1: x0 + w, y0: base - textH, y1: base });
-    boxes?.push({ kind: 'y', text: m.label, full: m.label, x0, x1: x0 + w, y0: base - textH, y1: base });
+    if (at.cut) cut.push(m.label);
+    placed.push({ x0: at.x0, x1: at.x0 + at.w, y0: at.y - textH, y1: at.y });
+    boxes?.push({ kind: 'y', text: at.text, full: m.label, x0: at.x0, x1: at.x0 + at.w, y0: at.y - textH, y1: at.y });
     ctx.textAlign = 'left';
     ctx.lineWidth = 3 * pr;
     ctx.strokeStyle = style.halo;
-    ctx.strokeText(m.label, x0, base);
+    ctx.strokeText(at.text, at.x0, at.y);
     ctx.fillStyle = color;
-    ctx.fillText(m.label, x0, base);
+    ctx.fillText(at.text, at.x0, at.y);
   }
   ctx.restore();
+  return cut;
 }
 
 /**
@@ -1039,7 +1047,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
             const lines = yMarksRef.current ?? [];
             // the labels of the y marks and of the x marks share one set of boxes (0.19.0): the x labels go where no label is
             const boxes: MarkBox[] = [];
-            if (lines.length) drawYMarks(u, lines.map((m, i) => ({ y: liveRef.current[i] ?? m.y, label: m.label ? pick(m.label, lang) : undefined, color: resolveToken(YMARK_TONE_TOKENS[m.tone ?? 'warn'], '#c80') })), markStyle, boxes);
+            const ycut = lines.length ? drawYMarks(u, lines.map((m, i) => ({ y: liveRef.current[i] ?? m.y, label: m.label ? pick(m.label, lang) : undefined, color: resolveToken(YMARK_TONE_TOKENS[m.tone ?? 'warn'], '#c80') })), markStyle, boxes) : [];
             // each handle sits on its line, and says its value to a screen reader
             u.over.querySelectorAll<HTMLElement>('[data-y-handle]').forEach((el) => {
               const i = Number(el.getAttribute('data-y-handle'));
@@ -1057,7 +1065,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
               el.setAttribute('aria-valuenow', String(Number(v.toPrecision(12))));
               el.setAttribute('aria-valuetext', label ? `${label}: ${shown}` : shown);
             });
-            const cut = marks?.length ? drawMarks(u, marks.map((m) => ({ x: m.x, label: pick(m.label, lang) })), markStyle, boxes) : [];
+            const cut = [...ycut, ...(marks?.length ? drawMarks(u, marks.map((m) => ({ x: m.x, label: pick(m.label, lang) })), markStyle, boxes) : [])];
             // what was placed, in CSS pixels from the canvas' corner, and how many labels overlap: declared for the gate (G20) and the shell's own tests
             const pr = uPlot.pxRatio || 1;
             const rounded = (v: number) => Math.round((v / pr) * 10) / 10;
