@@ -1,3 +1,50 @@
+## [0.19.000] - 2026-10-23
+
+### Added
+
+- Tier A of the interactive-visualization rubric on every shell chart (the Contraste 1.00.000 capture review, U16-R2). On by default, no change at a call site (SHC-063 to SHC-085):
+  - `UPlotChart`: zoom by the wheel (while the chart holds the focus, Ctrl or Meta included, and only while that changes the range; otherwise the wheel, and the browser's page zoom, are the page's), by the brush (a drag under 5 px is a click) and by pinch; pan by Shift and drag and by touch; a visible **Reset zoom** control while zoomed, double-click, `0` and Escape; the keyboard model (arrows move the crosshair and its readout, Home and End, `+` and `-`, Shift and the arrows, Enter picks); one tab stop with an accessible name; a hidden data table and a one-line summary; the zoom survives a theme, a language and a size change. New props `title`, `zoomY` and `zoomOff` (the reason zoom is turned off, 12 letters and digits at least).
+  - `BarChart`: a crosshair band and a readout per bar (pointer and keyboard), zoom and pan by category (wheel, brush, Shift and drag, pinch, keys), the reset control, the same tab stop, table and summary; new prop `zoomOff`. Its markup is wrapped in `.caos-bars-host`, with the foot (readout and reset control) under the drawing.
+  - Gate G20: every chart is a tab stop with a name, a summary (`aria-describedby`) and a table (`aria-details`); driven once per state it moves its crosshair with the arrow keys, zooms with `+` and with a scripted brush, shows one reset control and resets with `0`; a chart that turns zoom off, an empty reason included, is listed among the waivers (a short reason fails). A hand-drawn SVG chart is not measured (`docs/07_gate.md`). Plants `chart-not-focusable`, `chart-no-name`, `chart-no-table`, `chart-no-reset`, `chart-reset-hidden`, `chart-no-zero`, `chart-no-arrows`, `chart-dead-brush`, `zoom-off-empty`, `zoom-off-unexplained` and `bar-repeat-ticks`.
+  - Text kit: `niceStepAt`; `repeatedLabels` moves to it (still exported from `chart`); the interaction rules live in `src/chart/interaction.ts`.
+  - `BarChart`, the two forms the products still drew by hand (D16-21; SHC-090 to SHC-093), each with the whole of Tier A and no change to a call site that does not use them:
+    - Floating bars: `BarDatum.span` gives the bar's two ends on the value axis (a waterfall of layers, a bridge of signed steps). `value` stays the number the bar states; the readout and the table add the ends ("from a to b", From and To columns); a span of zero length is a dot as thick as a bar; ends in any order draw the same bar; a span outside `axis.range` is cut to it; with a span `axis.range` is the axis as given and may exclude zero.
+    - Grouped bars: `BarDatum.group` puts consecutive data in one band (side by side when vertical, one under another when horizontal) with the group label printed once, `BarChartProps.legend` draws what each tone means, the readout reads "group, label: value", the table gains a Group column, and the keyboard, zoom, pan and brush go group by group.
+  - `UPlotChart`: the labels of x marks and y marks share one set of placed boxes (SHC-094, SHC-095): no x label lies over a y label or another x label (the Contraste U16-R2 forms V04-2 and V16-3), a label that fits no row is cut with an ellipsis and kept whole in the plot's title, the readout and a new table of marks. The host declares `data-mark-overlaps`, `data-mark-boxes` and `data-mark-cut`; `drawMarks` and `drawYMarks` take an optional `boxes` array and `drawMarks` returns the labels it cut.
+  - Gate G20 fails a chart whose `data-mark-overlaps` is above 0, and drives the floating and the grouped bars (the walk reaches every bar and reads its ends and its group; the table has From, To and Group; a declared legend is visible); five plants prove it (SHC-096).
+- The re-review of 0.19.0: `BarDatum.format` (optional `FormatOptions`): the format of one bar's value, readout, ends and table cells, over `axis.format` (SHC-097).
+- `placeYLabel` in the chart's interaction rules; `drawYMarks` returns the labels it cut or could not write.
+- The gate's legit page `legit-bar-adoption` (the forms CAOS_Contraste adopted).
+
+### Fixed
+
+- `BarChart`: a value axis of counts ticked at fractions and rounded them ("0, 1, 1, 2, 2"): it now ticks at whole numbers, and an axis of fixed decimals at multiples of their unit (SHC-078); it declares `data-ticks-repeat` and the gate fails a repeated label under G6, as for `UPlotChart` (SHC-079).
+- The review of 0.19.0 (Opus, 2026-10-22), fixed before the release (SHC-065 to SHC-089):
+  - The brush works on every chart form: a parity plot, a chart with an overlay series and one with `x.range` ignored it, because uPlot's own `setScale` turned a fixed range back into the fixed one. The selection is applied through the zoom operations, ordered, inside the full range and not below the least span; the bars and the lines share one 5 px drag threshold.
+  - A vertical `BarChart` narrower than its value column draws no negative width and logs no error (it drew `rect` widths of -0.8 at 70 px); at 0 px it draws nothing.
+  - Zoomed to its least span, no axis repeats a tick label: an axis of significant digits (depth 1000 to 1490 m read "1,000" ten times) cannot be zoomed below the span its labels can tell apart (`leastLabelSpan`).
+  - On `x.time` the data table, the summary and the keyboard readout print dates in the page language, not epoch seconds.
+  - A wheel that cannot change the range (a wheel out at the full range, a wheel in at the least span) reaches the page, so a focused chart no longer stops the page from scrolling past it; a focused chart shows a 2 px ring. Ctrl or Meta with the wheel zooms a chart only while it holds the focus; over any other chart it stays the browser's page zoom.
+  - `zoomOff` of any text, an empty reason in one language included, sets `data-zoom-off`, and G20 fails an empty or short reason (it passed silently before).
+  - New data is drawn even when it differs from the data on show only by a swap of two values or by a change too small for a sum (the fingerprint is replaced by an element-wise `sameData`).
+  - The reset control is at least 24 by 24 px; the drawing of a `BarChart` is `role="presentation"` beside the named group (its name was said twice); the plot is described by its summary only and linked to its table by `aria-details`, so a screen reader no longer reads up to 1000 rows on every focus.
+- The re-review of 0.19.0 (Opus, 2026-10-22) and the CAOS_Contraste adoption of the bar forms (U16-F8), fixed before the release (SHC-090 to SHC-098):
+  - A dot total at an end of `axis.range` ran past the plot: its value label was cut and the dot covered its category label. With a dot the value axis is inset by its radius at both ends (MJ1).
+  - A plain bar beside floating bars, on an axis that excludes zero, was drawn from zero across the category labels: it is cut to the axis (MJ2), and it reads its two ends as the table writes them, so G20 passes a chart that mixes the two (F8-2).
+  - A floating or grouped bar that takes a choice (`onSelect`) failed G5: the middle of its box was empty drawing. It is now a target over its whole slot (`rect[data-bar-hit]`) (F8-1).
+  - G20's scripted brush dragged a fixed share of the drawing, which on a short horizontal chart of three or four bars spanned every category, so it reported a working brush as dead: it drags between the bars (F8-3). The chart's brush was right.
+  - Reference-line labels close together overlapped (they were clamped at the left edge): a y label is placed against the shared boxes, on rows near its line, and cut with an ellipsis when no place clears (`placeYLabel`); G20 names each overlapping pair with its kind, x or y (m1). An x mark with an empty label no longer takes a row.
+  - The shell's test of V04-2 drew the same pixels before and after the mark labels of 0.19.0; it now draws Contraste's C04 chart and measures the ink (m2).
+  - Grouped members were told apart by colour alone: each is named on the drawing when its slot has room (m4). The summary of a floating chart compared a step with a total: it states the first and the last ends (m5). A highlighted bar with a tone looked like its neighbours: it is outlined (m3).
+- `.prose svg { height: auto }` collapsed KaTeX's square-root SVG to under 2 px, so every root of a documentation page vanished: `.prose .katex svg` keeps its own height (SHC-080).
+- An axis title never cuts: a rotated y title longer than the plot moves above it as a horizontal line, an x title wider than the chart wraps below it, and a `BarChart` title wraps over as many lines as it needs (SHC-081, SHC-082).
+
+### Changed
+
+- The plot of a `UPlotChart` is now the first tab stop of the chart, before the series key (SHC-052 says so); the brush needs a 5 px drag, so a click that moves a pixel no longer zooms.
+- `UPlotChart` and `BarChart` draw their Tier A markup only once the chart has a size; before that they render as in 0.18.0 (SHC-085).
+- Styles: `styles.css` gains `.caos-bars-host`, `.caos-bars-foot`, `.caos-bars-readout`, `.caos-bars-brush`, `.caos-bars-cursor`, `.caos-chart-axis-title`, `.caos-chart-foot` and `.caos-chart-reset`; `reserved-classes.json` lists them.
+
 ## [0.18.000] - 2026-10-20
 
 ### Added
