@@ -347,6 +347,10 @@ export interface SummaryParts {
   yLabel?: string;
   low?: { text: string; at: string };
   high?: { text: string; at: string };
+  /** Floating bars (0.19.0): the first end of the first bar and the last end of the last (a bridge's opening and closing totals, a waterfall's
+   * start and its total), stated instead of the lowest and the highest value, which would compare a step with a total. */
+  first?: { text: string; at: string };
+  last?: { text: string; at: string };
   /** How many points or bars. */
   count: number;
 }
@@ -359,7 +363,10 @@ export function chartSummary(lang: Lang, p: SummaryParts): string {
   else parts.push(es ? `Gráfico de líneas, ${p.name}: ${p.count} puntos` : `Line chart, ${p.name}: ${p.count} points`);
   if (p.series && p.series.length > 0) parts.push(es ? `${p.series.length === 1 ? 'serie' : 'series'} ${p.series.join(', ')}` : `${p.series.length === 1 ? 'series' : 'series'} ${p.series.join(', ')}`);
   if (p.xLabel && p.xFrom !== undefined && p.xTo !== undefined) parts.push(es ? `${p.xLabel} de ${p.xFrom} a ${p.xTo}` : `${p.xLabel} from ${p.xFrom} to ${p.xTo}`);
-  if (p.low && p.high) {
+  if (p.first && p.last) {
+    const axis = p.yLabel ? `${p.yLabel}: ` : '';
+    parts.push(es ? `${axis}de ${p.first.text} en ${p.first.at} a ${p.last.text} en ${p.last.at}` : `${axis}from ${p.first.text} at ${p.first.at} to ${p.last.text} at ${p.last.at}`);
+  } else if (p.low && p.high) {
     const axis = p.yLabel ? `${p.yLabel}: ` : '';
     parts.push(es ? `${axis}mínimo ${p.low.text} en ${p.low.at}, máximo ${p.high.text} en ${p.high.at}` : `${axis}lowest ${p.low.text} at ${p.low.at}, highest ${p.high.text} at ${p.high.at}`);
   }
@@ -393,9 +400,13 @@ export function barExtent(value: number | null | undefined, span?: readonly (num
   return { a, b, dot: a === b, given: true };
 }
 
-/** A floating bar cut to the axis' range: wholly outside it, it draws nothing. A plain bar is left as it is. */
-export function clipExtent(e: BarExtent | null, lo: number, hi: number): BarExtent | null {
-  if (!e || !e.given) return e;
+/**
+ * A floating bar cut to the axis' range: wholly outside it, it draws nothing. A plain bar is left as it is, unless `all` (a chart with floating
+ * bars, whose `axis.range` is the whole axis and need not hold zero): then a plain bar is cut too, so it never runs from zero over the category
+ * labels (re-review of 0.19.0, MJ2).
+ */
+export function clipExtent(e: BarExtent | null, lo: number, hi: number, all = false): BarExtent | null {
+  if (!e || (!e.given && !all)) return e;
   if (Math.max(e.a, e.b) < lo || Math.min(e.a, e.b) > hi) return null;
   const c = (v: number) => Math.min(hi, Math.max(lo, v));
   return { ...e, a: c(e.a), b: c(e.b) };
@@ -513,6 +524,56 @@ export function placeXLabel(text: string, s: XLabelSpace): { text: string; x0: n
       for (let y = s.first; y <= s.bottom + 1e-6; y += s.rowH) {
         for (const x0 of pass) if (clear(x0, w, y)) return { text: candidate, x0, y, w, cut: candidate !== text };
       }
+    }
+    return null;
+  };
+  const whole = attempt(text);
+  if (whole) return whole;
+  for (let k = text.length - 1; k >= 1; k--) {
+    const cut = attempt(ellipsize(text, k));
+    if (cut) return cut;
+  }
+  return null;
+}
+
+export interface YLabelSpace {
+  /** The pixel the reference line is at. */
+  py: number;
+  /** The plot's edges: a label lies wholly inside them. */
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+  /** The room kept between a label and its line or another label, the distance between two rows, and the height of the text. */
+  gap: number;
+  rowH: number;
+  textH: number;
+  /** Every label placed so far, of both kinds: the new one lies over none of them. */
+  boxes: readonly LabelBox[];
+  /** The width of a text in these pixels. */
+  measure: (text: string) => number;
+}
+
+/**
+ * Where the label of a y mark (a reference line) goes, or null when nothing of it fits (re-review of 0.19.0, m1). It goes at the right end of its
+ * line, above it (below it when there is no room above), as before 0.19.0; when a placed label (of either kind) is in the way it moves left of it,
+ * then to the other side of the line, then one row further from the line on either side; when no place clears, the label is cut with an
+ * ellipsis, a character at a time, until one does. A label is never clamped over another, as it was in 0.19.0's first cut.
+ */
+export function placeYLabel(text: string, s: YLabelSpace): { text: string; x0: number; y: number; w: number; cut: boolean } | null {
+  const above = s.py - s.gap;
+  const below = s.py + s.gap + s.textH;
+  const fitsRow = (y: number): boolean => y - s.textH >= s.top - 1e-6 && y <= s.bottom + 1e-6;
+  const near = above - s.textH < s.top ? [below, above] : [above, below];
+  const rows = [...near, above - s.rowH, below + s.rowH].filter(fitsRow);
+  const clear = (x0: number, w: number, y: number): boolean =>
+    x0 >= s.left + s.gap - 1e-6 && x0 + w <= s.right - s.gap + 1e-6 && !s.boxes.some((b) => x0 < b.x1 + s.gap && x0 + w + s.gap > b.x0 && y - s.textH < b.y1 && y > b.y0);
+  const attempt = (candidate: string): { text: string; x0: number; y: number; w: number; cut: boolean } | null => {
+    const w = s.measure(candidate);
+    for (const y of rows) {
+      // the right end first, then left of each label in this row, from the right, then the left end
+      const inRow = s.boxes.filter((b) => y - s.textH < b.y1 && y > b.y0).map((b) => b.x0 - 2 * s.gap - w).sort((a, b) => b - a);
+      for (const x0 of [s.right - s.gap - w, ...inRow, s.left + s.gap]) if (clear(x0, w, y)) return { text: candidate, x0, y, w, cut: candidate !== text };
     }
     return null;
   };
