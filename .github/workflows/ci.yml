@@ -33,11 +33,12 @@ jobs:
     # The browser suites: the shell's components in a real browser (e2e/), and the gate's self-test (G15): the clean
     # fixture passes the full matrix and every planted defect fails the check that owns it. A gate that cannot fail on
     # its plant agrees with a broken app, so the gate is released only when this job is green.
-    # It runs on main (once per release) and by hand, never on develop: about 17 minutes a run, and CI minutes are paid
+    # It runs on main (once per release) and by hand, never on develop: about 50 minutes a run since 0.19.0 (the gate
+    # proves itself with 247 plants, G20 driving every chart; 0.18.0 took about 17), and CI minutes are paid
     # (Felipe, 2026-10-15). Every release runs both suites on the device first (npm run test:browser, npm run test:gate).
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
