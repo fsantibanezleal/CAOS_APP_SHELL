@@ -1580,4 +1580,173 @@ export function installLib() {
     }
     return out.slice(0, 10);
   };
+
+  // ---- G20 (0.19.0): every chart host carries Tier A: one tab stop with a name, the table of the values, a summary, a reset --------------
+  const reasonWords = (t) => (String(t).match(/[\p{L}\p{Nd}]/gu) || []).length;
+  G.chartsTierA = async (drive) => {
+    const out = [];
+    const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+    for (const host of document.querySelectorAll('[data-chart-host]')) {
+      if (!visible(host)) continue;
+      const kind = host.getAttribute('data-chart-host');
+      const label = describe(host.closest('[data-plot]') || host);
+      const problems = [];
+      const stop = host.querySelector('[data-chart-focus]');
+      // a chart that turns zoom off declares data-zoom-off, an empty reason included (the attribute is there, its text is the reason)
+      const entry = { label, kind, problems, zoomOffSet: host.hasAttribute('data-zoom-off'), zoomOff: host.getAttribute('data-zoom-off') || '', zoomOffValid: true };
+      if (entry.zoomOffSet) entry.zoomOffValid = reasonWords(entry.zoomOff) >= 12;
+      out.push(entry);
+      // the labels of a chart's marks (x and y) share one set of boxes, and none lies over another (0.19.0): the chart says how many do
+      const overlaps = host.getAttribute('data-mark-overlaps');
+      if (overlaps !== null && Number(overlaps) > 0) {
+        // the pairs that overlap, each label named with its kind (an x mark or a y mark), from the boxes the chart declares (re-review of 0.19.0, m1)
+        let pairs = [];
+        try {
+          const boxes = JSON.parse(host.getAttribute('data-mark-boxes') || '[]');
+          for (let i = 0; i < boxes.length; i++)
+            for (let j = i + 1; j < boxes.length; j++) {
+              const a = boxes[i];
+              const b = boxes[j];
+              if (a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1) pairs.push(`"${a.t}" (${a.k}) lies over "${b.t}" (${b.k})`);
+            }
+        } catch {
+          pairs = [];
+        }
+        problems.push(`${overlaps} pair(s) of mark label(s) overlap (data-mark-overlaps="${overlaps}")${pairs.length ? `: ${pairs.slice(0, 4).join('; ')}` : ': the chart declares no boxes to name them'}`);
+      }
+      if (!stop) {
+        problems.push('the chart is not a tab stop (no element with data-chart-focus): the keyboard cannot reach its crosshair, zoom or reset');
+        continue;
+      }
+      if (stop.tabIndex < 0) problems.push('the plot is not a tab stop (tabindex is below 0)');
+      const labelledBy = (stop.getAttribute('aria-labelledby') || '').split(/\s+/).filter(Boolean).map((id) => document.getElementById(id)?.textContent || '').join(' ');
+      const name = (stop.getAttribute('aria-label') || labelledBy || '').trim();
+      if (name.length < 2) problems.push('the plot has no accessible name (aria-label or aria-labelledby)');
+      // the summary describes the plot (aria-describedby); the table of the values is linked by aria-details (or, as in 0.19.0, described by)
+      const ids = `${stop.getAttribute('aria-describedby') || ''} ${stop.getAttribute('aria-details') || ''}`.split(/\s+/).filter(Boolean);
+      const described = ids.map((id) => document.getElementById(id)).filter(Boolean);
+      const table = described.find((el) => el.tagName === 'TABLE');
+      const points = Number(host.getAttribute('data-points') || '0');
+      if (!table) problems.push('the plot is not linked to a data table (aria-details must name a table of the plotted values)');
+      else {
+        const rows = table.querySelectorAll('tbody tr').length;
+        if (points > 0 && rows === 0) problems.push('the data table has no rows');
+        if (table.querySelectorAll('thead th').length < 2) problems.push('the data table has no header for the values');
+      }
+      const summary = described.find((el) => el.tagName !== 'TABLE');
+      if (!summary || !(summary.textContent || '').trim()) problems.push('the plot has no one-line text summary (aria-describedby must name it)');
+      // the bar forms of 0.19.0: a floating bar adds the two ends to the table (From, To), grouped bars add the group; a legend is drawn when one is declared
+      const spans = Number(host.getAttribute('data-spans') || '0');
+      const groups = Number(host.getAttribute('data-groups') || '0');
+      const legend = Number(host.getAttribute('data-legend') || '0');
+      if (kind === 'bars' && table) {
+        const want = 3 + (spans > 0 ? 2 : 0) + (groups > 0 ? 1 : 0);
+        const have = table.querySelectorAll('thead th').length;
+        if (have !== want) problems.push(`the data table of ${spans > 0 ? 'floating' : 'grouped'} bars has ${have} columns, it must have ${want} (${[groups > 0 ? 'group' : '', 'category', 'value', spans > 0 ? 'from, to' : '', 'note'].filter(Boolean).join(', ')})`);
+      }
+      if (kind === 'bars' && legend > 0) {
+        const keys = [...host.querySelectorAll('.caos-bars-legend li')].filter(visible);
+        if (keys.length !== legend) problems.push(`the legend is not shown: the chart declares ${legend} entries and ${keys.length} are visible`);
+      }
+      // driven (the `interact` state): the arrow keys move the crosshair and change the readout, a scripted brush zooms, `+` zooms, the one
+      // visible control and `0` reset. A chart that is zoomed already, or cannot be zoomed, is not driven for the zoom
+      if (drive) {
+        const key = (k) => stop.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+        let zeroDead = false;
+        const readout = host.querySelector('.caos-chart-readout, .caos-bars-readout');
+        if (readout && points > 0) {
+          const rest = (readout.textContent || '').trim();
+          key('ArrowRight');
+          await pause(80);
+          const moved = (readout.textContent || '').trim();
+          if (!moved || moved === rest) problems.push('the arrow keys do not move the crosshair (the readout does not change on ArrowRight)');
+          key('End');
+          key('Home');
+          await pause(40);
+          // floating and grouped bars: the keyboard walks every bar, each readout reads the bar's two ends (a floating bar) and its group (a grouped one)
+          if (kind === 'bars' && (spans > 0 || groups > 0) && points > 1 && points <= 60) {
+            const cells = table ? [...table.querySelectorAll('tbody tr')].map((tr) => [...tr.querySelectorAll('th, td')].map((c) => (c.textContent || '').trim())) : [];
+            const seen = new Set();
+            let unread = 0;
+            let ungrouped = 0;
+            for (let k = 0; k < points; k++) {
+              if (k > 0) key('ArrowRight');
+              await pause(30);
+              const text = (readout.textContent || '').trim();
+              seen.add(text);
+              const row = cells[k] || [];
+              const offset = groups > 0 ? 1 : 0;
+              if (spans > 0 && row[offset + 2] && row[offset + 3] && !(text.includes(row[offset + 2]) && text.includes(row[offset + 3]))) unread += 1;
+              if (groups > 0 && row[0] && !text.includes(row[0])) ungrouped += 1;
+            }
+            if (seen.size !== points) problems.push(`the keyboard walk reached ${seen.size} of ${points} bars (the arrow keys skip bars, or two bars read the same)`);
+            if (unread > 0) problems.push(`the readout of ${unread} floating bar(s) does not read its two ends (the table has them: From and To)`);
+            if (ungrouped > 0) problems.push(`the readout of ${ungrouped} grouped bar(s) does not read its group`);
+            key('Home');
+            await pause(40);
+          }
+        }
+        if (host.getAttribute('data-zoomable') === '1' && !host.hasAttribute('data-zoomed')) {
+          key('+');
+          await pause(80);
+          if (!host.hasAttribute('data-zoomed')) problems.push('the + key does not zoom the chart');
+          else {
+            const control = [...host.querySelectorAll('[data-chart-reset]')].filter(visible);
+            if (control.length !== 1) problems.push(`a zoomed chart shows ${control.length} reset controls, it must show exactly one`);
+            key('0');
+            await pause(80);
+            if (host.hasAttribute('data-zoomed')) {
+              zeroDead = true;
+              key('Escape');
+              await pause(80);
+            }
+          }
+          // a scripted brush across the plot: the mouse events uPlot listens for, the pointer events the bar chart listens for (it brushes along its
+          // category axis: down the rows of a horizontal chart, across the columns of a vertical one)
+          const target = kind === 'bars' ? host.querySelector('[data-chart-focus]') : host.querySelector('.u-over');
+          if (target && visible(target) && !host.hasAttribute('data-zoomed')) {
+            const r = target.getBoundingClientRect();
+            const bars = kind === 'bars';
+            const down = bars && host.getAttribute('data-orientation') !== 'vertical';
+            // a bar chart is brushed from the middle of its first bar to the middle of a bar a third of the way along (the Contraste adoption, F8-3):
+            // a fixed share of the drawing reached across every row of a short horizontal chart, whose axis and title take most of its height, and
+            // a brush over every category is no zoom. Without bars to aim at, a fixed share of the drawing is dragged
+            const drawnBars = bars ? [...host.querySelectorAll('svg [data-bar]')].map((g) => g.getBoundingClientRect()).filter((q) => q.width > 0 && q.height > 0) : [];
+            const aim = drawnBars.length >= 2 ? [drawnBars[0], drawnBars[Math.max(1, Math.floor(drawnBars.length / 3))]] : null;
+            const mid = (q) => ({ x: q.left + q.width / 2, y: q.top + q.height / 2 });
+            const at = (f) => {
+              if (aim) {
+                const [a, b] = [mid(aim[0]), mid(aim[1])];
+                return down ? { x: r.left + r.width * 0.5, y: a.y + (b.y - a.y) * f } : { x: a.x + (b.x - a.x) * f, y: r.top + r.height * 0.5 };
+              }
+              return down ? { x: r.left + r.width * 0.5, y: r.top + r.height * (0.15 + 0.4 * f) } : { x: r.left + r.width * (0.3 + 0.3 * f), y: r.top + r.height * 0.5 };
+            };
+            const fire = (type, f) => {
+              const p = at(f);
+              // uPlot ignores a mouse move with no movement while it drags (a Chrome-on-Windows stray event), so the scripted ones carry some
+              const init = { bubbles: true, cancelable: true, clientX: p.x, clientY: p.y, button: 0, buttons: type.endsWith('up') ? 0 : 1, view: window, movementX: down ? 0 : 3, movementY: down ? 3 : 0 };
+              target.dispatchEvent(bars ? new PointerEvent(type.replace('mouse', 'pointer'), { ...init, pointerId: 41, pointerType: 'mouse', isPrimary: true }) : new MouseEvent(type, init));
+            };
+            if (!bars) target.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false, clientX: at(0).x, clientY: at(0).y }));
+            fire('mousedown', 0);
+            for (let k = 1; k <= 6; k++) fire('mousemove', k / 6);
+            fire('mouseup', 1);
+            await pause(120);
+            if (!host.hasAttribute('data-zoomed')) problems.push('a drag across the plot does not zoom the chart (the brush is dead)');
+            else {
+              key('0');
+              await pause(80);
+              if (host.hasAttribute('data-zoomed')) {
+                zeroDead = true;
+                key('Escape');
+                await pause(80);
+              }
+            }
+          }
+        }
+        if (zeroDead) problems.push('the 0 key does not reset the zoom');
+      }
+    }
+    return out;
+  };
 }
