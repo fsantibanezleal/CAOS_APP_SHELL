@@ -705,6 +705,15 @@ svg.lucide { flex: none; }
   .caos-views-row > *, .caos-views-row > .caos-plot.fill { flex: none; }
   .caos-plot.fill > .caos-plot-body { flex: none; height: clamp(260px, 48vh, 440px); }
   .caos-plot.fill > .caos-plot-note { max-height: none; overflow-y: visible; }
+  /* A filling card whose body holds flowing content takes the height of that content instead of the clamp, and what is wider
+     than the card scrolls sideways inside the body, never cut at its edge (0.19.1, SHC-100). Flowing content is a table that
+     is the body's own child, or any element the product marks `data-caos-flow` (a stack of a drawing and its tables, a long
+     table in a scroll box, panels of small multiples): content that sets its own heights, which the clamp and its hidden
+     overflow cut (CAOS_Contraste U16-R2b: whole tables and their right columns lost at 390 px). A drawing alone keeps the clamp. */
+  .caos-plot.fill > .caos-plot-body:has(> .caos-table, [data-caos-flow]) { height: auto; overflow-x: auto; overflow-y: visible; }
+  /* An equation wider than the phone scrolls in its box (above); its right edge fades and the box keeps a gap after the last
+     symbol, so the cut reads as more to scroll to and, scrolled to the end, the last symbol is whole (0.19.1, SHC-100). */
+  .equation { padding-right: 1.5rem; mask-image: linear-gradient(to right, #000 calc(100% - 1.5rem), transparent); }
 }
 @media (max-width: 760px) {
   /* A phone wraps the cells instead of pushing the table past the page (found by the gate on the template). */
