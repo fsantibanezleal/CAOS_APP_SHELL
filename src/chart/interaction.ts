@@ -303,6 +303,17 @@ export function leastLabelSpan(fmt: { decimals?: number; digits?: number; percen
 /** Below this magnitude `formatTicks` writes an axis in scientific notation (the shell's own floor, `SCIENTIFIC_BELOW` in `lib/format`). */
 const SCIENTIFIC_FLOOR = 1e-4;
 
+/** The month and weekday names uPlot writes on a time axis, in the page language (0.19.1, SHC-099): uPlot's
+ * own names are English, so a Spanish page read "Jan", "Apr" under its dates (CAOS_Contraste U16-R2b c15 M1). Built from Intl in
+ * `es-CL` and `en-US`, the locales of every other number and date of the shell. */
+export function dateNames(lang: Lang): { MMMM: string[]; MMM: string[]; WWWW: string[]; WWW: string[] } {
+  const locale = lang === 'es' ? 'es-CL' : 'en-US';
+  const month = (style: 'long' | 'short') => Array.from({ length: 12 }, (_, m) => new Intl.DateTimeFormat(locale, { month: style, timeZone: 'UTC' }).format(new Date(Date.UTC(2024, m, 15))));
+  // 2024-09-01 is a Sunday: uPlot's weekday lists start on Sunday
+  const weekday = (style: 'long' | 'short') => Array.from({ length: 7 }, (_, d) => new Intl.DateTimeFormat(locale, { weekday: style, timeZone: 'UTC' }).format(new Date(Date.UTC(2024, 8, 1 + d))));
+  return { MMMM: month('long'), MMM: month('short'), WWWW: weekday('long'), WWW: weekday('short') };
+}
+
 /** A time of an axis (epoch seconds) in the page language: the date, with the time of day when the span shown is under three days. */
 export function formatTime(seconds: number, lang: Lang, spanSeconds: number): string {
   const short = spanSeconds < 3 * 86400;
