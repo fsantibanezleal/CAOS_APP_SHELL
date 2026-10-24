@@ -16,6 +16,7 @@ import {
   clipExtent,
   brushRange,
   DRAG_THRESHOLD,
+  dateNames,
   formatTime,
   leastLabelSpan,
   sameData,
@@ -521,4 +522,20 @@ test('placeYLabel: a label that fits no place is cut with an ellipsis; one that 
   const at = placeYLabel(long, { ...YSPACE, right: 150, boxes: [] })!;
   assert.ok(at.cut && at.text.endsWith('…') && at.x0 >= 4 && at.x0 + at.w <= 146 + 1e-9, at.text);
   assert.equal(placeYLabel(long, { ...YSPACE, boxes: [{ x0: 0, x1: 330, y0: 0, y1: 280 }] }), null);
+});
+
+test('dateNames: a time axis names its months and weekdays in the page language (SHC-099)', () => {
+  const es = dateNames('es');
+  const en = dateNames('en');
+  assert.equal(es.MMM.length, 12);
+  assert.equal(es.WWW.length, 7);
+  // uPlot's own names are English: a Spanish page read Jan and Apr under its dates (CAOS_Contraste U16-R2b c15 M1)
+  assert.match(es.MMM[0], /^ene/);
+  assert.match(es.MMM[3], /^abr/);
+  assert.match(es.MMMM[7], /^agosto$/);
+  assert.match(es.WWWW[0], /^domingo$/);
+  assert.equal(en.MMM[0], 'Jan');
+  assert.equal(en.MMMM[11], 'December');
+  assert.equal(en.WWW[0], 'Sun');
+  for (const m of es.MMM) assert.doesNotMatch(m, /^(Jan|Apr|Aug|Dec)/);
 });

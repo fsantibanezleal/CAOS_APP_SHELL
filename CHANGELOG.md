@@ -1,3 +1,11 @@
+## [0.19.001] - 2026-10-24
+
+### Fixed
+
+- A filling `PlotCard` on a narrow screen (900 px and below) whose body holds flowing content takes the height of that content and scrolls sideways, instead of the 260 to 440 px clamp with hidden overflow that cut whole tables and their right columns at 390 px (CAOS_Contraste U16-R2b, eight review batches; SHC-100). Flowing content is a table that is the body's own child, or any element marked `data-caos-flow` (a stack of a drawing and its tables, a table in a scroll box, panels of small multiples); a body that holds a drawing alone keeps the clamp; nothing changes at 1280 px. Products stop restyling `.caos-plot-body` to get it (the template's web-baseline guard refuses that).
+- An `.equation` that scrolls sideways on a narrow screen fades its right edge and keeps a gap after its end, so the cut reads as more to scroll to (moved into the shell from CAOS_Contraste, which restyled the shell's class; SHC-100).
+- The time axis of a `UPlotChart` names months and weekdays in the page language (`es-CL`, `en-US`): a Spanish page read uPlot's English "Jan", "Apr" under its dates (CAOS_Contraste U16-R2b c15 M1; SHC-099). New: `dateNames` in the chart's interaction rules.
+
 ## [0.19.000] - 2026-10-23
 
 ### Added

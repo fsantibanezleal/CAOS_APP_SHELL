@@ -8,6 +8,7 @@ import {
   axisTitleFits,
   chartSummary,
   countOverlaps,
+  dateNames,
   defaultChartName,
   DRAG_THRESHOLD,
   firstVisible,
@@ -798,6 +799,8 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
     const opts: uPlot.Options = {
       width,
       height: h,
+      // the month and weekday names of a time axis in the page language: uPlot's own are English (0.19.1, SHC-099)
+      ...(x.time ? { fmtDate: ((names: uPlot.DateNames) => (tpl: string) => uPlot.fmtDate(tpl, names))(dateNames(lang)) } : {}),
       legend: { show: false },
       cursor: {
         ...(scatter ? { dataIdx: (u: uPlot, sIdx: number, closest: number) => (sIdx === 0 ? closest : (nearest(u) ?? closest)) } : {}),
