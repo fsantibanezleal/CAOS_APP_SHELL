@@ -71,6 +71,14 @@ const WIDE_FONT = ':root, :root[data-theme] { --font-sans: Verdana, "DejaVu Sans
 
 const RATE_LIMIT = 5; // frames or mutations per second at rest above which a loop is reported (G8)
 
+/** A static host's slash form, including the root path (never `//`). */
+export const trailingSlashUrl = (url) => `${url.replace(/\/+$/, '')}/`;
+
+/** Prefer any completed JSON body when a page requested the same artifact more than once. */
+export function firstJsonResponse(candidates) {
+  return candidates.find((value) => value === '{' || value === '[') ?? candidates.at(-1) ?? '';
+}
+
 async function loadKeys() {
   try {
     return await import(new URL('../dist/keys.js', import.meta.url).href);
@@ -191,12 +199,14 @@ export async function runGate(o) {
         /* not a URL */
       }
       if ((type === 'fetch' || type === 'xhr') && pathname.endsWith('.json') && r.status() < 400 && !artifacts.has(pathname)) {
-        artifacts.set(
-          pathname,
-          r.text().then(
+        artifacts.set(pathname, []);
+      }
+      if ((type === 'fetch' || type === 'xhr') && pathname.endsWith('.json') && r.status() < 400) {
+        artifacts.get(pathname).push(
+          r.finished().then(() => r.text()).then(
             (t) => t.trimStart().slice(0, 1),
             () => '',
-          ),
+          )
         );
       }
     });
@@ -346,7 +356,9 @@ export async function runGate(o) {
 
             if (primary) {
               // G4: the trailing-slash form a static host serves for a materialised route.
-              const slash = `${urlFor(route)}/`;
+              // urlFor('/') already ends with the origin's root slash. Appending another one
+              // produced `//`, which static hosts treat as a different (missing) route.
+              const slash = trailingSlashUrl(urlFor(route));
               const r2 = await page.goto(slash, { waitUntil: 'load', timeout: 30000 }).catch((e) => e);
               const s2 = r2 && typeof r2.status === 'function' ? r2.status() : `error ${r2?.message ?? r2}`;
               if (s2 !== 200) fail('G4', at, `${slash} answered ${s2}`);
@@ -443,8 +455,9 @@ export async function runGate(o) {
     }
 
     // ---- G4: artifacts answered as JSON.
-    for (const [pathname, first] of artifacts) {
-      const c = await first;
+    for (const [pathname, attempts] of artifacts) {
+      const candidates = await Promise.all(attempts);
+      const c = firstJsonResponse(candidates);
       if (c !== '{' && c !== '[') fail('G4', { route: pathname }, `the artifact ${pathname} did not answer JSON (starts with "${c}"; the HTML fallback?)`);
     }
   } finally {
