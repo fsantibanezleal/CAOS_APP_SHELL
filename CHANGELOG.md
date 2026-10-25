@@ -1,3 +1,9 @@
+## [0.19.002] - 2026-10-25
+
+### Fixed
+
+- Gate G5 now distinguishes controls inside a static content `<header>` from controls inside the sticky site header. The covered viewport area is computed from the actual sticky or fixed header, so document source links remain reachable in the tablet regression (SHG-074).
+
 ## [0.19.001] - 2026-10-24
 
 ### Fixed
