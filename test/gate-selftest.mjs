@@ -323,6 +323,21 @@ before(async () => {
   await buildFixture(clean);
 });
 
+test('G5 treats a static section header as content beneath the sticky site header at tablet width', { timeout: 300_000 }, async () => {
+  const r = await runGate({
+    routes: '/introduction',
+    serve: clean,
+    expectBrand: BRAND,
+    sizes: '768x1024',
+    themes: 'light,dark',
+    langs: 'en,es',
+    idleMs: 600,
+    wideFont: false,
+    out: join(work, 'out-static-section-header'),
+  });
+  assert.equal(r.failures.length, 0, `the document's section heading was mistaken for the sticky site header:\n${show(r)}`);
+});
+
 test('the clean fixture passes every check in the full matrix (five sizes, both themes, both languages)', { timeout: 1_800_000 }, async () => {
   const r = await runGate({ serve: clean, expectBrand: BRAND, idleMs: 1000, out: join(work, 'out-clean') });
   assert.ok(r.states > 100, `the walk measured ${r.states} states; it should cover every route, tab and case`);
