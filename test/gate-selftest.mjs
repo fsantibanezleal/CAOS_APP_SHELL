@@ -10,7 +10,12 @@ import { join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { after, before, describe, test } from 'node:test';
 import { buildFixture, makePlant } from './gate-fixture/build.mjs';
-import { runGate } from '../gate/run.mjs';
+import { runGate, trailingSlashUrl } from '../gate/run.mjs';
+
+test('the materialised root route has one trailing slash', () => {
+  assert.equal(trailingSlashUrl('http://127.0.0.1:4173/'), 'http://127.0.0.1:4173/');
+  assert.equal(trailingSlashUrl('http://127.0.0.1:4173/introduction'), 'http://127.0.0.1:4173/introduction/');
+});
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const work = join(root, '.gate-selftest');
