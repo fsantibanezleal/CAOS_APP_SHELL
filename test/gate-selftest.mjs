@@ -10,11 +10,17 @@ import { join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { after, before, describe, test } from 'node:test';
 import { buildFixture, makePlant } from './gate-fixture/build.mjs';
-import { runGate, trailingSlashUrl } from '../gate/run.mjs';
+import { firstJsonResponse, runGate, trailingSlashUrl } from '../gate/run.mjs';
 
 test('the materialised root route has one trailing slash', () => {
   assert.equal(trailingSlashUrl('http://127.0.0.1:4173/'), 'http://127.0.0.1:4173/');
   assert.equal(trailingSlashUrl('http://127.0.0.1:4173/introduction'), 'http://127.0.0.1:4173/introduction/');
+});
+
+test('the artifact audit skips an aborted duplicate when a JSON response completed', () => {
+  assert.equal(firstJsonResponse(['', '{']), '{');
+  assert.equal(firstJsonResponse(['', '[']), '[');
+  assert.equal(firstJsonResponse(['<', '']), '');
 });
 
 const root = fileURLToPath(new URL('..', import.meta.url));
