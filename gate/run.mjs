@@ -196,7 +196,7 @@ export async function runGate(o) {
       if ((type === 'fetch' || type === 'xhr') && pathname.endsWith('.json') && r.status() < 400 && !artifacts.has(pathname)) {
         artifacts.set(
           pathname,
-          r.text().then(
+          r.finished().then(() => r.text()).then(
             (t) => t.trimStart().slice(0, 1),
             () => '',
           ),
