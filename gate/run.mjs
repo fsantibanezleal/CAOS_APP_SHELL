@@ -194,12 +194,14 @@ export async function runGate(o) {
         /* not a URL */
       }
       if ((type === 'fetch' || type === 'xhr') && pathname.endsWith('.json') && r.status() < 400 && !artifacts.has(pathname)) {
-        artifacts.set(
-          pathname,
+        artifacts.set(pathname, []);
+      }
+      if ((type === 'fetch' || type === 'xhr') && pathname.endsWith('.json') && r.status() < 400) {
+        artifacts.get(pathname).push(
           r.finished().then(() => r.text()).then(
             (t) => t.trimStart().slice(0, 1),
             () => '',
-          ),
+          )
         );
       }
     });
@@ -448,8 +450,9 @@ export async function runGate(o) {
     }
 
     // ---- G4: artifacts answered as JSON.
-    for (const [pathname, first] of artifacts) {
-      const c = await first;
+    for (const [pathname, attempts] of artifacts) {
+      const candidates = await Promise.all(attempts);
+      const c = candidates.find((value) => value === '{' || value === '[') ?? candidates.at(-1) ?? '';
       if (c !== '{' && c !== '[') fail('G4', { route: pathname }, `the artifact ${pathname} did not answer JSON (starts with "${c}"; the HTML fallback?)`);
     }
   } finally {
