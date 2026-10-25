@@ -74,6 +74,11 @@ const RATE_LIMIT = 5; // frames or mutations per second at rest above which a lo
 /** A static host's slash form, including the root path (never `//`). */
 export const trailingSlashUrl = (url) => `${url.replace(/\/+$/, '')}/`;
 
+/** Prefer any completed JSON body when a page requested the same artifact more than once. */
+export function firstJsonResponse(candidates) {
+  return candidates.find((value) => value === '{' || value === '[') ?? candidates.at(-1) ?? '';
+}
+
 async function loadKeys() {
   try {
     return await import(new URL('../dist/keys.js', import.meta.url).href);
@@ -452,7 +457,7 @@ export async function runGate(o) {
     // ---- G4: artifacts answered as JSON.
     for (const [pathname, attempts] of artifacts) {
       const candidates = await Promise.all(attempts);
-      const c = candidates.find((value) => value === '{' || value === '[') ?? candidates.at(-1) ?? '';
+      const c = firstJsonResponse(candidates);
       if (c !== '{' && c !== '[') fail('G4', { route: pathname }, `the artifact ${pathname} did not answer JSON (starts with "${c}"; the HTML fallback?)`);
     }
   } finally {
