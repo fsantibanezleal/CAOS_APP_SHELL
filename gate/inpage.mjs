@@ -890,7 +890,7 @@ export function installLib() {
     }
     // the document is scrolled so the element shows below a header stuck at the top of the viewport (0.8.0: the
     // sticky header sticks in a scrolling document since known shell defect 26 was fixed)
-    const cover = el.closest('header, [role="banner"]') ? 0 : stuckTop();
+    const cover = coverFor(el);
     const r = el.getBoundingClientRect();
     if (r.top < cover || r.bottom > window.innerHeight) winScroll(window.scrollX, window.scrollY + r.top + r.height / 2 - (cover + (window.innerHeight - cover) / 2));
     const r2 = el.getBoundingClientRect();
@@ -918,8 +918,19 @@ export function installLib() {
     return bottom;
   }
 
+  /** A link inside a static section <header> is still covered by the sticky site header above it. */
+  function coverFor(el) {
+    const header = el.closest('header, [role="banner"]');
+    if (header) {
+      const style = getComputedStyle(header);
+      const rect = header.getBoundingClientRect();
+      if ((style.position === 'sticky' || style.position === 'fixed') && rect.top <= 1 && rect.bottom > 0) return 0;
+    }
+    return stuckTop();
+  }
+
   const visibleArea = (el) => {
-    const area = { left: 0, top: el.closest('header, [role="banner"]') ? 0 : stuckTop(), right: window.innerWidth, bottom: window.innerHeight };
+    const area = { left: 0, top: coverFor(el), right: window.innerWidth, bottom: window.innerHeight };
     for (let a = el.parentElement; a && a !== document.body && a !== document.documentElement; a = a.parentElement) {
       const s = getComputedStyle(a);
       if (s.overflowX === 'visible' && s.overflowY === 'visible') continue;
