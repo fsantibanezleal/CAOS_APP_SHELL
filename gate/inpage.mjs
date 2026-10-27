@@ -413,7 +413,11 @@ export function installLib() {
         const y = Math.max(cy0, r.top);
         const x2 = Math.min(cx1, r.right);
         const y2 = Math.min(cy1, r.bottom);
-        if (x2 - x < 2 || y2 - y < 2) continue;
+        // Only the visible part counts (known shell defect, 0.19.4): a surface mostly past the edge of the viewport is measured
+        // when the gate scrolls to it. Judged from a sliver, a table card with 5 px of its body inside the fold was called
+        // blank (nothing is painted in 5 px of padding) while it renders whole once scrolled to. The visible part must be at
+        // least the drawing's own minimum, the one applied to its full rectangle above.
+        if (x2 - x < min || y2 - y < min) continue;
         // The stage a drawing is judged against: the view's body, else the sized stage, else the surface itself; the
         // view is the card that holds it. A drawing that fills a small corner of a large view underfills its stage.
         const stageEl = el.closest('.caos-plot-body') || el.closest('[data-drawn]') || el;
