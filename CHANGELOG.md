@@ -1,3 +1,10 @@
+## [0.19.004] - 2026-10-27
+
+### Fixed
+
+- A lane badge in the workbench rail wraps inside the rail: the Spanish replay label of 0.19.3 ("Reproduce el resultado precalculado") is wider than the 248 px rail and, with `nowrap`, spilled out of it and widened it, so G5 reported "rail element(s) outside the rail" and the case select cut 14 px of content. A badge outside the rail keeps `nowrap` (known shell defect 44; SHW-044).
+- Gate G6 judges a drawing only by the part of it inside the viewport, and only when that part is at least the drawing's minimum size (16 px for a canvas or a table, 48 px otherwise). A table card with 5 px of its body inside the fold of a 390 x 844 page was called blank ("table, 337x5 is blank") from a sliver of padding while it renders whole once scrolled to (CAOS_Contraste full gate; SHG-075). A blank drawing inside the viewport still fails.
+
 ## [0.19.003] - 2026-10-27
 
 ### Fixed
