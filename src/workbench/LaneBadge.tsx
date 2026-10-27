@@ -7,8 +7,8 @@ export type Lane = 'live' | 'replay' | 'offline';
 
 const LANE_LABELS: Record<Lane, { en: string; es: string }> = {
   live: { en: 'Live in your browser', es: 'En vivo en tu navegador' },
-  replay: { en: 'Replay of the offline result', es: 'Reproduce el resultado offline' },
-  offline: { en: 'Offline only', es: 'Solo offline' },
+  replay: { en: 'Replay of the offline result', es: 'Reproduce el resultado precalculado' },
+  offline: { en: 'Offline only', es: 'Solo precalculado' },
 };
 
 const PROVENANCE_LABELS: Record<Provenance, { en: string; es: string }> = {
