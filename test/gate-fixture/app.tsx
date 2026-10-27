@@ -503,6 +503,45 @@ function PhaseCanvas({ sim, width, height }: { sim: Sim; width: number; height: 
   return <canvas ref={ref} width={width} height={height} style={{ display: 'block' }} />;
 }
 
+/** Shell 0.19.4 (legit-table-at-fold): a spacer that puts the next card's table so that only 5 px of it are inside the viewport once the gate has
+ * brought the open view into sight (the shape of the Contraste table card on a 390 px page, 5 px of its body at the fold). Before it measures a
+ * workbench the gate centres the first tab panel (height H, offset o of the table under the panel's top) in the viewport below the sticky header:
+ * panel top = c - H / 2 with c the centre of the visible area. With the spacer S, H = h0 + S, so the table top is c - h0 / 2 + o + S / 2, and S is
+ * set to put that at (viewport height - 5). It renders nothing at other plants. */
+function FoldSpacer() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const place = () => {
+      el.style.height = '0px';
+      const table = el.parentElement?.querySelector('table');
+      const panel = document.querySelector('[data-case-workbench] [role="tabpanel"]');
+      if (!table || !panel) return;
+      const header = document.querySelector('.site-header');
+      const sticky = header && ['sticky', 'fixed'].includes(getComputedStyle(header).position);
+      const cover = sticky ? header.getBoundingClientRect().bottom : 0;
+      const c = cover + (window.innerHeight - cover) / 2;
+      const h0 = panel.getBoundingClientRect().height;
+      const o = table.getBoundingClientRect().top - panel.getBoundingClientRect().top;
+      el.style.height = `${Math.max(0, 2 * (window.innerHeight - 5 - c + h0 / 2 - o))}px`;
+    };
+    place();
+    window.addEventListener('resize', place);
+    return () => window.removeEventListener('resize', place);
+  }, []);
+  // the spacer holds a small drawing at its foot, in sight above the fold: a state whose viewport holds no other drawing is "nothing is drawn" (G6), as before
+  return (
+    <div ref={ref} data-fold-spacer="" style={{ flex: 'none', overflowAnchor: 'none', position: 'relative' }}>
+      <svg role="img" aria-label="A drawing above the fold" width={160} height={64} style={{ position: 'absolute', left: 0, bottom: 24 }}>
+        <rect x={0} y={0} width={160} height={64} fill="var(--color-accent)" />
+        <rect x={12} y={12} width={136} height={40} fill="var(--color-surface)" />
+        <rect x={24} y={24} width={112} height={16} fill="var(--color-bad)" />
+      </svg>
+    </div>
+  );
+}
+
 function ValidationView({ sim, focusOn }: { sim: Sim; focusOn?: boolean }) {
   const lang = useShellLang();
   const { stateKey } = useWorkbenchState();
@@ -527,6 +566,7 @@ function ValidationView({ sim, focusOn }: { sim: Sim; focusOn?: boolean }) {
           label: pick({ en: 'Checkpoints', es: 'Puntos de control' }, lang),
           content: (
             <>
+              {PLANT === 'legit-table-at-fold' && <FoldSpacer />}
               <PlotCard title={{ en: 'State at checkpoints', es: 'Estado en puntos de control' }} lane="live" provenance="synthetic" dataKey={stateKey}>
                 <table className="caos-table">
                   <thead>

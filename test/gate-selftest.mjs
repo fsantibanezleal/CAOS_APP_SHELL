@@ -302,6 +302,8 @@ const LEGIT = [
   // the re-review of 0.19.0 and the CAOS_Contraste adoption (U16-F8): floating bars that take a choice beside a plain total (G5, G20's readout of the
   // ends), two short horizontal bar charts that fill their card (G20's brush), and two long reference-line labels at one level (G20's mark labels)
   { id: 'legit-bar-adoption', opts: { routes: '/app' } },
+  // shell 0.19.4: a table card whose body is a few pixels inside the viewport is measured when the gate scrolls to it, not judged blank from its sliver
+  { id: 'legit-table-at-fold', opts: { routes: '/app', sizes: '390x844', langs: 'en,es' } },
 ];
 
 /** A static server with an SPA fallback: every unknown path answers index.html with 200 (the G4 plant). */

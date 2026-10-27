@@ -507,6 +507,9 @@ svg.lucide { flex: none; }
 .cs-kind-uploaded { color: var(--color-warn); border-color: color-mix(in oklab, var(--color-warn) 40%, transparent); }
 .cs-modified { display: flex; align-items: center; gap: 0.35rem 0.5rem; flex-wrap: wrap; min-width: 0; }
 .cs-modified .badge { white-space: normal; max-width: 100%; }
+/* A lane badge in the workbench rail wraps inside the rail: the Spanish replay label is wider than the 248px rail and, nowrap, spilled out of it and widened it (known shell defect 44, shell 0.19.4). Outside the rail a badge stays nowrap. */
+.caos-wb-rail .caos-badges { max-width: 100%; }
+.caos-wb-rail .badge { white-space: normal; max-width: 100%; }
 .cs-reset { border: none; background: transparent; color: var(--color-accent); font-size: 0.8rem; font-weight: 600; padding: 0.1rem 0.2rem; text-decoration: underline; text-underline-offset: 2px; }
 /* The compact one-of-N case picker (ADR-0071 rule 7): ten cases in four categories cost a 308px chip block, 21% of a
    2560x1440 viewport, and one row as a dropdown. */
