@@ -149,7 +149,7 @@ export function DocReferences({ ids }: { ids: string[] }) {
               <span translate="no">{c.citation}</span>{' '}
               {h ? (
                 <a href={h} target="_blank" rel="noreferrer noopener" className="faint">
-                  {c.doi ? <span translate="no">{`doi:${c.doi}`}</span> : 'link'}
+                  {c.doi ? <span translate="no">{`doi:${c.doi}`}</span> : lang === 'es' ? 'enlace' : 'link'}
                 </a>
               ) : null}
             </li>
@@ -181,6 +181,7 @@ export function Refs({ ids, label }: { ids: string[]; label: string }) {
  * gate fails on. */
 export function ReferenceList({ ids, heading }: { ids?: string[]; heading?: string }) {
   console.error('[caos-app-shell] ReferenceList is superseded by the end-of-page references block (ADR-0017 s4): give each DocSection its refs');
+  const lang = useShellLang();
   const { list, byId } = useContext(CitationsContext);
   const items = ids ? ids.map((k) => byId[k]).filter(Boolean) : list;
   return (
@@ -194,7 +195,7 @@ export function ReferenceList({ ids, heading }: { ids?: string[]; heading?: stri
               <span translate="no">{c.citation}</span>{' '}
               {h ? (
                 <a href={h} target="_blank" rel="noreferrer noopener" className="faint">
-                  {c.doi ? <span translate="no">{`doi:${c.doi}`}</span> : 'link'}
+                  {c.doi ? <span translate="no">{`doi:${c.doi}`}</span> : lang === 'es' ? 'enlace' : 'link'}
                 </a>
               ) : null}
             </li>

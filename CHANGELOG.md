@@ -1,3 +1,9 @@
+## [0.19.003] - 2026-10-27
+
+### Fixed
+
+- The shell's own labels read in Spanish on a Spanish page: the lane badges say "Reproduce el resultado precalculado" and "Solo precalculado" instead of "offline", and a reference without a DOI is linked as "enlace" instead of "link" (CAOS_Contraste capture review U16-R3, batches c17 and c24; SHT-011).
+
 ## [0.19.002] - 2026-10-25
 
 ### Fixed
