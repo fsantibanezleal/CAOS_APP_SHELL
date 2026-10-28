@@ -34,5 +34,7 @@ Every number on screen goes through `formatNumber(value, lang, options)` (or `us
 - `grouping: false` writes the integer part without a group separator in both languages: a calendar year on an axis
   (`x.format`), in a readout or in a table reads 2021, never 2,021 or 2.021 (known shell defect 30).
 
+A licence identifier (Apache-2.0, GPL-3.0, CC-BY-4.0) is a name, not a quantity: the footer marks it `translate="no"`, so G11 does not read its version as a number on a Spanish page (SHF-037).
+
 A unit is required on every readout value (`unit`, or `unitless` stated); a unit that is a word is bilingual, a
 symbol is written as is.
