@@ -1,3 +1,9 @@
+## [0.19.005] - 2026-10-27
+
+### Added
+
+- A product opts the notes of its filling cards out of the 35% cap with `data-caos-note-fit` on any ancestor: at 1280 px and wider, where the body keeps the stage floor, the note takes the height it needs and shrinks and scrolls in its own box only where the drawing needs its floor; below 1280 px the cap stays. CAOS_Contraste's C04 notes are data the reader needs whole, and the cap cut 9 to 117 px of them while the product could not restyle `.caos-plot-note` (the template's web-baseline guard refuses that) (known shell defect 46; SHC-101).
+
 ## [0.19.004] - 2026-10-27
 
 ### Fixed
