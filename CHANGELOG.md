@@ -1,3 +1,9 @@
+## [0.19.006] - 2026-10-28
+
+### Fixed
+
+- The footer marks the product licence `translate="no"`: a licence identifier is a name, not a quantity, and an SPDX id that carries a version (Apache-2.0, GPL-3.0, CC-BY-4.0) was read as a number with a decimal point by gate G11 on every Spanish page, and could be mangled by browser translation. The licence text is unchanged, the deprecated `footer.license` path gets the same attribute, and no other footer text is marked (base defect BD-1, found by CEFOP_DinHot on 2026-10-28; SHF-037).
+
 ## [0.19.005] - 2026-10-27
 
 ### Added

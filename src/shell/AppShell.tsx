@@ -253,7 +253,7 @@ function Frame({ config, pathname, routed, children }: { config: ShellConfig; pa
             {license && (
               <>
                 <span aria-hidden="true">·</span>
-                <span className="faint">{license}</span>
+                <span className="faint" translate="no">{license}</span>
               </>
             )}
             {config.footer?.disclaimer && (
