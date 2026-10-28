@@ -318,3 +318,11 @@ test('BL-016: the reserved list separates components from modifiers and reserves
   assert.ok(!r.classes.includes('css') && !r.classes.includes('min'), 'no class read from an @import line');
   assert.deepEqual(r.classes, [...new Set([...r.components, ...r.modifiers])].sort());
 });
+
+test('SHC-101: a workbench with noteFit marks its root data-caos-note-fit, and one without does not', () => {
+  const groups = [{ id: 'model', label: 'Model', content: 'MODEL-PANEL' }];
+  const fit = renderToStaticMarkup(<CaseWorkbench caseId="c1" groups={groups} context={{ content: 'ctx' }} noteFit />);
+  const plain = renderToStaticMarkup(<CaseWorkbench caseId="c1" groups={groups} context={{ content: 'ctx' }} />);
+  assert.match(fit, /data-case-workbench=""[^>]*data-caos-note-fit=""/);
+  assert.doesNotMatch(plain, /data-caos-note-fit/);
+});

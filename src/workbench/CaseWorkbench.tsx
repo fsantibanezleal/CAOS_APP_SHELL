@@ -38,6 +38,9 @@ export interface CaseWorkbenchProps {
   controls?: Record<string, unknown>;
   /** A workbench whose views have no live control declares it, so the reactivity gate does not expect one. */
   replayOnly?: boolean;
+  /** The notes of the case's filling cards are text the reader needs whole: at 1280 px and wider each takes the height it
+   * needs instead of 35% of its card, the body keeping the stage floor (`data-caos-note-fit`, 0.19.5, SHC-101). */
+  noteFit?: boolean;
   /** The regimes of the case, shown in the rail under the case picker; omit only for a case with no meaningful
    * parametric or temporal family. */
   variants?: VariantBarProps;
@@ -91,7 +94,7 @@ function panel(id: string, lane: Lane | undefined, provenance: Provenance | unde
  * `data-state-key` on the instrument so the gate can check that the instrument shows what was asked for.
  */
 export function CaseWorkbench(props: CaseWorkbenchProps) {
-  const { caseId, cases, source, controls, replayOnly, variants, rail, railLabel, groups, compare, context, group, onGroupChange, deepLinkView = true, ariaLabel, focus } = props;
+  const { caseId, cases, source, controls, replayOnly, noteFit, variants, rail, railLabel, groups, compare, context, group, onGroupChange, deepLinkView = true, ariaLabel, focus } = props;
   const lang = useShellLang();
   const focusCfg: CaseFocusConfig | null = focus === true ? {} : focus || null;
   // Focus mode, one piece of code with the surface's (useFocusMode): held in the URL (`?focus=1`), opened by the control or by a link,
@@ -159,6 +162,7 @@ export function CaseWorkbench(props: CaseWorkbenchProps) {
     'data-source': source ?? '',
     'data-state-key': stateKey,
     'data-replay-only': replayOnly ? '1' : undefined,
+    'data-caos-note-fit': noteFit ? '' : undefined,
   };
   if (showFocus && focusCfg) {
     const open = tabs.find((t) => t.id === openGroup) ?? tabs[0];
