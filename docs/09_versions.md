@@ -43,6 +43,6 @@ moved or deleted (a published tag is the record of a release that happened).
 - **0.04.000** (CHANGELOG, 2026-07-28): released in the repository, never published, and never tagged; npm goes from
   0.3.0 to 0.5.0, which carries it.
 - **0.06.009 to 0.06.012** (tags `v0.06.009` to `v0.06.012`, 2026-09-24 and 25): released in the repository, never
-  published. The npm token that published up to 0.6.8 stopped working (npm removed 2FA-bypass granular tokens), and
-  0.6.13 was the first upload after it was replaced. A product reads those four in the CHANGELOG; on npm it takes 0.6.13,
+  published. The npm token that published up to 0.6.8 expired on 2026-09-17 (every `npm publish` answered 401), and
+  0.6.13 was the first upload with its replacement, issued 2026-09-26. A product reads those four in the CHANGELOG; on npm it takes 0.6.13,
   which carries them.
