@@ -1,3 +1,9 @@
+## [0.19.008] - 2026-10-30
+
+### Fixed
+
+- A narrow scientific grid pushed a `PlotCard` caption 17 px outside its column when a translated lane/provenance badge and the title shared a non-wrapping row (CAOS_Geophysics MT cases at 768 px, dark Spanish; known defect 48, SHW-045, issue #161). Plot titles, actions and badges now wrap inside the card while captions that fit stay on one row. A product on 0.19.8 removes any temporary plot-caption wrapping rule.
+
 ## [0.19.007] - 2026-10-29
 
 ### Fixed

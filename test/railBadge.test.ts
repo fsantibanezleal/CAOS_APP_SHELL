@@ -29,8 +29,8 @@ test('a lane badge in the workbench rail wraps inside the rail (known defect 44)
   assert.match(group, /max-width:\s*100%/);
 });
 
-test('a badge outside the rail keeps nowrap', () => {
+test('a badge outside the rail or plot captions keeps nowrap', () => {
   assert.match(bodyOf('.badge') ?? '', /white-space:\s*nowrap/);
   const rails = [...CSS.matchAll(/([^{}]+)\{([^{}]*white-space:\s*normal[^{}]*)\}/g)].map((m) => m[1].trim());
-  for (const sel of rails) if (/\.badge/.test(sel)) assert.match(sel, /\.caos-wb-rail|\.cs-modified/, `"${sel}" unwraps a badge outside the rail`);
+  for (const sel of rails) if (/\.badge/.test(sel)) assert.match(sel, /\.caos-wb-rail|\.cs-modified|\.caos-plot-actions/, `"${sel}" unwraps a badge outside the rail and plot captions`);
 });
