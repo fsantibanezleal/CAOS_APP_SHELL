@@ -1,3 +1,9 @@
+## [0.19.007] - 2026-10-29
+
+### Fixed
+
+- The version numbering reads as one release everywhere. npm showed only the semver form (`0.19.6`) while the tags, `VERSION`, the CHANGELOG and the README badge showed the display form (`0.19.006`), and nothing on the npm page said they were the same release: the package shipped neither `VERSION` nor the CHANGELOG. The package now carries both, the README shows the npm badge beside the release-tag badge and states the two spellings, and [`docs/09_versions.md`](docs/09_versions.md) maps every version published on npm to its display form, its tag and its commit, with the numbers that never reached npm (0.04.000; 0.06.009 to 0.06.012) and why. The npm uploads that had no tag (0.1.1, 0.1.2, 0.6.0 to 0.6.4) are tagged at the commit npm records for them; no published tag was moved or deleted. `docs/08_releasing.md` and the SDD no longer say that trusted publishing has never published: every release from 0.19.000 was published by `publish-npm.yml`. Found by Felipe on 2026-10-29 ("why the numbering is not coherent"); SHR-001 to SHR-004. A product adopting it changes nothing but its pin.
+
 ## [0.19.006] - 2026-10-28
 
 ### Fixed
