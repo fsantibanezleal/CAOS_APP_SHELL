@@ -384,8 +384,9 @@ Versions are `X.XX.XXX` in `VERSION` (ADR-0068) with the semver form in `package
 the top CHANGELOG entry and the tag `vX.XX.XXX` agree with them (`scripts/check_version_coherence.py`), and the package
 carries `VERSION` and the CHANGELOG so the npm page shows both spellings ([`docs/09_versions.md`](../09_versions.md),
 SHR-001 to SHR-004). A fix is a patch; a new primitive, a new check or a changed default is a minor version.
-`.github/workflows/publish-npm.yml` publishes on a GitHub release through Trusted Publishing, and has published every
-release from 0.19.000 ([`docs/08_releasing.md`](../08_releasing.md)). Products pin the shell exactly and adopt a release
+`.github/workflows/publish-npm.yml` would publish on a GitHub release through Trusted Publishing but has never published
+(no Trusted Publisher is configured), so releases are published with the owner's direct-publish token from a clean
+clone of the tag ([`docs/08_releasing.md`](../08_releasing.md)). Products pin the shell exactly and adopt a release
 when their owner names it (ADR-0078 section 5): bump the pin, remove the overrides the CHANGELOG entry says are
 unnecessary, and pass the gate again. The CHANGELOG's latest entry is the release this document describes.
 
