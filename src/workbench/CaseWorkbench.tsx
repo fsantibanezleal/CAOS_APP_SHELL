@@ -155,6 +155,7 @@ export function CaseWorkbench(props: CaseWorkbenchProps) {
   const railHead = pickers;
   const focusPickers = pickers;
   const instrumentData = {
+    'data-instrument': '',
     'data-case-workbench': '',
     'data-group-count': tabs.length,
     'data-case': caseId,
