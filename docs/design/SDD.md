@@ -1,10 +1,10 @@
 # Software design document: `@fasl-work/caos-app-shell`
 
 This is the shell's first software design document (ADR-0075). It says what the shell is, what it promises
-to products, and which test or gate plant fails when a promise breaks. The requirements live in nine files, one per
+to products, and which test or gate plant fails when a promise breaks. The requirements live in ten files, one per
 area, under [`features/`](features/); each row names an existing test or a gate plant, and the CI step
 `scripts/check_sdd.py` reads them. The behaviour itself is described in [`docs/01_structure.md`](../01_structure.md)
-to [`docs/08_releasing.md`](../08_releasing.md); this document does not repeat those pages, it fixes the contracts and
+to [`docs/09_versions.md`](../09_versions.md); this document does not repeat those pages, it fixes the contracts and
 the verification.
 
 | Area | Prefix | Requirements file |
@@ -18,6 +18,7 @@ the verification.
 | Theme and language | SHT | [`features/theme-and-language/requirements.md`](features/theme-and-language/requirements.md) |
 | Architecture modal | SHA | [`features/architecture-modal/requirements.md`](features/architecture-modal/requirements.md) |
 | The gate | SHG | [`features/gate/requirements.md`](features/gate/requirements.md) |
+| Release and versions | SHR | [`features/release/requirements.md`](features/release/requirements.md) |
 
 ## Problem and non-goals
 
@@ -379,11 +380,14 @@ trunk-only triggers (ADR-0074, `scripts/check_ci_budget.py`).
 
 ## Versions and adoption
 
-Versions are `X.XX.XXX` in `VERSION` (ADR-0068) with the semver form in `package.json` (0.08.000 is 0.8.0); the top CHANGELOG entry and the tag `vX.XX.XXX` agree with them
-(`scripts/check_version_coherence.py`). A fix is a patch; a new primitive, a new check or a changed default is a minor version. The package is published to npm; `.github/workflows/publish-npm.yml` publishes on a GitHub
-release through Trusted Publishing, which has never published (the package page has no Trusted Publisher yet), so releases are published with the owner's direct-publish token until it is set
-([`docs/08_releasing.md`](../08_releasing.md)). Products pin the shell exactly and adopt a release when their owner names it (ADR-0078 section 5): bump the pin, remove the overrides the CHANGELOG entry says are unnecessary,
-and pass the gate again. The CHANGELOG's latest entry is 0.11.002 (2026-10-12: the filling card's stage floor holds on the stage itself), after 0.11.001 and 0.11.000: this design document, the gated requirements, the documentation-page areas of ADR-0017 section 2.1 with the executive view, the declared unavailable state, toned `yMarks`, the filling card's note cap and stage floor, and the knob's margin.
+Versions are `X.XX.XXX` in `VERSION` (ADR-0068) with the semver form in `package.json` and on npm (0.19.007 is 0.19.7);
+the top CHANGELOG entry and the tag `vX.XX.XXX` agree with them (`scripts/check_version_coherence.py`), and the package
+carries `VERSION` and the CHANGELOG so the npm page shows both spellings ([`docs/09_versions.md`](../09_versions.md),
+SHR-001 to SHR-004). A fix is a patch; a new primitive, a new check or a changed default is a minor version.
+`.github/workflows/publish-npm.yml` publishes on a GitHub release through Trusted Publishing, and has published every
+release from 0.19.000 ([`docs/08_releasing.md`](../08_releasing.md)). Products pin the shell exactly and adopt a release
+when their owner names it (ADR-0078 section 5): bump the pin, remove the overrides the CHANGELOG entry says are
+unnecessary, and pass the gate again. The CHANGELOG's latest entry is the release this document describes.
 
 ## Risks
 

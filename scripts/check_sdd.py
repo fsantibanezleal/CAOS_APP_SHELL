@@ -12,7 +12,7 @@ Checks, in increasing strength:
    one ``Status:`` line (live, planned or superseded) and a ``| ID | Requirement | Gate |`` table. Every line that
    starts with ``|`` is a row: a row with fewer than three cells or an empty ID is a finding, and every
    ``SH?-NNN`` token in the file must be the ID of a row.
-3. Every row has an ID matching ``SH[DFWCKNTAG]-NNN`` (unique across all files), a statement with SHALL and a gate.
+3. Every row has an ID matching ``SH[DFWCKNTAGR]-NNN`` (unique across all files), a statement with SHALL and a gate.
 4. **The named gate exists and can fail.** A live gate cell names, in backticks, one or more ``test/<file>::<name>``
    or ``e2e/<file>::<name>``: the name is the first string argument of a ``test(`` or ``it(`` call that starts its
    line (not inside a string, a comment or another test's body), and the call is not skipped (no ``.skip``,
@@ -41,8 +41,8 @@ SECTIONS = (
     "Problem and non-goals", "Dimensioning", "Technology and versions", "Contracts", "Components",
     "Degradation and dependency states", "Verification", "Versions and adoption", "Risks", "ADR fit",
 )
-ID_RE = re.compile(r"^SH[DFWCKNTAG]-\d{3}$")
-ID_TOKEN = re.compile(r"\bSH[DFWCKNTAG]-\d{3}\b")
+ID_RE = re.compile(r"^SH[DFWCKNTAGR]-\d{3}$")
+ID_TOKEN = re.compile(r"\bSH[DFWCKNTAGR]-\d{3}\b")
 TICKED = re.compile(r"`([^`]+)`")
 FILE_LIKE = re.compile(r"^[\w./-]+\.(py|ts|tsx|mjs|js|json|md|yml|yaml|css)(::[^`]+)?$")
 HEADER = re.compile(r"^#\s+Requirements:\s*\S", re.M)
@@ -206,7 +206,7 @@ def main() -> int:
             findings.append(f"{rel}: {token} appears outside the ID column of a row")
         for rid, statement, gate in rows:
             if not ID_RE.match(rid):
-                findings.append(f"{rel} {rid!r}: the ID does not match SH[DFWCKNTAG]-NNN")
+                findings.append(f"{rel} {rid!r}: the ID does not match SH[DFWCKNTAGR]-NNN")
             elif rid in seen:
                 findings.append(f"{rel} {rid}: duplicate ID (first in {seen[rid]})")
             else:

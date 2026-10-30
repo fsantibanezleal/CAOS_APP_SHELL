@@ -1,7 +1,12 @@
 # @fasl-work/caos-app-shell
 
 [![License](https://img.shields.io/github/license/fsantibanezleal/CAOS_APP_SHELL)](LICENSE)
-[![Version](https://img.shields.io/github/v/tag/fsantibanezleal/CAOS_APP_SHELL?label=version&sort=semver)](https://github.com/fsantibanezleal/CAOS_APP_SHELL/tags)
+[![npm](https://img.shields.io/npm/v/@fasl-work/caos-app-shell?label=npm)](https://www.npmjs.com/package/@fasl-work/caos-app-shell)
+[![Release](https://img.shields.io/github/v/tag/fsantibanezleal/CAOS_APP_SHELL?label=release&sort=semver)](https://github.com/fsantibanezleal/CAOS_APP_SHELL/tags)
+
+**One release, two spellings.** npm writes a version in semver (`0.19.7`); `VERSION`, the CHANGELOG and the git tag
+write the same release in the display form `X.XX.XXX` (`0.19.007`, tag `v0.19.007`), because npm forbids leading zeros
+(ADR-0068). Every version published on npm, its tag and its commit: [`docs/09_versions.md`](docs/09_versions.md).
 
 The shared **web-app shell, route types, views, drawings, design system and measured gate** of the CAOS / Faena
 public apps, one of the three parts of the CAOS base with the product template
