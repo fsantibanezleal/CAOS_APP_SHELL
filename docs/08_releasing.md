@@ -18,16 +18,17 @@ patch; a new primitive, a new check or a changed default is a minor version.
    carries; the known-defects record in CAOS_MANAGE (`conventions/shell-known-defects.md`) closes the entries
    the release carries.
 4. PR into `develop`, then `develop` into `main`; the tag on `main`; a GitHub release from the tag.
-5. Publish to npm (below), then `npm view @fasl-work/caos-app-shell version` shows the release.
+5. Publish to npm (below), then `npm view @fasl-work/caos-app-shell version` shows the release in its semver form and its
+   `gitHead` is the tag's commit ([`09_versions.md`](09_versions.md)).
 
 ## npm
 
 `.github/workflows/publish-npm.yml` publishes on a GitHub release through npm Trusted Publishing (OIDC, environment
-`npm`, provenance). It has never published: the package page has no Trusted Publisher yet (the upload of 0.7.0 answered
-E404). Until it has one, a release is published with the vault's direct-publish token from a clean clone of the tag
-(`npm ci`, `npm test`, `npm publish --access public`), as 0.6.13 and 0.7.0 to 0.7.2 were. npm stops accepting
-direct-publish tokens in January 2027; configuring the Trusted Publisher (user `fsantibanezleal`, repository
-`CAOS_APP_SHELL`, workflow `publish-npm.yml`, environment `npm`) is the owner's switch on the package page.
+`npm`, provenance): it checks `VERSION`, `package.json`, the CHANGELOG and the tag against each other, runs the tests and
+publishes. Every release from 0.19.000 was published by it; before that, releases went out with a direct-publish token
+from a clean clone of the tag, and four (0.06.009 to 0.06.012) never reached npm while the token was being replaced.
+After the release, `npm view @fasl-work/caos-app-shell@<semver> gitHead` is the tag's commit; the version map
+[`09_versions.md`](09_versions.md) gets a row of its own only for a release that breaks that rule.
 
 ## Products
 
