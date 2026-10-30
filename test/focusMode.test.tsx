@@ -121,6 +121,7 @@ test('inside Focus the rail head never shows the Focus control: select picker, c
   for (const layout of ['select', 'chips', 'none'] as const) {
     const html = inFocusMarkup(layout);
     assert.match(html, /data-focus-shell=""/, `${layout}: the focus frame is open`);
+    assert.match(html, /class="caos-cw caos-cw-focus"[^>]*data-instrument=""/, `${layout}: the focus instrument carries the shell marker`);
     assert.doesNotMatch(html, /data-focus-enter/, `${layout}: no Focus control inside Focus`);
     assert.match(html, /data-focus-exit=""/, `${layout}: the exit control is there`);
   }
