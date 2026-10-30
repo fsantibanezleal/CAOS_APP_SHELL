@@ -57,6 +57,7 @@ test('CaseWorkbench orders the groups, then the comparison, then the context (AD
   const order = [...out.matchAll(/role="tab"[^>]*>([^<]+)</g)].map((m) => m[1]);
   assert.deepEqual(order, ['Model', 'Validation', 'Compare variants', 'Context']);
   assert.match(out, /data-group-count="4"/);
+  assert.match(out, /class="caos-cw"[^>]*data-instrument=""/);
 });
 
 test('CaseWorkbench refuses more than six peer groups (ADR-0071 rule 5)', () => {
