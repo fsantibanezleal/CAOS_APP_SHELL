@@ -1,3 +1,9 @@
+## [0.19.009] - 2026-10-30
+
+### Fixed
+
+- The normal CaseWorkbench instrument now carries data-instrument, matching Focus mode and the workbench contract enforced by gate G6 (CAOS_APP_SHELL#163; SHW-046). Products on 0.19.9 need no product-side marker workaround.
+
 ## [0.19.008] - 2026-10-30
 
 ### Fixed
