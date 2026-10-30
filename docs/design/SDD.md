@@ -380,7 +380,7 @@ trunk-only triggers (ADR-0074, `scripts/check_ci_budget.py`).
 
 ## Versions and adoption
 
-Versions are `X.XX.XXX` in `VERSION` (ADR-0068) with the semver form in `package.json` and on npm (0.19.007 is 0.19.7);
+Versions are `X.XX.XXX` in `VERSION` (ADR-0068) with the semver form in `package.json` and on npm (0.19.008 is 0.19.8);
 the top CHANGELOG entry and the tag `vX.XX.XXX` agree with them (`scripts/check_version_coherence.py`), and the package
 carries `VERSION` and the CHANGELOG so the npm page shows both spellings ([`docs/09_versions.md`](../09_versions.md),
 SHR-001 to SHR-004). A fix is a patch; a new primitive, a new check or a changed default is a minor version.
