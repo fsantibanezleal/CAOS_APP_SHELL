@@ -23,11 +23,16 @@ patch; a new primitive, a new check or a changed default is a minor version.
 
 ## npm
 
-`.github/workflows/publish-npm.yml` publishes on a GitHub release through npm Trusted Publishing (OIDC, environment
-`npm`, provenance): it checks `VERSION`, `package.json`, the CHANGELOG and the tag against each other, runs the tests and
-publishes. Every release from 0.19.000 was published by it; before that, releases went out with a direct-publish token
-from a clean clone of the tag, and four (0.06.009 to 0.06.012) never reached npm while the token was being replaced.
-After the release, `npm view @fasl-work/caos-app-shell@<semver> gitHead` is the tag's commit; the version map
+`.github/workflows/publish-npm.yml` runs on a GitHub release through npm Trusted Publishing (OIDC, environment `npm`,
+provenance): it checks `VERSION`, `package.json`, the CHANGELOG and the tag against each other, runs the tests, signs
+the provenance statement and uploads. It has never published: every run since 0.9.3 answered `E404 Not Found - PUT`,
+which is npm's answer when no Trusted Publisher on the package page matches the workflow. Until the owner configures
+one (user `fsantibanezleal`, repository `CAOS_APP_SHELL`, workflow `publish-npm.yml`, environment `npm`), a release is
+published with the owner's direct-publish token from a clean clone of the tag (`npm ci`, `npm test`,
+`npm publish --access public`), as every release from 0.6.13 on was. npm stops accepting direct-publish tokens in
+January 2027.
+
+After the publish, `npm view @fasl-work/caos-app-shell@<semver> gitHead` is the tag's commit; the version map
 [`09_versions.md`](09_versions.md) gets a row of its own only for a release that breaks that rule.
 
 ## Products
