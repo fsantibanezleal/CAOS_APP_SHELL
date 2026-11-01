@@ -118,3 +118,22 @@ Green cases include exact-floor 9 px, above-floor text, locally small text enlar
 root CSS rotation, group rotation, nonuniform compression and skew. A conservative least-stretch
 measure prevents compressed glyphs passing because their other axis is large. Missing, singular,
 nonfinite or throwing font mappings enter the existing small array as font scale unavailable.
+
+## SHG-087: artifact reads interrupted by navigation
+
+The consumer trial on OreFlow008 observes a valid391107-byte model request before the gate closes
+its page context. Reading that response can fail because of navigation; this is not proof that the
+resource is HTML or empty. The reader keeps the original full URL and request headers. Only a
+failed body read or304 response admits one bounded independentGET, stripping conditional/range
+headers so the complete document is requested. Successful empty/malformed/HTML bodies fail without
+retry. A failed or non-2xx retry fails. CompleteJSON parse is required, not just its leading brace.
+
+RealHTTP/browser regression closes the first context after response headers, confirms a complete
+retry at exactly the original URL and retained header, and retains missing/invalid/HTML/empty/
+conditional cases as independent negative probes. The report records every transport retry.
+No readiness marker, idle-rate threshold, traversal floor or public product result is relaxed.
+
+The canceled-response regression additionally uses an actual browser session cookie. Complete
+on-wire headers are captured through Request.allHeaders before context teardown; the partial
+header map is insufficient. Cookie- and bearer-protected controls must both pass without
+recording credential values. Unavailable authorization metadata fails explicitly.

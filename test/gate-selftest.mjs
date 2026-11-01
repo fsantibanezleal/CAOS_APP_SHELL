@@ -14,7 +14,7 @@ import { buildFixture, makePlant } from './gate-fixture/build.mjs';
 import { runGate } from '../gate/run.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
-const work = join(root, '.gate-selftest');
+const work = join(process.env.CAOS_TEMP_ROOT || process.env.RUNNER_TEMP || root, '.gate-selftest');
 const clean = join(work, 'clean');
 const BRAND = 'GateFixture';
 const QUICK = { sizes: '1280x800', themes: 'light', langs: 'en', idleMs: 600, wideFont: false };
