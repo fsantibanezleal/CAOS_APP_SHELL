@@ -12,6 +12,9 @@ import { fileURLToPath } from 'node:url';
 import { after, before, describe, test } from 'node:test';
 import { buildFixture, makePlant } from './gate-fixture/build.mjs';
 import { runGate } from '../gate/run.mjs';
+import { SELF_TEST_WORKERS } from './selftest-workers.mjs';
+
+console.info(`G15 workers: plants ${SELF_TEST_WORKERS.plants}, legitimate ${SELF_TEST_WORKERS.legitimate}`);
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const work = join(process.env.CAOS_TEMP_ROOT || process.env.RUNNER_TEMP || root, '.gate-selftest');
@@ -436,7 +439,7 @@ test('a surface that renames the focus parameter (SurfaceFocusConfig.param) pass
 ${show(r)}`);
 });
 
-describe('every planted defect fails the check that owns it', { concurrency: 4 }, () => {
+describe('every planted defect fails the check that owns it', { concurrency: SELF_TEST_WORKERS.plants }, () => {
   const servers = [];
   after(async () => {
     for (const s of servers) await s.close();
@@ -462,7 +465,7 @@ ${show(r)}`);
   }
 });
 
-describe('a legitimate page passes the gate', { concurrency: 3 }, () => {
+describe('a legitimate page passes the gate', { concurrency: SELF_TEST_WORKERS.legitimate }, () => {
   for (const p of LEGIT) {
     test(`legit: ${p.id}`, { timeout: 600_000 }, async () => {
       const dir = makePlant(clean, join(work, `plant-${p.id}`), p.id);

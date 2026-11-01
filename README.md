@@ -159,4 +159,12 @@ Browser applications on 6/7 install the matching `react-router-dom`, which suppl
 Router 8 applications provide `react-router` directly. Do not mix different core and DOM majors in
 one application.
 
+### Self-test worker limits
+
+`npm run test:gate` runs the complete G15 matrix. On a workstation running other compute jobs, set
+`CAOS_GATE_TEST_CONCURRENCY=1` to serialize its browser cases. Integers from one through four are
+accepted; unset configuration retains four planted cases and three legitimate cases concurrently.
+Every case, assertion, viewport, language and timeout stays the same. Invalid settings fail before
+fixture generation. Keep the configured temporary directory external to the repository.
+
 MIT · part of the Faena mining-analytics hub.

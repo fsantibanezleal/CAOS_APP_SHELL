@@ -137,3 +137,10 @@ The canceled-response regression additionally uses an actual browser session coo
 on-wire headers are captured through Request.allHeaders before context teardown; the partial
 header map is insufficient. Cookie- and bearer-protected controls must both pass without
 recording credential values. Unavailable authorization metadata fails explicitly.
+
+SHG-088 permits `CAOS_GATE_TEST_CONCURRENCY=1` through `4` for local resource scheduling.
+Unset configuration retains the existing planted/legitimate limits of four/three. Invalid values fail
+during configuration import before fixture generation. The native child-process regression starts with
+closed input and no inherited Node test-runner context. The complete G15 fixture inventory, language and
+viewport matrix, assertions and all gate action/navigation timeouts remain unchanged; a lower worker
+limit serializes cases rather than skipping them. The actual complete run must still report every case.
