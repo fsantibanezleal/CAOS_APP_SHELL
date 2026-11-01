@@ -1,3 +1,14 @@
+## [0.19.011] - 2026-11-01
+
+### Fixed
+
+- Measure complete scrollable documents through actual readable viewport evidence rather than treating content below the current position as missing. Long executive briefs, source-link titles and technical areas retain the same content floors and hidden/clipped/font checks (issue #170).
+- Retain reached native controls by identity, reject permanent clipping through the full document ancestor chain and reject opaque ancestor covers. Document inspection restores and verifies the original keyboard focus and scrolling state.
+
+### Adoption
+
+- Products pin npm `0.19.11` and run the installed gate against the built site. No component API, style override or scientific-data change is required.
+
 ## [0.19.010] - 2026-10-31
 
 ### Fixed
