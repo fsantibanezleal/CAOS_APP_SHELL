@@ -2,6 +2,13 @@
 
 ## Every row is one line
 
+`SurfacePage document` uses the same controlled/deep-linked tabs, keyboard navigation and Focus
+composition as the default surface. It only opts its single page root into full-column document
+framing. Continue to set the surface's `focus` and each eligible `TabDef.focus`; a non-focusable view
+retains the reserved, hidden Focus slot. Focus keeps its configured query parameter and view memory;
+Escape and the exit button return to the same view and sub-view with document framing restored.
+Do not wrap a second document root around it or copy the Focus wrapper into a product.
+
 The route row, the tab rows, the sub-tab rows, the chip rows and the rail's section row follow one rule (ADR-0071
 rule 4): one line; when it does not fit it scrolls sideways (wheel, trackpad, drag, keyboard), its scrollbar hidden and
 its hidden end faded (`useOverflowFade` sets `data-fade-start` and `data-fade-end`, the stylesheet masks them); the

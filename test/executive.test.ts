@@ -27,6 +27,7 @@ import {
   wordsIn,
 } from '../src/content/executive.ts';
 import schema from '../src/content/executive.schema.json' with { type: 'json' };
+import { installLib } from '../gate/inpage.mjs';
 
 /** The executive view data file (CAOS_MANAGE conventions/problem-context-first.md; docs/06_executive-view.md). */
 
@@ -35,6 +36,57 @@ const clone = () => JSON.parse(JSON.stringify(fixture));
 const paths = (data: unknown) => validateExecutive(data).map((p) => p.path);
 const words = (n: number) => Array.from({ length: n }, (_, i) => `word${i}`).join(' ');
 const get = (d: any, path: string) => path.split('.').reduce((o, k) => o[k], d);
+
+// A small affine DOMMatrix test double; real DOM matrices are exercised in e2e/surface.test.ts.
+function affine(a = 1, b = 0, c = 0, d = 1, e = 0, f = 0): any {
+  return { a, b, c, d, e, f,
+    inverse() {
+      const det = a * d - b * c;
+      return affine(d / det, -b / det, -c / det, a / det, (c * f - d * e) / det, (b * e - a * f) / det);
+    },
+    multiply(m: any) {
+      return affine(a*m.a+c*m.b, b*m.a+d*m.b, a*m.c+c*m.d, b*m.c+d*m.d, a*m.e+c*m.f+e, b*m.e+d*m.f+f);
+    },
+  };
+}
+
+function geometryProbe() {
+  const old = (globalThis as any).window;
+  const oldDocument = (globalThis as any).document;
+  const win: any = {};
+  (globalThis as any).window = win;
+  (globalThis as any).document = { createRange: () => ({}) };
+  try { installLib(); return win.__caosGate.svgTextBounds; }
+  finally {
+    if (old === undefined) delete (globalThis as any).window; else (globalThis as any).window = old;
+    if (oldDocument === undefined) delete (globalThis as any).document; else (globalThis as any).document = oldDocument;
+  }
+}
+
+test('root SVG bounds transform all four corners and cancel root screen transforms', () => {
+  const measure = geometryProbe();
+  assert.equal(typeof measure, 'function');
+  const rootMatrix = affine(2, 0, 0, 3, 110, 70);
+  const local = affine(0, 2, -3, 0, 40, 20);
+  const bounds = measure({ getScreenCTM: () => rootMatrix }, {
+    getScreenCTM: () => rootMatrix.multiply(local), getBBox: () => ({ x: 1, y: 2, width: 5, height: 7 }),
+  });
+  for (const [key, expected] of Object.entries({ x: 13, y: 22, width: 21, height: 10 })) {
+    assert.ok(Math.abs(bounds[key] - expected) < 1e-9, key);
+  }
+});
+
+test('unavailable or singular SVG matrices never fabricate passing bounds', () => {
+  const measure = geometryProbe();
+  assert.equal(typeof measure, 'function');
+  const text = { getScreenCTM: () => affine(), getBBox: () => ({ x: -500, y: 0, width: 40, height: 10 }) };
+  for (const root of [null, affine(0, 0, 0, 1), affine(NaN)]) {
+    assert.equal(measure({ getScreenCTM: () => root }, text), null);
+  }
+  assert.equal(measure({ getScreenCTM() { throw new Error('DOM matrix unavailable'); } }, text), null);
+  assert.equal(measure({ getScreenCTM: () => affine() }, { ...text, getScreenCTM: () => null }), null);
+  assert.equal(measure({ getScreenCTM: () => affine() }, { ...text, getBBox() { throw new Error('No box'); } }), null);
+});
 
 test('the schema accepts the fixture and the validator reports no problem', () => {
   assert.equal(EXECUTIVE_SCHEMA_VERSION, '2.0.0');

@@ -32,6 +32,26 @@ routes, version, build, licence, visibility, architecture and footer provenance 
 | Surface | `SurfacePage` | an App that is not one case's: a hub, an explorer, a console | a head (title, lede, actions), one row of at most six views, the open view filling the rest and scrolling inside |
 | Document | `DocPage` and `DocSection` | Introduction, Methodology, Implementation, Experiments, Benchmark | the full width of the page (`--maxw-wide`), the Introduction included (0.13.1; the centred 1200 px column is gone); text blocks take the full column, captions keep a `--measure-text` (78ch) line, and the references close the page or open tab |
 
+For a document that also needs the surface's tab and Focus composition, use `SurfacePage document`.
+The optional boolean defaults to false: a generic surface keeps its existing heading and measured
+lede. Document mode adds `caos-surface-doc` and `data-doc-page` to the same wide page root. Its
+heading, lede and body fill the document column; actions occupy their own row rather than narrowing
+the introduction. Fonts and spacing remain shell tokens. The root already owns the page padding:
+place it directly under `AppShell`, never inside a second `.page-body` or `DocPage`.
+
+```tsx
+<SurfacePage document title={{ en: 'Introduction', es: 'Introducción' }} lede={lede} focus
+  tabs={[
+    { id: 'executive', label: executiveLabel, content: executiveView },
+    { id: 'technical', label: technicalLabel, content: technicalView, focus: true },
+  ]}
+/>
+```
+
+This changes framing, not content requirements or navigation. `DocSection`, references and the
+executive-view gates still apply. Omit `document` for an App surface; use `DocPage` for a document
+that does not need surface Focus. See [the quality contract](08_quality-bar.md).
+
 Two special frames sit beside these: `FocusShell` (a full-viewport scenario, ADR-0070; the App reaches it through `CaseWorkbench`'s
 `focus`, 0.14.0, or, for a surface App, through `SurfacePage`'s `focus` and `TabDef.focus`, 0.16.0, `docs/04_views.md`) and `WorkbenchShell` (an authenticated console with a sidebar and a phone bottom bar).
 
