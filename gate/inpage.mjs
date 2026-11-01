@@ -9,6 +9,55 @@ export function installLib() {
   G.raf = 0;
   // The smallest rendered size of an illustration label (EXEC_LIMITS.minLabelPx of gate/areas.mjs; test/executive.test.ts keeps them equal).
   const EXEC_MIN_LABEL_PX = 9;
+  /** Local text bounds mapped into the outer illustration's SVG user space, not screen pixels.
+   * All four corners matter for rotation/skew. Null is an explicit unmeasurable bound, never a pass.
+   * Screen matrices include nested viewports and root CSS transforms; the root inverse cancels them.
+   */
+  G.svgTextBounds = (root, text) => {
+    try {
+      const rootMatrix = root.getScreenCTM();
+      const textMatrix = text.getScreenCTM();
+      const valid = (m) => m && ['a', 'b', 'c', 'd', 'e', 'f'].every((k) => Number.isFinite(m[k]))
+        && m.a * m.d - m.b * m.c !== 0;
+      if (!valid(rootMatrix) || !valid(textMatrix)) return null;
+      const matrix = rootMatrix.inverse().multiply(textMatrix);
+      if (!valid(matrix)) return null;
+      const box = text.getBBox();
+      if (!['x', 'y', 'width', 'height'].every((k) => Number.isFinite(box[k]))) return null;
+      const corners = [[box.x, box.y], [box.x + box.width, box.y],
+        [box.x, box.y + box.height], [box.x + box.width, box.y + box.height]]
+        .map(([x, y]) => ({ x: matrix.a * x + matrix.c * y + matrix.e,
+          y: matrix.b * x + matrix.d * y + matrix.f }));
+      if (corners.some((p) => !Number.isFinite(p.x) || !Number.isFinite(p.y))) return null;
+      const x = Math.min(...corners.map((p) => p.x));
+      const y = Math.min(...corners.map((p) => p.y));
+      return { x, y, width: Math.max(...corners.map((p) => p.x)) - x,
+        height: Math.max(...corners.map((p) => p.y)) - y };
+    } catch {
+      return null;
+    }
+  };
+  /** Conservative rendered font size: the least stretch of the full text-to-screen mapping.
+   * Unlike a root bounding-rect ratio, singular values retain group/text/viewport scaling and
+   * ignore pure rotation. Normalize first, then use |det| / sigmaMax to avoid subtracting eigenvalues.
+   */
+  const svgTextFontPx = (text) => {
+    try {
+      const m = text.getScreenCTM();
+      const font = parseFloat(getComputedStyle(text).fontSize);
+      if (!m || m.is2D === false || !['a', 'b', 'c', 'd'].every((k) => Number.isFinite(m[k]))
+          || !Number.isFinite(font) || font <= 0) return null;
+      const norm = Math.max(Math.abs(m.a), Math.abs(m.b), Math.abs(m.c), Math.abs(m.d));
+      if (norm === 0) return null;
+      const a = m.a / norm, b = m.b / norm, c = m.c / norm, d = m.d / norm;
+      const largest = (Math.hypot(a + d, b - c) + Math.hypot(a - d, b + c)) / 2;
+      const scale = Math.abs(a * d - b * c) / largest * norm;
+      const px = font * scale;
+      return Number.isFinite(px) && px > 0 ? px : null;
+    } catch {
+      return null;
+    }
+  };
   G.counting = false;
   const nativeRaf = window.requestAnimationFrame ? window.requestAnimationFrame.bind(window) : null;
   if (nativeRaf) {
@@ -730,18 +779,18 @@ export function installLib() {
         if (!svg) return info;
         info.literal = literalsOf(svg);
         const vb = svg.viewBox && svg.viewBox.baseVal;
-        const w = svg.getBoundingClientRect().width;
-        const scale = vb && vb.width ? w / vb.width : 1;
         for (const t of svg.querySelectorAll('text')) {
           const label = (t.textContent || '').trim();
           if (!label || !visible(t)) continue;
           info.labels += 1;
           if (vb && vb.width) {
-            const b = t.getBBox();
-            if (b.x < vb.x - 1 || b.y < vb.y - 1 || b.x + b.width > vb.x + vb.width + 1 || b.y + b.height > vb.y + vb.height + 1) info.outside.push(label.slice(0, 40));
+            const b = G.svgTextBounds(svg, t);
+            if (!b) info.outside.push(`${label.slice(0, 40)} (bounds unavailable)`);
+            else if (b.x < vb.x - 1 || b.y < vb.y - 1 || b.x + b.width > vb.x + vb.width + 1 || b.y + b.height > vb.y + vb.height + 1) info.outside.push(label.slice(0, 40));
           }
-          const px = parseFloat(getComputedStyle(t).fontSize) * scale;
-          if (px < EXEC_MIN_LABEL_PX) info.small.push(`"${label.slice(0, 30)}" at ${px.toFixed(1)}px`);
+          const px = svgTextFontPx(t);
+          if (px === null) info.small.push(`"${label.slice(0, 30)}" (font scale unavailable)`);
+          else if (px < EXEC_MIN_LABEL_PX) info.small.push(`"${label.slice(0, 30)}" at ${px.toFixed(1)}px`);
         }
         return info;
       });
