@@ -228,6 +228,10 @@ const PLANTS = [
   { id: 'exec-illustration-colour', check: 'ADR-0017.2', re: /illustration "pain" uses literal colour\(s\) fill: #1f77b4|illustration "pain" uses literal colour\(s\) stroke: #1f77b4/, opts: { routes: '/introduction' } },
   { id: 'exec-illustration-chart', check: 'ADR-0017.2', re: /illustration "situation" declares a chart \(data-chart\)/, opts: { routes: '/introduction' } },
   { id: 'exec-illustration-label-outside', check: 'ADR-0017.2', re: /illustration "pain": label\(s\) outside the viewBox: "Past the edge of the drawing"/, opts: { routes: '/introduction' } },
+  // SHG-076: local bounds fit, but the group moves the actual label beyond the root viewBox.
+  { id: 'exec-illustration-transformed-outside', check: 'ADR-0017.2', re: /executive view \(EN\): illustration "pain": label\(s\) outside the viewBox: "Translated outside"/, also: /executive view \(ES\): illustration "pain": label\(s\) outside the viewBox: "Trasladado fuera"/, opts: { routes: '/introduction', langs: 'en,es' } },
+  // SHG-078: local font is 18px, but group scale makes the glyphs smaller than the unchanged 9px floor.
+  { id: 'exec-illustration-scaled-tiny-text', check: 'ADR-0017.2', re: /executive view \(EN\): illustration "pain": label\(s\) smaller than 9px as rendered: "Scaled tiny label" at [\d.]+px/, also: /executive view \(ES\): illustration "pain": label\(s\) smaller than 9px as rendered: "Texto reducido" at [\d.]+px/, opts: { routes: '/introduction', langs: 'en,es' } },
   { id: 'exec-illustration-missing', check: 'ADR-0017.2', re: /illustration "proposal": the file "executive\/proposal\.svg" did not load/, opts: { routes: '/introduction' } },
   // shell 0.14.0: flip cards, the card carousel, animated illustrations and Focus mode for the App (G16, G17, G18)
   { id: 'flip-back-long', check: 'G16', re: /flip card "[^"]+": a back of \d+ words; the limit is 40/, opts: { routes: '/introduction' } },
@@ -292,6 +296,8 @@ const PLANTS = [
 
 /** Legitimate pages that the gate once failed (ADR-0017 2.1 allows them): each must pass every check, in both languages. */
 const LEGIT = [
+  // SHG-076: negative local text coordinates become valid root coordinates after translation.
+  { id: 'legit-exec-illustration-transformed-inside', opts: { routes: '/introduction', themes: 'light,dark' } },
   // long case names the shell's case select shows whole (the consumer trial of 0.17.0: names of 241 and 311 px in 181 px of room, then 354 and 398 px that need three lines)
   { id: 'legit-select-two-lines', opts: { routes: '/app', requireFocus: true } },
   { id: 'legit-select-three-lines', opts: { routes: '/app', requireFocus: true } },

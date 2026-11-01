@@ -13,6 +13,8 @@ import { DocRefsScope } from './Cite';
 import { type TabDef, Tabs } from './Tabs';
 
 export interface SurfacePageProps {
+  /** Full-column document framing with the same tabs and Focus behavior. The root owns page padding. */
+  document?: boolean;
   /** The route's heading; omit it when the header's active route already names the surface. */
   title?: BiText;
   /** One line under the title: what the surface is for. */
@@ -61,7 +63,7 @@ const viewFocus = (tab: TabDef | undefined): ViewFocusConfig | null => (!tab || 
  * `CaseWorkbench`'s, one piece of code (`useFocusMode`). The control sits at the end of the tab row (a slot beside the tab list) with
  * its space reserved, so it adds no row and moves nothing; it is hidden while the open view has no stage.
  */
-export function SurfacePage({ title, lede, actions, tabs, value, onChange, deepLinkView = true, ariaLabel, instrument, focus, children }: SurfacePageProps) {
+export function SurfacePage({ document: documentMode = false, title, lede, actions, tabs, value, onChange, deepLinkView = true, ariaLabel, instrument, focus, children }: SurfacePageProps) {
   const lang = useShellLang();
   const placeAbove = useContext(PanelPathContext);
   const ids = (tabs ?? []).map((t) => t.id);
@@ -135,12 +137,12 @@ export function SurfacePage({ title, lede, actions, tabs, value, onChange, deepL
   // `null` is no actions: it renders neither an actions element nor a head of its own
   const head = title !== undefined || lede !== undefined || (actions !== undefined && actions !== null);
   const page = (
-    <div className="page-body wide caos-surface" data-surface="" data-view-param={reserve ? (viewParam ?? '') : undefined}>
+    <div className={`page-body wide caos-surface${documentMode ? ' caos-surface-doc' : ''}`} data-doc-page={documentMode ? '' : undefined} data-surface="" data-view-param={reserve ? (viewParam ?? '') : undefined}>
       {head && (
         <div className="caos-surface-head">
           <div className="caos-surface-heading">
             {title !== undefined && <h1 className="caos-surface-title">{pick(title, lang)}</h1>}
-            {lede !== undefined && <p className="caos-surface-lede">{lede}</p>}
+            {lede !== undefined && <p className={`caos-surface-lede${documentMode ? ' lede' : ''}`}>{lede}</p>}
           </div>
           {actions !== undefined && actions !== null && <div className="caos-surface-actions">{actions}</div>}
         </div>
