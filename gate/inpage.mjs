@@ -100,7 +100,7 @@ export function installLib() {
     return { left: ar.left + o.left, top: ar.top + o.top, right: ar.right - o.right, bottom: ar.bottom - o.bottom };
   };
   /**
-   * The part of `rect` a reader can see: inside `within`, inside every ancestor from `el` up (below `within`) that
+   * The part of `rect` a reader can see: inside `within`, inside every ancestor from `el` to the document root that
    * hides its overflow (`el` itself only when `self`: its overflow cuts its own text, not its own box) and inside every
    * `clip-path` of `el` and of those ancestors. Null when nothing is left.
    */
@@ -110,7 +110,7 @@ export function installLib() {
     let top = Math.max(rect.top, b.top);
     let right = Math.min(rect.right, b.right);
     let bottom = Math.min(rect.bottom, b.bottom);
-    for (let a = el; a && a !== within && a !== document.body; a = a.parentElement) {
+    for (let a = el; a; a = a.parentElement) {
       const s = getComputedStyle(a);
       const ar = a.getBoundingClientRect();
       if (a !== el || self) {
@@ -563,6 +563,8 @@ export function installLib() {
   // ---- 0.11.0: the required areas of the documentation pages (ADR-0017 section 2.1) ------------------------------
 
   let docBound = null; // the page being measured: what lies outside it, or is clipped out of it, is not read
+  let docEvidence = null; // scoped to one completed real traversal, never shared across active tabs
+  const docSeen = (el) => docEvidence ? docEvidence.complete(el) : readable(el, docBound, 4, 4);
   const wordsOf = (el) => {
     // the words a reader reads: visible text outside equations; `linkWords` of them inside links
     let words = 0;
@@ -570,7 +572,7 @@ export function installLib() {
     const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
     for (let n = walker.nextNode(); n; n = walker.nextNode()) {
       const parent = n.parentElement;
-      if (!parent || parent.closest('.katex, script, style') || !readable(parent, docBound, 4, 4, n)) continue;
+      if (!parent || parent.closest('.katex, script, style') || !(docEvidence ? docEvidence.nodeComplete(n) : readable(parent, docBound, 4, 4, n))) continue;
       const k = (n.nodeValue || '').split(/\s+/).filter(Boolean).length;
       words += k;
       if (parent.closest('a')) linkWords += k;
@@ -594,19 +596,19 @@ export function installLib() {
     }
     return { label: labels.join(' > '), key: ids.join('/'), head: ids[0] ?? null };
   };
-  const textOf = (el) => (el.innerText || '').trim().replace(/\s+/g, ' '); // rendered text: a hidden descendant is not in it
+  const textOf = (el) => (docEvidence ? docEvidence.text(el) : el.innerText || '').trim().replace(/\s+/g, ' '); // only witnessed text during traversal
   const norm = (s) => String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();
   /** A part of a statement a reader sees: the declared text is in the rendered text, in the readable part (`sel`) when the element has one. */
   const statPart = (el, want, sel) => {
     if (!want) return false;
     const kids = [...el.querySelectorAll(sel)];
-    return kids.length ? kids.some((k) => readable(k, docBound, 4, 4) && norm(k.innerText).includes(want)) : norm(el.innerText).includes(want);
+      return kids.length ? kids.some((k) => docSeen(k) && norm(textOf(k)).includes(want)) : norm(textOf(el)).includes(want);
   };
   /** A quantified statement: visible, a digit in its value, and the unit and the source it declares readable beside it (the `Stat` component). */
   const validStat = (el) => {
-    if (!readable(el, docBound, 4, 4)) return false;
+    if (!docSeen(el)) return false;
     const value = el.querySelector('.caos-stat-value');
-    return /\d/.test((value ? value.innerText : el.innerText) || '') && statPart(el, norm(el.getAttribute('data-stat-unit')), '.caos-stat-unit') && statPart(el, norm(el.getAttribute('data-stat-source')), '.caos-stat-source');
+    return /\d/.test(textOf(value || el)) && statPart(el, norm(el.getAttribute('data-stat-unit')), '.caos-stat-unit') && statPart(el, norm(el.getAttribute('data-stat-source')), '.caos-stat-source');
   };
 
   /**
@@ -619,7 +621,7 @@ export function installLib() {
     const page = document.querySelector('[data-doc-page]');
     if (!page || !visible(page)) return null;
     docBound = page;
-    const seen = (el) => readable(el, page, 4, 4);
+    const seen = (el) => docSeen(el);
     const lede = page.querySelector('.lede');
     // the document column: the page body without its padding; the lede and the executive view take all of it (Felipe, 2026-10-13)
     const pageStyle = getComputedStyle(page);
@@ -743,13 +745,14 @@ export function installLib() {
       // A card the carousel's window hides (`hidden` on its item) is out of sight by design: G16 walks the carousel and fails one it
       // cannot reach. Any other card that is not seen is not shown, as before 0.14.0.
       const hiddenByDeck = (el) => {
+        if (docEvidence) return false; // a real control must first expose every card
         const li = el.closest('[data-deck-card]');
         return Boolean(li) && li.hidden && Boolean(li.closest('[data-deck-mode="carousel"]'));
       };
       // The back of a flip card is content the reader gets by turning the card: read every field with the cards turned too (the
       // same `seen` and `innerText` as for any text), and call a field readable when it is seen in either face.
       const turned = new Map();
-      withFlipsTurned(() => {
+      if (!docEvidence) withFlipsTurned(() => {
         for (const e of root.querySelectorAll('[data-exec-field], [data-exec-cdef]')) turned.set(e, { text: textOf(e), seen: seen(e) });
       });
       const fullText = (e) => textOf(e) || (turned.get(e) ? turned.get(e).text : '');
@@ -887,6 +890,300 @@ export function installLib() {
       figures: inView('figure').map(captioned).filter(Boolean),
       equations: inView('.equation').map(equationCaption).filter(Boolean),
     };
+  };
+
+  /** SHG-079..082: collect glyph evidence by real scrolling, then compute the existing metric once.
+   * No DOM-presence fallback: every word fragment must fit the viewport, original clip bounds,
+   * scrollports and hit tests. Text-node identities deduplicate overlapping observations.
+   */
+  G.readDocument = async ({ maxSamples = 600, timeoutMs = 30000 } = {}) => {
+    const page = document.querySelector('[data-doc-page]');
+    if (!page || !visible(page)) return null;
+    const started = performance.now();
+    const saved = new Map([...document.querySelectorAll('*')].map((e) => [e, [e.scrollLeft, e.scrollTop]]));
+    const windowPosition = [scrollX, scrollY], focused = document.activeElement;
+    const state = [...page.querySelectorAll('[role="tab"][aria-selected="true"]')];
+    const nodes = new Map(), witnessed = new Set(), flips = new Map(), decks = new Map();
+    const inkContext = document.createElement('canvas').getContext('2d');
+    if (!inkContext) throw new Error('document glyph measurement canvas is unavailable');
+    let samples = 0;
+    const check = () => {
+      if (++samples > maxSamples || performance.now() - started > timeoutMs) throw new Error(`document traversal exceeded ${maxSamples} samples or ${timeoutMs}ms; active document remains unverified`);
+      if (!page.isConnected || state.some((e) => !e.isConnected || e.getAttribute('aria-selected') !== 'true')) throw new Error('document traversal changed the active page/tab');
+    };
+    const frame = () => new Promise((resolve) => nativeRaf ? nativeRaf(() => nativeRaf(resolve)) : setTimeout(resolve, 32));
+    const textNodes = (el) => textNodesOf(el).filter((n) => !n.parentElement.closest('.katex, svg, .sr-only, [data-deck-position]'));
+    const available = (el) => visible(el) && !el.closest('[hidden], [inert], [aria-hidden="true"]');
+    const nodeComplete = (n) => {
+      const row = nodes.get(n);
+      return Boolean(row && row.value === n.nodeValue && row.parts.length && row.parts.every((p) => p.count > 0 && p.seen.size === p.count));
+    };
+    const evidence = {
+      nodeComplete,
+      text: (el) => el ? textNodes(el).filter(nodeComplete).map((n) => n.nodeValue).join(' ') : '',
+      complete: (el) => {
+        if (!el) return false;
+        if (el.matches('[data-control]') && !witnessed.has(el)) return false;
+        const required = textNodes(el).filter((n) => nodes.has(n) || available(n.parentElement));
+        return required.length ? required.every(nodeComplete) : witnessed.has(el);
+      },
+    };
+    const pseudoPaint = new Map();
+    // This box model supports only ordinary, unmapped coordinates. Apply the same identity
+    // contract to the pseudo and its ancestors: separate CSS transform channels do not appear
+    // in computed transform, and motion/filter/zoom can also move or expand actual paint.
+    const knownPaintCoordinates = (s) =>
+      ['transform', 'translate', 'rotate', 'scale', 'offsetPath', 'filter', 'backdropFilter', 'perspective']
+        .every((key) => !s[key] || s[key] === 'none')
+      && (!s.zoom || Number(s.zoom) === 1)
+      && !/layout|paint|strict|content/.test(s.contain)
+      && !/transform|translate|rotate|scale|offset|filter|perspective|contain|content-visibility|zoom/.test(s.willChange)
+      && s.contentVisibility !== 'auto'
+      && (!s.transformStyle || s.transformStyle === 'flat')
+      && (!s.positionAnchor || ['auto', 'normal'].includes(s.positionAnchor))
+      && (!s.positionArea || s.positionArea === 'none')
+      && (!s.positionTryFallbacks || s.positionTryFallbacks === 'none');
+    const pseudoCover = (parent, x, y) => {
+      for (let a = parent; a; a = a.parentElement) {
+        let boxes = pseudoPaint.get(a);
+        if (!boxes) {
+          boxes = [];
+          for (const pseudo of ['::before', '::after']) {
+            const s = getComputedStyle(a, pseudo);
+            if (s.content === 'none' || s.content === 'normal' || s.display === 'none' || s.visibility !== 'visible' || Number(s.opacity) === 0 || Number(s.zIndex) < 0) continue;
+            const background = parseColor(s.backgroundColor);
+            const outline = !['none', 'hidden'].includes(s.outlineStyle) && parseFloat(s.outlineWidth) > 0;
+            const painted = (background && background.a > 0) || s.backgroundImage !== 'none' || s.boxShadow !== 'none'
+              || outline || s.borderImageSource !== 'none'
+              || ['Top', 'Right', 'Bottom', 'Left'].some((side) => parseFloat(s[`border${side}Width`]) > 0 && (parseColor(s[`border${side}Color`])?.a ?? 0) > 0);
+            if (!painted) continue;
+            // Unmapped or expanding paint is unknown, even when its nominal layout box is remote.
+            if (!['absolute', 'fixed'].includes(s.position) || !knownPaintCoordinates(s)
+              || s.boxShadow !== 'none' || outline || s.borderImageSource !== 'none') { boxes.push(null); continue; }
+            // Local CSS dimensions cannot be combined with a viewport-space origin when any
+            // ancestor changes that mapping or establishes a non-viewport fixed containing block.
+            // We do not have a complete paint transform here: unknown positioned paint fails closed.
+            let ambiguous = false;
+            for (let ancestor = a; ancestor; ancestor = ancestor.parentElement) {
+              const cs = getComputedStyle(ancestor);
+              if (!knownPaintCoordinates(cs)) { ambiguous = true; break; }
+            }
+            if (ambiguous) { boxes.push(null); continue; }
+            let cb = s.position === 'fixed' ? null : a;
+            while (cb && getComputedStyle(cb).position === 'static' && getComputedStyle(cb).transform === 'none') cb = cb.parentElement;
+            if (cb && (cb.scrollLeft || cb.scrollTop)) { boxes.push(null); continue; }
+            const r = cb?.getBoundingClientRect();
+            const base = r ? { left:r.left + cb.clientLeft, top:r.top + cb.clientTop, width:cb.clientWidth, height:cb.clientHeight }
+              : { left:s.position === 'fixed' ? 0 : -scrollX, top:s.position === 'fixed' ? 0 : -scrollY, width:innerWidth, height:innerHeight };
+            let width = parseFloat(s.width), height = parseFloat(s.height);
+            if (s.boxSizing !== 'border-box') {
+              width += parseFloat(s.paddingLeft) + parseFloat(s.paddingRight) + parseFloat(s.borderLeftWidth) + parseFloat(s.borderRightWidth);
+              height += parseFloat(s.paddingTop) + parseFloat(s.paddingBottom) + parseFloat(s.borderTopWidth) + parseFloat(s.borderBottomWidth);
+            }
+            const left = parseFloat(s.left), right = parseFloat(s.right), top = parseFloat(s.top), bottom = parseFloat(s.bottom);
+            const px = Number.isFinite(left) ? base.left + left + parseFloat(s.marginLeft) : base.left + base.width - right - width - parseFloat(s.marginRight);
+            const py = Number.isFinite(top) ? base.top + top + parseFloat(s.marginTop) : base.top + base.height - bottom - height - parseFloat(s.marginBottom);
+            if (![px,py,width,height].every(Number.isFinite)) { boxes.push(null); continue; }
+            boxes.push({ left:px, right:px+width, top:py, bottom:py+height });
+          }
+          pseudoPaint.set(a, boxes);
+        }
+        if (boxes.some((b) => !b || x >= b.left && x <= b.right && y >= b.top && y <= b.bottom)) return true;
+      }
+      return false;
+    };
+    const clearFragment = (rect, parent, control = false) => {
+      const b = clipRect(rect, parent, page, true);
+      if (!b || rect.width < 0.1 || rect.height < 0.1) return false;
+      let left = Math.max(b.left, 0), top = Math.max(b.top, 0);
+      let right = Math.min(b.right, innerWidth), bottom = Math.min(b.bottom, innerHeight);
+      for (let a = parent; a; a = a.parentElement) {
+        const s = getComputedStyle(a), r = a.getBoundingClientRect();
+        if (/auto|scroll/.test(s.overflowX)) { left = Math.max(left, r.left + a.clientLeft); right = Math.min(right, r.left + a.clientLeft + a.clientWidth); }
+        if (/auto|scroll/.test(s.overflowY)) { top = Math.max(top, r.top + a.clientTop); bottom = Math.min(bottom, r.top + a.clientTop + a.clientHeight); }
+      }
+      if (left > rect.left + 0.5 || top > rect.top + 0.5 || right < rect.right - 0.5 || bottom < rect.bottom - 0.5) return false;
+      // Hit testing quantizes fractional inline boxes to CSS pixels. Keep samples within fully
+      // contained pixel cells: a narrow visible separator must not probe the adjacent inline box.
+      // Full glyph extent was checked above; this does not admit clipped or covered fragments.
+      const sampleAt = (start, end, fraction) => {
+        const first = Math.ceil(start), last = Math.floor(end) - 1;
+        return first <= last ? Math.max(first, Math.min(last, start + (end - start) * fraction)) : (start + end) / 2;
+      };
+      for (const q of [0.15, 0.5, 0.85]) for (const v of [0.15, 0.5, 0.85]) {
+        const x = sampleAt(rect.left, rect.right, q), y = sampleAt(rect.top, rect.bottom, v);
+        const hit = document.elementFromPoint(x, y);
+        const transparentFallthrough = getComputedStyle(parent).pointerEvents === 'none' && hit?.contains(parent);
+        if (!hit || !(hit === parent || (control ? parent.contains(hit) : transparentFallthrough)) || pseudoCover(parent,x,y)) return false;
+        const link = parent.closest('a[href]');
+        if (link && !(hit === link || link.contains(hit))) return false;
+      }
+      return true;
+    };
+    const sample = () => {
+      check();
+      pseudoPaint.clear();
+      for (const n of textNodes(page)) {
+        const parent = n.parentElement;
+        if (!available(parent)) continue;
+        let row = nodes.get(n);
+        if (row && row.value !== n.nodeValue) throw new Error(`document text changed during traversal (${parent.tagName}: ${row.value.slice(0, 40)}); retry a settled state`);
+        if (!row) {
+          row = { value: n.nodeValue, parts: [...n.nodeValue.matchAll(/\S+/g)].map((m) => ({ start: m.index, end: m.index + m[0].length, count: 0, seen: new Set() })) };
+          nodes.set(n, row);
+        }
+        if (fontPx(parent) < FONT_FLOOR) continue;
+        const style = getComputedStyle(parent);
+        inkContext.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+        for (const part of row.parts) {
+          if (part.count > 0 && part.seen.size === part.count) continue;
+          const r = document.createRange(); r.setStart(n, part.start); r.setEnd(n, part.end);
+          const boxes = [...r.getClientRects()].filter((b) => b.width > 0 && b.height > 0);
+          if (part.count && part.count !== boxes.length) throw new Error('document layout changed during traversal; retry a settled state');
+          part.count = boxes.length;
+          const ink = inkContext.measureText(n.nodeValue.slice(part.start, part.end));
+          const fontHeight = ink.fontBoundingBoxAscent + ink.fontBoundingBoxDescent;
+          if (!Number.isFinite(fontHeight) || fontHeight <= 0) throw new Error('document glyph font metrics are unavailable');
+          boxes.forEach((b, i) => {
+            // Range boxes include font leading, which may extend above a tight heading's line box.
+            // Judge the actual ink ascent/descent, not invisible leading; retain all clip/hit checks.
+            const scale = b.height / fontHeight;
+            if (fontPx(parent) * scale < FONT_FLOOR) return;
+            const baseline = b.bottom - ink.fontBoundingBoxDescent * scale;
+            const top = baseline - ink.actualBoundingBoxAscent * scale;
+            const bottom = baseline + ink.actualBoundingBoxDescent * scale;
+            if (clearFragment({left:b.left,right:b.right,top,bottom,width:b.width,height:bottom-top}, parent)) part.seen.add(i);
+          });
+        }
+      }
+      for (const e of page.querySelectorAll('figure, svg, canvas, img, .equation')) {
+        const b = e.getBoundingClientRect();
+        if (available(e) && b.bottom > 0 && b.top < innerHeight && readable(e, page, 4, 4)) witnessed.add(e);
+      }
+      // Native inputs have no text nodes. Witness the actual control, never its metadata alone.
+      for (const e of page.querySelectorAll('[data-control]')) {
+        const target = e.matches('input, select, button, textarea, [role="slider"]') ? e
+          : e.querySelector('input, select, button, textarea, [role="slider"]') ?? e;
+        if (available(e) && available(target) && readable(target, page, 4, 4)
+          && clearFragment(target.getBoundingClientRect(), target, true)) witnessed.add(e);
+      }
+    };
+    const scrollable = (e) => {
+      const s = getComputedStyle(e);
+      return available(e) && ((/^(auto|scroll)$/.test(s.overflowY) && e.scrollHeight > e.clientHeight + 1) || (/^(auto|scroll)$/.test(s.overflowX) && e.scrollWidth > e.clientWidth + 1));
+    };
+    const bringSafely = (e) => {
+      const x = scrollX, y = scrollY;
+      bring(e); // only user-scrollable element ancestors; protect an unscrollable document too
+      if (/hidden|clip/.test(getComputedStyle(document.documentElement).overflowY) || /hidden|clip/.test(getComputedStyle(document.body).overflowY)) winScroll(x, y);
+    };
+    const positions = (max, size) => {
+      const out = [0], step = Math.max(16, Math.floor(size * 0.65));
+      for (let p = step; p < max; p += step) {
+        if (out.length > maxSamples) throw new Error('document scroll extent exceeds traversal budget');
+        out.push(p);
+      }
+      if (max > 0) out.push(max);
+      return out;
+    };
+    const sweep = async () => {
+      sample();
+      const containers = [...ancestorsUntil(page, document.body), page, ...page.querySelectorAll('*')].filter(scrollable);
+      const de = document.scrollingElement;
+      if (de && de.scrollHeight > innerHeight + 1 && !/hidden|clip/.test(getComputedStyle(de).overflowY) && !/hidden|clip/.test(getComputedStyle(document.body).overflowY)) containers.unshift(de);
+      const unique = [...new Set(containers)];
+      const owner = (e) => unique.find((p) => p !== e && p.contains(e) && !unique.some((q) => q !== p && q !== e && p.contains(q) && q.contains(e)));
+      const walk = async (e) => {
+        const s = getComputedStyle(e);
+        const maxX = /auto|scroll/.test(s.overflowX) ? e.scrollWidth - e.clientWidth : 0;
+        const maxY = e === de || /auto|scroll/.test(s.overflowY) ? e.scrollHeight - e.clientHeight : 0;
+        for (const y of positions(maxY, Math.min(e.clientHeight, innerHeight))) for (const x of positions(maxX, Math.min(e.clientWidth, innerWidth))) {
+          // A settled card/animated illustration may reduce incidental overflow between frames.
+          // Clamp to the real extent; coverage still requires every fragment, never a partial word.
+          const wantedX = Math.min(x, e.scrollWidth - e.clientWidth), wantedY = Math.min(y, e.scrollHeight - e.clientHeight);
+          setScroll(e, wantedX, wantedY); await frame();
+          if (Math.abs(e.scrollLeft - Math.min(wantedX, e.scrollWidth-e.clientWidth)) > 1 || Math.abs(e.scrollTop - Math.min(wantedY, e.scrollHeight-e.clientHeight)) > 1) throw new Error(`document scroller ${e.className} could not reach its requested position`);
+          sample();
+          for (const child of unique.filter((c) => owner(c) === e)) {
+            const r = child.getBoundingClientRect();
+            if (r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth) await walk(child);
+          }
+        }
+      };
+      for (const e of unique.filter((e) => !owner(e))) { bringSafely(e); await walk(e); }
+    };
+    const click = async (button) => {
+      if (!button || !available(button) || button.disabled) throw new Error('document card control is unavailable');
+      bringSafely(button); await frame();
+      const r = button.getBoundingClientRect(), hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+      if (!hit || !(hit === button || button.contains(hit))) throw new Error('document card control is covered or clipped');
+      button.click(); await frame();
+      // Await the real transition, without changing attributes/styles or exposing a hidden face.
+      const running = document.getAnimations().filter((a) => a.playState === 'running' && a.effect?.target?.closest?.('[data-flip-card], [data-card-deck]'));
+      let timer;
+      try {
+        await Promise.race([Promise.all(running.map((a) => a.finished)), new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('document card transition did not settle')), 1500); })]);
+      } finally { clearTimeout(timer); }
+      await frame();
+    };
+    const signature = (deck) => [...deck.querySelectorAll('[data-deck-card]')].map((c, i) => c.hidden ? '' : i).join(',');
+    const visitFlips = async () => {
+      for (const card of page.querySelectorAll('[data-flip-card]')) {
+        if (!available(card)) continue;
+        if (!flips.has(card)) flips.set(card, card.getAttribute('data-flip-open'));
+        const open = card.getAttribute('data-flip-open') === 'true';
+        await click(card.querySelector(`[data-flip-toggle="${open ? 'back' : 'front'}"]`));
+        if ((card.getAttribute('data-flip-open') === 'true') === open) throw new Error('document flip control did not turn the card');
+        await sweep();
+        await click(card.querySelector(`[data-flip-toggle="${open ? 'front' : 'back'}"]`));
+      }
+    };
+    try {
+      await sweep(); await visitFlips();
+      for (const deck of page.querySelectorAll('[data-deck-mode="carousel"]')) {
+        decks.set(deck, signature(deck));
+        const count = deck.querySelectorAll('[data-deck-card]').length;
+        for (const direction of ['prev', 'next']) {
+          for (let i = 0; ; i++) {
+            const button = deck.querySelector(`[data-deck-${direction}]`);
+            if (!button) throw new Error('document carousel has no traversal control');
+            if (button.getAttribute('aria-disabled') === 'true') break;
+            if (i > count) throw new Error('document carousel traversal did not terminate');
+            const before = signature(deck); await click(button);
+            if (signature(deck) === before) throw new Error('document carousel control did not expose another card');
+            await sweep(); await visitFlips();
+          }
+        }
+      }
+      docEvidence = evidence;
+      return G.docPage();
+    } finally {
+      docEvidence = null;
+      try {
+      for (const [card, open] of flips) if (card.isConnected && card.getAttribute('data-flip-open') !== open) await click(card.querySelector(`[data-flip-toggle="${open === 'true' ? 'front' : 'back'}"]`));
+      for (const [deck, initial] of decks) {
+        const count = deck.querySelectorAll('[data-deck-card]').length;
+        for (let i = 0; signature(deck) !== initial; i++) {
+          if (i > Math.min(count * 2, 32)) throw new Error('document carousel position could not be restored');
+          const first = [...deck.querySelectorAll('[data-deck-card]')].findIndex((c) => !c.hidden);
+          const target = initial.split(',').findIndex((v) => v !== '');
+          await click(deck.querySelector(`[data-deck-${first > target ? 'prev' : 'next'}]`));
+        }
+      }
+      } finally {
+      for (const [e, [x, y]] of saved) if (e.isConnected) setScroll(e, x, y);
+      winScroll(...windowPosition);
+      if (focused === document.body) {
+        if (document.activeElement !== focused) document.activeElement?.blur?.();
+      } else if (focused?.isConnected) focused.focus({ preventScroll: true });
+      await frame();
+      if (focused && document.activeElement !== focused) throw new Error('document focus could not be restored');
+      if (state.some((e) => !e.isConnected || e.getAttribute('aria-selected') !== 'true')) throw new Error('document tab state could not be restored');
+      for (const [card, open] of flips) if (!card.isConnected || card.getAttribute('data-flip-open') !== open) throw new Error('document flip state could not be restored');
+      for (const [deck, initial] of decks) if (!deck.isConnected || signature(deck) !== initial) throw new Error('document carousel state could not be restored');
+      for (const [e, [x, y]] of saved) if (e.isConnected && (Math.abs(e.scrollLeft - x) > 1 || Math.abs(e.scrollTop - y) > 1)) throw new Error('document scroll position could not be restored');
+      }
+    }
   };
 
   /** A tall view must move when scrolled (S1, G5). Restores the positions it changed. */
