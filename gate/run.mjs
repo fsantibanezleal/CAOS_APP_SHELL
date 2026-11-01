@@ -38,6 +38,7 @@
 // plus the ADR-0071 and ADR-0017 measures (viewport, one-row tabs, rail without scroll, centred prose, captions,
 // references).
 
+import { readJsonArtifact } from './artifacts.mjs';
 import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { decodePng, paintedBox, unionArea } from './png.mjs';
@@ -135,6 +136,7 @@ export async function runGate(o) {
   let states = 0;
   const fail = (check, where, message) => failures.push({ check, route: where.route ?? '', mode: where.mode ?? '', trail: where.trail ?? '', message });
   const artifacts = new Map();
+  const artifactChecks = [];
 
   const browser = await chromium.launch();
   const openContext = async ([w, h], theme, lang, wide = false) => {
@@ -193,10 +195,7 @@ export async function runGate(o) {
       if ((type === 'fetch' || type === 'xhr') && pathname.endsWith('.json') && r.status() < 400 && !artifacts.has(pathname)) {
         artifacts.set(
           pathname,
-          r.text().then(
-            (t) => t.trimStart().slice(0, 1),
-            () => '',
-          ),
+          readJsonArtifact(r),
         );
       }
     });
@@ -444,8 +443,9 @@ export async function runGate(o) {
 
     // ---- G4: artifacts answered as JSON.
     for (const [pathname, first] of artifacts) {
-      const c = await first;
-      if (c !== '{' && c !== '[') fail('G4', { route: pathname }, `the artifact ${pathname} did not answer JSON (starts with "${c}"; the HTML fallback?)`);
+      const result = await first;
+      artifactChecks.push({ path: pathname, ...result });
+      if (!result.ok) fail('G4', { route: pathname }, `the artifact ${pathname} did not answer JSON (starts with "${result.first}"; ${result.error ?? 'the HTML fallback?'})`);
     }
   } finally {
     await browser.close();
@@ -1131,6 +1131,7 @@ export async function runGate(o) {
       checks,
       captures: captures.length,
       failures,
+      artifactChecks,
     };
     writeFileSync(join(opt.out, 'gate-report.json'), JSON.stringify(report, null, 2));
     // G14: the captures are for a person to read (the gate measures, it does not judge content); one page shows them.
