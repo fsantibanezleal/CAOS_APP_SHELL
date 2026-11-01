@@ -1,3 +1,15 @@
+## [0.19.012] - 2026-11-01
+
+### Fixed
+
+- Verify complete JSON artifact documents when navigation interrupts a page-owned body read or a conditional response has no body. One bounded GET preserves the observed URL and credentials while removing range/cache preconditions; transport retries are recorded. HTML, empty, malformed and failed responses remain failures.
+- Keep artifact validation independent of page-context lifetime without changing readiness declarations, idle-rate limits, traversal rules or component styles.
+- Permit the gate self-test to use the configured external temporary root; CI uses its runner temporary root.
+
+### Adoption
+
+- Pin npm 0.19.12 and run the installed gate against the deployed origin. Components and scientific calculations are unchanged.
+
 ## [0.19.011] - 2026-11-01
 
 ### Fixed
