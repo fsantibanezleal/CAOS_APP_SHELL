@@ -5,7 +5,8 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { build } from 'esbuild';
 import { join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { after, before, describe, test } from 'node:test';
@@ -331,6 +332,52 @@ before(async () => {
   await buildFixture(clean);
 });
 
+// Issue 170: reuse the real executive/technical fixture content and shell components. Only the
+// generated test bundle changes its document wrapper; production fixtures/source are untouched.
+describe('document traversal through the real runner', () => {
+  const documentSite = join(work, 'document-surface');
+  before(async () => {
+    await buildFixture(documentSite);
+    await build({
+      entryPoints: { app: join(root, 'test/gate-fixture/app.tsx') }, bundle: true,
+      format: 'esm', outdir: join(documentSite, 'assets'), jsx: 'automatic', minify: true,
+      logLevel: 'error', loader: { '.woff2': 'file', '.woff': 'file', '.ttf': 'file' },
+      define: { 'process.env.NODE_ENV': '"production"' },
+      plugins: [{ name: 'long-document-surface', setup(builder) {
+        builder.onLoad({ filter: /gate-fixture[\\/]app\.tsx$/ }, (args) => {
+          let source = readFileSync(args.path, 'utf8');
+          const open = '<DocPage wide={id === \'implementation\'} title={title} lede={doc.lede} floorWaivers={doc.waivers}>';
+          const at = source.indexOf(open), end = source.indexOf('</DocPage>', at);
+          assert.ok(at >= 0 && end > at, 'the real fixture document wrapper exists');
+          source = source.slice(0, at) + source.slice(at, end).replace(open, '<SurfacePage document title={title} lede={doc.lede}>') + '</SurfacePage>' + source.slice(end + '</DocPage>'.length);
+          return { contents: source, loader: 'tsx', resolveDir: join(root, 'test/gate-fixture') };
+        });
+      } }],
+    });
+  });
+
+  test('document traversal: complete long executive/technical surface passes EN/ES without duplicated floors', { timeout: 600000 }, async () => {
+    const r = await runGate({ ...QUICK, serve: documentSite, routes: '/introduction', langs: 'en,es', expectBrand: BRAND, out: join(work, 'out-document-readable') });
+    assert.equal(r.failures.length, 0, show(r));
+    assert.ok(r.states > 10);
+  });
+
+  for (const [id, css] of [
+    ['hidden', '[data-exec-field="pain.key_message"]{opacity:0}'],
+    ['tiny', '[data-exec-field="pain.paragraphs[0]"]{font-size:1px}'],
+    ['clipped', '[data-exec-field="pain.paragraphs[0]"]{display:block;height:12px;overflow:hidden}'],
+    ['source', '[data-exec-source-title]{visibility:hidden}'],
+  ]) test(`document traversal: ${id} long-document plant remains red`, { timeout: 600000 }, async () => {
+    const dir = makePlant(documentSite, join(work, `document-${id}`), `document-${id}`);
+    for (const route of ['', 'introduction']) {
+      const path = join(dir, route, 'index.html');
+      writeFileSync(path, readFileSync(path, 'utf8').replace('</head>', `<style>${css}</style></head>`));
+    }
+    const r = await runGate({ ...QUICK, serve: dir, routes: '/introduction', expectBrand: BRAND, out: join(work, `out-document-${id}`) });
+    assert.ok(r.failures.some((f) => f.check === 'ADR-0017.2'), `unreadable ${id} content was admitted:\n${show(r)}`);
+  });
+});
+
 test('G5 treats a static section header as content beneath the sticky site header at tablet width', { timeout: 300_000 }, async () => {
   const r = await runGate({
     routes: '/introduction',
@@ -435,4 +482,14 @@ test('the CLI exits 2 without a subject and 1 on a failing subject', { timeout: 
   const wrong = spawnSync(process.execPath, [bin, '--serve', clean, '--expect-brand', 'SomethingElse', '--sizes', '1280x800', '--themes', 'light', '--langs', 'en', '--out', join(work, 'out-cli')], { encoding: 'utf8' });
   assert.equal(wrong.status, 1, wrong.stdout + wrong.stderr);
   assert.match(wrong.stdout, /FAIL \[G1\]/);
+});
+
+test('document traversal: below-fold benchmark live control passes and permanently hidden control fails', { timeout: 300000 }, async () => {
+  const positive = await runGate({ ...QUICK, serve: clean, routes: '/benchmark', langs: 'en,es', expectBrand: BRAND, out: join(work, 'out-document-live-control') });
+  assert.equal(positive.failures.length, 0, `the real benchmark range control must count:\n${show(positive)}`);
+  const hidden = makePlant(clean, join(work, 'document-live-control-hidden'), 'document-live-control-hidden');
+  const path = join(hidden, 'benchmark', 'index.html');
+  writeFileSync(path, readFileSync(path, 'utf8').replace('</head>', '<style>[data-control="contact"]{visibility:hidden}</style></head>'));
+  const negative = await runGate({ ...QUICK, serve: hidden, routes: '/benchmark', langs: 'en,es', expectBrand: BRAND, out: join(work, 'out-document-live-control-hidden') });
+  for (const lang of ['EN', 'ES']) assert.ok(negative.failures.some((f) => f.check === 'ADR-0017.2' && f.message.includes(`(${lang})`) && /live area.*0 controls/.test(f.message)), `hidden ${lang} control must fail its actual floor:\n${show(negative)}`);
 });
