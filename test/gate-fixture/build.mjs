@@ -87,6 +87,30 @@ export function makePlant(cleanDir, plantDir, plant) {
 `;
     svg('pain', (x) => x.replace('</svg>', `${extra('en', 'Past the edge of the drawing')}${extra('es', 'Fuera del borde del dibujo')}</svg>`));
   }
+  // SHG-076/078: keep the real clean illustration, tokens, captions and language filtering intact.
+  // Add only the adversarial label: the old local-box/root-width shortcuts would accept both defects.
+  if (plant === 'exec-illustration-transformed-outside') {
+    svg('pain', (x) => x.replace('</svg>', `
+  <g transform="translate(600 0)">
+    <text data-lang="en" x="20" y="40" font-size="18" fill="var(--color-fg)">Translated outside</text>
+    <text data-lang="es" x="20" y="40" font-size="18" fill="var(--color-fg)">Trasladado fuera</text>
+  </g></svg>`));
+  }
+  if (plant === 'exec-illustration-scaled-tiny-text') {
+    svg('pain', (x) => x.replace('</svg>', `
+  <g transform="translate(40 20) scale(.25)">
+    <text data-lang="en" x="20" y="40" font-size="18" fill="var(--color-fg)">Scaled tiny label</text>
+    <text data-lang="es" x="20" y="40" font-size="18" fill="var(--color-fg)">Texto reducido</text>
+  </g></svg>`));
+  }
+  // SHG-076 legitimate inverse: local x=-160 is outside, but root x=40 is inside after translation.
+  if (plant === 'legit-exec-illustration-transformed-inside') {
+    svg('pain', (x) => x.replace('</svg>', `
+  <g transform="translate(200 0)">
+    <text data-lang="en" x="-160" y="40" font-size="18" fill="var(--color-fg)">Translated inside</text>
+    <text data-lang="es" x="-160" y="40" font-size="18" fill="var(--color-fg)">Trasladado dentro</text>
+  </g></svg>`));
+  }
   if (plant === 'fallback-json') writeFileSync(join(plantDir, 'data', 'artifact.json'), readFileSync(join(plantDir, 'index.html')));
   return plantDir;
 }

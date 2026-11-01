@@ -1,3 +1,10 @@
+## [0.19.010] - 2026-10-31
+
+### Fixed
+
+- `SurfacePage document` gives a documentation surface a full-column heading and lede, with one root-owned inset and the existing tabs and Focus controls. OreFlow's Introduction needed document framing without a nested page wrapper or product overrides (issue #167, SHD-088). Products adopt the optional `document` prop and remove their document-width workaround; ordinary surfaces retain their current layout.
+- Executive illustration checks measure transformed text bounds in the outer SVG viewBox and rendered font size through the complete text-to-screen matrix. Translated, scaled, rotated and nested labels are checked in their actual coordinate space; unavailable geometry fails explicitly. The existing bounds tolerance and 9 px font floor are unchanged (issue #167, SHG-076 to SHG-078).
+
 ## [0.19.009] - 2026-10-30
 
 ### Fixed
