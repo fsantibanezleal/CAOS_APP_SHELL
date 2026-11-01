@@ -480,8 +480,12 @@ export async function runGate(o) {
     if (f.refsDeclaredNoBlock) fail('ADR-0017.4', where, `${f.refsDeclaredNoBlock} section(s) cite references the page never lists (no references block in their page or tab)`);
     if (f.uncaptioned) fail('ADR-0017.2', where, `${f.uncaptioned} equation(s) without a caption`);
     if (s.walkState?.doc) {
-      const d = await page.evaluate(() => window.__caosGate.docPage());
-      if (d) s.walkState.doc.push(d);
+      try {
+        const d = await page.evaluate(() => window.__caosGate.readDocument());
+        if (d) s.walkState.doc.push(d);
+      } catch (e) {
+        fail('ADR-0017.2', where, `document readability traversal could not complete: ${e.message.split('\n')[0]}`);
+      }
     }
     for (const r of f.repeatedTicks ?? []) {
       // named x ticks (UPlotChart declares the repeated names): a name used twice, wherever the two ticks sit on the axis

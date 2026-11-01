@@ -1,5 +1,38 @@
 # Document framing and illustration geometry
 
+## Readability across scrollable documents
+
+The gate measures each active document tab across real scroll positions, then evaluates one
+complete metric for that state. Overlapping observations share text-node identities: paragraphs,
+equations, glossary entries, rows, statements and executive fields count once. Long paragraphs
+require every rendered word fragment to be witnessed; a visible first line is insufficient.
+Glyph ink bounds avoid mistaking a font's invisible leading for clipped heading text. The existing
+font minimum, document bounds, clipping, opacity and visibility checks still apply. Pointer hit
+tests reject covered text and source titles; a source URL without a readable title does not pass.
+
+Only user-scrollable ancestors and nested containers are traversed. Overflow-hidden content and
+inactive panes are never exposed for measurement. Flip cards and carousel windows are visited
+through their controls, with transitions settled; no attribute manipulation admits hidden faces.
+The gate restores card/deck state, scroll positions and focus before continuing other checks.
+Traversal has sample/time limits and fails explicitly if it cannot finish or restore state.
+
+Registered controls without text, such as native range inputs, contribute only after their actual
+control box has been witnessed inside the viewport and clipping bounds with successful pointer
+hits. A readable label or `data-control` attribute alone is insufficient. Scroll observations share
+the same control identity; permanently hidden or covered controls remain excluded (SHG-083).
+
+Clipping includes the document boundary and every outer clipping ancestor, not only descendants.
+An ancestor hit is not proof of readable text: ordinary pointer-transparent fall-through is
+distinguished from positioned opaque pseudo-element paint. Unmeasurable covering paint fails
+closed. Restoration checks the actual active element, including default BODY/document focus,
+and reports an explicit failure if focus, tabs, cards, decks or scroll positions cannot be restored.
+
+Tracked in [issue 170](https://github.com/fsantibanezleal/CAOS_APP_SHELL/issues/170).
+SHG-079 through SHG-086 cover the contract. Browser coverage lives in `e2e/surface.test.ts`;
+runner-level long-document and hidden/tiny/clipped/source plants live in `test/gate-selftest.mjs`.
+Use `node --test --test-name-pattern 'document traversal' test/gate-selftest.mjs` for that focused
+fixture group. Full gate self-validation remains required before a shell release.
+
 ## Document surfaces
 
 `SurfacePage` accepts an optional boolean `document`. The false/unset default retains generic

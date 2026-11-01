@@ -6,7 +6,16 @@ import { deflateSync } from 'node:zlib';
 import { after, before, test } from 'node:test';
 import { decodePng, paintedBox, unionArea } from '../gate/png.mjs';
 import { servePages } from '../gate/serve.mjs';
-import { ANIMATION_MAX_SECONDS, analyseSvgAnimation, animationFailures } from '../gate/areas.mjs';
+import { ANIMATION_MAX_SECONDS, analyseSvgAnimation, animationFailures, mergeSections } from '../gate/areas.mjs';
+
+test('document traversal metrics retain stable identities when observed again', () => {
+  const metric = { dense: 2, denseKeys: ['first', 'second'], equations: 1, equationKeys: ['balance'],
+    glossary: 10, steps: 4, rows: 3, stats: 2 };
+  const combined = mergeSections([metric, structuredClone(metric), structuredClone(metric)]);
+  for (const key of ['dense', 'equations', 'glossary', 'steps', 'rows', 'stats'] as const) {
+    assert.equal(combined[key], metric[key], `${key} cannot multiply across repeated positions`);
+  }
+});
 
 /** The gate's own building blocks, without a browser: the Pages-faithful server and the pixel arithmetic of G6. */
 
