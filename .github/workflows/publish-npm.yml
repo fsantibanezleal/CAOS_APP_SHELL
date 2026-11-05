@@ -75,4 +75,14 @@ jobs:
             echo "${package_name}@${package_version} is already published with matching integrity; no-op."
           else
             npm publish --ignore-scripts --provenance --access public
+            for attempt in {1..12}; do
+              published_integrity="$(npm view "${package_name}@${package_version}" dist.integrity 2>/dev/null || true)"
+              [ -n "$published_integrity" ] && break
+              sleep 5
+            done
+            if [ "$published_integrity" != "$local_integrity" ]; then
+              echo "Registry integrity for ${package_name}@${package_version} does not match the published build" >&2
+              exit 1
+            fi
+            echo "${package_name}@${package_version} published and registry integrity verified."
           fi

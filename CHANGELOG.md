@@ -1,3 +1,10 @@
+## [0.20.001] - 2026-11-05
+
+### Fixed
+
+- Publish the package from the canonical CI build and verify registry SHA-512 integrity, preventing platform line endings from changing the release tarball.
+- Normalize padded release versions when matching GitHub tags, and make retries safe for an already-published identical package.
+
 ## [0.20.000] - 2026-11-05
 
 ### Added
