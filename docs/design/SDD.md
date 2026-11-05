@@ -275,6 +275,18 @@ Public API of the main entry by group, with the module that declares each value 
 | Cases and the workbench | values | `Stage`, `useStageSize` | `src/workbench/Stage.tsx` |
 | Cases and the workbench | values | `ViewsRow` | `src/workbench/ViewsRow.tsx` |
 | Cases and the workbench | types | `ViewsRowProps` | `src/workbench/ViewsRow.tsx` |
+| Showcase stories | values | `StoryFrame` | `src/workbench/StoryFrame.tsx` |
+| Showcase stories | types | `StoryAccent`, `StoryFrameProps`, `StoryStep` | `src/workbench/StoryFrame.tsx` |
+| Showcase stories | values | `SceneCallouts`, `layoutSceneCallouts` | `src/workbench/SceneCallouts.tsx` |
+| Showcase stories | types | `CalloutBox`, `CalloutState`, `SceneCalloutDef` | `src/workbench/SceneCallouts.tsx` |
+| Showcase stories | values | `Scene3DFrame` | `src/workbench/Scene3DFrame.tsx` |
+| Showcase stories | types | `Scene3DFrameProps` | `src/workbench/Scene3DFrame.tsx` |
+| Showcase stories | values | `LinkedViewProvider`, `createLinkedViewStore`, `useLinkedItem`, `useLinkedView`, `useLinkedCursor` | `src/workbench/linkedViews.tsx` |
+| Showcase stories | types | `LinkedViewSide`, `LinkedViewState`, `LinkedViewStore`, `SelectionOrigin` | `src/workbench/linkedViews.tsx` |
+| Showcase stories | values | `flyCamera`, `prefersReducedMotion`, `runStagedTransition` | `src/workbench/motion.ts` |
+| Showcase stories | types | `CameraFlyOptions`, `CameraFrame`, `CameraPose`, `MotionOptions`, `MotionStage` | `src/workbench/motion.ts` |
+| Showcase stories | values | `cameraForBounds`, `detailTier`, `explodedOffsets`, `flowSpeed`, `sceneEnvironment` | `src/workbench/scene3d.ts` |
+| Showcase stories | types | `DetailTier`, `ExplodedPart`, `SceneBounds`, `SceneEnvironment`, `Vec3` | `src/workbench/scene3d.ts` |
 | Cases and the workbench | types | `StageSize` | `src/workbench/Stage.tsx` |
 | Cases and the workbench | values | `isStale`, `makeStateKey`, `useWorkbenchState`, `WorkbenchStateContext` | `src/workbench/state.ts` |
 | Cases and the workbench | types | `Provenance`, `WorkbenchState` | `src/workbench/state.ts` |
@@ -319,7 +331,7 @@ One paragraph each; the rows are in the area file.
   See [`features/documents/requirements.md`](features/documents/requirements.md).
 - Frame and navigation (SHF). `AppShell`, `STANDARD_ROUTES`, `FocusShell`, `WorkbenchShell`, `Tabs`, `SubTabs`, `TabGroups`, `SurfacePage` (with Focus mode for a view with a stage since 0.16.0, `TabDef.focus`), `BREAKPOINTS`, `useUrlView`, `useOverflowFade` (internal).
   The frame, its three modes, the three route types and every row of links or tabs as one scrolling line. See [`features/frame-and-navigation/requirements.md`](features/frame-and-navigation/requirements.md).
-- Workbench (SHW). `WorkbenchLayout`, `CaseWorkbench` (with Focus mode for the App since 0.14.0, through `FocusShell`; the behaviour is `useFocusMode`, shared with `SurfacePage` since 0.16.0), `CaseSelector`, the case model helpers, `VariantBar`, `LaneBadge`, `Stage`, `ViewsRow`, the state key, `PanelBoundary`, the viz loop. The App route of
+- Workbench (SHW). `WorkbenchLayout`, `CaseWorkbench` (with Focus mode for the App since 0.14.0, through `FocusShell`; the behaviour is `useFocusMode`, shared with `SurfacePage` since 0.16.0), `CaseSelector`, the case model helpers, `VariantBar`, `LaneBadge`, `Stage`, `ViewsRow`, `PanelBoundary`, the visualization loop, `StoryFrame` (step links and pause-aware story controls), `SceneCallouts` (anchored labels), `LinkedViewProvider` (shared scene/panel/cursor state), and the reduced-motion-aware transition and 3D scene helpers. The App route of
   a product about cases: a rail beside an instrument of at most six views, all computed for one state key. See [`features/workbench/requirements.md`](features/workbench/requirements.md).
 - Charts (SHC). `UPlotChart` (line, point, log and parity plots, marks and toned reference lines), `BarChart`, and the text kit. Drawings that size their own margins from measured text and declare themselves
   to the gate. See [`features/charts/requirements.md`](features/charts/requirements.md).
@@ -330,7 +342,7 @@ One paragraph each; the rows are in the area file.
 - Theme and language (SHT). Tokens (`SHELL_TOKENS`, `resolveToken`, `useThemeTokens`), the theme and language stores and toggles, `THEME_BOOT_SCRIPT`, the storage keys, `pick`. Both themes at WCAG AA, English by default. See
   [`features/theme-and-language/requirements.md`](features/theme-and-language/requirements.md).
 - Architecture modal (SHA). `ArchitectureModal` and `validateArchitectureConfig`. The in-app "how it works" dialog (ADR-0058). See [`features/architecture-modal/requirements.md`](features/architecture-modal/requirements.md).
-- The gate (SHG). `caos-shell-gate`, G1 to G19 (G16 flip cards and card decks, G17 animated drawings, G18 Focus mode, 0.14.0, on a surface App too since 0.16.0 (`--app-route`); G19 values whole, 0.15.0) and the ADR checks, and its self-test. See [`features/gate/requirements.md`](features/gate/requirements.md).
+- The gate (SHG). `caos-shell-gate`, G1 to G21 (G16 flip cards and card decks, G17 animated drawings, G18 Focus mode, 0.14.0, on a surface App too since 0.16.0 (`--app-route`); G19 values whole, 0.15.0; G20 navigation-safe complete artifact reads; G21 showcase story structure and interaction) and the ADR checks, and its self-test. See [`features/gate/requirements.md`](features/gate/requirements.md).
 
 ## Degradation and dependency states
 
@@ -389,6 +401,11 @@ SHR-001 to SHR-004). A fix is a patch; a new primitive, a new check or a changed
 clone of the tag ([`docs/08_releasing.md`](../08_releasing.md)). Products pin the shell exactly and adopt a release
 when their owner names it (ADR-0078 section 5): bump the pin, remove the overrides the CHANGELOG entry says are
 unnecessary, and pass the gate again. The CHANGELOG's latest entry is the release this document describes.
+
+Version 0.20.000 adds the shared showcase primitives and a measured G21 story gate for ADR-0082. G21 verifies route and
+story structure, callout provenance and geometry, reciprocal linked selection, shared cursor scrubbing, keyboard and
+playback behavior, reduced motion, transition settling, mobile layout, LCP, frame rate and interaction latency. The
+product still owns the truth and provenance of every scientific value and the suitability of its domain views.
 
 ## Risks
 

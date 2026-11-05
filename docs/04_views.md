@@ -252,3 +252,40 @@ the tab order but stay in the markup; reduced motion removes the slide; when eve
 
 The executive view uses them for `pain.bearers`, `situation.roles`, `situation.state_of_the_art` and `proposal.four_cs`
 (`docs/06_executive-view.md`). A product page may use both under the same rule; the gate (G16) measures them wherever they appear.
+
+## Guided stories and linked scene views
+
+`StoryFrame` presents three to six numbered analytical steps. The product owns the evidence, stage and panel for every
+step; the shell owns the bilingual stepper, direct links, previous/next controls, play/pause state, keyboard controls
+(arrows, Home, End and Space), and pause-on-interaction. Each `StoryStep` supplies a stable `id`, its ordinal `number`,
+bilingual `verb`, evidence-based `headline`, explanatory `summary`, direct `href`, one of five `accent` values, and
+React nodes for `stage` and `panel`. The route resolves its active step from the URL and passes `activeId` and
+`onStepChange`; this keeps deep links, browser history and the displayed step in agreement.
+
+```tsx
+<StoryFrame
+  steps={steps}
+  activeId={activeId}
+  onStepChange={(id) => navigate(`/story/${id}`)}
+  onExit={() => navigate('/app')}
+/>
+```
+
+`SceneCallouts` takes bilingual eyebrow, unit and optional source text, a formatted value, a semantic state, and a
+normalized scene anchor for each item. Its deterministic layout measures the stage, places callouts with leader lines,
+and supports a reserved header band when a diagram must remain clear. The product reprojects anchors as its camera or
+view changes and computes every displayed value and its provenance from its own data.
+
+`LinkedViewProvider` creates one selection/cursor store for a scene and its panel. `useLinkedView` exposes `selectedId`,
+`cursor`, `seriesId` and the `select`, `scrub` and `showSeries` actions. Components pass an origin (`scene`, `panel`,
+`series` or `external`) so a product can reflect selection in both directions without maintaining duplicate state.
+
+The motion helpers are renderer-independent. `runStagedTransition` applies changes in reading order and honors reduced
+motion; `flyCamera` interpolates a camera pose with easing, can be aborted, and moves directly to the final pose when
+motion is reduced. `cameraForBounds`, `flowSpeed`, `explodedOffsets`, `detailTier` and `sceneEnvironment` provide
+deterministic camera framing, rate limits, exploded-part offsets, distance-based detail and theme-specific scene
+lighting. They do not supply product geometry or scientific state.
+
+`Scene3DFrame` gives a product-owned WebGL/canvas/SVG renderer an accessible viewport and separate controls, legend and
+availability slots. The shell owns the responsive frame; the product supplies geometry, camera controls, values,
+provenance and interaction semantics.

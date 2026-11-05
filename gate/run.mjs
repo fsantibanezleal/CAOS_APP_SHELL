@@ -9,8 +9,8 @@
 //                            are JSON, not the HTML fallback; a missing asset answers 404; doc text clears a floor
 //   G5 scroll and reach      boxes inside the viewport, the rail and their scrollers; tall views scroll; nothing is
 //                            cut; truncated text carries its full text; a select shows its whole selected text (0.17.0); every control reachable by the pointer
-//   G6 painted area          drawing surfaces have painted pixels, fill their stage, and cover at least half the
-//                            viewport on the App route, measured on the screenshot, never on a host box
+//   G6 painted area          drawing surfaces have painted pixels, fill their stage, and cover at least 60% of the
+//                            viewport on the App route, measured on the screenshot, never on a host box (ADR-0082)
 //   G7 walk everything       every route, tab, sub-tab and case, at five sizes, both themes, both languages,
 //                            waiting for declared state (data-state, data-stale, data-drawn), never networkidle
 //   G8 idle at rest          no sustained animation frames or DOM mutations after load and after a tab switch
@@ -55,7 +55,7 @@ export const DEFAULTS = {
   idleMs: 3000,
   settleMs: 15000,
   textFloor: 400,
-  instrumentMin: 0.5,
+  instrumentMin: 0.6,
   stageFillMin: 0.3,
   stageFloor: 140,
   viewportMinWidth: 1280,
@@ -64,6 +64,7 @@ export const DEFAULTS = {
   wideFont: true,
   wideFontSizes: '390x844,1280x800',
   requireFocus: false,
+  requireShowcase: false,
 };
 
 /** The wide fallback font of the G10 pass: wider than the Windows and macOS sans fonts; DejaVu Sans is what a Linux
@@ -243,7 +244,6 @@ export async function runGate(o) {
       if (res.status() !== 404) fail('G4', { route: '/__caos_gate_missing__.json' }, `a missing asset answered ${res.status()}, not 404 (an SPA fallback hides missing artifacts and broken deep links)`);
       await ctx.close();
     }
-
     // ---- G1: the subject, and the route list (from the header nav unless given).
     let routes = opt.routes ? String(opt.routes).split(',').map((r) => r.trim()).filter(Boolean) : null;
     {
@@ -265,6 +265,7 @@ export async function runGate(o) {
       sink.splice(0);
       await ctx.close();
     }
+    const storyRoutes = new Set(routes.filter((route) => /^\/story(?:\/|$)/.test(route)));
 
     // ---- G18 on a surface App: under --require-focus the App route must be among the measured routes, or nothing would be measured
     if (opt.requireFocus && workbenchRoutes.size === 0 && !routes.includes(appRoute)) {
@@ -380,7 +381,7 @@ export async function runGate(o) {
 
           if (primary) {
             // ADR-0071 rule 9 / G5: every header route reached by a real pointer click from the App route.
-            for (const route of routes.filter((r) => r !== workbenchRoute)) {
+            for (const route of routes.filter((r) => r !== workbenchRoute && !storyRoutes.has(r))) {
               await page.goto(urlFor(workbenchRoute), { waitUntil: 'load', timeout: 30000 }).catch(() => undefined);
               await settle(page);
               const link = page.locator('header nav a[href]');
@@ -405,6 +406,159 @@ export async function runGate(o) {
           }
           await ctx.close();
         }
+      }
+    }
+
+    // ---- G21 (ADR-0082): a required showcase story must be a real, directly addressable 3–6 step experience.
+    if (opt.requireShowcase) {
+      const stories = routes.filter((route) => /^\/story(?:\/|$)/.test(route));
+      if (stories.length === 0) {
+        fail('G21', { route: '/story', mode: 'routes' }, 'no /story/<step> route is declared; ADR-0082 requires a directly addressable guided story');
+      } else {
+        const size = primarySize;
+        const [w, h] = size;
+        const mode = `${w}x${h} ${themes[0]} ${langs[0]} story`;
+        const ctx = await openContext(size, themes[0], langs[0]);
+        const { page, sink } = await newPage(ctx);
+        const visited = [];
+        for (const route of stories) {
+          const at = { route, mode };
+          const res = await page.goto(urlFor(route), { waitUntil: 'load', timeout: 30000 }).catch((e) => e);
+          const status = res && typeof res.status === 'function' ? res.status() : `error ${res?.message ?? res}`;
+          if (status !== 200) { fail('G21', at, `direct story link answered ${status}`); continue; }
+          const settled = await settle(page);
+          if (settled) fail('G21', at, `story did not settle: ${settled}`);
+          const f = await page.evaluate(() => window.__caosGate.showcaseFacts());
+          if (!f.present) { fail('G21', at, 'route does not render [data-story]'); continue; }
+          if (f.count < 3 || f.count > 6) fail('G21', at, `story has ${f.count} visible steps; ADR-0082 requires 3 to 6`);
+          if (!f.headline || !/\d/.test(f.headline)) fail('G21', at, `step headline does not state a numeric finding ("${f.headline}")`);
+          if (f.headlineWords > 12) fail('G21', at, `finding headline has ${f.headlineWords} words; ADR-0082 caps it at 12`);
+          if (!f.stage || !f.panel || !f.layout) fail('G21', at, 'story needs one visible stage and one docked panel');
+          if (f.layout && w >= opt.viewportMinWidth) {
+            const share = (f.layout.width * f.layout.height) / (w * h);
+            if (share < 0.8) fail('G21', at, `story stage and docked panel cover ${(100 * share).toFixed(1)}% of the viewport (floor 80%, ADR-0082)`);
+          }
+          if (f.calls.length < 3) fail('G21', at, `stage has ${f.calls.length} visible anchored callouts; ADR-0082 requires at least 3`);
+          for (const call of f.calls) {
+            if (!call.value?.trim() || !call.unit?.trim()) fail('G21', at, `callout ${call.id} has no value or unit`);
+            if (!['alarm', 'warning', 'normal', 'selected', 'inactive'].includes(call.state)) fail('G21', at, `callout ${call.id} has no recognised semantic state`);
+            if (!call.source?.trim()) fail('G21', at, `callout ${call.id} has no value provenance`);
+            if (![call.anchor?.x, call.anchor?.y].every((v) => Number.isFinite(v) && v >= 0 && v <= 1)) fail('G21', at, `callout ${call.id} has no normalized subject anchor`);
+            else if (call.box && f.stage) {
+              const x = f.stage.left + call.anchor.x * f.stage.width, y = f.stage.top + call.anchor.y * f.stage.height;
+              const clearance = 8;
+              if (x >= call.box.left - clearance && x <= call.box.right + clearance && y >= call.box.top - clearance && y <= call.box.bottom + clearance)
+                fail('G21', at, `callout ${call.id} covers its own subject anchor`);
+            }
+          }
+          for (let i = 0; i < f.calls.length; i += 1) for (let j = i + 1; j < f.calls.length; j += 1) {
+            const a = f.calls[i].box, b = f.calls[j].box;
+            if (a && b && a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top) fail('G21', at, `callouts ${f.calls[i].id} and ${f.calls[j].id} overlap`);
+          }
+          if (f.calls.some(({ box }) => !box || box.left < f.stage.left || box.right > f.stage.right || box.top < f.stage.top || box.bottom > f.stage.bottom)) fail('G21', at, 'one or more callouts escape the stage instead of following its subject');
+          if (f.calls.length && await page.locator('[data-story] [data-caos-callout-leader]').count() < f.calls.length) fail('G21', at, 'not every scene callout has a leader to its subject anchor');
+          if (f.scroll.width > f.viewport.width + 1) fail('G21', at, `story page overflows horizontally (${f.scroll.width}px in ${f.viewport.width}px)`);
+          visited.push({ route, step: f.step, hrefs: f.links.map((x) => x.href) });
+          drain(sink, at);
+        }
+        const first = visited.find((x) => x.hrefs.length >= 3);
+        if (first) {
+          const hrefs = [...new Set(first.hrefs.map((href) => routeOf(new URL(href, base).href)).filter(Boolean))];
+          if (hrefs.length < 3 || hrefs.some((href) => !stories.includes(href))) fail('G21', { route: first.route, mode }, `stepper links do not directly address at least three declared story steps (${hrefs.join(', ') || 'none'})`);
+          await page.goto(urlFor(first.route), { waitUntil: 'load', timeout: 30000 }).catch(() => undefined);
+          await settle(page);
+          const perf = await page.evaluate(() => window.__caosGate.storyPerformanceFacts());
+          if (perf.lcp === null || perf.lcp > 2500) fail('G21', { route: first.route, mode }, `story LCP is ${perf.lcp === null ? 'unavailable' : `${perf.lcp.toFixed(0)} ms`}; ADR-0082 ceiling is 2500 ms`);
+          const assetBytes = perf.assets3d.reduce((sum, asset) => sum + asset.bytes, 0);
+          if (perf.assets3d.some((asset) => !asset.bytes)) fail('G21', { route: first.route, mode }, 'a 3D asset has no measurable compressed transfer size');
+          if (assetBytes > 15 * 1024 * 1024) fail('G21', { route: first.route, mode }, `compressed 3D assets total ${(assetBytes / 1024 / 1024).toFixed(2)} MiB; ADR-0082 ceiling is 15 MiB`);
+          const main = page.locator('[data-story]').first();
+          await main.focus().catch(() => undefined);
+          await page.keyboard.press('End').catch(() => undefined);
+          await page.waitForFunction((step) => window.__caosGate.showcaseFacts().step !== step, first.step, { timeout: 3000 }).catch(() => undefined);
+          const endFacts = await page.evaluate(() => window.__caosGate.showcaseFacts());
+          if (endFacts.step === first.step) fail('G21', { route: first.route, mode }, 'End key does not move the story to its final step');
+          await page.keyboard.press('Home').catch(() => undefined);
+          await page.waitForFunction((step) => window.__caosGate.showcaseFacts().step === step, first.step, { timeout: 3000 }).catch(() => undefined);
+          const homeFacts = await page.evaluate(() => window.__caosGate.showcaseFacts());
+          if (homeFacts.step !== first.step) fail('G21', { route: first.route, mode }, 'Home key does not return the story to its first step');
+          const sceneItem = page.locator('[data-story] [data-linked-view="scene"][data-linked-id]').first();
+          const panelItem = (id) => page.locator(`[data-story] [data-linked-view="panel"][data-linked-id="${id}"]`).first();
+          if (!(await sceneItem.count())) fail('G21', { route: first.route, mode }, 'story has no selectable linked scene objects');
+          else {
+            const id = await sceneItem.getAttribute('data-linked-id');
+            const panelMatch = panelItem(id);
+            if (!(await panelMatch.count())) fail('G21', { route: first.route, mode }, `scene object ${id} has no linked panel item`);
+            else {
+              await sceneItem.evaluate((el) => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window })));
+              await page.waitForFunction((target) => document.querySelector(`[data-linked-view="panel"][data-linked-id="${CSS.escape(target)}"][data-linked-selected="true"]`), id, { timeout: 2000 }).catch(() => undefined);
+              if (await panelMatch.getAttribute('data-linked-selected') !== 'true') fail('G21', { route: first.route, mode }, `selecting scene object ${id} does not select the matching panel item`);
+              await panelMatch.evaluate((el) => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window })));
+              await page.waitForFunction((target) => document.querySelector(`[data-linked-view="scene"][data-linked-id="${CSS.escape(target)}"][data-linked-selected="true"]`), id, { timeout: 2000 }).catch(() => undefined);
+              if (await sceneItem.getAttribute('data-linked-selected') !== 'true') fail('G21', { route: first.route, mode }, `selecting panel item ${id} does not highlight the matching scene object`);
+            }
+          }
+          const cursorInput = page.locator('[data-story] [data-linked-cursor]').first();
+          if (!(await cursorInput.count())) fail('G21', { route: first.route, mode }, 'story has no shared scrub control for linked scene and plots');
+          else {
+            await cursorInput.evaluate((el) => { const input = el; const min = Number(input.min || 0), max = Number(input.max || 100); const next = String(Math.round(min + (max - min) * .63)); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, next); input.dispatchEvent(new Event('input', { bubbles: true })); input.dispatchEvent(new Event('change', { bubbles: true })); });
+            await page.waitForTimeout(80);
+            const cursorFacts = await page.evaluate(() => window.__caosGate.showcaseFacts());
+            const value = cursorFacts.cursorInputs[0]?.value;
+            if (!cursorFacts.cursors.length || cursorFacts.cursors.some((position) => position !== value)) fail('G21', { route: first.route, mode }, 'scrubbing does not move every linked-view marker to the same cursor');
+          }
+          const play = page.locator('[data-story] button[aria-pressed]').first();
+          if (!(await play.count())) fail('G21', { route: first.route, mode }, 'story has no play/pause control with an observable state');
+          else {
+            await play.click();
+            if (await play.getAttribute('aria-pressed') !== 'true') fail('G21', { route: first.route, mode }, 'play control does not enter playing state');
+            const link = page.locator('[data-story-link]').nth(1);
+            await link.click();
+            if (await page.locator('[data-story] button[aria-pressed]').first().getAttribute('aria-pressed') !== 'false') fail('G21', { route: first.route, mode }, 'story autoplay does not pause on reader interaction');
+          }
+          // Measure a real step change against ADR-0082: eased stage motion, interaction latency and frames while it moves.
+          await page.evaluate(() => { window.__caosGate.resetStoryInteractions(); window.__caosGate.storyFrameSample = window.__caosGate.sampleStoryFrames(1600); });
+          const next = page.locator('[data-story] .caos-story-controls button').nth(2);
+          if (await next.isEnabled()) {
+            await next.click();
+            await page.waitForTimeout(90);
+            const earlyMotion = await page.evaluate(() => window.__caosGate.showcaseFacts().motion);
+            await page.waitForTimeout(260);
+            const lateMotion = await page.evaluate(() => window.__caosGate.showcaseFacts().motion);
+            if (!earlyMotion || earlyMotion.animationName === 'none' || earlyMotion.animationName === 'auto' || earlyMotion.transform === 'none' || earlyMotion.transform === 'matrix(1, 0, 0, 1, 0, 0)') fail('G21', { route: first.route, mode }, 'story step has no visible eased stage transition');
+            else if (Number.parseFloat(earlyMotion.animationDuration) * (earlyMotion.animationDuration.endsWith('ms') ? 1 : 1000) < 200) fail('G21', { route: first.route, mode }, `normal stage transition is shorter than 200 ms (${earlyMotion.animationDuration})`);
+            if (!lateMotion || lateMotion.transform !== 'matrix(1, 0, 0, 1, 0, 0)') fail('G21', { route: first.route, mode }, 'the staged transition does not settle at its final state');
+          }
+          const frameFacts = await page.evaluate(() => window.__caosGate.storyFrameSample);
+          if (!frameFacts || frameFacts.median === null || frameFacts.p05 === null) fail('G21', { route: first.route, mode }, 'story animation frame rate could not be measured');
+          else {
+            if (frameFacts.median < 55) fail('G21', { route: first.route, mode }, `story median is ${frameFacts.median.toFixed(1)} fps; ADR-0082 floor is 55 fps`);
+            if (frameFacts.p05 < 30) fail('G21', { route: first.route, mode }, `story fifth-percentile frame rate is ${frameFacts.p05.toFixed(1)} fps; ADR-0082 floor is 30 fps`);
+          }
+          const interactions = await page.evaluate(() => window.__caosGate.storyPerformanceFacts().events);
+          if (!interactions.length) fail('G21', { route: first.route, mode }, 'browser interaction latency was not measurable');
+          else if (Math.max(...interactions.map((entry) => entry.duration)) > 200) fail('G21', { route: first.route, mode }, `story interaction latency is ${Math.max(...interactions.map((entry) => entry.duration)).toFixed(0)} ms; ADR-0082 ceiling is 200 ms`);
+          await page.emulateMedia({ reducedMotion: 'reduce' });
+          const anyOtherLink = page.locator('[data-story-link]').nth(1);
+          if (await anyOtherLink.count()) {
+            await anyOtherLink.click();
+            const reducedMotion = await page.evaluate(() => window.__caosGate.showcaseFacts().motion);
+            const durationMs = reducedMotion ? Number.parseFloat(reducedMotion.animationDuration) * (reducedMotion.animationDuration.endsWith('ms') ? 1 : 1000) : Infinity;
+            if (reducedMotion?.animationName !== 'none' && durationMs > 150) fail('G21', { route: first.route, mode: 'reduced motion' }, `stage motion lasts ${durationMs} ms with reduced motion requested; ceiling is 150 ms`);
+          }
+        }
+        // The mobile story uses one column: the docked panel follows the stage and the three critical callouts remain visible.
+        const mobile = await openContext([390, 844], themes[0], langs[0]);
+        const { page: phone, sink: phoneSink } = await newPage(mobile);
+        await phone.goto(urlFor(stories[0]), { waitUntil: 'load', timeout: 30000 }).catch(() => undefined);
+        await settle(phone);
+        const mobileFacts = await phone.evaluate(() => window.__caosGate.showcaseFacts());
+        if (mobileFacts.calls.length !== 3) fail('G21', { route: stories[0], mode: '390x844 mobile story' }, `mobile story shows ${mobileFacts.calls.length} callouts; ADR-0082 requires the three primary callouts`);
+        if (!mobileFacts.stage || !mobileFacts.panel || mobileFacts.panel.top < mobileFacts.stage.bottom - 1) fail('G21', { route: stories[0], mode: '390x844 mobile story' }, 'the docked panel does not sit below the scene on mobile');
+        if (mobileFacts.scroll.width > mobileFacts.viewport.width + 1) fail('G21', { route: stories[0], mode: '390x844 mobile story' }, `mobile story overflows horizontally (${mobileFacts.scroll.width}px in ${mobileFacts.viewport.width}px)`);
+        drain(phoneSink, { route: stories[0], mode: '390x844 mobile story' });
+        await mobile.close();
+        await ctx.close();
       }
     }
 
@@ -938,7 +1092,7 @@ export async function runGate(o) {
     const big = s.w >= opt.viewportMinWidth;
     if (big && f.rail && f.rail.scroll > f.rail.client + 1) fail('G18', at, `${label}: the rail scrolls (${f.rail.scroll}px of content in ${f.rail.client}px)`);
     if (f.tabRows.some((r) => r > 1)) fail('G18', at, `${label}: a tab row wraps onto ${Math.max(...f.tabRows)} rows`);
-    if (big && f.share < opt.instrumentMin) fail('G18', at, `${label}: the stage covers ${(100 * f.share).toFixed(1)}% of the viewport (floor ${(100 * opt.instrumentMin).toFixed(0)}%)`);
+    if (big && f.share < 0.8) fail('G18', at, `${label}: the stage covers ${(100 * f.share).toFixed(1)}% of the viewport (floor 80% on Focus and story routes, ADR-0082)`);
     if (f.exitInside === false) fail('G18', at, `${label}: the exit control is outside the viewport`);
     for (const c of f.covered) fail('G18', at, `${label}: ${c.chrome} covers the control "${c.control}" (the stage must clear the Focus chrome)`);
     if (f.cutSelects.count) fail('G5', at, `${label}: ${f.cutSelects.count} select(s) cut the selected text (a case name cut in its box, or a display that names another case than the one the select holds, or a plain select with a text wider than its room): ${f.cutSelects.list.join('; ')}`);
