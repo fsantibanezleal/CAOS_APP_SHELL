@@ -61,7 +61,11 @@ jobs:
           set -euo pipefail
           package_name="$(node -p 'require("./package.json").name')"
           package_version="$(node -p 'require("./package.json").version')"
-          local_integrity="$(npm pack --json --ignore-scripts --pack-destination "$RUNNER_TEMP" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s)[0].integrity))')"
+          npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP" >/dev/null
+          tarball_name="$(node -e 'const p=require("./package.json"); console.log(p.name.replace(/^@/, "").replace("/", "-") + "-" + p.version + ".tgz")')"
+          tarball_path="$RUNNER_TEMP/$tarball_name"
+          test -f "$tarball_path"
+          local_integrity="$(node -e 'const fs=require("node:fs"); const crypto=require("node:crypto"); console.log("sha512-"+crypto.createHash("sha512").update(fs.readFileSync(process.argv[1])).digest("base64"))' "$tarball_path")"
           published_integrity="$(npm view "${package_name}@${package_version}" dist.integrity 2>/dev/null || true)"
           if [ -n "$published_integrity" ]; then
             if [ "$published_integrity" != "$local_integrity" ]; then
