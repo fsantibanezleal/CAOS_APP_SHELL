@@ -41,7 +41,10 @@ jobs:
           python3 scripts/check_version_coherence.py .
           file_version="$(tr -d ' \r\n' < VERSION)"
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
-            test "${GITHUB_REF_NAME}" = "v${file_version}"
+            tag_version="${GITHUB_REF_NAME#v}"
+            file_semver="$(python3 -c 'import re,sys; m=re.match(r"^(\d+)\.(\d+)\.(\d+)",sys.argv[1]); assert m; print(".".join(str(int(x)) for x in m.groups()))' "$file_version")"
+            tag_semver="$(python3 -c 'import re,sys; m=re.match(r"^(\d+)\.(\d+)\.(\d+)",sys.argv[1]); assert m; print(".".join(str(int(x)) for x in m.groups()))' "$tag_version")"
+            test "$tag_semver" = "$file_semver"
           fi
 
       - run: npm ci
@@ -50,4 +53,19 @@ jobs:
         run: npm test
 
       - name: Publish through trusted publishing, with provenance
-        run: npm publish --provenance --access public
+        shell: bash
+        run: |
+          set -euo pipefail
+          package_name="$(node -p 'require("./package.json").name')"
+          package_version="$(node -p 'require("./package.json").version')"
+          local_integrity="$(npm pack --json --pack-destination "$RUNNER_TEMP" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const i=s.lastIndexOf("\n[");const metadata=JSON.parse(s.slice(i<0?0:i+1).trim());console.log(metadata[0].integrity)})')"
+          published_integrity="$(npm view "${package_name}@${package_version}" dist.integrity 2>/dev/null || true)"
+          if [ -n "$published_integrity" ]; then
+            if [ "$published_integrity" != "$local_integrity" ]; then
+              echo "Published ${package_name}@${package_version} has different bytes" >&2
+              exit 1
+            fi
+            echo "${package_name}@${package_version} is already published with matching integrity; no-op."
+          else
+            npm publish --provenance --access public
+          fi
