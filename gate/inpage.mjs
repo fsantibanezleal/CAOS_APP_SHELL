@@ -7,6 +7,34 @@
 export function installLib() {
   const G = (window.__caosGate = window.__caosGate || {});
   G.raf = 0;
+  const storyPerformance = { lcp: null, events: [] };
+  try {
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) storyPerformance.lcp = Math.max(storyPerformance.lcp ?? 0, entry.startTime + entry.duration);
+    }).observe({ type: 'largest-contentful-paint', buffered: true });
+  } catch { /* Chromium reference runner supports LCP; G21 reports it unavailable if not. */ }
+  try {
+    new PerformanceObserver((list) => {
+      storyPerformance.events.push(...list.getEntries().filter((entry) => entry.interactionId > 0).map((entry) => ({ name: entry.name, duration: entry.duration })));
+    }).observe({ type: 'event', buffered: true, durationThreshold: 16 });
+  } catch { /* G21 reports no interaction samples as an unmeasured requirement. */ }
+  G.resetStoryInteractions = () => { storyPerformance.events = []; };
+  G.storyPerformanceFacts = () => ({
+    lcp: storyPerformance.lcp,
+    events: storyPerformance.events.slice(),
+    assets3d: performance.getEntriesByType('resource').filter((entry) => /\.(?:glb|gltf|bin|ktx2|basis|draco|obj|mtl|stl|fbx)(?:$|\?)/i.test(entry.name))
+      .map((entry) => ({ name: entry.name, bytes: entry.transferSize || entry.encodedBodySize || 0 })),
+  });
+  G.sampleStoryFrames = (duration = 1600) => new Promise((resolve) => {
+    const times = [];
+    const start = performance.now();
+    const tick = (now) => { times.push(now); if (now - start < duration) requestAnimationFrame(tick); else {
+      const deltas = times.slice(1).map((time, index) => time - times[index]).filter((delta) => delta > 0).sort((a, b) => a - b);
+      const percentile = (q) => deltas.length ? deltas[Math.min(deltas.length - 1, Math.floor(q * (deltas.length - 1)))] : null;
+      resolve({ frames: deltas.length, median: percentile(.5) ? 1000 / percentile(.5) : null, p05: percentile(.95) ? 1000 / percentile(.95) : null });
+    } };
+    requestAnimationFrame(tick);
+  });
   // The smallest rendered size of an illustration label (EXEC_LIMITS.minLabelPx of gate/areas.mjs; test/executive.test.ts keeps them equal).
   const EXEC_MIN_LABEL_PX = 9;
   /** Local text bounds mapped into the outer illustration's SVG user space, not screen pixels.
@@ -1511,6 +1539,46 @@ export function installLib() {
       tabRows: rows,
       share: box ? (box.width * box.height) / (window.innerWidth * window.innerHeight) : 0,
       exitInside: (() => { const e = document.querySelector('[data-focus-exit]'); if (!e) return null; const r = e.getBoundingClientRect(); return r.width > 0 && r.right <= window.innerWidth + 1 && r.bottom <= window.innerHeight + 1; })(),
+    };
+  };
+
+  /** ADR-0082 showcase story, its docked stage/panel and the rendered geometry of its anchored callouts (G21). */
+  G.showcaseFacts = () => {
+    const story = document.querySelector('[data-story]');
+    const box = (element) => {
+      if (!element) return null;
+      const r = element.getBoundingClientRect();
+      return { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height };
+    };
+    const stage = story?.querySelector('[data-stage]');
+    const layout = story?.querySelector('[data-stage-layout]');
+    const callouts = [...(stage?.querySelectorAll('[data-caos-callout]') ?? [])].filter(visible).map((element) => ({
+      id: element.getAttribute('data-caos-callout'), value: element.getAttribute('data-callout-value'), unit: element.getAttribute('data-callout-unit'),
+      state: element.getAttribute('data-callout-state'), source: element.getAttribute('data-callout-source'),
+      anchor: { x: Number(element.getAttribute('data-callout-anchor-x')), y: Number(element.getAttribute('data-callout-anchor-y')) }, box: box(element),
+    }));
+    const links = [...(story?.querySelectorAll('[data-story-link]') ?? [])].filter(visible).map((element) => ({ id: element.getAttribute('data-story-link'), href: element.getAttribute('href'), active: element.getAttribute('aria-selected') === 'true' }));
+    const linked = [...(story?.querySelectorAll('[data-linked-id][data-linked-view]') ?? [])].filter(visible).map((element) => ({ id: element.getAttribute('data-linked-id'), view: element.getAttribute('data-linked-view'), selected: element.getAttribute('data-linked-selected') === 'true', box: box(element) }));
+    const cursors = [...(story?.querySelectorAll('[data-linked-cursor-marker]') ?? [])].filter(visible).map((element) => element.getAttribute('data-linked-cursor-position'));
+    const cursorInputs = [...(story?.querySelectorAll('[data-linked-cursor]') ?? [])].filter(visible).map((element) => ({ value: element.value ?? element.getAttribute('value') ?? '', type: element.type ?? '' }));
+    const headline = story?.querySelector('[data-story-headline]');
+    return {
+      present: Boolean(story),
+      step: story?.getAttribute('data-story-step') ?? null,
+      count: links.length,
+      links,
+      linked,
+      cursors,
+      cursorInputs,
+      headline: headline?.textContent?.trim() ?? '',
+      stage: box(stage),
+      panel: box(story?.querySelector('[data-stage-panel]')),
+      layout: box(layout),
+      calls: callouts,
+      headlineWords: (headline?.textContent?.trim() ?? '').split(/\s+/).filter(Boolean).length,
+      motion: (() => { const stageMotion = stage?.parentElement?.getAttribute('data-story-transition'); const target = story?.querySelector('[data-story-transition] > .caos-story-stage'); if (!target) return null; const style = getComputedStyle(target); return { key: stageMotion, animationName: style.animationName, animationDuration: style.animationDuration, animationDelay: style.animationDelay, opacity: style.opacity, transform: style.transform }; })(),
+      viewport: { width: innerWidth, height: innerHeight },
+      scroll: { width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight },
     };
   };
 

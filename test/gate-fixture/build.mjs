@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { THEME_BOOT_SCRIPT } from '../../dist/keys.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
-export const ROUTES = ['app', 'introduction', 'methodology', 'implementation', 'experiments', 'benchmark', 'console'];
+export const ROUTES = ['app', 'introduction', 'methodology', 'implementation', 'experiments', 'benchmark', 'console', 'story/measure', 'story/phase', 'story/decision'];
 
 function page(plant) {
   return `<!doctype html>
@@ -67,6 +67,10 @@ export function makePlant(cleanDir, plantDir, plant) {
   };
   walk(plantDir);
   if (plant === 'deeplink') rmSync(join(plantDir, 'methodology'), { recursive: true, force: true });
+  if (plant === 'showcase-anchor-occlusion') {
+    writeFileSync(join(plantDir, 'assets', 'app.css'), readFileSync(join(plantDir, 'assets', 'app.css'), 'utf8') +
+      '\n[data-caos-callout="feed"] { left: calc(22% - 92px) !important; top: calc(45% - 34px) !important; }\n');
+  }
   // the plants of the executive view that are defects of an illustration file
   const svg = (name, edit) => writeFileSync(join(plantDir, 'executive', `${name}.svg`), edit(readFileSync(join(plantDir, 'executive', `${name}.svg`), 'utf8')));
   if (plant === 'exec-illustration-missing') rmSync(join(plantDir, 'executive', 'proposal.svg'));

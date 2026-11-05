@@ -16,16 +16,18 @@
 //   --sizes 390x844,...,2560x1440  --themes light,dark  --langs en,es
 //   --case-sample id1,id2        cases walked outside the primary mode; default the first and the last
 //   --single-case                the workbench has one case and no case control
-//   --idle-ms 3000  --settle-ms 15000  --text-floor 400  --instrument-min 0.5  --stage-fill-min 0.3  --stage-floor 140
+//   --idle-ms 3000  --settle-ms 15000  --text-floor 400  --instrument-min 0.6  --stage-fill-min 0.3  --stage-floor 140
 //   --wide-font-sizes 390x844,1280x800   the sizes of the wide-font pass (G10); --no-wide-font skips it
 //   --require-focus              fail an App without a Focus control (G18; ADR-0070 requires one in a product with simulations); on a surface
 //                                App, one with no view that offers it
+//   --require-showcase            fail when no /story/<step> routes exist or the story misses ADR-0082's direct-link,
+//                                stage, panel, finding, callout, keyboard and pause checks (also pass story routes in --routes)
 //   --out gate-output            report (gate-report.json), screenshots (shots/) and the capture index (index.html)
 // Needs `playwright` in the consuming project (optional peer dependency). Exit 1 on any failure, 2 on misuse.
 
 import { runGate } from '../gate/run.mjs';
 
-const FLAGS = new Set(['single-case', 'no-wide-font', 'require-focus', 'spa-fallback']);
+const FLAGS = new Set(['single-case', 'no-wide-font', 'require-focus', 'require-showcase', 'spa-fallback']);
 const args = {};
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i += 1) {
@@ -51,6 +53,7 @@ const options = {
   caseSample: args['case-sample'],
   singleCase: args['single-case'] === true,
   requireFocus: args['require-focus'] === true,
+  requireShowcase: args['require-showcase'] === true,
   spaFallback: args['spa-fallback'] === true,
   idleMs: num('idle-ms'),
   settleMs: num('settle-ms'),

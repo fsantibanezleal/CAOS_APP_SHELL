@@ -102,7 +102,7 @@ export function RailBody({ rail, railHead, railLabel }: Pick<WorkbenchLayoutProp
  * Renders `.page-body.wide.caos-wb`: no reading-width cap (a workbench is not prose, ADR-0071 rule 2),
  * `min-width: 0` down the tree so no row pushes the page wider than the screen (rule 3), a rail with an
  * explicit width that never scrolls (rule 6), and an instrument marked `data-instrument` so the measured gate
- * can check that it covers at least half of the viewport (rule 8). Pair with `ShellConfig.contain`.
+ * can check that it covers at least 60% of the viewport, and Focus at least 80% (ADR-0082). Pair with `ShellConfig.contain`.
  */
 export function WorkbenchLayout({ rail, railHead, children, railLabel, className }: WorkbenchLayoutProps) {
   const lang = useShellLang();

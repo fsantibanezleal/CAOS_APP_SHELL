@@ -87,7 +87,7 @@ function panel(id: string, lane: Lane | undefined, provenance: Provenance | unde
  * parameters and live values; the instrument holds ONE row of at most six question groups in a fixed order (the
  * instrument groups, the variant comparison, the context write-up) and the open group's views, which take the
  * height that row leaves. Pickers, parameters and numbers sit in the rail so the drawing keeps the instrument
- * (rule 8: at least half the viewport is drawn).
+ * (rule 8: at least 60% of the viewport is drawn on the App route).
  *
  * It provides the selection's state key to every `PlotCard` and `Readout` in the rail and the instrument, so a view
  * still showing data for an earlier selection says so, and it writes `data-case`, `data-variant`, `data-source` and
