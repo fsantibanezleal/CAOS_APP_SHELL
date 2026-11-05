@@ -3,6 +3,7 @@
 ### Added
 
 - Add ADR-0082 showcase primitives: direct-link `StoryFrame`, sourced and unit-bearing scene callouts, reciprocal linked scene/panel selection and shared cursor hooks, eased story transitions with an instant reduced-motion path, 3D camera/bounds/rate/explosion/LOD/environment helpers, semantic state and story-accent tokens.
+- Add the renderer-agnostic `Scene3DFrame` for full-size product-owned scenes with separate controls, legend and availability; prevent callout cards from covering their authored subject anchors and make G21 fail on planted occlusion.
 - Raise the measured App drawing floor to 60% and Focus floor to 80%; extend G21 to check direct routes, 3–6 steps, numeric headlines of at most 12 words, stage/panel geometry, callout value/unit/state/provenance/anchor, reciprocal selection and cursor scrubbing, keyboard navigation, pause-on-interaction, reduced motion, mobile stacking, LCP, FPS, interaction latency and compressed 3D asset size.
 
 ### Fixed

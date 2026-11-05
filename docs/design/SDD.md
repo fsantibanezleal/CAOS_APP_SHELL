@@ -279,6 +279,8 @@ Public API of the main entry by group, with the module that declares each value 
 | Showcase stories | types | `StoryAccent`, `StoryFrameProps`, `StoryStep` | `src/workbench/StoryFrame.tsx` |
 | Showcase stories | values | `SceneCallouts`, `layoutSceneCallouts` | `src/workbench/SceneCallouts.tsx` |
 | Showcase stories | types | `CalloutBox`, `CalloutState`, `SceneCalloutDef` | `src/workbench/SceneCallouts.tsx` |
+| Showcase stories | values | `Scene3DFrame` | `src/workbench/Scene3DFrame.tsx` |
+| Showcase stories | types | `Scene3DFrameProps` | `src/workbench/Scene3DFrame.tsx` |
 | Showcase stories | values | `LinkedViewProvider`, `createLinkedViewStore`, `useLinkedItem`, `useLinkedView`, `useLinkedCursor` | `src/workbench/linkedViews.tsx` |
 | Showcase stories | types | `LinkedViewSide`, `LinkedViewState`, `LinkedViewStore`, `SelectionOrigin` | `src/workbench/linkedViews.tsx` |
 | Showcase stories | values | `flyCamera`, `prefersReducedMotion`, `runStagedTransition` | `src/workbench/motion.ts` |

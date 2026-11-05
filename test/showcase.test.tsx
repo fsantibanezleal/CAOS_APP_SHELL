@@ -6,6 +6,7 @@ import { MemoryRouter } from 'react-router';
 import { createLinkedViewStore } from '../src/workbench/linkedViews';
 import { layoutCalloutHeader, layoutSceneCallouts, type SceneCalloutDef } from '../src/workbench/SceneCallouts';
 import { StoryFrame, type StoryStep } from '../src/workbench/StoryFrame';
+import { Scene3DFrame } from '../src/workbench/Scene3DFrame';
 import { flyCamera, runStagedTransition } from '../src/workbench/motion';
 import { cameraForBounds, detailTier, explodedOffsets, flowSpeed, sceneEnvironment } from '../src/workbench/scene3d';
 
@@ -90,6 +91,21 @@ test('story frame exposes each deep link, step number, finding headline, stage a
   assert.match(html, /data-story-headline/);
   assert.match(html, /href="\/story\/step-1"/);
   assert.match(html, /data-stage-panel/);
+});
+
+test('the shared 3D frame gives product-owned renderers a full-size accessible scene and separate context', () => {
+  const html = renderToStaticMarkup(createElement(Scene3DFrame, {
+    label: 'Grinding mill and classifier', controls: createElement('button', null, 'Reset camera'),
+    legend: createElement('p', null, 'Reference geometry'), status: createElement('p', null, 'Synthetic replay'),
+  }, createElement('canvas', { 'aria-label': '3D grinding circuit' })));
+  assert.match(html, /data-caos-scene3d-frame/);
+  assert.match(html, /role="region" aria-label="Grinding mill and classifier"/);
+  assert.match(html, /data-caos-scene3d-renderer/);
+  assert.match(html, /Reset camera/);
+  assert.match(html, /Scene legend/);
+  assert.match(html, /role="status"/);
+  const spanish = renderToStaticMarkup(createElement(Scene3DFrame, { label: 'Escena del circuito', legendLabel: 'Leyenda de escena', legend: 'Geometría de referencia' }, createElement('svg')));
+  assert.match(spanish, /aria-label="Leyenda de escena"/);
 });
 
 test('reduced motion applies story transitions immediately and camera flies to the final pose', async () => {

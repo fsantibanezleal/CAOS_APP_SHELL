@@ -285,3 +285,7 @@ motion; `flyCamera` interpolates a camera pose with easing, can be aborted, and 
 motion is reduced. `cameraForBounds`, `flowSpeed`, `explodedOffsets`, `detailTier` and `sceneEnvironment` provide
 deterministic camera framing, rate limits, exploded-part offsets, distance-based detail and theme-specific scene
 lighting. They do not supply product geometry or scientific state.
+
+`Scene3DFrame` gives a product-owned WebGL/canvas/SVG renderer an accessible viewport and separate controls, legend and
+availability slots. The shell owns the responsive frame; the product supplies geometry, camera controls, values,
+provenance and interaction semantics.

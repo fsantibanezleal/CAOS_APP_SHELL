@@ -113,6 +113,8 @@ export { StoryFrame } from './workbench/StoryFrame';
 export type { StoryAccent, StoryFrameProps, StoryStep } from './workbench/StoryFrame';
 export { SceneCallouts, layoutSceneCallouts } from './workbench/SceneCallouts';
 export type { CalloutBox, CalloutState, SceneCalloutDef } from './workbench/SceneCallouts';
+export { Scene3DFrame } from './workbench/Scene3DFrame';
+export type { Scene3DFrameProps } from './workbench/Scene3DFrame';
 export { LinkedViewProvider, createLinkedViewStore, useLinkedItem, useLinkedView, useLinkedCursor } from './workbench/linkedViews';
 export type { LinkedViewSide, LinkedViewState, LinkedViewStore, SelectionOrigin } from './workbench/linkedViews';
 export { flyCamera, prefersReducedMotion, runStagedTransition } from './workbench/motion';
