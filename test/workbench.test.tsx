@@ -26,6 +26,17 @@ test('WorkbenchLayout is the full-viewport workbench with a marked instrument (A
   assert.match(out, /<aside class="caos-wb-rail" aria-label="Controls"/);
 });
 
+test('WorkbenchLayout accepts bounded rail width and rejects invalid values (SHW-054)', () => {
+  const out = html(<WorkbenchLayout rail={<p>controls</p>} railWidth={186}>instrument</WorkbenchLayout>);
+  assert.match(out, /style="--rail-w:186px"[^>]*data-workbench="" data-rail-width="186"/);
+  for (const width of [149, 361, Number.NaN, Number.POSITIVE_INFINITY]) {
+    assert.throws(
+      () => renderToStaticMarkup(<WorkbenchLayout rail={<p>controls</p>} railWidth={width}>instrument</WorkbenchLayout>),
+      /finite value from 150 to 360 px/,
+    );
+  }
+});
+
 test('a rail given as sections shows one section at a time, never all of them (ADR-0071 rule 6)', () => {
   const out = html(
     <WorkbenchLayout
@@ -46,6 +57,7 @@ test('CaseWorkbench orders the groups, then the comparison, then the context (AD
   const out = html(
     <CaseWorkbench
       caseId="c1"
+      railWidth={186}
       groups={[
         { id: 'model', label: 'Model', content: 'M' },
         { id: 'validation', label: 'Validation', lane: 'live', content: 'V' },
@@ -58,6 +70,7 @@ test('CaseWorkbench orders the groups, then the comparison, then the context (AD
   assert.deepEqual(order, ['Model', 'Validation', 'Compare variants', 'Context']);
   assert.match(out, /data-group-count="4"/);
   assert.match(out, /class="caos-cw"[^>]*data-instrument=""/);
+  assert.match(out, /style="--rail-w:186px"[^>]*data-workbench="" data-rail-width="186"/);
 });
 
 test('CaseWorkbench refuses more than six peer groups (ADR-0071 rule 5)', () => {

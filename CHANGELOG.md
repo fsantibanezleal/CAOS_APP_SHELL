@@ -1,3 +1,13 @@
+## [0.21.000] - 2026-11-05
+
+### Added
+
+- Add a bounded `railWidth` prop to `WorkbenchLayout` and `CaseWorkbench` so products can calibrate desktop controls through the shared API without overriding shell-owned CSS.
+
+### Adoption
+
+- Products that need a calibrated desktop rail may pass `railWidth` from 150 through 360 CSS pixels, then remove any rail-width workaround and rerun the installed measured gate.
+
 ## [0.20.000] - 2026-11-05
 
 ### Added
