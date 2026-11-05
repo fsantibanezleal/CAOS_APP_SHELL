@@ -3,10 +3,12 @@
 ### Added
 
 - Add a bounded `railWidth` prop to `WorkbenchLayout` and `CaseWorkbench` so products can calibrate desktop controls through the shared API without overriding shell-owned CSS.
+- Add explicit `density="compact"` to `Tabs` and `tabDensity="compact"` to `CaseWorkbench`, preserving labels, keyboard behavior and overflow while reducing vertical navigation chrome for short viewports.
 
 ### Adoption
 
 - Products that need a calibrated desktop rail may pass `railWidth` from 150 through 360 CSS pixels, then remove any rail-width workaround and rerun the installed measured gate.
+- Products with short viewports may opt into compact tab rows; default density remains unchanged.
 
 ## [0.20.000] - 2026-11-05
 

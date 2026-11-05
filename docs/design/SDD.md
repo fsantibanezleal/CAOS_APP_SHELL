@@ -409,7 +409,9 @@ product still owns the truth and provenance of every scientific value and the su
 
 Version 0.21.000 adds a bounded `railWidth` prop to `WorkbenchLayout` and `CaseWorkbench`, so products can size the
 desktop control rail through the shared API without overriding shell-owned CSS. Values must be finite and from 150 to
-360 CSS pixels; omitting the prop preserves the existing layout.
+360 CSS pixels; omitting the prop preserves the existing layout. It also adds an explicit compact tab-row density to
+`Tabs` and `CaseWorkbench`; the default comfortable density preserves the previous spacing, labels, keyboard semantics
+and overflow behavior.
 
 ## Risks
 

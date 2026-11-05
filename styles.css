@@ -297,6 +297,8 @@ code, kbd { font-family: var(--font-mono); }
 .tablist::-webkit-scrollbar { display: none; }
 .tablist .tab, .tablist button { flex: 0 0 auto; white-space: nowrap; }
 .tab { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.5rem 1rem; border: 1px solid transparent; border-radius: var(--radius-md); background: transparent; color: var(--color-fg-subtle); font-size: var(--text-md); font-weight: 550; transition: color 0.15s, background-color 0.15s, border-color 0.15s; }
+.tabs-compact > .tablist { margin-bottom: 0.15rem; padding-bottom: 0; }
+.tabs-compact > .tablist .tab { padding-block: 0.2rem; }
 .tab:hover { color: var(--color-fg); background: var(--color-surface-2); }
 .tab.active { color: var(--color-accent); background: var(--color-accent-soft); border-color: color-mix(in oklab, var(--color-accent) 35%, transparent); font-weight: 650; }
 .tabpanel:focus, .subtabpanel:focus { outline: none; }
@@ -573,6 +575,8 @@ svg.lucide { flex: none; }
 .caos-cw > .tabs { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
 .caos-cw > .tabs > .tablist { margin-bottom: 0.5rem; padding-bottom: var(--space-1); }
 .caos-cw > .tabs > .tablist .tab { padding: 0.38rem 0.85rem; }
+.caos-cw > .tabs.tabs-compact > .tablist { margin-bottom: 0.15rem; padding-bottom: 0; }
+.caos-cw > .tabs.tabs-compact > .tablist .tab { padding-block: 0.2rem; }
 .caos-cw > .tabs > .tabpanel:not([hidden]) { flex: 1 1 auto; min-height: 0; overflow: auto; display: flex; flex-direction: column; }
 .caos-cw-panel { display: flex; flex-direction: column; gap: 0.6rem; min-width: 0; flex: 1 1 auto; min-height: 0; }
 .caos-cw-panel-head { display: flex; justify-content: flex-end; }
