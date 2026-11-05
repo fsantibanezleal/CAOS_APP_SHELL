@@ -115,7 +115,7 @@ const PLANTS = [
   { id: 'unavailable-invisible-chart', check: 'G6', re: /a drawing is present but not visible/, trail: /pending/, opts: { routes: '/app' } },
   { id: 'low-contrast', check: 'G13', re: /contrast \d\.\d\d:1, below 4\.5:1/, opts: { routes: '/app,/introduction' } },
   // ADR-0017 2.1: the required areas of the documentation pages; each fails with its own floor
-  { id: 'floor-no-executive', check: 'ADR-0017.2', re: /no executive view; the top-level topics are \[none\]/, opts: { routes: '/introduction' } },
+  { id: 'floor-no-executive', check: 'G4', re: /the root opened the Introduction on the "none" view; the landing opens its executive view/, opts: { routes: '/introduction' } },
   { id: 'floor-exec-second', check: 'ADR-0017.2', re: /the executive view is not the first topic \(the first is "technical"\)/, opts: { routes: '/introduction' } },
   { id: 'floor-exec-equation', check: 'ADR-0017.2', re: /executive view \(EN\): 1 equation\(s\); the executive view holds no equation/, opts: { routes: '/introduction' } },
   { id: 'floor-five-sections', check: 'ADR-0017.2', re: /no section declares the area "math"/, opts: { routes: '/introduction' } },
