@@ -5,6 +5,11 @@
 - Publish the package from the canonical CI build and verify registry SHA-512 integrity, preventing platform line endings from changing the release tarball.
 - Normalize padded release versions when matching GitHub tags, and make retries safe for an already-published identical package.
 
+## 0.20.002 - 2026-11-05
+
+- Keep all StoryFrame tabs on one horizontally scrollable row at mobile, tablet and desktop widths (SHW-055, #183).
+- Add a real-browser regression covering all six links, keyboard Home/End and document containment at five widths.
+
 ## [0.20.000] - 2026-11-05
 
 ### Added
