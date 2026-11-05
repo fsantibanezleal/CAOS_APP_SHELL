@@ -52,13 +52,16 @@ jobs:
       - name: Unit and contract tests
         run: npm test
 
+      - name: Build the package before checking the published bytes
+        run: npm run build
+
       - name: Publish through trusted publishing, with provenance
         shell: bash
         run: |
           set -euo pipefail
           package_name="$(node -p 'require("./package.json").name')"
           package_version="$(node -p 'require("./package.json").version')"
-          local_integrity="$(npm pack --json --pack-destination "$RUNNER_TEMP" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const i=s.lastIndexOf("\n[");const metadata=JSON.parse(s.slice(i<0?0:i+1).trim());console.log(metadata[0].integrity)})')"
+          local_integrity="$(npm pack --json --ignore-scripts --pack-destination "$RUNNER_TEMP" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s)[0].integrity))')"
           published_integrity="$(npm view "${package_name}@${package_version}" dist.integrity 2>/dev/null || true)"
           if [ -n "$published_integrity" ]; then
             if [ "$published_integrity" != "$local_integrity" ]; then
@@ -67,5 +70,5 @@ jobs:
             fi
             echo "${package_name}@${package_version} is already published with matching integrity; no-op."
           else
-            npm publish --provenance --access public
+            npm publish --ignore-scripts --provenance --access public
           fi
