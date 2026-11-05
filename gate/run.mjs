@@ -523,7 +523,13 @@ export async function runGate(o) {
             await next.click();
             await page.waitForTimeout(90);
             const earlyMotion = await page.evaluate(() => window.__caosGate.showcaseFacts().motion);
-            await page.waitForTimeout(260);
+            // Wait for the actual CSS stage animation to finish instead of assuming it starts on the same frame as the click.
+            // On loaded runners style/layout can begin a few frames after Playwright's click promise resolves.
+            await page.waitForFunction(() => {
+              const target = document.querySelector('[data-story-transition] > .caos-story-stage');
+              const animations = target ? target.getAnimations().filter((animation) => animation.animationName === 'caos-story-stage-enter') : [];
+              return animations.length > 0 && animations.every((animation) => animation.playState === 'finished');
+            }, null, { timeout: 1500 }).catch(() => undefined);
             const lateMotion = await page.evaluate(() => window.__caosGate.showcaseFacts().motion);
             if (!earlyMotion || earlyMotion.animationName === 'none' || earlyMotion.animationName === 'auto' || earlyMotion.transform === 'none' || earlyMotion.transform === 'matrix(1, 0, 0, 1, 0, 0)') fail('G21', { route: first.route, mode }, 'story step has no visible eased stage transition');
             else if (Number.parseFloat(earlyMotion.animationDuration) * (earlyMotion.animationDuration.endsWith('ms') ? 1 : 1000) < 200) fail('G21', { route: first.route, mode }, `normal stage transition is shorter than 200 ms (${earlyMotion.animationDuration})`);
