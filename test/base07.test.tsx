@@ -208,12 +208,14 @@ test('the App route: the rail carries the case picker, the variants and the live
       context={{ content: 'ctx' }}
     />,
   );
-  const rail = out.slice(out.indexOf('data-rail'), out.indexOf('data-instrument'));
+  const rail = out.slice(out.indexOf('data-rail'), out.indexOf('</aside>'));
   assert.match(rail, /data-control="case"/);
   assert.match(rail, /data-control="variant"/);
   assert.match(rail, /data-readout=""/);
   assert.match(rail, /data-stale="0"/, 'the rail readout reads the workbench state key');
-  assert.doesNotMatch(out.slice(out.indexOf('data-instrument')), /data-control="case"/);
+  const instrument = out.match(/<section[^>]*class="caos-wb-main"[\s\S]*?<\/section>/)?.[0] ?? '';
+  assert.match(instrument, /data-instrument/);
+  assert.doesNotMatch(instrument, /data-control="case"/);
   assert.match(out, /class="caos-plot fill"/);
   assert.match(out, /data-case="c2"/);
 });

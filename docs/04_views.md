@@ -289,3 +289,22 @@ lighting. They do not supply product geometry or scientific state.
 `Scene3DFrame` gives a product-owned WebGL/canvas/SVG renderer an accessible viewport and separate controls, legend and
 availability slots. The shell owns the responsive frame; the product supplies geometry, camera controls, values,
 provenance and interaction semantics.
+
+Below 900px the workbench places its primary instrument first and docks its complete control rail below it. The
+document may scroll as a whole; the rail does not become a second narrow scroll container. The instrument receives
+viewport-based space, so a product's real Stage remains readable instead of taking only the height left by its
+controls. Story likewise docks its complete panel below a viewport-sized stage. Neither component inserts invented
+product geometry or changes selection callbacks.
+
+Mobile Focus keeps its own single scroll container. Its action row stays reachable while the reader scrolls to a
+long panel, and its wrapping label/HUD are docked above the drawing. Overlay clearances are zero while
+chrome is docked, including the desktop side dock. Exit/Escape, native controls, selected state and
+keyboard focus restoration retain their existing behavior. Desktop rail and viewport geometry remain contained.
+
+StoryStep.panel also accepts the existing RailSection[] contract, rendered through internal section navigation; ordinary ReactNode panels remain supported. Desktop story uses a compact header and horizontal dock. Desktop Focus places its metadata and controls beside the boxed real drawing; narrow Focus places them above/below it with zero overlay clearance.
+
+NativeSelect is an opt-in native select with a wrapping aria-hidden selected-text display. All native functional props and the forwarded HTMLSelectElement ref remain native. The style prop sizes its visible wrapper; className applies to the native control. Multiple/size>1 controls remain ordinary native listboxes. Use normal label/id association; the visual mirror is not a second accessible control.
+
+Popup/listbox changes retain the same native select node, so an uncontrolled held selection and browser reset state survive size changes. Multiple transitions follow the ordinary React native select's option/default rules. The listbox wrapper uses display:contents; its mirror has no layout. hidden suppresses the complete wrapper and native target even when style sets display:block; removing hidden restores the held control. Disabled controls remain visible.
+
+Desktop Story allocates its drawing and intrinsic explanation together. The summary spans the first two header columns, navigation keeps its established font sizes with compact line leading, and the dock has no vertical padding. No viewport minimum is imposed on a nested Stage: its actual instrument grid track remains authoritative, including a complete explanation or warning below it. The drawing floor and desktop containment are measured on that real composition.

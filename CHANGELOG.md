@@ -1,3 +1,13 @@
+## [0.21.000] - 2026-11-05
+
+- Allocate readable primary drawings and docked controls across phone, desktop Story and Focus layouts, preserving native selection and keyboard behavior.
+- Allow existing RailSection arrays in StoryStep.panel, with shared accessible section navigation; ordinary node panels remain supported.
+- Add NativeSelect with a full selected-text display, native popup/listbox semantics, controlled and uncontrolled values, refs, reset and dynamic option support.
+- Keep accessibility-only chart tables within their intentional hidden host; preserve complete screen-reader cells and visible table behavior.
+- Measure both owner-level and legacy Focus chrome and the actual native selected-label display; retain owning negative gate controls.
+- Keep full story action verbs in the one-row horizontal navigation owner and preserve selected-step reveal.
+- Bound full browser-suite execution to two concurrent files on every host, retaining every test and its original timeout.
+
 ## [0.20.001] - 2026-11-05
 
 ### Fixed

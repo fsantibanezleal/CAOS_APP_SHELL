@@ -27,6 +27,7 @@ import {
   SubTabs,
   ViewsRow,
   pick,
+  formatNumber,
   useShellLang,
   useThemeTokens,
   useLinkedCursor,
@@ -1067,7 +1068,7 @@ function Workbench() {
     if (PLANT === 'focus-chrome-covers') {
       // the stage content starts under the Focus label, so the label covers the open group's sub-tab row
       const style = document.createElement('style');
-      style.textContent = '.caos-focus-instrument > .caos-cw-focus { padding-top: 0.4rem !important; }';
+      style.textContent = '.caos-focus-instrument > .caos-cw-focus { padding-top: 0.4rem !important; }.caos-focus-label { position:fixed !important;left:0 !important;top:0 !important;width:400px !important;margin:0 !important;z-index:100 !important; }';
       document.head.append(style);
       return () => style.remove();
     }
@@ -1236,7 +1237,7 @@ function Console() {
         document.body.style.minHeight = '';
       };
     }
-    if (PLANT === 'surface-focus-chrome-covers') return styled('.caos-focus-instrument > .caos-surface-focus { padding-top: 0.4rem !important; }');
+    if (PLANT === 'surface-focus-chrome-covers') return styled('.caos-focus-instrument > .caos-surface-focus { padding-top: 0.4rem !important; }.caos-focus-label { position:fixed !important;left:0 !important;top:0 !important;width:400px !important;margin:0 !important;z-index:100 !important; }');
     if (PLANT === 'surface-focus-no-exit') return styled('[data-focus-exit] { display: none !important; }');
     if (PLANT === 'surface-focus-stage-small') return styled('.caos-focus-shell { grid-template-columns: minmax(0, 1fr) 62vw !important; }');
     if (PLANT === 'surface-focus-tabs-wrap') return styled('.caos-focus-instrument .subtablist { flex-wrap: wrap !important; max-width: 90px !important; overflow: visible !important; }');
@@ -1580,30 +1581,41 @@ function ModePlants() {
   return null;
 }
 
+const SHOWCASE_VALUES = { feed: 720, power: 12.4, recovery: 84.2 };
+
 function ShowcaseInstrument() {
+  const lang = useShellLang();
   const scene = useLinkedItem('mill', 'scene');
   const panel = useLinkedItem('mill', 'panel');
   const cursor = useLinkedCursor();
   const items = [
-    { id: 'feed', eyebrow: { en: 'Mill feed', es: 'Alimentación del molino' }, value: '720', unit: { en: 't/h', es: 't/h' }, state: 'normal' as const, anchor: { x: .22, y: .45 }, source: { en: 'Live case trace', es: 'Traza activa del caso' } },
-    { id: 'power', eyebrow: { en: 'Mill power', es: 'Potencia del molino' }, value: '12.4', unit: { en: 'MW', es: 'MW' }, state: 'warning' as const, anchor: { x: .52, y: .5 }, source: { en: 'Operating contract', es: 'Contrato operativo' } },
-    { id: 'recovery', eyebrow: { en: 'Recovery', es: 'Recuperación' }, value: '84.2', unit: { en: '%', es: '%' }, state: 'selected' as const, anchor: { x: .8, y: .45 }, source: { en: 'Live case trace', es: 'Traza activa del caso' } },
+    { id: 'feed', eyebrow: { en: 'Mill feed', es: 'Alimentación del molino' }, value: formatNumber(SHOWCASE_VALUES.feed, lang, { decimals: 0 }), unit: { en: 't/h', es: 't/h' }, state: 'normal' as const, anchor: { x: .22, y: .45 }, source: { en: 'Synthetic fixture', es: 'Prueba sintética' } },
+    { id: 'power', eyebrow: { en: 'Mill power', es: 'Potencia del molino' }, value: formatNumber(SHOWCASE_VALUES.power, lang, { decimals: 1 }), unit: { en: 'MW', es: 'MW' }, state: 'warning' as const, anchor: { x: .52, y: .5 }, source: { en: 'Synthetic fixture', es: 'Prueba sintética' } },
+    { id: 'recovery', eyebrow: { en: 'Recovery', es: 'Recuperación' }, value: formatNumber(SHOWCASE_VALUES.recovery, lang, { decimals: 1 }), unit: { en: '%', es: '%' }, state: 'selected' as const, anchor: { x: .8, y: .45 }, source: { en: 'Synthetic fixture', es: 'Prueba sintética' } },
   ];
   return <div className="caos-story-fixture-stage" style={{ position: 'relative', width: '100%', height: '100%' }}><SceneCallouts items={items} placement="header"/><svg viewBox="0 0 100 50" width="100%" height="100%" role="img" aria-label="Grinding circuit with mill and classifier"><g data-linked-view="scene"><rect x="20" y="15" width="28" height="20" fill="var(--color-surface-2)" stroke="var(--color-border)"/><g {...scene}><circle cx="34" cy="25" r="5" fill="var(--color-accent)"/><text x="34" y="42" textAnchor="middle" fill="var(--color-fg)">Mill</text></g></g><line x1="48" y1="25" x2="75" y2="25" stroke="var(--color-accent)"/><circle {...cursor.markerProps} cx={20 + Number(cursor.cursor ?? 0) * .6} cy="25" r="2" fill="var(--color-warn)"/></svg><label className="caos-story-fixture-scrub" style={{ position: 'absolute', insetInline: '1rem', bottom: '1rem', zIndex: 5 }}>Circuit position <input type="range" min="0" max="100" {...cursor.inputProps}/></label></div>;
 }
 
-function ShowcasePanel() {
+function ShowcasePanel({ step }: { step: 'measure' | 'phase' | 'decision' }) {
   const item = useLinkedItem('mill', 'panel');
-  return <button type="button" {...item}>Mill · 12.4 MW · 720 t/h</button>;
+  const lang = useShellLang();
+  const power = formatNumber(SHOWCASE_VALUES.power, lang, { decimals: 1 });
+  const recovery = formatNumber(SHOWCASE_VALUES.recovery, lang, { decimals: 1 });
+  const explanation = {
+    measure: { en: 'Synthetic fixture: feed is held at 720 t/h. The scrubber maps the cursor to x = 20 + 0.6c; it does not recompute a process model. Select the mill in the scene or panel to share equipment state.', es: 'Prueba sintética: la alimentación permanece en 720 t/h. El deslizador ubica el cursor con x = 20 + 0,6c; no recalcula un modelo de proceso. Seleccionar el molino en la escena o panel comparte el equipo activo.' },
+    phase: { en: `The fixture holds power at ${power} MW; it does not solve a mill model. The warning style is authored test state. Selecting either view sets the shared mill ID; using the range control pauses story playback.`, es: `La prueba mantiene la potencia en ${power} MW; no resuelve un modelo de molino. La advertencia es un estado de prueba definido. Ambas vistas comparten el ID del molino; usar el deslizador pausa la reproducción.` },
+    decision: { en: `Recovery is the fixture's fixed ${recovery}%, not a measured plant result. The three callouts reuse the same constants. The marker depends only on the shared cursor; it supplies no recovery equation or uncertainty estimate.`, es: `La recuperación fija de ${recovery}% pertenece a la prueba, no a una medición de planta. Los tres rótulos usan las mismas constantes. El marcador depende solo del cursor compartido; no calcula recuperación ni incertidumbre.` },
+  };
+  return <><button type="button" {...item} style={{ flex: '0 0 auto' }}>{lang === 'es' ? 'Molino' : 'Mill'} · {power} MW · {formatNumber(SHOWCASE_VALUES.feed, lang, { decimals: 0 })} t/h</button><p style={{ margin: 0, fontSize: 'var(--text-sm)' }}>{pick(explanation[step], lang)}</p></>;
 }
 
 function ShowcaseStory() {
   const { step = 'measure' } = useParams();
   const navigate = useNavigate();
   const steps = [
-    { id: 'measure', number: 1 as const, verb: { en: 'Measure the feed', es: 'Medir la alimentación' }, headline: { en: '720 t/h enters the grinding circuit', es: '720 t/h entra al circuito de molienda' }, summary: { en: 'Live example values with explicit provenance.', es: 'Valores de ejemplo activos con procedencia explícita.' }, href: '/story/measure', accent: 1 as const, stage: <ShowcaseInstrument/>, panel: <ShowcasePanel/> },
-    { id: 'phase', number: 2 as const, verb: { en: 'Inspect the mill', es: 'Inspeccionar el molino' }, headline: { en: '12.4 MW limits the grind response', es: '12.4 MW limita la respuesta de molienda' }, summary: { en: 'The state is linked to the equipment selection.', es: 'El estado está vinculado con la selección del equipo.' }, href: '/story/phase', accent: 2 as const, stage: <ShowcaseInstrument/>, panel: <ShowcasePanel/> },
-    { id: 'decision', number: 3 as const, verb: { en: 'Compare the outcome', es: 'Comparar el resultado' }, headline: { en: 'Recovery reaches 84.2% in this case', es: 'La recuperación alcanza 84.2% en este caso' }, summary: { en: 'The finding follows the selected case record.', es: 'El hallazgo sigue el registro de caso seleccionado.' }, href: '/story/decision', accent: 3 as const, stage: <ShowcaseInstrument/>, panel: <ShowcasePanel/> },
+    { id: 'measure', number: 1 as const, verb: { en: 'Measure the feed', es: 'Medir la alimentación' }, headline: { en: '720 t/h enters the grinding circuit', es: '720 t/h entra al circuito de molienda' }, summary: { en: 'Synthetic example values with explicit provenance.', es: 'Valores sintéticos de ejemplo con procedencia explícita.' }, href: '/story/measure', accent: 1 as const, stage: <ShowcaseInstrument/>, panel: <ShowcasePanel step="measure"/> },
+    { id: 'phase', number: 2 as const, verb: { en: 'Inspect the mill', es: 'Inspeccionar el molino' }, headline: { en: `${formatNumber(SHOWCASE_VALUES.power, 'en', { decimals: 1 })} MW limits the grind response`, es: `${formatNumber(SHOWCASE_VALUES.power, 'es', { decimals: 1 })} MW limita la respuesta de molienda` }, summary: { en: 'The state is linked to the equipment selection.', es: 'El estado está vinculado con la selección del equipo.' }, href: '/story/phase', accent: 2 as const, stage: <ShowcaseInstrument/>, panel: <ShowcasePanel step="phase"/> },
+    { id: 'decision', number: 3 as const, verb: { en: 'Compare the outcome', es: 'Comparar el resultado' }, headline: { en: `Recovery reaches ${formatNumber(SHOWCASE_VALUES.recovery, 'en', { decimals: 1 })}% in this case`, es: `La recuperación alcanza ${formatNumber(SHOWCASE_VALUES.recovery, 'es', { decimals: 1 })}% en este caso` }, summary: { en: 'The finding follows the selected case record.', es: 'El hallazgo sigue el registro de caso seleccionado.' }, href: '/story/decision', accent: 3 as const, stage: <ShowcaseInstrument/>, panel: <ShowcasePanel step="decision"/> },
   ];
   return <LinkedViewProvider initial={{ cursor: 30 }}><StoryFrame className="caos-story-fixture" steps={steps} activeId={steps.some((item) => item.id === step) ? step : 'measure'} onStepChange={(next) => navigate(`/story/${next}`)} onExit={() => navigate('/app?case=c-mid&view=circuit')}/></LinkedViewProvider>;
 }

@@ -276,7 +276,7 @@ export function installLib() {
     for (const sel of document.querySelectorAll('select')) {
       if (!mctx || !visible(sel)) continue;
       const ss = getComputedStyle(sel);
-      const held = norm(sel.options[sel.selectedIndex]?.textContent);
+      const held = norm(sel.options[sel.selectedIndex]?.label ?? sel.options[sel.selectedIndex]?.textContent);
       const display = sel.closest('.cs-select-wrap')?.querySelector('.cs-select-display');
       if (display) {
         const t = display.querySelector('.cs-select-text') ?? display;
@@ -1495,9 +1495,9 @@ export function installLib() {
     // a stage control the Focus chrome (the label, the HUD tiles, the actions) sits on: more than 1px in both directions
     const chrome = st
       ? [
-          ...[...st.querySelectorAll(':scope > .caos-focus-label')].map((e) => [e, 'the stage label']),
-          ...[...st.querySelectorAll(':scope > .caos-focus-hud > div')].map((e) => [e, 'the HUD']),
-          ...[...st.querySelectorAll(':scope > .caos-focus-actions')].map((e) => [e, 'the Focus actions']),
+          ...[...[st, shell].filter(Boolean).flatMap((root) => [...root.querySelectorAll(':scope > .caos-focus-label')])].map((e) => [e, 'the stage label']),
+          ...[...[st, shell].filter(Boolean).flatMap((root) => [...root.querySelectorAll(':scope > .caos-focus-hud > div')])].map((e) => [e, 'the HUD']),
+          ...[...[st, shell].filter(Boolean).flatMap((root) => [...root.querySelectorAll(':scope > .caos-focus-actions')])].map((e) => [e, 'the Focus actions']),
         ].filter(([e]) => visible(e))
       : [];
     const covered = [];

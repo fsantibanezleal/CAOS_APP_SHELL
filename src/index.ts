@@ -34,6 +34,8 @@ export type { VizFrame, VizLoop, VizLoopOptions, VizLoopDeps } from './lib/vizLo
 
 export { CaseSelector } from './case/CaseSelector';
 export type { CaseSelectorProps, CaseSelectorText } from './case/CaseSelector';
+export { NativeSelect } from './workbench/NativeSelect';
+export type { NativeSelectProps } from './workbench/NativeSelect';
 export {
   caseKind,
   casesInSource,

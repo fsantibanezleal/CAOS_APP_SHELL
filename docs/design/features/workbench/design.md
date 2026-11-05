@@ -1,0 +1,23 @@
+# Design: stage space and docked controls
+
+Below 900px, ADR-0071 permits whole-document scrolling. WorkbenchLayout places the instrument first in DOM order and its complete native rail afterward. Explicit desktop grid coordinates retain the left rail and right instrument. The narrow instrument receives a small-viewport height through its real Stage flex chain; no product-specific readability constant is encoded.
+
+FocusShell owns one narrow-screen scroll container with sticky exit/language/theme actions, wrapping metadata above the viewport-sized drawing, and the complete rail below. On desktop, metadata, actions and rail occupy a compact side dock, leaving at least 80% actual drawing area in the tested compositions. The boxed stage contains only its real instrument. A no-rail Focus variant uses a compact metadata header and preserves the full drawing width. Docked chrome clears inherited overlay offsets; legacy overlay measurement remains available without a scroll listener or unbounded resize mutation.
+
+StoryFrame retains its numbered finding, summary, step links and actions. A compact desktop header and horizontal dock leave at least 80% real stage area. Its panel accepts either an ordinary ReactNode or the existing RailSection[] contract. Arrays use internal RailBody section navigation and keyboard semantics; ordinary nodes remain directly rendered. This is an additive public type extension, with no RailBody export. Default visible action captions are concise in both languages while full action labels remain accessible; supplied labels remain verbatim.
+
+NativeSelect is an additive public component accepting native select props and forwarding its ref to the real HTMLSelectElement. Popup selects have an aria-hidden wrapping selected-text display overlaid by the real native control. Native id/name/label associations, value/defaultValue, options/optgroups, disabled state, events and popup/keyboard behavior remain authoritative. DOM selection synchronizes the display after React changes, option mutations and native form reset. The style prop sizes the visible wrapper; className is applied to the native select. Multiple and size>1 listboxes are passed through as ordinary native selects. Consumers opt in explicitly; arbitrary supplied controls are never mutated.
+
+ChartDataTable remains a native table with every cell and aria-details relationship. Only a direct table inside its deliberately clipped sr-only host receives fixed narrow layout, including caption width; visible tables retain automatic layout. Painted SVG/canvas sizing is unchanged. G18 enumerates actual owner-direct Focus metadata as well as legacy stage descendants; physical cover detection and full-label negative controls remain enforced.
+
+The synthetic layout fixture paints a coordinate grid across the actual Stage. Tests require SVG/Stage agreement, containment, readable cells, non-overlapping callouts and genuine control access. Product drafts remain prepublication evidence; independent review, exact package adoption and release gates belong to the root owner.
+
+
+Narrow story links size intrinsically up to the navigation owner's width. Full verbs wrap when necessary; they are never ellipsized. A bounded resize/layout observer reveals the selected link only by adjusting the horizontal owner's scrollLeft, preserving document position and native link keyboard behavior.
+
+The actual clean fixture exposed fourteen1280px Focus rail overflows after metadata moved into the side dock. Desktop density recovers nested body/head/panel padding and gaps and chip inline room; fonts, native heights, all source text and three final readouts remain unchanged. It preserves ordinary-node rails instead of silently rewriting fixture content into sections.
+# Independent review successor: native node and real track allocation
+
+NativeSelect keeps a stable wrapper, mirror and real select subtree across popup/listbox transitions. The plain wrapper participates through display:contents; the unused mirror has display:none. hidden explicitly suppresses the wrapper with precedence over its inline display styling. Browser-owned uncontrolled dirty/default state is retained rather than copied into caller state. Native multiple-mode updates and reset remain comparable to an ordinary React select.
+
+Story's intrinsic summary uses the first two desktop header columns, compact navigation line leading retains font sizes, and the dock reclaims vertical padding. A nested Stage has no viewport minimum that could overrun an instrument's grid track. Drawing area, the actual intrinsic takeaway, owner containment and controls are checked together; permitted mobile document scrolling is unchanged.

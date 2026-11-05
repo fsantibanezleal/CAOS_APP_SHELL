@@ -106,9 +106,10 @@ sees its unit and its source (in the rendered text), not when they are attribute
 ## The gate proves itself (G15)
 
 `npm run test:gate` builds the fixture product (`test/gate-fixture`), runs the gate on it clean in the full matrix
-(every check must pass), and once per planted defect (the check that owns it must fail with its own message): 171
-plants, one per check and per distinct trap, then the legitimate pages that the gate once failed
-(`legit-engine-subtabs`, `legit-method-view-tabs`), which must pass every check in both languages.
+(every check must pass), and once per planted defect (the check that owns it must fail with its own message): all237
+enumerated plants, plus the standalone negative/positive controls, then all eight legitimate-page variants that the gate
+once failed. The full inventory is the live PLANTS and LEGIT arrays and standalone tests in test/gate-selftest.mjs;
+no selected subset substitutes for the release suite. Legitimate variants must pass every applicable check in both languages.
 A check without a plant is a check that can agree with a broken app.
 
 ### G21: showcase story (ADR-0082)

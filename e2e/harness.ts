@@ -15,7 +15,7 @@ export interface Harness {
   close: () => Promise<void>;
 }
 
-export async function startHarness(entry: string, files: Record<string, { type: string; body: string | Buffer }> = {}): Promise<Harness> {
+export async function startHarness(entry: string, files: Record<string, { type: string; body: string | Buffer }> = {}, stylesheet?: URL): Promise<Harness> {
   const script = await build({
     stdin: { contents: entry, resolveDir: root, sourcefile: 'harness-entry.tsx', loader: 'tsx' },
     bundle: true,
@@ -25,7 +25,7 @@ export async function startHarness(entry: string, files: Record<string, { type: 
     jsx: 'automatic',
     define: { 'process.env.NODE_ENV': '"production"' },
   });
-  const css = await readFile(new URL('../styles.css', import.meta.url), 'utf8');
+  const css = await readFile(stylesheet ?? new URL('../styles.css', import.meta.url), 'utf8');
   const server: Server = createServer((req, res) => {
     const url = (req.url ?? '/').split('?')[0];
     if (url === '/entry.js') {

@@ -191,6 +191,7 @@ const CLEAR_JS = () => {
     exitIn: er.right <= innerWidth && er.bottom <= innerHeight && er.width > 0,
     h: document.documentElement.scrollHeight <= innerHeight + 1,
     clearTop: stage.style.getPropertyValue('--caos-focus-clear-top'),
+    sideDock: label.parentElement === stage.parentElement && innerWidth > 900,
   };
 };
 
@@ -206,7 +207,7 @@ test('a wrapping Focus title never covers the stage controls, at phone, tablet a
       assert.ok(m.n >= 2, `${where}: the stage has controls (${m.n})`);
       assert.ok(width === 768 || m.labelHeight > 70, `${where}: the title wraps (label ${m.labelHeight}px high)`);
       assert.deepEqual(m.hits, [], `${where}: the label covers no control`);
-      assert.ok(m.labelBottom <= m.firstControlTop, `${where}: the label (${m.labelBottom}) ends above the first control (${m.firstControlTop})`);
+      assert.ok(m.sideDock || m.labelBottom <= m.firstControlTop, `${where}: the docked label is beside or above the drawing controls`);
       assert.ok(m.exitIn, `${where}: the exit control is inside the viewport`);
       assert.ok(m.h, `${where}: the page does not scroll`);
       await page.close();
@@ -225,7 +226,7 @@ test('the clearance follows a language change and a resize inside Focus, and a o
   await page.waitForTimeout(150);
   const es = await page.evaluate(CLEAR_JS);
   assert.deepEqual(es.hits, [], 'after the switch to Spanish the label still covers nothing');
-  assert.ok(es.labelBottom <= es.firstControlTop, 'and the clearance followed the new text');
+  assert.ok(es.sideDock || es.labelBottom <= es.firstControlTop, 'the dock stays clear after the new text');
   await page.setViewportSize({ width: 390, height: 844 });
   await page.waitForTimeout(150);
   const narrow = await page.evaluate(CLEAR_JS);
@@ -241,7 +242,7 @@ test('the clearance follows a language change and a resize inside Focus, and a o
   await one.close();
 });
 
-test('the HUD follows the wrapped label on a desktop and the stage clears it at the bottom on a phone', async () => {
+test('the HUD follows the wrapped label on desktop and docks above the mobile drawing without overlay padding', async () => {
   for (const width of [1280, 390]) {
     const page = await h.browser.newPage({ viewport: { width, height: width < 800 ? 844 : 800 } });
     await page.goto(`${h.address}/?view=validation&focus=1&hud=1`);
@@ -262,7 +263,7 @@ test('the HUD follows the wrapped label on a desktop and the stage clears it at 
     assert.equal(m.tileOnLabel, false, `${width}px: no HUD tile on the label`);
     assert.equal(m.tileOnControl, false, `${width}px: no HUD tile on a stage control`);
     if (width > 900) assert.ok(m.hudTop >= m.labelBottom, `${width}px: the HUD starts below the label (${m.hudTop} vs ${m.labelBottom})`);
-    else assert.match(m.clearBottom, /^\d+px$/, `${width}px: the stage clears the bottom HUD`);
+    else assert.equal(m.clearBottom, '0px', `${width}px: the HUD is docked in flow and needs no overlay padding`);
     await page.close();
   }
 });

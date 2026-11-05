@@ -1,5 +1,15 @@
 # Document framing and illustration geometry
 
+## Browser-suite resource admission
+
+`npm run test:browser` runs the complete `e2e/**/*.test.ts` inventory with at most two files concurrently.
+Each file launches a real browser. Node's host-dependent default admitted up to 31 files on a 32-thread
+device; the full 356-test run recorded three target crashes, a navigation timeout and a selected-text
+height assertion while the owned process tree reached 14.65 GB RSS. A fixed worker bound avoids treating
+CPU count as a browser-memory budget. It changes neither coverage, assertions nor timeouts. The failed
+run remains evidence; every unresolved assertion still needs investigation and the complete successor
+browser and gate suites must pass before release. This scheduling control does not qualify performance.
+
 ## Readability across scrollable documents
 
 The gate measures each active document tab across real scroll positions, then evaluates one

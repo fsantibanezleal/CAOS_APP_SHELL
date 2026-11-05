@@ -550,11 +550,15 @@ svg.lucide { flex: none; }
 .cs-select-row { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
 .cs-select-row > .cs-select-wrap { flex: 1 1 auto; min-width: 0; }
 .cs-select-row > :not(.cs-select-wrap) { flex: none; }
+/* NativeSelect uses the same visible mirror and native hit target without limiting its label to one line. */
+[data-native-select] { display: block; }
+[data-native-select][hidden], [data-native-select-plain][hidden], [data-native-select-plain] > .cs-select-display { display: none !important; }
+[data-native-select] > .cs-select-native:disabled { cursor: not-allowed; }
 
 /* == 9 workbench ================================================================================================ */
 
 /* The rail: sized, never scrolled when sections are used (ADR-0071 rule 6). */
-.caos-wb-rail { display: flex; flex-direction: column; gap: var(--space-3); min-height: 0; overflow-y: auto; overflow-x: hidden; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 0.85rem; }
+.caos-wb-rail { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; gap: var(--space-3); min-height: 0; overflow-y: auto; overflow-x: hidden; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 0.85rem; }
 .caos-wb-rail-head { display: flex; flex-direction: column; gap: var(--space-3); padding-bottom: var(--space-3); border-bottom: 1px solid var(--color-border); }
 .caos-wb-rail-panel { display: flex; flex-direction: column; gap: 0.8rem; min-height: 0; }
 /* A labelled control in the rail stacks its text above it; a knob's head keeps its own row, the value at the right
@@ -565,7 +569,7 @@ svg.lucide { flex: none; }
 .caos-wb-rail .caos-variant-bar, .caos-focus-rail .caos-variant-bar { margin-bottom: 0; }
 .caos-wb-rail .caos-chip-row, .caos-focus-rail .caos-chip-row { flex-wrap: wrap; overflow: visible; }
 .caos-wb-rail .caos-variant-note, .caos-focus-rail .caos-variant-note { font-size: 0.8rem; }
-.caos-wb-main { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.caos-wb-main { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; min-height: 0; min-width: 0; }
 
 /* CaseWorkbench: ONE row of at most six question groups; the open panel takes the height the row leaves and owns its
    scroll (failure class 4: drawings at zero or at a guessed size). */
@@ -711,6 +715,11 @@ svg.lucide { flex: none; }
 .caos-chart-foot > .caos-chart-readout { flex: 1 1 0; min-width: 0; }
 .caos-chart-reset { flex: none; box-sizing: border-box; min-width: 24px; min-height: 24px; margin: 0.15rem 0 0; padding: 0.15rem 0.5rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface-2); color: var(--color-fg); font: inherit; font-size: 0.72rem; line-height: 1.15; cursor: pointer; }
 .caos-chart-reset:hover { border-color: var(--color-fg-subtle); }
+/* Accessibility fallbacks deliberately occupy their sr-only host. Their captions must not force an
+   intrinsic table width outside that host; all cells and native table/aria-details semantics remain. */
+.sr-only > .caos-chart-table { width: 100%; table-layout: fixed; border-collapse: collapse; overflow-wrap: anywhere; }
+.sr-only > .caos-chart-table :is(th, td) { padding: 0; border: 0; min-width: 0; }
+.sr-only > .caos-chart-table > caption { width: 1px; min-width: 0; overflow-wrap: anywhere; }
 .caos-chart-reset:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
 /* A view whose data is not there yet says so (and declares data-state="loading" for the gate). */
 .caos-pending { margin: auto; padding: var(--space-5); color: var(--color-fg-faint); font-size: 0.86rem; text-align: center; }
@@ -758,7 +767,7 @@ svg.lucide { flex: none; }
 
 /* ADR-0070: the shell-owned, full-viewport scenario focus frame. */
 .caos-focus-shell { position: fixed; inset: 0; z-index: var(--z-focus); display: grid; grid-template-columns: minmax(0,1fr) var(--rail-w); min-width: 0; height: 100dvh; background: var(--color-bg); color: var(--color-fg); }
-.caos-focus-stage { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: var(--color-bg); }
+.caos-focus-stage { grid-column: 1; grid-row: 1; position: relative; min-width: 0; min-height: 0; overflow: hidden; background: var(--color-bg); }
 .caos-focus-instrument { position: absolute; inset: 0; min-width: 0; min-height: 0; }
 .caos-focus-label, .caos-focus-hud > div { background: color-mix(in oklab,var(--color-surface) 82%,transparent); backdrop-filter: blur(6px); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
 .caos-focus-label { position: absolute; top: 14px; left: 14px; max-width: min(46ch,calc(100% - 230px)); display: grid; gap: 4px; padding: 10px 12px; pointer-events: none; }
@@ -770,7 +779,7 @@ svg.lucide { flex: none; }
 .caos-focus-hud span { color: var(--color-fg-subtle); font-size: 0.61rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; }
 .caos-focus-actions { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; align-items: center; padding: 4px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: color-mix(in oklab,var(--color-surface) 90%,transparent); backdrop-filter: blur(6px); }
 .caos-focus-actions button { border: 0; border-radius: 4px; padding: 6px 9px; background: var(--color-surface-2); color: var(--color-fg); font-size: 0.75rem; font-weight: 700; cursor: pointer; }
-.caos-focus-rail { min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; border-left: 1px solid var(--color-border); background: var(--color-surface); }
+.caos-focus-rail { grid-column: 2; grid-row: 1; min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; border-left: 1px solid var(--color-border); background: var(--color-surface); }
 @media (max-width: 900px) {
   .caos-focus-shell { grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,54dvh) minmax(0,46dvh); }
   .caos-focus-rail { border-left: 0; border-top: 1px solid var(--color-border); }
@@ -975,7 +984,7 @@ body:has([data-story]) .app-shell > .page > .caos-story { width: 100%; height: 1
 .caos-story-step:hover { color: var(--color-fg); text-decoration: none; }
 .caos-story-step.is-active { color: var(--color-fg); border-color: var(--color-accent); box-shadow: inset 3px 0 var(--color-accent); }
 .caos-story-step-number { grid-row: 1 / span 2; display: grid; place-items: center; width: 1.55rem; height: 1.55rem; border: 1px solid currentColor; border-radius: 50%; font: 700 var(--text-xs) var(--font-mono); }
-.caos-story-step-verb { overflow: hidden; color: var(--color-fg); font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.caos-story-step-verb { color: var(--color-fg); font-weight: 700; white-space: nowrap; }
 .caos-story-step-headline { overflow: hidden; color: var(--color-fg-subtle); font-size: var(--text-xs); text-overflow: ellipsis; white-space: nowrap; }
 .caos-story-controls { justify-content: flex-end; }
 .caos-story-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 29%); gap: var(--space-3); flex: 1 1 auto; min-width: 0; min-height: 0; }
@@ -1031,3 +1040,101 @@ body:has([data-story]) .app-shell > .page > .caos-story { width: 100%; height: 1
    the rail head's whole width. The tab row's own spacing (a tighter rule than the surface's) is repeated under the slot. */
 .caos-cw > .tabs.tabs-has-slot { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto minmax(0, 1fr); column-gap: 0.5rem; }
 .caos-cw > .tabs-has-slot > .tabs-slot { margin-bottom: 0.5rem; padding-bottom: var(--space-1); }
+
+/* Keep DOM/focus order stage-first, while the desktop grid retains its established rail placement. */
+.caos-focus-shell > .caos-focus-actions { grid-column: 1; grid-row: 1; z-index: 3; }
+
+/* Desktop showcase modes reserve their area for the actual drawing. Focus metadata shares the
+   one side dock; a story combines its chrome into one row and uses a horizontal bottom dock. */
+@media (min-width: 901px) {
+  .caos-focus-shell { --rail-w: clamp(190px, 13vw, 260px); grid-template-rows: auto auto auto minmax(0, 1fr); }
+  .caos-focus-stage { grid-column: 1; grid-row: 1 / -1; }
+  .caos-focus-instrument { position: absolute; inset: 0; }
+  .caos-focus-instrument > .caos-cw-focus, .caos-focus-instrument > .caos-surface-focus { padding: 0; }
+  .caos-focus-shell .caos-focus-actions { grid-column: 2; grid-row: 1; position: static; justify-content: flex-end; min-width: 0; border-radius: 0; gap: 4px; }
+  .caos-focus-label { grid-column: 2; grid-row: 2; position: static; max-width: none; margin: 4px; padding: 4px 6px; gap: 2px; pointer-events: auto; }
+  .caos-focus-hud { grid-column: 2; grid-row: 3; position: static; margin: 0 var(--space-2) var(--space-2); }
+  .caos-focus-hud:empty { display: none; }
+  .caos-focus-rail { grid-column: 2; grid-row: 4; }
+  /* The compact dock shares its height between metadata and full native controls.
+     Reclaim nested padding and horizontal chip room before wrapping adds rows;
+     retain established fonts, control heights and every readout. */
+  .caos-focus-actions button { padding-inline: 4px; }
+  .caos-focus-rail-body { padding: .375rem; gap: .375rem; }
+  .caos-focus-rail .caos-wb-rail-head { gap: .375rem; padding-bottom: .375rem; }
+  .caos-focus-rail .caos-wb-rail-panel { gap: .375rem; }
+  .caos-focus-rail .chip { padding-inline: .5rem; }
+  .caos-focus-shell.caos-focus-norail { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto minmax(0, 1fr); }
+  .caos-focus-norail > .caos-focus-stage { grid-column: 1 / -1; grid-row: 3; }
+  .caos-focus-norail > .caos-focus-label { grid-column: 1; grid-row: 1; }
+  .caos-focus-norail > .caos-focus-hud { grid-column: 1 / -1; grid-row: 2; }
+  .caos-focus-stage:has(> .caos-focus-label) { display: contents; }
+  .caos-focus-stage:has(> .caos-focus-label) > .caos-focus-instrument { position: relative; grid-column: 1; grid-row: 1 / -1; }
+
+  .app-shell.fixed .page-body.wide.caos-story { padding: 0; }
+  .caos-story { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; grid-template-rows: auto auto minmax(0, 1fr); column-gap: var(--space-2); }
+  .caos-story-header { display: contents; }
+  .caos-story-heading { display: contents; }
+  .caos-story-verb { grid-column: 3; grid-row: 2; justify-self: end; align-self: center; padding-inline: var(--space-2); }
+  .caos-story-headline { grid-column: 1; grid-row: 1; align-self: center; margin: 0; padding-inline: var(--space-2); font-size: var(--text-md); }
+  .caos-story-heading > p { grid-column: 1 / 3; grid-row: 2; margin: 0; padding-inline: var(--space-2); }
+  .caos-story-actions { grid-column: 3; grid-row: 1; padding-inline: var(--space-2); }
+  .caos-story-stepper { grid-column: 2; grid-row: 1; display: flex; align-items: center; }
+  .caos-story-step { flex: 0 0 auto; }
+  .caos-story-step-verb, .caos-story-step-headline { line-height: 1.1; }
+  .caos-story-step { row-gap: 2px; }
+  .caos-story-step-headline { max-width: 10ch; }
+  .caos-story-layout { grid-column: 1 / -1; grid-row: 3; display: flex; flex-direction: column; gap: 2px; }
+  .caos-story-stage { flex: 1 1 auto; min-height: 0; }
+  /* Reserve the drawing and its intrinsic explanation together in the real scene owner.
+     A viewport minimum on a nested Stage overflows an instrument's smaller grid track.
+     The summary shares the header's full first two columns; reclaim only dock padding. */
+  .caos-story-panel { flex: none; display: flex; gap: var(--space-2); padding: 0 var(--space-1); }
+  .caos-story-panel > * { flex: 1 1 0; min-width: 0; }
+  .caos-story-panel[data-panel-layout="sections"] { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; }
+  .caos-story-panel[data-panel-layout="sections"] > .caos-wb-rail-panel { display: flex; flex-direction: row; gap: var(--space-2); }
+  .caos-story-panel[data-panel-layout="sections"] > .caos-wb-rail-panel > * { flex: 1 1 0; min-width: 0; }
+}
+
+/* ADR-0071 permits document scrolling below 900px. Allocate a viewport to the actual instrument,
+   then dock the one complete control panel below it. Never squeeze the drawing around the panel. */
+@media (max-width: 900px) {
+  .caos-wb { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; }
+  .caos-wb-main { grid-column: 1; grid-row: 1; min-height: 100svh; }
+  .caos-wb-rail { grid-column: 1; grid-row: 2; overflow: visible; min-height: 0; }
+  .caos-cw > .tabs > .tabpanel:not([hidden]) { overflow: visible; }
+
+  body:has([data-story]) .app-shell > .page { display: block; overflow: visible; }
+  body:has([data-story]) .app-shell > .page > .caos-story { height: auto; }
+  .caos-story { height: auto; min-height: 100svh; }
+  .caos-story-header { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: var(--space-2); }
+  .caos-story-actions { flex-wrap: wrap; justify-content: space-between; }
+  .caos-story-controls { flex-wrap: wrap; justify-content: flex-start; }
+  .caos-story-stepper { display: flex; flex-wrap: nowrap; overflow-x: auto; flex: none; }
+  .caos-story-step { flex: 0 0 auto; width: max-content; min-width: min-content; max-width: 100%; }
+  .caos-story-step-verb { white-space: normal; overflow-wrap: anywhere; }
+  .caos-story-layout { display: flex; flex-direction: column; flex: none; }
+  .caos-story-stage { height: 100svh; min-height: 100svh; flex: none; }
+  .caos-story-panel { max-height: none; overflow: visible; flex: none; }
+
+  /* Focus has a single scroll owner. The sticky action row belongs to that owner, so exit stays
+     reachable even through a long docked panel. Label/HUD are flow content, never scene overlays. */
+  .caos-focus-shell, .caos-focus-shell.caos-focus-norail { display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }
+  .caos-focus-shell > .caos-focus-actions { position: sticky; top: 0; right: auto; margin: 0; flex: none; justify-content: flex-end; border-radius: 0; background: var(--color-surface); }
+  .caos-focus-stage { display: block; height: 100svh; min-height: 100svh; overflow: visible; flex: none; }
+  .caos-focus-stage:has(> .caos-focus-label) { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto auto; height: auto; min-height: 0; }
+  .caos-focus-label { grid-row: 2; position: static; flex: none; max-width: none; margin: var(--space-2); pointer-events: auto; }
+  .caos-focus-hud { grid-row: 3; position: static; flex: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr)); gap: var(--space-2); margin-inline: var(--space-2); }
+  .caos-focus-hud:empty { display: none; }
+  .caos-focus-hud > div { min-width: 0; padding: var(--space-2); }
+  .caos-focus-hud strong { font-size: 1rem; white-space: normal; overflow-wrap: anywhere; }
+  .caos-focus-hud span { font-size: .75rem; white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+  .caos-focus-instrument { grid-row: 4; position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; }
+  .caos-focus-stage:has(> .caos-focus-label) > .caos-focus-instrument { position: relative; inset: auto; height: 100svh; min-height: 100svh; }
+  .caos-focus-instrument > .caos-cw-focus, .caos-focus-instrument > .caos-surface-focus { padding: 0 var(--space-2); }
+  .caos-focus-instrument:has(.caos-cw-context) { height: auto; }
+  .caos-focus-rail { flex: none; overflow: visible; min-height: 0; }
+  /* Existing installed JS can exercise draft CSS before publication; its actions are still inside
+     the stage. Final package tests exercise the shared owner-level action row above. */
+  .caos-focus-stage > .caos-focus-actions { grid-row: 1; position: sticky; top: 0; right: auto; justify-content: flex-end; }
+}

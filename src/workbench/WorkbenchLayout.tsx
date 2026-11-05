@@ -109,12 +109,12 @@ export function WorkbenchLayout({ rail, railHead, children, railLabel, className
   const label = pick(railLabel ?? { en: 'Controls', es: 'Controles' }, lang);
   return (
     <div className={['page-body', 'wide', 'caos-wb', className].filter(Boolean).join(' ')} data-workbench="">
-      <aside className="caos-wb-rail" aria-label={label} data-rail="">
-        <RailBody rail={rail} railHead={railHead} railLabel={railLabel} />
-      </aside>
       <section className="caos-wb-main" data-instrument="">
         {children}
       </section>
+      <aside className="caos-wb-rail" aria-label={label} data-rail="">
+        <RailBody rail={rail} railHead={railHead} railLabel={railLabel} />
+      </aside>
     </div>
   );
 }

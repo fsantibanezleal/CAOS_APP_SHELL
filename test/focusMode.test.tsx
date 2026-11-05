@@ -28,7 +28,7 @@ test('a workbench with a focus configuration shows the Focus control at the end 
   const list = html.indexOf('role="tablist"');
   assert.ok(list > 0 && slot > list && html.indexOf('data-focus-enter') > slot, 'the control is in the slot after the tab list');
   assert.ok(html.indexOf('data-focus-enter') > html.indexOf('data-case-workbench'), 'inside the instrument, not in the rail');
-  const head = html.slice(html.indexOf('caos-wb-rail-head'), html.indexOf('data-case-workbench'));
+  const head = html.slice(html.indexOf('caos-wb-rail-head'));
   assert.doesNotMatch(head, /data-focus-enter/, 'not in the rail head (shell 0.17.0, BL-074)');
   assert.equal(FOCUS_TEXT.enter.es, 'Enfocar');
   assert.equal(FOCUS_TEXT.enterLabel.es, 'Abrir este caso en modo enfoque');
@@ -57,7 +57,7 @@ test('the case select takes the rail head alone: the Focus control is not in its
   assert.doesNotMatch(html, /cs-select-row/, 'no row beside the select');
   assert.equal((html.match(/data-focus-enter=""/g) ?? []).length, 1, 'one control');
   const slot = html.indexOf('data-tabs-slot');
-  assert.ok(html.indexOf('data-focus-enter') > slot && slot > html.indexOf('<select'), 'the select first, the control later in the tab row');
+  assert.ok(html.indexOf('data-focus-enter') > slot && html.indexOf('<select') > slot, 'stage-first DOM: Focus remains in its tab slot, followed by the docked case control');
 });
 
 test('whatever the case picker (select, chips or none) the Focus control sits in the tab row slot and the rail head gets no row for it', () => {
