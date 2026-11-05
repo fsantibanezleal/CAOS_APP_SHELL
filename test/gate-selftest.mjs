@@ -268,7 +268,7 @@ const PLANTS = [
   { id: 'surface-focus-page-scroll', check: 'G18', re: /Focus mode of view \w+: the page scrolls/, opts: SURF },
   { id: 'surface-focus-rail-scroll', check: 'G18', re: /Focus mode of view engine: the rail scrolls/, opts: SURF },
   { id: 'surface-focus-tabs-wrap', check: 'G18', re: /Focus mode of view engine: a tab row wraps onto 2 rows/, opts: SURF },
-  { id: 'surface-focus-stage-small', check: 'G18', re: /Focus mode of view \w+: the stage covers \d+\.\d% of the viewport \(floor 50%\)/, opts: SURF },
+  { id: 'surface-focus-stage-small', check: 'G18', re: /Focus mode of view \w+: the stage covers \d+\.\d% of the viewport \(floor 80% on Focus and story routes, ADR-0082\)/, opts: SURF },
   { id: 'surface-focus-no-exit', check: 'G18', re: /Focus mode of view \w+: the exit control could not be used/, opts: SURF },
   { id: 'surface-focus-chrome-covers', check: 'G18', re: /Focus mode of view engine: the stage label covers the control/, opts: SURF },
   { id: 'surface-focus-enter-inside', check: 'G18', re: /Focus mode of view engine: the Focus control shows inside Focus mode/, opts: SURF },
@@ -402,6 +402,24 @@ test('the clean fixture passes every check in the full matrix (five sizes, both 
   assert.ok(r.captures >= 30, `${r.captures} captures`);
   for (const name of readdirSync(join(work, 'out-clean', 'shots'))) assert.ok(index.includes(`shots/${name}`), `index.html shows ${name}`);
   assert.ok(readdirSync(join(work, 'out-clean', 'shots')).some((n) => n.endsWith('_wide.png')), 'the wide-font pass captured its states');
+});
+
+test('G21 rejects a product with no directly addressable guided story when showcase is required', { timeout: 300_000 }, async () => {
+  const r = await runGate({ ...QUICK, routes: '/app', serve: clean, expectBrand: BRAND, requireShowcase: true, out: join(work, 'out-no-showcase') });
+  assert.ok(r.failures.some((f) => f.check === 'G21' && /no \/story\/<step> route is declared/.test(f.message)), `the required showcase story was admitted:\n${show(r)}`);
+});
+
+test('G21 admits only a directly linked story with evidence callouts, reciprocal selection, reduced motion and responsive performance', { timeout: 300_000 }, async () => {
+  const dir = makePlant(clean, join(work, 'plant-showcase'), 'showcase');
+  const r = await runGate({ ...QUICK, routes: '/story/measure,/story/phase,/story/decision', serve: dir, expectBrand: BRAND, requireShowcase: true, out: join(work, 'out-showcase') });
+  assert.equal(r.failures.length, 0, `the complete showcase fixture failed:
+${show(r)}`);
+});
+
+test('G21 rejects a callout that occludes its own plotted subject anchor', { timeout: 300_000 }, async () => {
+  const dir = makePlant(clean, join(work, 'plant-showcase-anchor-occlusion'), 'showcase-anchor-occlusion');
+  const r = await runGate({ ...QUICK, routes: '/story/measure,/story/phase,/story/decision', serve: dir, expectBrand: BRAND, requireShowcase: true, out: join(work, 'out-showcase-anchor-occlusion') });
+  assert.ok(r.failures.some((f) => f.check === 'G21' && /callout feed covers its own subject anchor/.test(f.message)), `the occluded subject was admitted:\n${show(r)}`);
 });
 
 test('the clean surface App passes every check, G18 included, in both languages and themes at a phone and a desktop size', { timeout: 1_800_000 }, async () => {
