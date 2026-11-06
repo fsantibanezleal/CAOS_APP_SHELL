@@ -1557,6 +1557,7 @@ const ARCH_SVG = '<svg viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg"><
 const config: ShellConfig = {
   product: { name: PLANT === 'brand' ? 'Impostor' : 'GateFixture' },
   routes: SURFACE ? [...STANDARD_ROUTES, { path: '/console', en: 'Console', es: 'Consola' }] : PLANT === 'showcase' ? [...STANDARD_ROUTES, { path: '/story/measure', en: 'Guided story', es: 'Recorrido guiado' }] : STANDARD_ROUTES,
+  immersiveRoutes: PLANT.startsWith('showcase') ? ['/story'] : [],
   links: { github: 'https://github.com/fsantibanezleal/CAOS_APP_SHELL' },
   version: '0.07.000',
   build: 'fixture',
