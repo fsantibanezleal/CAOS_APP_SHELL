@@ -2,7 +2,7 @@
 // in plain, truthful filler about the fixture itself (a test product that exists to exercise the gate). The self-test
 // plants one defect per floor through `plant` (`window.__PLANT__`); clean, every floor holds in both languages.
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
-import { Callout, DocSection, Equation, ExecutiveView, Figure, Glossary, SubTabs, Tabs, pick, type BiText } from '../../src/index';
+import { Callout, DocSection, Equation, ExecutiveView, Figure, Glossary, InlineMath, SubTabs, Tabs, pick, type BiText } from '../../src/index';
 import executiveData from './executive/executive.json';
 import { SECTION_TITLES } from '../../src/content/executive';
 
@@ -409,7 +409,34 @@ function MethodSection({ lang, m, plant }: { lang: Lang; m: Method; plant: strin
       refs={is('floor-method-norefs') ? undefined : REFS}
       noRefsReason={is('floor-method-norefs') ? { en: 'A planted method that cites nothing and says so.', es: 'Un método plantado que no cita nada y lo dice.' } : undefined}
     >
-      {is('floor-duplicate') ? Array.from({ length: 4 }, (_, i) => <p key={i}>{para(lang, tag, 1)}</p>) : <Paras lang={lang} tag={tag} n={dense} />}
+      {is('legit-math-comma') ? (
+        <>
+          <MathParagraph lang={lang} />
+          <Paras lang={lang} tag={tag} n={3} from={2} />
+        </>
+      ) : is('math-over-text') ? (
+        // the tolerance for the invisible parts of KaTeX must not admit its glyphs: math drawn over a dense paragraph still hides it
+        <>
+          <Paras lang={lang} tag={tag} n={1} />
+          <div style={{ position: 'relative' }}>
+            <p>{para(lang, tag, 2)}</p>
+            <span aria-hidden="true" style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+              <InlineMath tex={'\\Huge \\mathrm{' + 'MMMMMMMMMMMMMMMMMMMMMMMM'.repeat(6) + '}'} />
+            </span>
+          </div>
+          <Paras lang={lang} tag={tag} n={2} from={3} />
+        </>
+      ) : is('long-document-covered') ? (
+        // a long document in which one of the four dense paragraphs lies under an opaque cover: it must still not count
+        <>
+          <Paras lang={lang} tag={tag} n={1} />
+          <div style={{ position: 'relative' }}>
+            <p>{para(lang, tag, 2)}</p>
+            <div aria-hidden="true" style={{ position: 'absolute', inset: 0, background: 'var(--color-bg)' }} />
+          </div>
+          <Paras lang={lang} tag={tag} n={2} from={3} />
+        </>
+      ) : is('floor-duplicate') ? Array.from({ length: 4 }, (_, i) => <p key={i}>{para(lang, tag, 1)}</p>) : <Paras lang={lang} tag={tag} n={dense} />}
       {is('floor-hidden') && (
         <>
           <p style={{ display: 'none' }}>{para(lang, tag, 91)}</p>
@@ -445,9 +472,35 @@ const MARGIN_REGION = (lang: Lang) => (
   </div>
 );
 
+/**
+ * Issue 196: a document whose real scroll extent is far over the old fixed budget of 600 samples. Every scrollport is a
+ * short region that holds a long run of blank space between two readable paragraphs, so the walk has many positions to
+ * visit and every word is still readable. The count scales with the number of regions, as DinHot's tables and slides do.
+ */
+const LongScrollports = ({ lang, regions = 4 }: { lang: Lang; regions?: number }) => (
+  <div>
+    {Array.from({ length: regions }, (_, i) => (
+      <div key={i} role="region" aria-label={pick({ en: `Long listing ${i + 1}`, es: `Listado largo ${i + 1}` }, lang)} tabIndex={0} style={{ height: 200, overflowY: 'auto' }}>
+        <p>{pick({ en: `Listing ${i + 1} opens here.`, es: `El listado ${i + 1} abre aquí.` }, lang)}</p>
+        <div aria-hidden="true" style={{ height: 15000 }} />
+        <p>{pick({ en: `Listing ${i + 1} ends here.`, es: `El listado ${i + 1} termina aquí.` }, lang)}</p>
+      </div>
+    ))}
+  </div>
+);
+
+/** A dense paragraph whose inline math ends in a subscript and is followed at once by a comma (DinHot, Methodology, Trap metrics). */
+const MathParagraph = ({ lang }: { lang: Lang }) => (
+  <p>
+    {pick({ en: 'The reported trapping depth uses the signed power', es: 'La profundidad de atrapamiento informada usa la potencia con signo' }, lang)} <InlineMath tex="P_{\mathrm{trap}}" />
+    {pick({ en: ', while the efficiency uses the raw', es: ', mientras que la eficiencia usa la potencia bruta' }, lang)} <InlineMath tex="P_{\mathrm{in}}" />
+    {pick({ en: ' of the same run, so both read from one record. Each day, contacts between the first two groups produce new infections in proportion to the contact rate, and a fixed share of the infected recover, which is the whole model of this fixture.', es: ' de la misma corrida, así que ambas salen de un solo registro. Cada día, los contactos entre los dos primeros grupos producen contagios nuevos en proporción a la tasa de contacto, y una fracción fija de los contagiados se recupera, que es todo el modelo de este producto de prueba.' }, lang)}
+  </p>
+);
+
 function Methodology({ lang, plant }: { lang: Lang; plant: string }) {
   const methods: Method[] = [
-    { id: 'theory', label: { en: 'Theory', es: 'Teoría' }, kind: 'classical' },
+    { id: 'theory', label: { en: 'Theory', es: 'Teoría' }, kind: 'classical', extra: plant === 'legit-long-document' || plant === 'long-document-covered' ? <LongScrollports lang={lang} /> : undefined },
     { id: 'numerics', label: { en: 'Numerics', es: 'Numérica' }, kind: 'classical' },
     // taller than the page's scroll box and shorter than the window: reachable (known shell defect 18)
     { id: 'notes', label: { en: 'Notes', es: 'Notas' }, kind: 'classical', extra: <div style={{ height: 'calc(100vh - 40px)' }}><p>{pick(PARAGRAPH, lang)}</p></div> },

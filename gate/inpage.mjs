@@ -923,8 +923,14 @@ export function installLib() {
   /** SHG-079..082: collect glyph evidence by real scrolling, then compute the existing metric once.
    * No DOM-presence fallback: every word fragment must fit the viewport, original clip bounds,
    * scrollports and hit tests. Text-node identities deduplicate overlapping observations.
+   *
+   * The budget scales with the document (CAOS_APP_SHELL#196, known defect 55). A fixed count stopped a long, fully
+   * readable page. Now every scrollport the walk visits grants the samples of its own grid (the positions along its
+   * scroll extent, y by x, at the walk's viewport step), and the time allowed is `baseMs` plus `msPerSample` for every
+   * sample granted. `baseSamples` covers the first sample and the clicks of the flip cards and carousels. Two ceilings
+   * stay absolute, so a page that never settles still fails with the same message: `ceilingSamples`, `ceilingMs`.
    */
-  G.readDocument = async ({ maxSamples = 600, timeoutMs = 30000 } = {}) => {
+  G.readDocument = async ({ baseSamples = 100, baseMs = 30000, msPerSample = 500, ceilingSamples = 20000, ceilingMs = 900000 } = {}) => {
     const page = document.querySelector('[data-doc-page]');
     if (!page || !visible(page)) return null;
     const started = performance.now();
@@ -934,9 +940,11 @@ export function installLib() {
     const nodes = new Map(), witnessed = new Set(), flips = new Map(), decks = new Map();
     const inkContext = document.createElement('canvas').getContext('2d');
     if (!inkContext) throw new Error('document glyph measurement canvas is unavailable');
-    let samples = 0;
+    let samples = 0, granted = baseSamples;
+    const budget = () => ({ samples: Math.min(granted, ceilingSamples), ms: Math.min(baseMs + granted * msPerSample, ceilingMs) });
     const check = () => {
-      if (++samples > maxSamples || performance.now() - started > timeoutMs) throw new Error(`document traversal exceeded ${maxSamples} samples or ${timeoutMs}ms; active document remains unverified`);
+      const limit = budget();
+      if (++samples > limit.samples || performance.now() - started > limit.ms) throw new Error(`document traversal exceeded ${limit.samples} samples or ${Math.round(limit.ms)}ms; active document remains unverified`);
       if (!page.isConnected || state.some((e) => !e.isConnected || e.getAttribute('aria-selected') !== 'true')) throw new Error('document traversal changed the active page/tab');
     };
     const frame = () => new Promise((resolve) => nativeRaf ? nativeRaf(() => nativeRaf(resolve)) : setTimeout(resolve, 32));
@@ -1038,9 +1046,23 @@ export function installLib() {
         const first = Math.ceil(start), last = Math.floor(end) - 1;
         return first <= last ? Math.max(first, Math.min(last, start + (end - start) * fraction)) : (start + end) / 2;
       };
+      // KaTeX builds a subscript from tables and a 2px strut (`.vlist-s`, a zero-width space in a 1px font) that overhang the
+      // box of the math into the text beside it, so the hit test of the first glyph after the math (a comma) returns a
+      // structural math element and not the paragraph. An element of the math that paints nothing at the point (no glyph of
+      // its own, no background, no border, no drawing) cannot hide the text: look through it at what lies beneath, and judge
+      // that by the same rule. A glyph of the math over the text is in the stack as a painting element, so it still fails.
+      const paints = (e) => {
+        if (/^(svg|img|canvas|video)$/i.test(e.tagName) || e.closest('svg')) return true;
+        if ([...e.childNodes].some((c) => c.nodeType === 3 && /[^\s\u200b]/.test(c.nodeValue))) return true;
+        const cs = getComputedStyle(e);
+        return (parseColor(cs.backgroundColor)?.a ?? 0) > 0 || cs.backgroundImage !== 'none'
+          || ['Top', 'Right', 'Bottom', 'Left'].some((side) => parseFloat(cs[`border${side}Width`]) > 0 && (parseColor(cs[`border${side}Color`])?.a ?? 0) > 0);
+      };
+      const inert = (e) => !parent.closest('.katex') && Boolean(e.closest('.katex')) && !paints(e);
       for (const q of [0.15, 0.5, 0.85]) for (const v of [0.15, 0.5, 0.85]) {
         const x = sampleAt(rect.left, rect.right, q), y = sampleAt(rect.top, rect.bottom, v);
-        const hit = document.elementFromPoint(x, y);
+        let hit = document.elementFromPoint(x, y);
+        if (hit && inert(hit)) hit = document.elementsFromPoint(x, y).find((e) => !inert(e)) ?? null;
         const transparentFallthrough = getComputedStyle(parent).pointerEvents === 'none' && hit?.contains(parent);
         if (!hit || !(hit === parent || (control ? parent.contains(hit) : transparentFallthrough)) || pseudoCover(parent,x,y)) return false;
         const link = parent.closest('a[href]');
@@ -1108,13 +1130,14 @@ export function installLib() {
     const positions = (max, size) => {
       const out = [0], step = Math.max(16, Math.floor(size * 0.65));
       for (let p = step; p < max; p += step) {
-        if (out.length > maxSamples) throw new Error('document scroll extent exceeds traversal budget');
+        if (out.length > ceilingSamples) throw new Error('document scroll extent exceeds traversal budget');
         out.push(p);
       }
       if (max > 0) out.push(max);
       return out;
     };
     const sweep = async () => {
+      granted += 1;
       sample();
       const containers = [...ancestorsUntil(page, document.body), page, ...page.querySelectorAll('*')].filter(scrollable);
       const de = document.scrollingElement;
@@ -1125,7 +1148,9 @@ export function installLib() {
         const s = getComputedStyle(e);
         const maxX = /auto|scroll/.test(s.overflowX) ? e.scrollWidth - e.clientWidth : 0;
         const maxY = e === de || /auto|scroll/.test(s.overflowY) ? e.scrollHeight - e.clientHeight : 0;
-        for (const y of positions(maxY, Math.min(e.clientHeight, innerHeight))) for (const x of positions(maxX, Math.min(e.clientWidth, innerWidth))) {
+        const ys = positions(maxY, Math.min(e.clientHeight, innerHeight)), xs = positions(maxX, Math.min(e.clientWidth, innerWidth));
+        granted += ys.length * xs.length; // this scrollport's grid is the work the budget must cover
+        for (const y of ys) for (const x of xs) {
           // A settled card/animated illustration may reduce incidental overflow between frames.
           // Clamp to the real extent; coverage still requires every fragment, never a partial word.
           const wantedX = Math.min(x, e.scrollWidth - e.clientWidth), wantedY = Math.min(y, e.scrollHeight - e.clientHeight);
@@ -1184,7 +1209,10 @@ export function installLib() {
         }
       }
       docEvidence = evidence;
-      return G.docPage();
+      const doc = G.docPage();
+      // what the walk cost, so a gate run can report samples and time per state
+      if (doc) doc.walk = { samples, budgetSamples: budget().samples, ms: Math.round(performance.now() - started), budgetMs: Math.round(budget().ms) };
+      return doc;
     } finally {
       docEvidence = null;
       try {
