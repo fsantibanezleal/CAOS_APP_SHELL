@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { useShellLang } from '../lib/lang';
 import { type BiText, pick } from '../lib/text';
@@ -24,6 +24,7 @@ export interface StoryFrameProps {
   onExit?: () => void;
   labels?: Partial<{ steps: BiText; previous: BiText; next: BiText; play: BiText; pause: BiText; exit: BiText }>;
   autoAdvanceMs?: number;
+  mobileStageMinHeight?: number;
   className?: string;
 }
 
@@ -40,7 +41,10 @@ const DEFAULT_LABELS = {
  * A guided 3 to 6 step story over the same state as a product App. The product owns each step's real view and panel;
  * the shell owns the stepper, deep links, keyboard behavior, pause-on-interaction, and semantic structure (ADR-0082).
  */
-export function StoryFrame({ steps, activeId, onStepChange, onExit, labels = {}, autoAdvanceMs = 5000, className }: StoryFrameProps) {
+export function StoryFrame({ steps, activeId, onStepChange, onExit, labels = {}, autoAdvanceMs = 5000, mobileStageMinHeight = 300, className }: StoryFrameProps) {
+  if (!Number.isInteger(mobileStageMinHeight) || mobileStageMinHeight < 300 || mobileStageMinHeight > 900) {
+    throw new RangeError("StoryFrame mobileStageMinHeight must be an integer from 300 through 900 CSS pixels");
+  }
   const lang = useShellLang();
   const [playing, setPlaying] = useState(false);
   const activeIndex = Math.max(0, steps.findIndex((step) => step.id === activeId));
@@ -77,7 +81,7 @@ export function StoryFrame({ steps, activeId, onStepChange, onExit, labels = {},
 
   if (!active) return null;
   return (
-    <section className={['caos-story', 'page-body', 'wide', className].filter(Boolean).join(' ')} data-story="" data-story-step={active.id} data-step-accent={active.accent} aria-label={pick(copy.steps, lang)} tabIndex={0} onKeyDown={onKeyDown}>
+    <section className={['caos-story', 'page-body', 'wide', className].filter(Boolean).join(' ')} style={{ '--caos-story-stage-minimum': `${mobileStageMinHeight}px` } as CSSProperties} data-story="" data-story-step={active.id} data-step-accent={active.accent} aria-label={pick(copy.steps, lang)} tabIndex={0} onKeyDown={onKeyDown}>
       <header className="caos-story-header">
         <div className="caos-story-heading">
           <span className="caos-story-verb">{active.number.toString().padStart(2, '0')} · {pick(active.verb, lang)}</span>
