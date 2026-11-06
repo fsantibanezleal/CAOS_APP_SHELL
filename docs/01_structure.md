@@ -16,15 +16,16 @@ Every route sits in the same frame, top to bottom:
 The header and footer strings, icons and links are the shell's (`chrome.ts`); a product passes only its name, mark,
 routes, version, build, licence, visibility, architecture and footer provenance (`ShellConfig`).
 
-## Three modes
+## Frame modes
 
 | Mode | `ShellConfig` | What scrolls |
 |---|---|---|
 | default | (nothing) | the document; the header sticks to the top |
 | fixed | `fixed: true`, or `fixedRoutes: ['/explore']` | the listed routes are the viewport; others scroll as documents |
 | contain | `contain: true` (the template's configuration) | every route is the viewport: a workbench or a surface fills it, a document scrolls inside `main`, so the header and footer stay in view; below 900 px the document scrolls as a whole |
+| immersive | `immersiveRoutes: ['/story']` | named routes fill the viewport without header or footer; the skip link and main landmark remain |
 
-## Three route types
+## Route types
 
 | Type | Component | Use it for | Body |
 |---|---|---|---|

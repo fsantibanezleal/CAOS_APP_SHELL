@@ -407,6 +407,9 @@ story structure, callout provenance and geometry, reciprocal linked selection, s
 playback behavior, reduced motion, transition settling, mobile layout, LCP, frame rate and interaction latency. The
 product still owns the truth and provenance of every scientific value and the suitability of its domain views.
 
+Version 0.21.000 adds shell-owned immersive route framing and a bounded desktop rail-width API. A filled plot with a
+stage and marked plot control now shares height through the shell's PlotCard rules; products remove local reserved-class overrides.
+
 ## Risks
 
 From the CHANGELOG's known shell defects and the docs; each has the requirement or gate that holds the mitigation.

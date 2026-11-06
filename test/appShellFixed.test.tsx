@@ -61,6 +61,17 @@ test('a non-root path matches its sub-routes', () => {
   assert.doesNotMatch(render(cfg, '/laboratory'), /app-shell fixed/);
 });
 
+test('immersiveRoutes removes chrome and gives the route its own contained frame', () => {
+  const html = render({ ...base, immersiveRoutes: ['/story'] }, '/story');
+  assert.match(html, /class="app-shell fixed immersive"/);
+  assert.match(html, /class="skip-link"/);
+  assert.match(html, /<main class="page"/);
+  assert.match(html, /<main class="page"[^>]*data-brand="Probe"/);
+  assert.doesNotMatch(html, /class="site-header"|class="site-footer"/);
+  assert.match(render({ ...base, immersiveRoutes: ['/story'] }, '/story/step-2'), /app-shell fixed immersive/);
+  assert.doesNotMatch(render({ ...base, immersiveRoutes: ['/story'] }, '/storyboard'), /app-shell fixed immersive/);
+});
+
 test('fixed: true contains every route', () => {
   assert.match(render({ ...base, fixed: true }, '/methodology'), /app-shell fixed/);
 });

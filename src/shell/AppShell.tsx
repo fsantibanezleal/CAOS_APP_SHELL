@@ -46,6 +46,8 @@ export interface ShellConfig {
   };
   /** Routes whose surface IS the viewport (ADR-0071 rule 1), matched exactly or by prefix for a non-root path. */
   fixedRoutes?: string[];
+  /** Routes that use the full frame without site chrome (for a guided, direct-link StoryFrame). */
+  immersiveRoutes?: string[];
   /** Every route fixed: a single-surface app (a hub, a one-page tool). */
   fixed?: boolean;
   /**
@@ -155,6 +157,7 @@ function Frame({ config, pathname, routed, children }: { config: ShellConfig; pa
     config.contain === true ||
     config.fixed === true ||
     (config.fixedRoutes ?? []).some((p) => p === pathname || (p !== '/' && pathname.startsWith(p.replace(/\/$/, '') + '/')));
+  const immersive = (config.immersiveRoutes ?? []).some((p) => p === pathname || (p !== '/' && pathname.startsWith(p.replace(/\/$/, '') + '/')));
   const license = config.license ? pick(config.license, lang) : config.footer?.license?.[lang] ?? '';
   const brand = (
     <>
@@ -164,12 +167,12 @@ function Frame({ config, pathname, routed, children }: { config: ShellConfig; pa
   );
 
   return (
-    <div className={config.contain ? 'app-shell fixed contain' : fixed ? 'app-shell fixed' : 'app-shell'}>
+    <div className={['app-shell', config.contain || fixed || immersive ? 'fixed' : '', config.contain ? 'contain' : '', immersive ? 'immersive' : ''].filter(Boolean).join(' ')}>
       {/* The first stop of the keyboard: past the header to the content (WCAG 2.4.1). */}
       <a className="skip-link" href="#main">
         {c.skip}
       </a>
-      <header className="site-header">
+      {!immersive && <header className="site-header">
         <div className="header-inner">
           {routed ? (
             <NavLink to="/" className="brand" aria-label={config.product.name} data-brand={config.product.name}>
@@ -205,17 +208,17 @@ function Frame({ config, pathname, routed, children }: { config: ShellConfig; pa
             <ThemeToggle />
           </div>
         </div>
-      </header>
+      </header>}
 
       {config.architecture && archOpen && <ArchitectureModal config={config.architecture} onClose={() => setArchOpen(false)} />}
 
-      <main className="page" id="main" tabIndex={-1}>
+      <main className="page" id="main" tabIndex={-1} data-brand={config.product.name}>
         <PanelBoundary panel="page">{children}</PanelBoundary>
       </main>
 
       {/* ADR-0016 s2: one compact line: provenance + honesty, not re-advertising. The header (s1) already carries
           the personal/portfolio links; NEVER repeat them here. */}
-      <footer className="site-footer">
+      {!immersive && <footer className="site-footer">
         <div className="footer-inner">
           <div className="footer-meta" ref={footRef}>
             <span>{config.product.name}</span>
@@ -264,7 +267,7 @@ function Frame({ config, pathname, routed, children }: { config: ShellConfig; pa
             )}
           </div>
         </div>
-      </footer>
+      </footer>}
     </div>
   );
 }
