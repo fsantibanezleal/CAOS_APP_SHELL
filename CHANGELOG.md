@@ -1,3 +1,9 @@
+## [0.21.001] - Unreleased
+
+### Fixed
+
+- Keep six guided story steps on one horizontally scrollable row at phone, tablet and desktop widths (SHW-055, issue 183).
+
 ## [0.21.000] - 2026-11-05
 
 ### Added
