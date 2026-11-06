@@ -48,6 +48,8 @@ export interface CaseWorkbenchProps {
    * as one node or as sections shown one at a time (ADR-0071 rule 6). */
   rail?: ReactNode | RailSection[];
   railLabel?: BiText;
+  /** Desktop control-rail width, passed to WorkbenchLayout (150–360 px). */
+  railWidth?: number;
   /** The instrument: the case's own question groups (for example Model, Validation, Impact, Findings). */
   groups: WorkbenchGroup[];
   /** The comparison across the case's variants (one metric per regime; selecting one loads it). */
@@ -94,7 +96,7 @@ function panel(id: string, lane: Lane | undefined, provenance: Provenance | unde
  * `data-state-key` on the instrument so the gate can check that the instrument shows what was asked for.
  */
 export function CaseWorkbench(props: CaseWorkbenchProps) {
-  const { caseId, cases, source, controls, replayOnly, noteFit, variants, rail, railLabel, groups, compare, context, group, onGroupChange, deepLinkView = true, ariaLabel, focus } = props;
+  const { caseId, cases, source, controls, replayOnly, noteFit, variants, rail, railLabel, railWidth, groups, compare, context, group, onGroupChange, deepLinkView = true, ariaLabel, focus } = props;
   const lang = useShellLang();
   const focusCfg: CaseFocusConfig | null = focus === true ? {} : focus || null;
   // Focus mode, one piece of code with the surface's (useFocusMode): held in the URL (`?focus=1`), opened by the control or by a link,
@@ -207,7 +209,7 @@ export function CaseWorkbench(props: CaseWorkbenchProps) {
   return (
     <ViewMemoryContext.Provider value={memory}>
       <WorkbenchStateContext.Provider value={{ stateKey, caseId, variantId, source }}>
-        <WorkbenchLayout rail={rail ?? null} railHead={railHead} railLabel={railLabel}>
+        <WorkbenchLayout rail={rail ?? null} railHead={railHead} railLabel={railLabel} railWidth={railWidth}>
           <div className="caos-cw" {...instrumentData}>
             <Tabs
               tabs={tabs}

@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useId, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import { useShellLang } from '../lib/lang';
 import { useOverflowFade } from '../lib/overflow';
 import { type BiText, pick } from '../lib/text';
@@ -21,6 +21,8 @@ export interface WorkbenchLayoutProps {
   /** Accessible name of the rail. */
   railLabel?: BiText;
   className?: string;
+  /** Product-calibrated desktop rail width in CSS pixels. Keep within 150–360 px. */
+  railWidth?: number;
 }
 
 function isSections(rail: ReactNode | RailSection[]): rail is RailSection[] {
@@ -104,11 +106,14 @@ export function RailBody({ rail, railHead, railLabel }: Pick<WorkbenchLayoutProp
  * explicit width that never scrolls (rule 6), and an instrument marked `data-instrument` so the measured gate
  * can check that it covers at least 60% of the viewport, and Focus at least 80% (ADR-0082). Pair with `ShellConfig.contain`.
  */
-export function WorkbenchLayout({ rail, railHead, children, railLabel, className }: WorkbenchLayoutProps) {
+export function WorkbenchLayout({ rail, railHead, children, railLabel, className, railWidth }: WorkbenchLayoutProps) {
   const lang = useShellLang();
   const label = pick(railLabel ?? { en: 'Controls', es: 'Controles' }, lang);
+  if (railWidth !== undefined && (!Number.isFinite(railWidth) || railWidth < 150 || railWidth > 360)) {
+    throw new RangeError('WorkbenchLayout.railWidth must be a finite value from 150 to 360 px');
+  }
   return (
-    <div className={['page-body', 'wide', 'caos-wb', className].filter(Boolean).join(' ')} data-workbench="">
+    <div className={['page-body', 'wide', 'caos-wb', className].filter(Boolean).join(' ')} style={railWidth === undefined ? undefined : { '--rail-w': `${railWidth}px` } as CSSProperties} data-workbench="" data-rail-width={railWidth}>
       <aside className="caos-wb-rail" aria-label={label} data-rail="">
         <RailBody rail={rail} railHead={railHead} railLabel={railLabel} />
       </aside>

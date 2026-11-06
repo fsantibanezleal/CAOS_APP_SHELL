@@ -26,6 +26,12 @@ test('WorkbenchLayout is the full-viewport workbench with a marked instrument (A
   assert.match(out, /<aside class="caos-wb-rail" aria-label="Controls"/);
 });
 
+test('WorkbenchLayout accepts a bounded rail width through its API', () => {
+  const out = html(<WorkbenchLayout rail={<p>controls</p>} railWidth={186}>instrument</WorkbenchLayout>);
+  assert.match(out, /style="--rail-w:186px"/);
+  assert.throws(() => renderToStaticMarkup(<WorkbenchLayout rail={<p>controls</p>} railWidth={120}>instrument</WorkbenchLayout>), /150 to 360 px/);
+});
+
 test('a rail given as sections shows one section at a time, never all of them (ADR-0071 rule 6)', () => {
   const out = html(
     <WorkbenchLayout

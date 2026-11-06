@@ -190,6 +190,11 @@ test('S1 and S2: the stylesheet lets the document scroll, always hides [hidden],
   assert.match(css, /\.main-nav \{[^}]*min-width: 0;[^}]*overflow-x: auto;/);
 });
 
+test('immersive phone pages use document scrolling so the full story remains reachable', () => {
+  const css = readFileSync(new URL('../styles.css', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.app-shell\.immersive > \.page \{ overflow: visible; \}/);
+});
+
 test('the App route: the rail carries the case picker, the variants and the live values, under the same state key', async () => {
   const { Readout } = await import('../src/workbench/Readouts.tsx');
   const { useWorkbenchState } = await import('../src/workbench/state.ts');

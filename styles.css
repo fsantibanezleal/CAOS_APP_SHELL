@@ -201,8 +201,11 @@ code, kbd { font-family: var(--font-mono); }
 .app-shell.fixed .site-footer { margin-top: 0; }
 .app-shell.fixed .site-footer .footer-inner { padding: 0.45rem 1.5rem; gap: 0.4rem; font-size: 0.74rem; line-height: 1.3; }
 .app-shell.fixed.contain > .page { display: flex; flex-direction: column; overflow: hidden; }
+.app-shell.immersive { height: 100dvh; min-height: 100dvh; overflow: hidden; }
+.app-shell.immersive > .page { display: flex; flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 0; }
+.app-shell.immersive > .page > .caos-story { width: 100%; height: 100%; flex: 1 1 auto; }
 /* A document route scrolls inside the main container; a workbench or a surface fills it. */
-.app-shell.fixed.contain > .page:has(> .page-body:not(.caos-wb):not(.caos-surface)) { display: block; overflow-y: auto; overscroll-behavior: contain; }
+.app-shell.fixed.contain:not(.immersive) > .page:has(> .page-body:not(.caos-wb):not(.caos-surface)) { display: block; overflow-y: auto; overscroll-behavior: contain; }
 /* The chrome of a contained app spans the instrument's width with its inset, so at 2560 px the header and footer do
    not float in a 1200 px column above a full-width workbench. */
 .app-shell.fixed.contain .header-inner, .app-shell.fixed.contain .site-footer .footer-inner { max-width: var(--maxw-wide); padding-inline: var(--space-4); }
@@ -213,7 +216,9 @@ code, kbd { font-family: var(--font-mono); }
   .app-shell.fixed.contain { height: auto; min-height: 100dvh; overflow: visible; }
   /* Both forms of the rule above are released: the `:has()` form outranked a plain `> .page` and kept a document's
      `.page` a scroll container that never scrolls, so nothing in it could be sticky (G12, 0.8.0). */
-  .app-shell.fixed.contain > .page, .app-shell.fixed.contain > .page:has(> .page-body:not(.caos-wb):not(.caos-surface)) { display: block; overflow: visible; }
+  .app-shell.fixed.contain:not(.immersive) > .page, .app-shell.fixed.contain:not(.immersive) > .page:has(> .page-body:not(.caos-wb):not(.caos-surface)) { display: block; overflow: visible; }
+  /* A stacked phone workbench is a document: its full instrument and controls must remain reachable by page scroll. */
+  .app-shell.fixed.contain:not(.immersive) > .page:has(> .caos-wb) { display: block; overflow: visible; }
 }
 @media (max-width: 760px) {
   /* ADR-0071: the route row shares the header row and owns the horizontal scroll; no second row above the
@@ -253,6 +258,18 @@ code, kbd { font-family: var(--font-mono); }
 .page-body.wide.caos-wb { padding-inline: var(--space-4); }
 .caos-wb > * { min-width: 0; }
 .app-shell.fixed.contain > .page > .caos-wb { flex: 1 1 auto; min-height: 0; }
+/* A tuned rail is an API value; keep the compact desktop spacing and control labels within it. */
+.caos-wb[data-rail-width] { gap: 0.4rem; }
+.caos-wb[data-rail-width] .caos-wb-rail,
+.caos-wb[data-rail-width] .caos-wb-rail-head,
+.caos-wb[data-rail-width] .caos-wb-rail-panel { gap: 0.25rem; }
+.caos-wb[data-rail-width] .caos-wb-rail { padding: 0.4rem; }
+.caos-wb[data-rail-width] .caos-readout-row { gap: 0.2rem; }
+.caos-wb[data-rail-width] .tablist { padding-bottom: 0; margin-bottom: 0; }
+.caos-wb[data-rail-width] .tablist .tab { padding-block: 0.2rem; }
+.caos-wb[data-rail-width] .subtabs { margin-block: 0.1rem; }
+.caos-wb[data-rail-width] .subtablist { margin-bottom: 0; }
+.caos-wb[data-rail-width] .subtab { padding-block: 0.18rem; }
 
 /* Surface (SurfacePage): a tab App that fills the viewport; its head and tab row hold their height and the open
    panel scrolls. The containment 15 to 19 products wrote for themselves (audit 2026-10-07, section 3). */
@@ -641,6 +658,11 @@ svg.lucide { flex: none; }
 .caos-plot-note { margin: 0.4rem 0 0; font-size: 0.78rem; color: var(--color-fg-faint); }
 .caos-plot.fill { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
 .caos-plot.fill > .caos-plot-body { flex: 1 1 0; min-height: 0; overflow: hidden; }
+.caos-plot.fill > .caos-plot-body:has(> [data-caos-plot-control]) { display: flex; flex-direction: column; }
+.caos-plot.fill > .caos-plot-body:has(> [data-caos-plot-control]) > .caos-stage { flex: 1 1 0; height: auto; min-height: 0; }
+.caos-plot.fill > .caos-plot-body > [data-caos-plot-control] { flex: 0 0 auto; display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem 0.6rem; min-width: 0; min-height: 2rem; padding: 0.2rem 0.35rem; color: var(--color-fg-subtle); font-size: 0.78rem; font-variant-numeric: tabular-nums; }
+.caos-plot.fill > .caos-plot-body > [data-caos-plot-control] input { flex: 1 1 100%; width: 100%; min-width: 8rem; margin: 0; accent-color: var(--color-accent); }
+.caos-plot.fill > .caos-plot-body > [data-caos-plot-control] strong { color: var(--color-fg); font-weight: 600; }
 .caos-plot.fill > .caos-plot-body > .caos-table { height: 100%; }
 /* The note of a filling card keeps at most 35% of the card and scrolls beyond it, so the drawing keeps a floor
    (CAOS_APP_SHELL#95: a long note left plots of 10 to 90 px at 1280 x 800). */
@@ -953,10 +975,6 @@ svg.lucide { flex: none; }
 
 /* ADR-0082 showcase frame: one focused stage, one docked panel, readable step navigation and anchored scene notes. */
 .caos-story { display: flex; flex-direction: column; gap: 0; min-width: 0; min-height: 0; height: 100%; padding: 0; color: var(--color-fg); background: var(--color-bg); }
-body:has([data-story]) .app-shell > .site-header,
-body:has([data-story]) .app-shell > .site-footer { display: none !important; }
-body:has([data-story]) .app-shell > .page { display: flex; flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 0; }
-body:has([data-story]) .app-shell > .page > .caos-story { width: 100%; height: 100%; flex: 1 1 auto; }
 .caos-story-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); min-width: 0; }
 .caos-story-heading { min-width: 0; }
 .caos-story-verb { display: block; color: var(--color-step-1); font: 700 var(--text-xs) var(--font-mono); letter-spacing: .09em; text-transform: uppercase; }
@@ -970,6 +988,7 @@ body:has([data-story]) .app-shell > .page > .caos-story { width: 100%; height: 1
 .caos-story-actions,.caos-story-controls { display: flex; align-items: center; gap: var(--space-2); }
 .caos-story button { min-height: 36px; padding: .35rem .65rem; color: var(--color-fg); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer; }
 .caos-story button:disabled { opacity: .55; cursor: not-allowed; }
+.caos-story-actions button { min-height: clamp(28px, 2.5vw, 36px); padding: clamp(.15rem, .5vw, .35rem) clamp(.4rem, .8vw, .65rem); font-size: clamp(.75rem, .8vw, .9rem); line-height: 1.15; white-space: nowrap; }
 .caos-story-stepper { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: var(--space-2); min-width: 0; }
 .caos-story-step { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; align-items: center; column-gap: .55rem; min-width: 0; min-height: 40px; padding: .2rem .55rem; color: var(--color-fg-subtle); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); text-decoration: none; }
 .caos-story-step:hover { color: var(--color-fg); text-decoration: none; }
@@ -1009,7 +1028,10 @@ body:has([data-story]) .app-shell > .page > .caos-story { width: 100%; height: 1
 .caos-callout-trend.trend-down { color: var(--color-good); }
 .caos-callout-source { grid-column: 1 / -1; }
 @media (max-width: 760px) {
-  body:has([data-story]) .app-shell > .page { overflow-y: auto; }
+  .app-shell.immersive { height: auto; min-height: 100dvh; overflow: visible; }
+  .app-shell.immersive > .page { display: block; overflow: visible; }
+  .app-shell.immersive > .page > .caos-story { height: auto; min-height: 100%; }
+  .app-shell.immersive > .page { overflow: visible; }
   .caos-story { height: auto; min-height: 100%; }
   .caos-story-header { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: .45rem; }
   .caos-story-heading { width: 100%; }
