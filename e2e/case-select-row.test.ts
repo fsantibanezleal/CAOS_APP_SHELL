@@ -30,6 +30,7 @@ before(async () => {
               cases={{ cases: CASES, selectedId: caseId, onSelect: setCaseId, layout: 'select', deepLink: true }}
               variants={{ variants: [{ id: 'a', label: 'Base' }, { id: 'b', label: 'Stress' }], activeId: 'a', onSelect: () => undefined }}
               focus={focus}
+              tabDensity={q.get('compact') === '1' ? 'compact' : undefined}
               groups={[
                 { id: 'model', label: { en: 'Model', es: 'Modelo' }, content: <p data-probe="model">MODEL {caseId}</p> },
                 { id: 'validation', label: { en: 'Validation', es: 'Validación' }, content: (
@@ -161,6 +162,30 @@ test('the rail head and the group tab row are no taller with the Focus control t
     assert.equal(withFocus.rowH, without.rowH, `${w}px: the tab row's height`);
     assert.equal(withFocus.tabH, without.tabH, `${w}px: the tabs' height`);
     assert.equal(withFocus.panelTop, without.panelTop, `${w}px: the panel starts at the same place, the row added no height (${withFocus.panelTop} against ${without.panelTop})`);
+  }
+});
+
+test('SHW-055: compact workbench tabs reduce vertical chrome without changing tab behavior or overflow', async () => {
+  for (const width of [390, 1280]) {
+    const measure = async (compact: boolean) => {
+      const page = await h.browser.newPage({ viewport: { width, height: 800 } });
+      await page.goto(`${h.address}/?${compact ? 'compact=1' : ''}`);
+      const list = page.locator('[data-case-workbench] [role="tablist"]');
+      await list.waitFor();
+      const height = await list.evaluate((node) => node.getBoundingClientRect().height);
+      const count = await list.locator('[role="tab"]').count();
+      await page.getByRole('tab', { name: 'Model', exact: true }).focus();
+      await page.keyboard.press('ArrowRight');
+      assert.equal(await page.getByRole('tab', { name: 'Validation', exact: true }).getAttribute('aria-selected'), 'true');
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
+      await page.close();
+      return { height, count, overflow };
+    };
+    const comfortable = await measure(false);
+    const compact = await measure(true);
+    assert.equal(compact.count, comfortable.count, `${width}px: every tab remains available`);
+    assert.ok(compact.height < comfortable.height, `${width}px: compact row ${compact.height}px is shorter than ${comfortable.height}px`);
+    assert.equal(compact.overflow, true, `${width}px: compact tabs do not create page overflow`);
   }
 });
 
