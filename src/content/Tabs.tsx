@@ -21,6 +21,8 @@ export const MAX_PEER_TABS = 6;
 
 export interface TabsProps {
   tabs: TabDef[];
+  /** Explicit row density for short workbench viewports; `comfortable` preserves the default spacing. */
+  density?: 'comfortable' | 'compact';
   /** Uncontrolled: the first selected tab. */
   initial?: string;
   /** Controlled: the selected tab, owned by the app (for example a view held in the URL). */
@@ -41,7 +43,7 @@ export interface TabsProps {
  * is rendered, inside an error boundary; a row wider than its box fades the hidden end. Controlled when `value` is
  * given (known shell defect 6). More than six peers is reported (rule 5).
  */
-export function Tabs({ tabs, initial, value, onChange, ariaLabel, trailing }: TabsProps) {
+export function Tabs({ tabs, initial, value, onChange, ariaLabel, trailing, density = 'comfortable' }: TabsProps) {
   const baseId = useId();
   const first = tabs[0]?.id ?? '';
   const memory = useContext(ViewMemoryContext);
@@ -81,7 +83,7 @@ export function Tabs({ tabs, initial, value, onChange, ariaLabel, trailing }: Ta
 
   const current = tabs.find((t) => t.id === active) ?? tabs[0];
   return (
-    <div className={trailing === undefined ? 'tabs' : 'tabs tabs-has-slot'}>
+    <div className={`${trailing === undefined ? 'tabs' : 'tabs tabs-has-slot'}${density === 'compact' ? ' tabs-compact' : ''}`}>
       <div className="tablist" role="tablist" aria-label={ariaLabel} ref={rowRef}>
         {tabs.map((tab, idx) => {
           const selected = tab.id === current?.id;

@@ -2,6 +2,10 @@
 
 ## The workbench (`CaseWorkbench`)
 
+`tabDensity="compact"` keeps the complete case-view row and its existing keyboard/overflow
+behavior while reducing vertical navigation chrome for short viewports. The default
+`comfortable` density is unchanged.
+
 The App route of a product about cases, the whole route in one component:
 
 ```tsx

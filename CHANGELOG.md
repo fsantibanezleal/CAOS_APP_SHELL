@@ -1,8 +1,16 @@
-## [0.21.001] - Unreleased
+## [0.22.000] - 2026-11-06
+
+### Added
+
+- Add explicit `density="compact"` to `Tabs` and `tabDensity="compact"` to `CaseWorkbench`, preserving labels, keyboard behavior and overflow while reducing vertical navigation chrome for short viewports.
 
 ### Fixed
 
 - Keep six guided story steps on one horizontally scrollable row at phone, tablet and desktop widths (SHW-055, issue 183).
+
+### Adoption
+
+- Products with short viewports may opt into compact tab rows; default density remains unchanged.
 
 ## [0.21.000] - 2026-11-05
 
