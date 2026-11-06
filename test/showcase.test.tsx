@@ -134,3 +134,19 @@ test('scene helpers frame authored bounds, bound rate motion, explode stable par
   assert.equal(sceneEnvironment('dark').background, '#101a22');
   assert.equal(sceneEnvironment('light').key.castShadow, true);
 });
+
+test('SHW-057: StoryFrame exposes the requested mobile stage floor on its root', () => {
+  const steps: StoryStep[] = [1, 2, 3].map((number) => ({
+    id: `step-${number}`, number, verb: { en: `Inspect ${number}`, es: `Inspeccionar ${number}` },
+    headline: { en: `Finding ${number}`, es: `Hallazgo ${number}` }, summary: { en: 'Summary', es: 'Resumen' },
+    href: `/story/step-${number}`, accent: number as 1 | 2 | 3, stage: createElement('svg'), panel: createElement('p', null, 'Evidence'),
+  }));
+  const render = (mobileStageMinHeight?: number) => renderToStaticMarkup(createElement(MemoryRouter, null, createElement(StoryFrame, {
+    steps, activeId: 'step-1', onStepChange: () => undefined, mobileStageMinHeight,
+  })));
+  assert.match(render(), /--caos-story-stage-minimum:300px/);
+  assert.match(render(640), /--caos-story-stage-minimum:640px/);
+  for (const invalid of [299, 901, 640.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+    assert.throws(() => render(invalid), RangeError);
+  }
+});

@@ -275,6 +275,10 @@ React nodes for `stage` and `panel`. The route resolves its active step from the
 />
 ```
 
+When a story's complete interactive drawing needs more room on a phone, set `mobileStageMinHeight` in CSS pixels.
+The stage grows to that minimum and the evidence panel remains below it in normal page flow; omitted, the minimum is
+300 px. The option sizes the shared frame without changing the product's callouts or drawing.
+
 `SceneCallouts` takes bilingual eyebrow, unit and optional source text, a formatted value, a semantic state, and a
 normalized scene anchor for each item. Its deterministic layout measures the stage, places callouts with leader lines,
 and supports a reserved header band when a diagram must remain clear. The product reprojects anchors as its camera or

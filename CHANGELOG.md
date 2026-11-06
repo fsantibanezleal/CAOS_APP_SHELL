@@ -1,3 +1,8 @@
+## [0.23.000] - 2026-11-06
+
+### Added
+- Add the `StoryFrame.mobileStageMinHeight` option for products whose mobile scene, controls and three required callouts need a taller stage. The default remains 300 px and the panel stays below the stage. the product template's story showed the need when the 390 × 844 gate could not keep its plot labels, scrub control and callouts visible together.
+
 ## [0.22.000] - 2026-11-06
 
 ### Added
