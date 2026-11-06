@@ -81,6 +81,10 @@ const PLANTS = [
   { id: 'bar-ends-hidden', check: 'G20', re: /\(bars chart\): the readout of \d+ floating bar\(s\) does not read its two ends/, opts: { routes: '/app' } },
   { id: 'bar-group-unread', check: 'G20', re: /\(bars chart\): the readout of \d+ grouped bar\(s\) does not read its group/, opts: { routes: '/app' } },
   { id: 'bar-legend-hidden', check: 'G20', re: /\(bars chart\): the legend is not shown: the chart declares 3 entries and 0 are visible/, opts: { routes: '/app' } },
+  // issue 196: the budget scales with the document, it does not admit what the evidence rule rejects: the same long document with one
+  // dense paragraph under an opaque cover still counts three of four, and is not a budget error
+  { id: 'long-document-covered', check: 'ADR-0017.2', re: /Methodology, method area, topic "Theory" \(EN\): 3 dense paragraphs, the floor is 4/, opts: { routes: '/methodology' } },
+  { id: 'math-over-text', check: 'ADR-0017.2', re: /Methodology, method area, topic "Theory" \(EN\): 3 dense paragraphs, the floor is 4/, opts: { routes: '/methodology' } },
   { id: 'never-ready', check: 'G7', re: /data-state="loading"/, opts: { routes: '/app,/benchmark', settleMs: 3000 } },
   { id: 'raf-loop', check: 'G8', re: /animation frames/, opts: { routes: '/app' } },
   { id: 'mutation-loop', check: 'G8', re: /DOM mutations/, opts: { routes: '/app' } },
@@ -311,6 +315,11 @@ const LEGIT = [
   { id: 'legit-bar-adoption', opts: { routes: '/app' } },
   // shell 0.19.4: a table card whose body is a few pixels inside the viewport is measured when the gate scrolls to it, not judged blank from its sliver
   { id: 'legit-table-at-fold', opts: { routes: '/app', sizes: '390x844', langs: 'en,es' } },
+  // issue 196 (known defect 55): a document with 4 long scrollports (over 900 samples, far over the old fixed 600) is walked whole,
+  // and a dense paragraph whose inline math ends in a subscript followed by a comma is counted (the invisible KaTeX strut after the subscript
+  // lies over the comma and used to take its hit test)
+  { id: 'legit-long-document', opts: { routes: '/methodology' } },
+  { id: 'legit-math-comma', opts: { routes: '/methodology' } },
 ];
 
 /** A static server with an SPA fallback: every unknown path answers index.html with 200 (the G4 plant). */

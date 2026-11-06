@@ -1,3 +1,14 @@
+## Unreleased
+
+### Fixed
+
+- The gate's document walk (`G.readDocument`) verifies a long, fully readable documentation page instead of stopping at a fixed budget of 600 samples and 30 seconds (known defect 55, issue 196). The budget now scales with the document: every scrollport the walk visits grants the samples of its own grid (the positions along its scroll extent, y by x), and the time allowed is 30 seconds plus 500 ms for every sample granted, under two absolute ceilings (20,000 samples, 15 minutes), so a page that never settles still fails with the same message. The report lists the cost of every walked state (`docWalks`: samples and time against the budget earned).
+- The same walk counted a dense paragraph as unread when its inline math ended in a subscript and a comma followed at once: KaTeX builds a subscript from tables and an invisible 2px strut (`.vlist-s`) that overhang the math into the text beside it, and the hit test of the comma returned one of them instead of the paragraph. The hit test now looks through an element of the math that paints nothing at that point (no glyph of its own, no background, no border, no drawing) to the element beneath, and judges that by the unchanged rule (viewport, clip, scrollports, hit); math glyphs drawn over text still fail.
+
+### Adoption
+
+- No product change. A product pinned below 0.23.000 for this defect (CEFOP_DinHot, at 0.19.6) can move once a release carries this entry.
+
 ## [0.23.000] - 2026-11-06
 
 ### Added
