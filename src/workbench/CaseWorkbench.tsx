@@ -50,6 +50,8 @@ export interface CaseWorkbenchProps {
   railLabel?: BiText;
   /** Desktop control-rail width, passed to WorkbenchLayout (150–360 px). */
   railWidth?: number;
+  /** Density of the case-group tab row; compact preserves every tab while reducing vertical chrome. */
+  tabDensity?: 'comfortable' | 'compact';
   /** The instrument: the case's own question groups (for example Model, Validation, Impact, Findings). */
   groups: WorkbenchGroup[];
   /** The comparison across the case's variants (one metric per regime; selecting one loads it). */
@@ -96,7 +98,7 @@ function panel(id: string, lane: Lane | undefined, provenance: Provenance | unde
  * `data-state-key` on the instrument so the gate can check that the instrument shows what was asked for.
  */
 export function CaseWorkbench(props: CaseWorkbenchProps) {
-  const { caseId, cases, source, controls, replayOnly, noteFit, variants, rail, railLabel, railWidth, groups, compare, context, group, onGroupChange, deepLinkView = true, ariaLabel, focus } = props;
+  const { caseId, cases, source, controls, replayOnly, noteFit, variants, rail, railLabel, railWidth, tabDensity = 'comfortable', groups, compare, context, group, onGroupChange, deepLinkView = true, ariaLabel, focus } = props;
   const lang = useShellLang();
   const focusCfg: CaseFocusConfig | null = focus === true ? {} : focus || null;
   // Focus mode, one piece of code with the surface's (useFocusMode): held in the URL (`?focus=1`), opened by the control or by a link,
@@ -217,6 +219,7 @@ export function CaseWorkbench(props: CaseWorkbenchProps) {
               onChange={selectGroup}
               ariaLabel={pick(ariaLabel ?? { en: 'Case views', es: 'Vistas del caso' }, lang)}
               trailing={enter || undefined}
+              density={tabDensity}
             />
           </div>
         </WorkbenchLayout>

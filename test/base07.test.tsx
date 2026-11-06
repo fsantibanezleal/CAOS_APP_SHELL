@@ -63,6 +63,25 @@ test('S4: Tabs are controllable and render only the open panel; TabGroups show t
   assert.match(seen.join('\n'), /7 peer tabs/);
 });
 
+test('SHW-056: compact Tabs keep semantics and add an explicit density class', () => {
+  const compact = html(<Tabs density="compact" ariaLabel="Views" tabs={[
+    { id: 'a', label: 'A', content: 'one' },
+    { id: 'b', label: 'B', content: 'two' },
+  ]} />);
+  assert.match(compact, /class="tabs tabs-compact"/);
+  assert.match(compact, /role="tablist" aria-label="Views"/);
+  assert.match(compact, /role="tab"/);
+  assert.match(compact, /aria-selected="true"/);
+});
+
+test('SHW-056: CaseWorkbench forwards compact tab density', () => {
+  const compact = html(<CaseWorkbench caseId="c1" tabDensity="compact" groups={[
+    { id: 'model', label: { en: 'Model', es: 'Modelo' }, content: 'model' },
+  ]} context={{ content: 'context' }} />);
+  assert.match(compact, /class="tabs tabs-compact"/);
+  assert.match(compact, /role="tablist"/);
+});
+
 test('S3: a failing view is contained by its boundary and named', () => {
   function Boom(): React.ReactElement {
     throw new Error('planted');

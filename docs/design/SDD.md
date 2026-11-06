@@ -410,6 +410,10 @@ product still owns the truth and provenance of every scientific value and the su
 Version 0.21.000 adds shell-owned immersive route framing and a bounded desktop rail-width API. A filled plot with a
 stage and marked plot control now shares height through the shell's PlotCard rules; products remove local reserved-class overrides.
 
+Version 0.22.000 keeps the six-step story navigator on one reachable row at phone, tablet and desktop widths. It also
+adds explicit compact tab-row density to `Tabs` and `CaseWorkbench`; the default comfortable density
+preserves the previous spacing, labels, keyboard semantics and overflow behavior.
+
 ## Risks
 
 From the CHANGELOG's known shell defects and the docs; each has the requirement or gate that holds the mitigation.
