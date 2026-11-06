@@ -456,3 +456,5 @@ Each ADR below is read from the private management repository (`conventions/arch
 | ADR-0078 | Rules live in the base | the shell owns every pixel rule; products pin exactly and adopt per section 5; a gap is fixed here first (section 3); the reserved-class list and the gate carry the rules to products |
 
 UNVERIFIED: ADR-0065 is named in the brief's ADR list, but nothing in the shell's code or tests names it; the row above reads the ADR's title in the management repository and states the repository files it concerns, not a verified binding.
+
+Version 0.23.000 adds a bounded `StoryFrame.mobileStageMinHeight` option for mobile stories whose interactive drawing needs more room. The option accepts integer CSS-pixel values from 300 through 900, defaults to 300, and keeps the evidence panel after the stage in normal document flow.
