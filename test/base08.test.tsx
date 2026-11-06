@@ -82,6 +82,12 @@ test('BL-001: one breakpoint set; the stylesheet changes layout only at 480, 760
   assert.equal(BREAKPOINTS.large, 1280);
 });
 
+test('SHC-102: a marked PlotCard control shares its filled body with the drawing stage', () => {
+  const css = readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
+  assert.match(css, /\.caos-plot\.fill > \.caos-plot-body:has\(> \[data-caos-plot-control\]\)\s*\{\s*display:\s*flex;\s*flex-direction:\s*column;/);
+  assert.match(css, /\.caos-plot\.fill > \.caos-plot-body:has\(> \[data-caos-plot-control\]\) > \.caos-stage\s*\{[^}]*flex:\s*1 1 0;[^}]*height:\s*auto;/);
+});
+
 test('BL-001: the layout, type, space, radius, icon and z-order values are tokens the token list names', () => {
   const defined = new Set([...RAW.matchAll(/^\s*(--[a-z0-9-]+)\s*:/gim)].map((m) => m[1]));
   for (const t of ['--rail-w', '--header-h', '--measure', '--measure-text', '--icon-lg', '--space-4', '--text-sm', '--radius-md', '--z-modal', '--fade']) {
@@ -115,8 +121,9 @@ test('BL-005 (defect 24, #55): the vertical sub-tab list is sticky', () => {
 
 test('defect 26: the document clips sideways without making body a scroll container (sticky works)', () => {
   assert.match(CSS, /html, body \{ overflow-x: hidden; overflow-x: clip; \}/);
-  // the release below 900 px names both forms of the contained page rule, or the :has() form keeps .page scrolling
-  assert.match(CSS, /\.app-shell\.fixed\.contain > \.page, \.app-shell\.fixed\.contain > \.page:has\(> \.page-body:not\(\.caos-wb\):not\(\.caos-surface\)\) \{ display: block; overflow: visible; \}/);
+  // A contained document scrolls below 900 px; an immersive story keeps its own scroll mode.
+  assert.match(CSS, /\.app-shell\.fixed\.contain:not\(\.immersive\) > \.page, \.app-shell\.fixed\.contain:not\(\.immersive\) > \.page:has\(> \.page-body:not\(\.caos-wb\):not\(\.caos-surface\)\) \{ display: block; overflow: visible; \}/);
+  assert.match(CSS, /\.app-shell\.immersive > \.page \{ display: flex; flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 0; \}/);
 });
 
 test('BL-006 (defect 23, #54): a filling card in a views row takes an equal share', () => {
@@ -156,7 +163,7 @@ test('BL-010: the frame has a skip link to main#main', () => {
     </AppShell>,
   );
   assert.match(out, /^<div class="app-shell"><a class="skip-link" href="#main">Skip to the content<\/a>/);
-  assert.match(out, /<main class="page" id="main" tabindex="-1">/);
+  assert.match(out, /<main class="page" id="main" tabindex="-1" data-brand="P">/);
 });
 
 test('BL-011: the workbench holds the open group in ?view=, and ignores a view it does not have', () => {
@@ -198,7 +205,7 @@ test('BL-003: the surface route fills the viewport with a head, a tab row and a 
   assert.match(out, /class="caos-surface-body"><div class="tabs">/);
   assert.match(out, /PANEL-A/);
   assert.equal(declared('.caos-surface-body > .tabs > .tabpanel:not([hidden])', 'overflow'), 'auto');
-  assert.match(CSS, /\.app-shell\.fixed\.contain > \.page:has\(> \.page-body:not\(\.caos-wb\):not\(\.caos-surface\)\)/);
+  assert.match(CSS, /\.app-shell\.fixed\.contain:not\(\.immersive\) > \.page:has\(> \.page-body:not\(\.caos-wb\):not\(\.caos-surface\)\)/);
   const plain = html(<SurfacePage instrument>BODY</SurfacePage>);
   assert.match(plain, /<div class="caos-surface-body" data-instrument="">BODY<\/div>/);
   assert.doesNotMatch(plain, /caos-surface-head/);

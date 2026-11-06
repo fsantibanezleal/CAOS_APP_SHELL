@@ -1,14 +1,29 @@
+## [0.21.001] - Unreleased
+
+### Fixed
+
+- Keep six guided story steps on one horizontally scrollable row at phone, tablet and desktop widths (SHW-055, issue 183).
+
+## [0.21.000] - 2026-11-05
+
+### Added
+
+- Add `ShellConfig.immersiveRoutes` for route-specific full-viewport story framing. The route keeps the skip link and product identity on the main landmark while the shell omits header and footer; phone layouts return to document scrolling.
+- Add the bounded `railWidth` API to `WorkbenchLayout` and `CaseWorkbench`, with shared compact rail spacing for measured workbench layouts.
+
+### Fixed
+
+- Make a filling `PlotCard` containing a `Stage` and a direct child marked `data-caos-plot-control` allocate drawing height to the stage while keeping the control reachable, with no product CSS override.
+
+### Adoption
+
+- Products use `immersiveRoutes` and `railWidth` for guided full-screen stories and tuned desktop rails, then remove CSS overrides of shell-reserved classes.
 ## [0.20.001] - 2026-11-05
 
 ### Fixed
 
 - Publish the package from the canonical CI build and verify registry SHA-512 integrity, preventing platform line endings from changing the release tarball.
 - Normalize padded release versions when matching GitHub tags, and make retries safe for an already-published identical package.
-
-## 0.20.002 - 2026-11-05
-
-- Keep all StoryFrame tabs on one horizontally scrollable row at mobile, tablet and desktop widths (SHW-055, #183).
-- Add a real-browser regression covering all six links, keyboard Home/End and document containment at five widths.
 
 ## [0.20.000] - 2026-11-05
 
@@ -1306,3 +1321,17 @@ All notable changes to this product. Format: `X.XX.XXX` (display, see the worksp
 
 - All configured page routes remain reachable on mobile through a compact second header row. Links scroll horizontally inside the header, retain their active-page semantics and remain visible when reached by keyboard focus.
 - Real-browser navigation tests exercise all six routes by click and keyboard at 320, 390 and 1440 px, in EN/ES and both themes. They verify viewport containment and a header below 100 px so the main instrument retains most of the viewport.
+## [0.21.000] - 2026-11-05
+
+### Added
+
+- Add `ShellConfig.immersiveRoutes` for route-specific full-viewport story framing. The route keeps the skip link and product identity on the main landmark while the shell omits header and footer; phone layouts return to document scrolling.
+- Add the bounded `railWidth` API to `WorkbenchLayout` and `CaseWorkbench`, with shared compact rail spacing for measured workbench layouts.
+
+### Fixed
+
+- Make a filling `PlotCard` containing a `Stage` and a direct child marked `data-caos-plot-control` allocate drawing height to the stage while keeping the control reachable, with no product CSS override.
+
+### Adoption
+
+- Products use `immersiveRoutes` and `railWidth` for guided full-screen stories and tuned desktop rails, then remove CSS overrides of shell-reserved classes.
