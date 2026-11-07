@@ -127,6 +127,7 @@ export async function runGate(o) {
   const failures = [];
   const focusReported = new Set(); // G18: an App without a Focus control is reported once per route and mode
   const waivers = []; // ADR-0017 2.1: every waiver a documentation page declares, with its verdict
+  const docWalks = []; // the document walk's cost per state (samples and time against the budget it earned), for the report
   // The smallest measured values against each floor, so a pass shows its margin (and a CI font change that eats it
   // is visible before it fails).
   const minima = { drawnShare: null, stageFill: null };
@@ -642,7 +643,7 @@ export async function runGate(o) {
     if (s.walkState?.doc) {
       try {
         const d = await page.evaluate(() => window.__caosGate.readDocument());
-        if (d) s.walkState.doc.push(d);
+        if (d) { s.walkState.doc.push(d); if (d.walk) docWalks.push({ route: where.route, lang: s.lang, trail: where.trail, ...d.walk }); }
       } catch (e) {
         fail('ADR-0017.2', where, `document readability traversal could not complete: ${e.message.split('\n')[0]}`);
       }
@@ -1288,6 +1289,7 @@ export async function runGate(o) {
       states,
       minima,
       waivers,
+      docWalks,
       checks,
       captures: captures.length,
       failures,

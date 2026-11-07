@@ -241,7 +241,13 @@ test('document traversal reads the complete long SurfacePage once and restores i
     assert.equal(result.first.sections[0].equations,2);
     assert.equal(result.first.sections[0].glossary,10);
     assert.equal(result.first.sections[0].steps,4);
-    assert.deepEqual(result.first,result.second,'repeated traversal never duplicates evidence');
+    // issue 196: the walk reports its own cost (samples and milliseconds against the budget it earned); the time differs
+    // between two walks, the evidence must not
+    const {walk: firstWalk, ...firstEvidence} = result.first;
+    const {walk: secondWalk, ...secondEvidence} = result.second;
+    for (const walk of [firstWalk, secondWalk]) assert.ok(walk.samples > 0 && walk.samples <= walk.budgetSamples && walk.ms <= walk.budgetMs, JSON.stringify(walk));
+    assert.equal(firstWalk.samples, secondWalk.samples, 'the same document costs the same samples');
+    assert.deepEqual(firstEvidence,secondEvidence,'repeated traversal never duplicates evidence');
     assert.equal(result.after,result.before);
   } finally {await page.close();}
 });
@@ -275,9 +281,11 @@ test('document traversal combines successive long-paragraph fragments and nested
  }finally{await page.close()}
 });
 
+// issue 196: the budget scales with the document under absolute ceilings; a ceiling of zero samples exhausts it at the
+// first sample, with the same message and the scroll position restored
 test('document traversal fails explicitly on exhausted budget and restores position',async()=>{
  const page=await h.browser.newPage();try{await page.goto(`${h.address}/introduction?long=1`);await page.evaluate(installLib);
- const result=await page.evaluate(async()=>{const g=(window as any).__caosGate;const panel=document.querySelector('.tabpanel')!;panel.scrollTop=100;const before=panel.scrollTop;let error='';try{await g.readDocument({maxSamples:0})}catch(e){error=String(e)}return{before,after:panel.scrollTop,error}});
+ const result=await page.evaluate(async()=>{const g=(window as any).__caosGate;const panel=document.querySelector('.tabpanel')!;panel.scrollTop=100;const before=panel.scrollTop;let error='';try{await g.readDocument({ceilingSamples:0})}catch(e){error=String(e)}return{before,after:panel.scrollTop,error}});
  assert.match(result.error,/exceeded/);assert.equal(result.before,result.after);
  }finally{await page.close()}
 });
