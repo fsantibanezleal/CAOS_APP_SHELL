@@ -1050,8 +1050,11 @@ svg.lucide { flex: none; }
   .caos-story button { min-height: 34px; padding: .3rem .5rem; font-size: .78rem; white-space: nowrap; }
   /* every verb whole on a phone (review m4 of 0.23.2): a step is at least as wide as its number and verb, the row scrolls on x and
      StoryFrame keeps the active step inside it */
-  .caos-story-stepper { grid-auto-columns: minmax(max-content, 1fr); grid-auto-flow: column; grid-template-columns: unset; overflow-x: auto; }
-  .caos-story-step-verb { overflow: visible; text-overflow: clip; }
+  .caos-story-stepper { container-type: inline-size; grid-auto-columns: minmax(max-content, 1fr); grid-auto-flow: column; grid-template-columns: unset; overflow-x: auto; }
+  /* a step is never wider than its row (100cqi of the stepper): a verb longer than the row wraps inside it, so End always shows the
+     last step whole, whatever width the platform's font gives the verb (Linux CI's system font overflowed a 320 px row in 0.24.0's first candidate) */
+  .caos-story-step { max-width: 100cqi; }
+  .caos-story-step-verb { overflow: visible; text-overflow: clip; white-space: normal; overflow-wrap: anywhere; }
   .caos-story-step-headline { display: none; }
   .caos-story-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(max(46dvh, var(--caos-story-stage-minimum, 300px)), auto) auto; }
   .caos-story-panel { max-height: 30dvh; }

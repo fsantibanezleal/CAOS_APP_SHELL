@@ -11,6 +11,7 @@ fixed here, with a test that fails on 0.23.2 for the reason the review gave.
 | SHW-060 | known defect 60: header cards in declaration order on nominal heights (review M1, M3) | `test/showcase.test.tsx` (SHW-060) | boxes in declaration order; the grown card laid out at 68 px |
 | SHW-061 | known defect 60 in the browser: wrapped sources, anchors in reverse x | `e2e/scene-callouts.test.ts` (SHW-061) | at 390 en the nip and css cards overlapped by 79.5 x 19.3 px; no `--caos-callout-band` |
 | SHW-062 | review m4: the phone stepper cut its verbs | `e2e/story-stepper.test.ts` (SHW-062) | at 320 en the verb "Measure" was cut by 27 px |
+| SHW-062 | a step wider than its row (main CI on Linux, first 0.24.0 candidate) | `e2e/story-stepper.test.ts` (SHW-062, the long-verb case) | a verb longer than the row made a 561 px step in a 280 px row; End could not show it whole |
 
 Measured on the shell's showcase fixture callouts (`ShowcaseInstrument`) in a StoryFrame stage, eyebrow and value
 overflow (`scrollWidth - clientWidth`, px) per card, before and after:
