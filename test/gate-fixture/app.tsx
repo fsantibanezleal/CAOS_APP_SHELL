@@ -43,6 +43,8 @@ declare global {
   }
 }
 const PLANT = window.__PLANT__ ?? '';
+// shell 0.25.0 (issue 208): these plants put a chart in the middle of a long Experiments page, so the document walk scrolls it under the pointer
+const POINTER_PLANT = PLANT === 'legit-chart-pointer-redispatch' || PLANT === 'chart-readout-scroll-move' || PLANT === 'legit-chart-in-document';
 /** The surface App (shell 0.16.0): the plant `surface` is its clean run, `surface-*` its defects; `/console` is its route. */
 const SURFACE = PLANT === 'surface' || PLANT.startsWith('surface-');
 /** The first consumer's shape (CAOS_Neuraxis): a headless surface (no title, lede or actions) that holds its view in `?mode=`. */
@@ -73,6 +75,52 @@ function plantDom(mutate: () => void): () => void {
 }
 const WORDS = 'one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty';
 function flipPlant(plant: string): (() => void) | undefined {
+  // shell 0.25.0 (issue 208, known defect 62): the gate's document walk scrolls the page under a resting pointer. `legit-chart-pointer-redispatch` does what the
+  // browser does after such a scroll: it re-dispatches the pointer position (the same client coordinates) to the element now under it, as mouseover,
+  // mouseenter and mousemove; the shell's chart ignores it, so no readout changes while the walk reads (the page passes). `chart-readout-scroll-move` is a
+  // product script that moves a chart's crosshair on every scroll (to other coordinates: a real move), so the walk sees the readout change and fails.
+  if (plant === 'legit-chart-pointer-redispatch' || plant === 'chart-readout-scroll-move') {
+    const init = (x: number, y: number) => ({ clientX: x, clientY: y, screenX: x, screenY: y, view: window });
+    // where the pointer rests: the position of the last move the page was sent, by the gate's browser (the plant's own events are not counted); before
+    // any, the pointer comes to rest at 62% of the width and 45% of the height with one move on the body
+    let own = false;
+    let rest = { x: Math.round(window.innerWidth * 0.62), y: Math.round(window.innerHeight * 0.45) };
+    const follow = (e: Event) => {
+      if (own) return;
+      rest = { x: (e as MouseEvent).clientX, y: (e as MouseEvent).clientY };
+    };
+    window.addEventListener('mousemove', follow, { capture: true, passive: true });
+    own = true;
+    document.body.dispatchEvent(new MouseEvent('mousemove', { ...init(rest.x, rest.y), bubbles: true }));
+    own = false;
+    let n = 0;
+    let timer = 0;
+    const onScroll = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        if (plant === 'chart-readout-scroll-move') {
+          const over = [...document.querySelectorAll<HTMLElement>('.u-over')].find((o) => o.getBoundingClientRect().width > 0);
+          if (!over) return;
+          const r = over.getBoundingClientRect();
+          over.dispatchEvent(new MouseEvent('mousemove', { ...init(r.left + r.width * (++n % 2 ? 0.2 : 0.8), r.top + r.height / 2), bubbles: true }));
+          return;
+        }
+        const el = document.elementFromPoint(rest.x, rest.y);
+        if (!el) return;
+        own = true;
+        el.dispatchEvent(new MouseEvent('mouseover', { ...init(rest.x, rest.y), bubbles: true }));
+        el.dispatchEvent(new MouseEvent('mouseenter', init(rest.x, rest.y)));
+        el.dispatchEvent(new MouseEvent('mousemove', { ...init(rest.x, rest.y), bubbles: true }));
+        own = false;
+      }, 30);
+    };
+    window.addEventListener('scroll', onScroll, { capture: true, passive: true });
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('scroll', onScroll, { capture: true });
+      window.removeEventListener('mousemove', follow, { capture: true });
+    };
+  }
   // shell 0.19.0 (G20): a chart that loses a part of Tier A after the shell drew it (a product script, a stylesheet): its tab stop, its name, its data
   // table, or a keyboard handler of the product that takes the zoom key
   if (plant === 'chart-not-focusable' || plant === 'chart-no-name' || plant === 'chart-no-table' || plant === 'chart-no-reset' || plant === 'chart-no-zero' || plant === 'chart-no-arrows' || plant === 'chart-dead-brush') {
@@ -384,6 +432,25 @@ const CASES = [
 const VARIANTS = [
   { id: 'base', label: { en: 'Baseline', es: 'Base' }, note: { en: 'Contact rate as published.', es: 'Tasa de contacto publicada.' } },
   { id: 'stress', label: { en: 'Stress', es: 'Estrés' }, note: { en: 'Contact rate 30% higher.', es: 'Tasa de contacto 30% mayor.' } },
+];
+// shell 0.25.0 (issue 207, known defect 61): a one-of-N choice of 14 methods named by their names. `variants-long-chips` draws it as chips (the rail
+// scrolls: ADR-0071.6); `legit-variants-select` draws the same list with `layout: 'select'` and passes every check in both languages.
+const LONG_VARIANTS = [
+  ...VARIANTS,
+  ...[
+    ['Ordinary least squares regression with a ridge penalty', 'Regresion de minimos cuadrados con penalizacion de cresta'],
+    ['Lasso regression with a cross-validated penalty', 'Regresion lasso con penalizacion validada por cruce'],
+    ['Elastic net regression over a grid of mixing weights', 'Regresion de red elastica sobre una malla de pesos'],
+    ['Principal component regression on the leading modes', 'Regresion sobre componentes principales de los modos'],
+    ['Partial least squares with the number of components chosen', 'Minimos cuadrados parciales con numero de componentes'],
+    ['Gradient boosted trees with monotone constraints', 'Arboles con refuerzo de gradiente y restricciones'],
+    ['Random forest with out-of-bag error estimates', 'Bosque aleatorio con error fuera de bolsa'],
+    ['Gaussian process regression with an anisotropic kernel', 'Regresion de proceso gaussiano con nucleo anisotropico'],
+    ['Support vector regression with a radial kernel', 'Regresion de vectores de soporte con nucleo radial'],
+    ['Neural network with two hidden layers and early stopping', 'Red neuronal con dos capas ocultas y parada temprana'],
+    ['Physics-informed model with the heat equation as constraint', 'Modelo informado por fisica con la ecuacion de calor'],
+    ['Kalman smoother on the state-space form of the process', 'Suavizador de Kalman en la forma de espacio de estados'],
+  ].map(([en, es], i) => ({ id: `long${i}`, label: { en, es }, note: { en: `Method ${i + 3} of 14.`, es: `Metodo ${i + 3} de 14.` } })),
 ];
 
 // -------------------------------------------------------------------------------------------------- the views
@@ -1154,7 +1221,13 @@ function Workbench() {
         caseId={shownCase}
         cases={{ cases: shownCases, selectedId: caseId, onSelect: setCaseId, layout: 'select', deepLink: true }}
         controls={controls}
-        variants={PLANT === 'no-controls' ? undefined : { variants: VARIANTS, activeId: variant, onSelect: setVariant, lane: 'live' }}
+        variants={
+          PLANT === 'no-controls'
+            ? undefined
+            : PLANT === 'variants-long-chips' || PLANT === 'legit-variants-select'
+              ? { variants: LONG_VARIANTS, activeId: variant, onSelect: setVariant, lane: 'live', layout: PLANT === 'legit-variants-select' ? 'select' : 'chips' }
+              : { variants: VARIANTS, activeId: variant, onSelect: setVariant, lane: 'live' }
+        }
         rail={rail}
         groups={[
           { id: 'model', label: { en: 'Model', es: 'Modelo' }, content: <ModelView sim={sim} /> },
@@ -1473,7 +1546,7 @@ function Doc({ id }: { id: string }) {
     }
     return undefined;
   }, [id, lang]);
-  useEffect(() => (id === 'introduction' ? flipPlant(PLANT) : undefined), [id]);
+  useEffect(() => (id === 'introduction' || (id === 'experiments' && POINTER_PLANT) ? flipPlant(PLANT) : undefined), [id]);
   useEffect(() => {
     if (PLANT === 'console' && id === 'methodology') console.error('planted: the methodology page fails');
     if (id !== 'benchmark') return;
@@ -1515,6 +1588,18 @@ function Doc({ id }: { id: string }) {
       {PLANT === 'value-broken-range' && id === 'introduction' && <NarrowRange />}
       {PLANT === 'mobile-only' && id === 'introduction' && <div className="fixture-mobile-only">planted narrow-screen block</div>}
       {doc.body}
+      {POINTER_PLANT && id === 'experiments' && (
+        <>
+          <div style={{ height: 900 }} aria-hidden="true" />
+          <UPlotChart
+            height={260}
+            x={{ values: [1, 2, 3, 4, 5, 6, 7, 8], label: pick({ en: 'Step', es: 'Paso' }, lang) }}
+            y={{ label: pick({ en: 'Level', es: 'Nivel' }, lang) }}
+            series={[{ label: pick({ en: 'Alpha', es: 'Alfa' }, lang), values: [3, 5, 4, 8, 6, 9, 7, 12] }]}
+          />
+          <div style={{ height: 900 }} aria-hidden="true" />
+        </>
+      )}
     </DocPage>
   );
 }
