@@ -57,10 +57,11 @@ it is re-exported.
 | Path | Exports | Lines | Area |
 |---|---|---|---|
 | `src/case/caseModel.ts` | `CaseKind`, `CaseDef`, `caseKind`, `sourcesPresent`, `CaseGroup`, `groupByCategory`, `casesInSource`, `caseTooltip`, `readCaseParam`, `withCaseParam` | 78 | workbench |
-| `src/case/CaseSelector.tsx` | `CaseSelectorText`, `CaseSelectorProps`, `CaseSelector`, `CaseDef`, `CaseKind` | 245 | workbench |
+| `src/case/CaseSelector.tsx` | `CaseSelectorText`, `CaseSelectorProps`, `CaseSelector`, `CaseDef`, `CaseKind` | 263 | workbench |
 | `src/chart/BarChart.tsx` | `BarDatum`, `BarChartProps`, `BarChart` | 238 | charts |
 | `src/chart/text.ts` | `fontFamily`, `textWidth`, `widestLabel`, `FittedLabel`, `fitLabel`, `niceStep`, `niceTicks` | 102 | charts |
 | `src/chart/UPlotChart.tsx` | `ChartSeries`, `ChartAxis`, `YMarkTone`, `YMARK_TONE_TOKENS`, `UPlotChartProps`, `seriesStyle`, `sortOrder`, `parityRange`, `rangeWithLevels`, `tickSteps`, `LOG_TABLE_FLOOR`, `logDecades`, `smallestPositive`, `repeatedLabels`, `drawMarks`, `drawYMarks`, `nearestPoint`, `decadeOnly`, `parityBox`, `clampMark`, `nudgeMark`, `overlayExtent`, `YMarkDrag`, `UPlotChart` | 856 | charts |
+| `src/chart/pointer.ts` | `PointerTrack`, `PointerSample`, `SCROLL_WINDOW_MS`, `newTrack`, `scrollSynthesised`, `onRealMove`, `pointerTrack` | 75 | charts |
 | `src/chart.ts` | re-exports the chart entry | 4 | charts |
 | `src/content/Callout.tsx` | `Callout` | 25 | documents |
 | `src/content/CardDeck.tsx` | `DECK_TEXT`, `perPageFor`, `deckWindow`, `deckPosition`, `DeckCard`, `CardDeckProps`, `CardDeck` | 204 | documents |
@@ -79,6 +80,7 @@ it is re-exported.
 | `src/lib/format.ts` | `FormatOptions`, `NBSP`, `SCIENTIFIC_BELOW`, `NOT_AVAILABLE`, `formatNumber`, `formatTicks`, `useFormat` | 83 | numbers-and-units |
 | `src/lib/keys.ts` | `THEME_STORAGE_KEY`, `LANG_STORAGE_KEY`, `THEME_BOOT_SCRIPT`, `STANDARD_ROUTES` | 21 | theme-and-language |
 | `src/lib/lang.ts` | `Lang`, `useLangStore`, `useShellLang` | 47 | theme-and-language |
+| `src/lib/SelectDisplay.tsx` | `SelectDisplay` | 68 | workbench |
 | `src/lib/overflow.ts` | `useOverflowFade` | 58 | frame-and-navigation |
 | `src/lib/PanelBoundary.tsx` | `PanelBoundary` | 45 | workbench |
 | `src/lib/text.ts` | `BiText`, `pick` | 11 | theme-and-language |
@@ -103,7 +105,7 @@ it is re-exported.
 | `src/workbench/Readouts.tsx` | `Tone`, `ReadoutItem`, `ReadoutProps`, `Readout`, `GaugeZone`, `GaugeProps`, `Gauge`, `VerdictProps`, `Verdict`, `PlotCardProps`, `PlotCard` | 249 | controls-and-readouts |
 | `src/workbench/Stage.tsx` | `StageSize`, `useStageSize`, `Stage` | 65 | workbench |
 | `src/workbench/state.ts` | `Provenance`, `WorkbenchState`, `WorkbenchStateContext`, `useWorkbenchState`, `makeStateKey`, `isStale` | 49 | workbench |
-| `src/workbench/VariantBar.tsx` | `VariantDef`, `VariantBarProps`, `VariantBar` | 60 | workbench |
+| `src/workbench/VariantBar.tsx` | `VariantDef`, `VariantBarProps`, `VariantBar` | 79 | workbench |
 | `src/workbench/ViewsRow.tsx` | `ViewsRowProps`, `ViewsRow` | 29 | workbench |
 | `src/workbench/WorkbenchLayout.tsx` | `RailSection`, `WorkbenchLayoutProps`, `WorkbenchLayout` | 120 | workbench |
 
@@ -464,3 +466,7 @@ Version 0.23.001 fixes the gate's document walk (`G.readDocument`, known defect 
 Version 0.23.002 keeps the StoryFrame step row at its natural height under a panel taller than the layout (`.caos-story-stepper` is `flex: none`; known defect 57, SHW-058). No product change.
 
 Version 0.24.000 fixes four defects that an ADR-0082 review of CAOS_ChancaDEM found. A `SceneCallouts` card shows its state as a word in the page language with a glyph of its own shape (`data-callout-state-label`; en normal, warning, alarm, selected, inactive; es normal, aviso, alarma, seleccionado, inactivo), the border colour kept (known defect 58, SHW-059); its eyebrow wraps instead of ending in an ellipsis. G21 runs its callout checks (value, unit, provenance, the state label, the own anchor clear, no overlap, inside the stage, one leader each, no horizontal overflow) at every size, theme and language of the gate matrix, the interaction and performance checks staying at the primary size; the report lists the measured contexts (`storyContexts`) (known defect 59, SHG-090, SHG-091). The layer measures its cards and lays them out on their real heights; `layoutCalloutHeader` takes the measured heights, reads the cards in anchor x order, takes the slot order with the fewest crossing leaders (the anchor order winning every tie), and the header placement sets `--caos-callout-band` and calls `onLayout({ bandHeight })` (known defect 60, SHW-060, SHW-061). The phone story stepper shows every verb whole and keeps the active step inside its row (SHW-062). A product reads `--caos-callout-band` or `onLayout` instead of a nominal band.
+
+Version 0.25.000 adds `VariantBar` `layout: 'select'`, one select with the shell's display (`SelectDisplay`, shared with `CaseSelector`) for a long or long-named variant choice, so the rail keeps its height (ADR-0071 rule 7, #207, known defect 61), and makes a chart's readout and cursor ignore the pointer events the browser re-dispatches when the page scrolls under a resting pointer, so the document walk sees a settled document (#208, known defect 62). Found by CEFOP_DinHot's full gate. Chips mode and every other output are unchanged.
+
+Version 0.25.000 closes two gaps that CEFOP_DinHot's full gate found on 0.23.2. `VariantBar` takes `layout?: 'chips' | 'select'` (default `'chips'`, unchanged): `'select'` draws the variants as one native select with the shell's display, now the shared `SelectDisplay` that the case select uses too, with the active label whole, the count, the lane badge, the note and `data-control="variant"` kept, for a long or long-named list (known defect 61, SHW-063, ADR-0071 rule 7). A `UPlotChart` changes its cursor and readout only on a real pointer move, an enter or a leave by moving, or the keyboard: the browser's re-dispatch of the pointer position after a scroll under a resting pointer, and the leave it sends when the scroll takes the plot away, are stopped before uPlot reads them (a held leave is applied at the next real move), so the gate's document walk reads a settled page (known defect 62, SHC-103, ADR-0017.2). A product with a long variant list sets `layout: 'select'`; nothing else changes.

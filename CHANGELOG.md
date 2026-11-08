@@ -1,3 +1,22 @@
+## [0.25.000] - 2026-11-08
+
+Two gaps that CEFOP_DinHot's full gate found on its release build (shell 0.23.2; CAOS_APP_SHELL#207, #208; known defects 61 and 62).
+
+### Added
+
+- `VariantBar` `layout?: 'chips' | 'select'` (default `'chips'`, markup unchanged; known defect 61, SHW-063, issue 207). `'select'` draws the variants as one native select with the shell's display, the active variant's full label shown whole and wrapping inside the rail, and keeps the title with its count, the lane badge, the active variant's note, `data-variant-bar`, `data-variant-count`, `data-control="variant"`, the keyboard of a native select and the disabled options. A list of 14 long-named variants fits a 232 px rail at 1280 x 800 in en and es and in the wide-font pass (as chips it scrolled the rail: G5 441, ADR-0071.6 266 and G18 14 findings on DinHot).
+- `SelectDisplay` (`src/lib/SelectDisplay.tsx`, internal): the display of the case select, extracted so `CaseSelector` and `VariantBar` share one component; the case select's markup and behaviour are unchanged.
+- Gate plants: `variants-long-chips` (the long list as chips fails ADR-0071.6), `legit-variants-select` (the same list in `layout: 'select'` passes), `legit-chart-in-document`, `legit-chart-pointer-redispatch` and `chart-readout-scroll-move` (the document walk on a long page with a chart).
+
+### Fixed
+
+- A chart's readout no longer changes when the page scrolls under a resting pointer (known defect 62, SHC-103, issue 208, ADR-0017.2). The browser re-dispatches the pointer position (a mouseover, mouseenter and mousemove at the same client coordinates) to the chart that came under it, and sends a mouseleave at the same coordinates when the scroll takes the plot away; `UPlotChart` moved its cursor and readout on both, so the gate's document walk reported "document text changed during traversal" (reproduced on the shell's own fixture, three tabs of /experiments). `UPlotChart` now changes its cursor and readout only on a real pointer move, an enter or a leave by moving, or the keyboard; the held leave is applied at the next real move of the pointer, and a touch or a pen is never judged.
+
+### Adoption
+
+- A product with a long or long-named variant list sets `layout: 'select'` on its `variants` prop (`CaseWorkbench` forwards it to `VariantBar`); nothing else changes. A product with a short list keeps the chips.
+- Known defect 62: no product change. A product that worked around it (a pointer moved off the document before the walk, a readout excluded from the walk) removes the workaround. A chart scrolled away from a resting pointer keeps its last reading until the pointer next moves, leaves by moving, or the keyboard acts.
+
 ## [0.24.000] - 2026-11-08
 
 Four defects that an ADR-0082 review of CAOS_ChancaDEM on 0.23.2 found (CAOS_MANAGE `wip/chancadem/viz-review-2026-11-07.md`, findings M11, M1, M3, m4).
