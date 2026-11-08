@@ -139,3 +139,26 @@ The canceled-response regression additionally uses an actual browser session coo
 on-wire headers are captured through Request.allHeaders before context teardown; the partial
 header map is insufficient. Cookie- and bearer-protected controls must both pass without
 recording credential values. Unavailable authorization metadata fails explicitly.
+
+## SHG-090 and SHG-091: G21 callouts across the gate matrix (0.24.0)
+
+CAOS_ChancaDEM on shell 0.23.2 passed its gate (0 failures, 2626 states) while its header cards overlapped by 2 to 6 px at
+390x844 on four story steps and in Spanish: G21 measured the callouts in one context only (the primary size, the first
+theme, the first language). The callout checks now run on every story route in every context of the gate matrix; the
+interaction, motion and performance checks stay at the primary size, so the run grows only by the story routes times
+the extra contexts. Console errors of the extra loads are not reported again (the main walk loads the same routes in
+the same contexts). The report lists every measured context in `storyContexts`.
+
+Validation, red on 0.23.2 and green on 0.24.0:
+
+| Case | Plant or fixture | Expected |
+|---|---|---|
+| a card that covers another only on a phone | `showcase-overlap-mobile` (a media query moves the recovery card over the top row below 500 px) | G21 `callouts <a> and <b> overlap` at `390x844 light en story` |
+| a card widened for longer Spanish text only in Spanish | `showcase-overlap-es` (`html[lang="es"]` widens the power card to 320 px) | G21 `callouts power and recovery overlap` at `1280x800 light es story` |
+| a state shown by colour alone | `showcase-state-colour-only` (the state label hidden) | G21 `callout feed shows its state by colour alone` |
+| the clean showcase | `showcase` at 390x844 and 1280x800, light and dark, en and es | 0 failures; `storyContexts` lists the four 390 and the four 1280 contexts |
+
+The clean showcase in the wider matrix exposed two fixture defects that the main walk had never met, because the story
+was measured in English at 1280 only: the Spanish values were written with a decimal point (G11) and the story held 374
+characters at 390, under the 400-character floor, with the step headlines hidden (G4). The fixture now formats its
+values in the reader's language and its panel carries one sentence of evidence.

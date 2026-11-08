@@ -1,3 +1,24 @@
+## [0.24.000] - 2026-11-08
+
+Four defects that an ADR-0082 review of CAOS_ChancaDEM on 0.23.2 found (CAOS_MANAGE `wip/chancadem/viz-review-2026-11-07.md`, findings M11, M1, M3, m4).
+
+### Fixed
+
+- A scene callout no longer shows its state by colour alone (known defect 58, SHW-059, ADR-0082 rule 8). Every `SceneCallouts` card carries a state label, a word in the page language with a glyph of its own shape (en normal, warning, alarm, selected, inactive; es normal, aviso, alarma, seleccionado, inactivo), marked `data-callout-state-label`, on a row of its own; the border colour stays. A callout without a recognised state gets no label (G21 already fails it). The eyebrow wraps instead of ending in an ellipsis: on the shell's own fixture the Spanish eyebrows were cut by 19 to 58 px at 390 and 1280 px.
+- G21 measures the callouts at every size, theme and language of the gate matrix (known defect 59, SHG-090). Its callout checks (value and unit, state and state label, provenance, the 8 px clearance of the own anchor, no overlap, inside the stage, one leader per callout, no horizontal overflow) ran at the primary size, first theme and first language only, so ChancaDEM's cards overlapped by 2 to 6 px at 390x844 and in Spanish while the gate passed. The interaction, motion and performance checks stay at the primary size. The report lists the measured contexts (`storyContexts`). A new G21 check fails a callout whose state label is not visible (SHG-091).
+- Header callouts are laid out on their measured heights, in the order of their anchors (known defect 60, SHW-060, SHW-061). `layoutCalloutHeader` placed the cards in declaration order on nominal heights (68 px, 54 px compact), so a card that grew when its source wrapped covered the next row and a card anchored at the right could sit at the left with its leader across the subject. The layer now measures its cards (ResizeObserver) and lays them out again when a height changes; `layoutCalloutHeader(items, width, height, compact, heights?)` reads the cards in anchor x order (stable for equal x), sizes each row by its tallest card, takes the slot order with the fewest crossing leaders (the anchor order winning every tie) and narrows a compact card to the cell, never over its neighbour. `layoutSceneCallouts` takes the same optional `heights`.
+- At a phone width every verb of the story stepper is whole (SHW-062, review m4). A step is at least as wide as its number and verb, the row scrolls on x, and `StoryFrame` brings the active step inside the row whenever it changes (keyboard, autoplay, deep link).
+
+### Added
+
+- `SceneCallouts` `onLayout?: (info: { bandHeight: number }) => void` and the CSS custom property `--caos-callout-band` (px) on the header layer: the distance from the top of the layer to the bottom of the lowest card after layout.
+
+### Adoption
+
+- Known defects 58 and 59: no product change beyond the product's own gate run on this release; a product that drew its own state word or glyph in the eyebrow to work around defect 58 removes it. A product whose cards overlapped only on a phone or in Spanish now fails G21 there and fixes its layout.
+- Known defect 60: a product that reserves a header band reads `--caos-callout-band` (CSS) or `onLayout` (JavaScript) instead of a band computed from the nominal 184x68 or 164x54 cards, and drops any local reordering of its callouts by anchor x.
+- The phone stepper: no product change; a product that shortened its step verbs to fit the 90 px columns may restore them.
+
 ## [0.23.002] - 2026-11-07
 
 ### Fixed

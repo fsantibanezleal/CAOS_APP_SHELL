@@ -22,6 +22,9 @@ const QUICK = { sizes: '1280x800', themes: 'light', langs: 'en', idleMs: 600, wi
 /** The options of a product whose App is a surface (shell 0.16.0): the route `/console` of the fixture, walked as the App route. */
 const SURF = { routes: '/console', workbench: '', appRoute: '/console' };
 
+/** The options of a product that must carry a guided story (ADR-0082, G21): the fixture's three story routes. */
+const SHOWCASE = { routes: '/story/measure,/story/phase,/story/decision', requireShowcase: true };
+
 /** One plant per check (and per distinct trap inside a check); `expect` must appear among the failures. */
 const PLANTS = [
   { id: 'landing-app', check: 'G4', re: /the root opened \/, not the Introduction/, opts: { routes: '/introduction' } },
@@ -297,6 +300,12 @@ const PLANTS = [
   { id: 'surface-focus-url-stays', check: 'G18', re: /Focus mode of view \w+: the URL still holds \?focus after the return/, opts: SURF },
   { id: 'exec-deck-hidden-cards', check: 'ADR-0017.2', re: /executive view \(EN\): the proposal holds 1 row\(s\) of the 4 C's, exactly 4 are required/, opts: { routes: '/introduction' } },
   { id: 'exec-flip-content-hidden', check: 'ADR-0017.2', re: /executive view \(EN\): \d+ field\(s\) are in the page and a reader cannot read them/, opts: { routes: '/introduction' } },
+  // shell 0.24.0 (CAOS_ChancaDEM's ADR-0082 review): G21 measures the callouts at every size, theme and language of the gate matrix
+  // (known defect 59): cards that overlap only on a phone, or only with the longer Spanish text, fail there; and a callout shows its
+  // state as a word, not by its colour alone (known defect 58)
+  { id: 'showcase-overlap-mobile', check: 'G21', re: /callouts \w+ and \w+ overlap/, mode: /^390x844 light en story$/, opts: { ...SHOWCASE, sizes: '390x844,1280x800' } },
+  { id: 'showcase-overlap-es', check: 'G21', re: /callouts power and recovery overlap/, mode: /^1280x800 light es story$/, opts: { ...SHOWCASE, langs: 'en,es' } },
+  { id: 'showcase-state-colour-only', check: 'G21', re: /callout feed shows its state by colour alone/, opts: SHOWCASE },
 ];
 
 /** Legitimate pages that the gate once failed (ADR-0017 2.1 allows them): each must pass every check, in both languages. */
@@ -418,11 +427,14 @@ test('G21 rejects a product with no directly addressable guided story when showc
   assert.ok(r.failures.some((f) => f.check === 'G21' && /no \/story\/<step> route is declared/.test(f.message)), `the required showcase story was admitted:\n${show(r)}`);
 });
 
-test('G21 admits only a directly linked story with evidence callouts, reciprocal selection, reduced motion and responsive performance', { timeout: 300_000 }, async () => {
+test('G21 admits only a directly linked story with evidence callouts, reciprocal selection, reduced motion and responsive performance', { timeout: 900_000 }, async () => {
+  // shell 0.24.0: the callouts are measured at a phone and a desktop size, in both themes and both languages (known defect 59)
   const dir = makePlant(clean, join(work, 'plant-showcase'), 'showcase');
-  const r = await runGate({ ...QUICK, routes: '/story/measure,/story/phase,/story/decision', serve: dir, expectBrand: BRAND, requireShowcase: true, out: join(work, 'out-showcase') });
+  const r = await runGate({ ...QUICK, ...SHOWCASE, sizes: '390x844,1280x800', themes: 'light,dark', langs: 'en,es', serve: dir, expectBrand: BRAND, out: join(work, 'out-showcase') });
   assert.equal(r.failures.length, 0, `the complete showcase fixture failed:
 ${show(r)}`);
+  const modes = new Set((r.storyContexts ?? []).map((c) => c.mode));
+  for (const mode of ['390x844 light en story', '390x844 dark es story', '1280x800 dark es story', '1280x800 light en story']) assert.ok(modes.has(mode), `G21 measured the callouts at ${mode}: ${[...modes].join(', ')}`);
 });
 
 test('G21 rejects a callout that occludes its own plotted subject anchor', { timeout: 300_000 }, async () => {
