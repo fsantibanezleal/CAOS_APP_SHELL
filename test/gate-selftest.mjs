@@ -306,8 +306,10 @@ const PLANTS = [
   { id: 'showcase-overlap-mobile', check: 'G21', re: /callouts \w+ and \w+ overlap/, mode: /^390x844 light en story$/, opts: { ...SHOWCASE, sizes: '390x844,1280x800' } },
   { id: 'showcase-overlap-es', check: 'G21', re: /callouts power and recovery overlap/, mode: /^1280x800 light es story$/, opts: { ...SHOWCASE, langs: 'en,es' } },
   { id: 'showcase-state-colour-only', check: 'G21', re: /callout feed shows its state by colour alone/, opts: SHOWCASE },
-  // shell 0.25.0 (issue 207): 14 long-named variants as chips scroll the rail (the same list in `layout: 'select'` is the legit page below)
+  // shell 0.25.0 (issues 207 and 208): 14 long-named variants as chips scroll the rail (the same list in `layout: 'select'` is the legit page below);
+  // a product script that moves a chart's crosshair on every scroll makes the document walk see the readout change
   { id: 'variants-long-chips', check: 'ADR-0071.6', re: /the rail scrolls: \d+px of content in \d+px/, opts: { routes: '/app' } },
+  { id: 'chart-readout-scroll-move', check: 'ADR-0017.2', re: /document readability traversal could not complete: .*document text changed during traversal/, opts: { routes: '/experiments' } },
 ];
 
 /** Legitimate pages that the gate once failed (ADR-0017 2.1 allows them): each must pass every check, in both languages. */
@@ -333,6 +335,11 @@ const LEGIT = [
   { id: 'legit-math-comma', opts: { routes: '/methodology' } },
   // shell 0.25.0 (issue 207, known defect 61): 14 long-named variants in `layout: 'select'` keep the rail whole in both languages (G5, ADR-0071.6)
   { id: 'legit-variants-select', opts: { routes: '/app' } },
+  // shell 0.25.0 (issue 208, known defect 62): the browser's re-dispatch of the pointer position after a scroll does not move a chart's readout, so the
+  // document walk reads a settled page
+  // the baseline of the one above: the same long page with its chart and no pointer script
+  { id: 'legit-chart-in-document', opts: { routes: '/experiments' } },
+  { id: 'legit-chart-pointer-redispatch', opts: { routes: '/experiments' } },
 ];
 
 /** A static server with an SPA fallback: every unknown path answers index.html with 200 (the G4 plant). */

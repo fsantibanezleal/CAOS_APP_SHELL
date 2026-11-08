@@ -25,6 +25,7 @@ import {
   stepIndex,
   thinRows,
 } from './interaction';
+import { onRealMove, pointerTrack, scrollSynthesised } from './pointer';
 import { referenceLineName, repeatedLabels } from './text';
 export { repeatedLabels };
 import { createZoom, type ZoomControls } from './uplotZoom';
@@ -596,6 +597,7 @@ export function nearestPoint(xs: readonly number[], ys: readonly (readonly (numb
  */
 export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height = 280, onCursor, onPick, parity, readout, hint, solo, title, zoomY, zoomOff }: UPlotChartProps) {
   const lang = useShellLang();
+  pointerTrack(); // follows the pointer from the first chart's first render, so a re-dispatch after a scroll is known by its position
   const theme = useThemeStore((s) => s.theme);
   const fill = height === 'fill';
   // The plot box is measured: its width always, its height too when the chart fills its container.
@@ -903,6 +905,31 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
         ],
         ready: [
           (u: uPlot) => {
+            // the readout and the cursor change only on a real pointer move, an enter or a leave by moving, or the keyboard: the browser's
+            // re-dispatch of the pointer position after a scroll under a resting pointer (a mouseover, mouseenter and mousemove at the same
+            // coordinates) and the leave it sends when the scroll takes the plot away are stopped before uPlot reads them. A held leave is applied
+            // at the next real move, unless the pointer reaches this plot first (issue 208, known defect 62)
+            const track = pointerTrack();
+            let heldLeave = false;
+            let replay = false;
+            const real = (e: Event) => {
+              if (replay) return;
+              if (scrollSynthesised(track, e as MouseEvent, performance.now())) {
+                if (e.type === 'mouseleave') heldLeave = true;
+                e.stopImmediatePropagation();
+              } else if (e.type !== 'mouseleave') heldLeave = false;
+            };
+            u.root.addEventListener('mousemove', real, true);
+            u.root.addEventListener('mouseenter', real, true);
+            u.root.addEventListener('mouseleave', real, true);
+            const stopHeld = onRealMove(() => {
+              if (!heldLeave) return;
+              heldLeave = false;
+              replay = true;
+              u.over.dispatchEvent(new MouseEvent('mouseleave', { clientX: track.x, clientY: track.y }));
+              replay = false;
+            });
+            u.hooks.destroy = [...(u.hooks.destroy ?? []), stopHeld];
             u.over.addEventListener('click', () => {
               const idx = pickedRef.current;
               if (idx === null || idx === undefined || !onPickRef.current) return;
