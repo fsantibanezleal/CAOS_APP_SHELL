@@ -1,4 +1,4 @@
-## Unreleased (0.25.0)
+## [0.25.000] - 2026-11-08
 
 Two gaps that CEFOP_DinHot's full gate found on its release build (shell 0.23.2; CAOS_APP_SHELL#207, #208; known defects 61 and 62).
 
