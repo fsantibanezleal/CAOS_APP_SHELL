@@ -136,3 +136,47 @@ test('SHW-062 at a phone width every step verb of the story stepper is whole and
     await page.close();
   } finally { await h.close(); }
 });
+
+test('SHW-062 a step whose verb is wider than the phone row wraps inside the row, and End shows it whole (fonts of any width)', async () => {
+  // 0.24.0's first candidate sized each phone step to its whole verb; Linux CI's wider system font made the last Spanish step
+  // wider than a 320 px row, so no scroll could show it whole. A verb longer than any row must wrap inside a step capped at
+  // the row's width, on every platform.
+  const h = await startHarness(`
+    import React, { useState } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { MemoryRouter } from 'react-router';
+    import { StoryFrame } from './src/workbench/StoryFrame';
+    const verbs = ['Measure', 'Look inside', 'Solve', 'Inspect the evidence of the ten surveys of the campaign one by one'];
+    function App() {
+      const [activeId, setActive] = useState('step-1');
+      const steps = verbs.map((verb, i) => ({ id: 'step-' + (i + 1), number: i + 1, verb,
+        headline: 'Four steps share one observed history', summary: 'Recorded case',
+        href: '/story/' + (i + 1), accent: 1, stage: <p>Actual stage</p>, panel: <p>Evidence panel</p> }));
+      return <MemoryRouter><StoryFrame steps={steps} activeId={activeId} onStepChange={setActive} /></MemoryRouter>;
+    }
+    createRoot(document.getElementById('root')!).render(<App />);
+  `);
+  try {
+    const page = await h.browser.newPage();
+    for (const width of [320, 390]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto(h.address);
+      const tabs = page.locator('[data-story-link]');
+      await tabs.last().waitFor();
+      await page.locator('[data-story]').focus();
+      await page.keyboard.press('End');
+      await page.waitForTimeout(400);
+      const m = await page.evaluate(`(() => {
+        const row = document.querySelector('.caos-story-stepper').getBoundingClientRect();
+        const last = [...document.querySelectorAll('[data-story-link]')].pop();
+        const box = last.getBoundingClientRect(), verb = last.querySelector('.caos-story-step-verb');
+        return { rowLeft: row.left, rowRight: row.right, left: box.left, right: box.right, width: box.width, rowWidth: row.width,
+                 cut: verb.scrollWidth - verb.clientWidth };
+      })()`) as { rowLeft: number; rowRight: number; left: number; right: number; width: number; rowWidth: number; cut: number };
+      assert.ok(m.width <= m.rowWidth + 1, `${width}: the long step is no wider than its row (${m.width} > ${m.rowWidth})`);
+      assert.ok(m.left >= m.rowLeft - 1 && m.right <= m.rowRight + 1, `${width}: End shows the long step whole inside the row`);
+      assert.ok(m.cut <= 0, `${width}: the long verb wraps, never cut (${m.cut} px)`);
+    }
+    await page.close();
+  } finally { await h.close(); }
+});
