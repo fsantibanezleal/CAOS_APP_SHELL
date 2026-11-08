@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { useShellLang } from '../lib/lang';
 import { type BiText, pick } from '../lib/text';
@@ -50,6 +50,18 @@ export function StoryFrame({ steps, activeId, onStepChange, onExit, labels = {},
   const activeIndex = Math.max(0, steps.findIndex((step) => step.id === activeId));
   const active = steps[activeIndex];
   const copy = useMemo(() => ({ ...DEFAULT_LABELS, ...labels }), [labels]);
+  const stepper = useRef<HTMLElement | null>(null);
+
+  // The step row scrolls on x when its steps do not fit (a phone shows each verb whole, review m4 of 0.23.2): the active
+  // step is brought inside the row whenever it changes, by keyboard, autoplay or a deep link. Only the row scrolls.
+  useEffect(() => {
+    const row = stepper.current;
+    const link = row?.querySelector<HTMLElement>('[aria-current="step"]');
+    if (!row || !link) return;
+    const r = row.getBoundingClientRect(), l = link.getBoundingClientRect();
+    if (l.left < r.left) row.scrollLeft -= r.left - l.left;
+    else if (l.right > r.right) row.scrollLeft += Math.min(l.right - r.right, l.left - r.left);
+  }, [activeId]);
 
   useEffect(() => {
     if (steps.length < 3 || steps.length > 6) console.error('[caos-app-shell] A showcase story has 3 to 6 steps (ADR-0082 rule 3)');
@@ -97,7 +109,7 @@ export function StoryFrame({ steps, activeId, onStepChange, onExit, labels = {},
           {onExit && <button type="button" className="caos-story-exit" onClick={() => { setPlaying(false); onExit(); }}>{pick(copy.exit, lang)}</button>}
         </div>
       </header>
-      <nav className="caos-story-stepper" role="tablist" aria-label={pick(copy.steps, lang)}>
+      <nav ref={stepper} className="caos-story-stepper" role="tablist" aria-label={pick(copy.steps, lang)}>
         {steps.map((step) => (
           <Link key={step.id} role="tab" aria-selected={step.id === active.id} aria-current={step.id === active.id ? 'step' : undefined} to={step.href} data-story-link={step.id} className={step.id === active.id ? 'caos-story-step is-active' : 'caos-story-step'} onClick={() => { setPlaying(false); onStepChange(step.id); }}>
             <span className="caos-story-step-number">{step.number}</span><span className="caos-story-step-verb" title={pick(step.verb, lang)}>{pick(step.verb, lang)}</span><span className="caos-story-step-headline" title={pick(step.headline, lang)}>{pick(step.headline, lang)}</span>

@@ -35,6 +35,10 @@
 //   G20 chart interactions   every chart is one tab stop with an accessible name, described by a table of its values and a one-line summary,
 //                            and a zoomed chart resets (the + key zooms, the visible control shows, the 0 key resets); a chart that turns zoom
 //                            off says why (12 letters and digits at least) and is listed among the waivers (0.19.0)
+//   G21 showcase story       with --require-showcase: a directly linked 3 to 6 step story; its callouts carry value, unit, provenance and
+//                            a state shown as a word (not by colour alone), leave their own anchor clear, never overlap, stay on the stage
+//                            and have a leader each, at every size, theme and language of the matrix (0.24.0); interactions, motion and
+//                            performance at the primary size
 // plus the ADR-0071 and ADR-0017 measures (viewport, one-row tabs, rail without scroll, centred prose, captions,
 // references).
 
@@ -128,6 +132,7 @@ export async function runGate(o) {
   const focusReported = new Set(); // G18: an App without a Focus control is reported once per route and mode
   const waivers = []; // ADR-0017 2.1: every waiver a documentation page declares, with its verdict
   const docWalks = []; // the document walk's cost per state (samples and time against the budget it earned), for the report
+  const storyContexts = []; // G21: every context (size, theme, language) whose story routes had their callouts measured (0.24.0)
   // The smallest measured values against each floor, so a pass shows its margin (and a CI font change that eats it
   // is visible before it fails).
   const minima = { drawnShare: null, stageFill: null };
@@ -416,12 +421,41 @@ export async function runGate(o) {
       if (stories.length === 0) {
         fail('G21', { route: '/story', mode: 'routes' }, 'no /story/<step> route is declared; ADR-0082 requires a directly addressable guided story');
       } else {
+        const STATES = ['alarm', 'warning', 'normal', 'selected', 'inactive'];
+        // The callout checks of one story route in one context: content, state shown by more than colour, the own anchor
+        // left clear, no overlap, inside the stage, one leader each, no horizontal overflow. They run at every size, theme
+        // and language of the gate matrix (known defect 59, 0.24.0): a card grows with its text, so a layout that holds at
+        // 1280 in English can overlap on a phone or in Spanish.
+        const calloutChecks = async (page, at, f) => {
+          for (const call of f.calls) {
+            if (!call.value?.trim() || !call.unit?.trim()) fail('G21', at, `callout ${call.id} has no value or unit`);
+            if (!STATES.includes(call.state)) fail('G21', at, `callout ${call.id} has no recognised semantic state`);
+            // ADR-0082 rule 8: a state is never shown by colour alone (a word or an icon with it)
+            else if (!/[\p{L}]/u.test(call.stateLabel ?? '')) fail('G21', at, `callout ${call.id} shows its state by colour alone: no visible data-callout-state-label with its word (ADR-0082 rule 8)`);
+            if (!call.source?.trim()) fail('G21', at, `callout ${call.id} has no value provenance`);
+            if (![call.anchor?.x, call.anchor?.y].every((v) => Number.isFinite(v) && v >= 0 && v <= 1)) fail('G21', at, `callout ${call.id} has no normalized subject anchor`);
+            else if (call.box && f.stage) {
+              const x = f.stage.left + call.anchor.x * f.stage.width, y = f.stage.top + call.anchor.y * f.stage.height;
+              const clearance = 8;
+              if (x >= call.box.left - clearance && x <= call.box.right + clearance && y >= call.box.top - clearance && y <= call.box.bottom + clearance)
+                fail('G21', at, `callout ${call.id} covers its own subject anchor`);
+            }
+          }
+          for (let i = 0; i < f.calls.length; i += 1) for (let j = i + 1; j < f.calls.length; j += 1) {
+            const a = f.calls[i].box, b = f.calls[j].box;
+            if (a && b && a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top) fail('G21', at, `callouts ${f.calls[i].id} and ${f.calls[j].id} overlap`);
+          }
+          if (f.calls.some(({ box }) => !box || !f.stage || box.left < f.stage.left || box.right > f.stage.right || box.top < f.stage.top || box.bottom > f.stage.bottom)) fail('G21', at, 'one or more callouts escape the stage instead of following its subject');
+          if (f.calls.length && await page.locator('[data-story] [data-caos-callout-leader]').count() < f.calls.length) fail('G21', at, 'not every scene callout has a leader to its subject anchor');
+          if (f.scroll.width > f.viewport.width + 1) fail('G21', at, `story page overflows horizontally (${f.scroll.width}px in ${f.viewport.width}px)`);
+        };
         const size = primarySize;
         const [w, h] = size;
         const mode = `${w}x${h} ${themes[0]} ${langs[0]} story`;
         const ctx = await openContext(size, themes[0], langs[0]);
         const { page, sink } = await newPage(ctx);
         const visited = [];
+        storyContexts.push({ mode, routes: stories.length });
         for (const route of stories) {
           const at = { route, mode };
           const res = await page.goto(urlFor(route), { waitUntil: 'load', timeout: 30000 }).catch((e) => e);
@@ -440,27 +474,32 @@ export async function runGate(o) {
             if (share < 0.8) fail('G21', at, `story stage and docked panel cover ${(100 * share).toFixed(1)}% of the viewport (floor 80%, ADR-0082)`);
           }
           if (f.calls.length < 3) fail('G21', at, `stage has ${f.calls.length} visible anchored callouts; ADR-0082 requires at least 3`);
-          for (const call of f.calls) {
-            if (!call.value?.trim() || !call.unit?.trim()) fail('G21', at, `callout ${call.id} has no value or unit`);
-            if (!['alarm', 'warning', 'normal', 'selected', 'inactive'].includes(call.state)) fail('G21', at, `callout ${call.id} has no recognised semantic state`);
-            if (!call.source?.trim()) fail('G21', at, `callout ${call.id} has no value provenance`);
-            if (![call.anchor?.x, call.anchor?.y].every((v) => Number.isFinite(v) && v >= 0 && v <= 1)) fail('G21', at, `callout ${call.id} has no normalized subject anchor`);
-            else if (call.box && f.stage) {
-              const x = f.stage.left + call.anchor.x * f.stage.width, y = f.stage.top + call.anchor.y * f.stage.height;
-              const clearance = 8;
-              if (x >= call.box.left - clearance && x <= call.box.right + clearance && y >= call.box.top - clearance && y <= call.box.bottom + clearance)
-                fail('G21', at, `callout ${call.id} covers its own subject anchor`);
-            }
-          }
-          for (let i = 0; i < f.calls.length; i += 1) for (let j = i + 1; j < f.calls.length; j += 1) {
-            const a = f.calls[i].box, b = f.calls[j].box;
-            if (a && b && a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top) fail('G21', at, `callouts ${f.calls[i].id} and ${f.calls[j].id} overlap`);
-          }
-          if (f.calls.some(({ box }) => !box || box.left < f.stage.left || box.right > f.stage.right || box.top < f.stage.top || box.bottom > f.stage.bottom)) fail('G21', at, 'one or more callouts escape the stage instead of following its subject');
-          if (f.calls.length && await page.locator('[data-story] [data-caos-callout-leader]').count() < f.calls.length) fail('G21', at, 'not every scene callout has a leader to its subject anchor');
-          if (f.scroll.width > f.viewport.width + 1) fail('G21', at, `story page overflows horizontally (${f.scroll.width}px in ${f.viewport.width}px)`);
+          await calloutChecks(page, at, f);
           visited.push({ route, step: f.step, hrefs: f.links.map((x) => x.href) });
           drain(sink, at);
+        }
+        // Every other context of the gate matrix: the callout checks only. The performance and interaction checks below stay
+        // at the primary size. Console errors of these loads are not drained here: the main walk loads the same routes in the
+        // same contexts and reports them there once.
+        for (const s of sizes) for (const theme of themes) for (const lang of langs) {
+          if (s === primarySize && theme === themes[0] && lang === langs[0]) continue;
+          const smode = `${s[0]}x${s[1]} ${theme} ${lang} story`;
+          const sctx = await openContext(s, theme, lang);
+          const { page: sp, sink: ssink } = await newPage(sctx);
+          for (const route of stories) {
+            const at = { route, mode: smode };
+            const res = await sp.goto(urlFor(route), { waitUntil: 'load', timeout: 30000 }).catch((e) => e);
+            const status = res && typeof res.status === 'function' ? res.status() : `error ${res?.message ?? res}`;
+            if (status !== 200) { fail('G21', at, `direct story link answered ${status}`); ssink.splice(0); continue; }
+            const settled = await settle(sp);
+            if (settled) fail('G21', at, `story did not settle: ${settled}`);
+            const f = await sp.evaluate(() => window.__caosGate.showcaseFacts());
+            if (!f.present) fail('G21', at, 'route does not render [data-story]');
+            else await calloutChecks(sp, at, f);
+            ssink.splice(0);
+          }
+          storyContexts.push({ mode: smode, routes: stories.length });
+          await sctx.close();
         }
         const first = visited.find((x) => x.hrefs.length >= 3);
         if (first) {
@@ -1290,6 +1329,7 @@ export async function runGate(o) {
       minima,
       waivers,
       docWalks,
+      storyContexts,
       checks,
       captures: captures.length,
       failures,

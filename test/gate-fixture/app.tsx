@@ -1585,17 +1585,21 @@ function ShowcaseInstrument() {
   const scene = useLinkedItem('mill', 'scene');
   const panel = useLinkedItem('mill', 'panel');
   const cursor = useLinkedCursor();
+  // the product formats each value in the reader's language (a Spanish page writes a decimal comma, G11)
+  const lang = useShellLang();
   const items = [
     { id: 'feed', eyebrow: { en: 'Mill feed', es: 'Alimentación del molino' }, value: '720', unit: { en: 't/h', es: 't/h' }, state: 'normal' as const, anchor: { x: .22, y: .45 }, source: { en: 'Live case trace', es: 'Traza activa del caso' } },
-    { id: 'power', eyebrow: { en: 'Mill power', es: 'Potencia del molino' }, value: '12.4', unit: { en: 'MW', es: 'MW' }, state: 'warning' as const, anchor: { x: .52, y: .5 }, source: { en: 'Operating contract', es: 'Contrato operativo' } },
-    { id: 'recovery', eyebrow: { en: 'Recovery', es: 'Recuperación' }, value: '84.2', unit: { en: '%', es: '%' }, state: 'selected' as const, anchor: { x: .8, y: .45 }, source: { en: 'Live case trace', es: 'Traza activa del caso' } },
+    { id: 'power', eyebrow: { en: 'Mill power', es: 'Potencia del molino' }, value: lang === 'es' ? '12,4' : '12.4', unit: { en: 'MW', es: 'MW' }, state: 'warning' as const, anchor: { x: .52, y: .5 }, source: { en: 'Operating contract', es: 'Contrato operativo' } },
+    { id: 'recovery', eyebrow: { en: 'Recovery', es: 'Recuperación' }, value: lang === 'es' ? '84,2' : '84.2', unit: { en: '%', es: '%' }, state: 'selected' as const, anchor: { x: .8, y: .45 }, source: { en: 'Live case trace', es: 'Traza activa del caso' } },
   ];
   return <div className="caos-story-fixture-stage" style={{ position: 'relative', width: '100%', height: '100%' }}><SceneCallouts items={items} placement="header"/><svg viewBox="0 0 100 50" width="100%" height="100%" role="img" aria-label="Grinding circuit with mill and classifier"><g data-linked-view="scene"><rect x="20" y="15" width="28" height="20" fill="var(--color-surface-2)" stroke="var(--color-border)"/><g {...scene}><circle cx="34" cy="25" r="5" fill="var(--color-accent)"/><text x="34" y="42" textAnchor="middle" fill="var(--color-fg)">Mill</text></g></g><line x1="48" y1="25" x2="75" y2="25" stroke="var(--color-accent)"/><circle {...cursor.markerProps} cx={20 + Number(cursor.cursor ?? 0) * .6} cy="25" r="2" fill="var(--color-warn)"/></svg><label className="caos-story-fixture-scrub" style={{ position: 'absolute', insetInline: '1rem', bottom: '1rem', zIndex: 5 }}>Circuit position <input type="range" min="0" max="100" {...cursor.inputProps}/></label></div>;
 }
 
 function ShowcasePanel() {
   const item = useLinkedItem('mill', 'panel');
-  return <button type="button" {...item}>Mill · 12.4 MW · 720 t/h</button>;
+  const lang = useShellLang();
+  // the panel carries a sentence of evidence, so the story holds the text floor on a phone, where the step headlines are hidden (G4)
+  return <><button type="button" {...item}>{lang === 'es' ? 'Molino · 12,4 MW · 720 t/h' : 'Mill · 12.4 MW · 720 t/h'}</button><p>{lang === 'es' ? 'Valores de referencia del caso, registrados para la compuerta.' : 'Reference values of the case, recorded for the gate.'}</p></>;
 }
 
 function ShowcaseStory() {
@@ -1603,8 +1607,8 @@ function ShowcaseStory() {
   const navigate = useNavigate();
   const steps = [
     { id: 'measure', number: 1 as const, verb: { en: 'Measure the feed', es: 'Medir la alimentación' }, headline: { en: '720 t/h enters the grinding circuit', es: '720 t/h entra al circuito de molienda' }, summary: { en: 'Live example values with explicit provenance.', es: 'Valores de ejemplo activos con procedencia explícita.' }, href: '/story/measure', accent: 1 as const, stage: <ShowcaseInstrument/>, panel: <ShowcasePanel/> },
-    { id: 'phase', number: 2 as const, verb: { en: 'Inspect the mill', es: 'Inspeccionar el molino' }, headline: { en: '12.4 MW limits the grind response', es: '12.4 MW limita la respuesta de molienda' }, summary: { en: 'The state is linked to the equipment selection.', es: 'El estado está vinculado con la selección del equipo.' }, href: '/story/phase', accent: 2 as const, stage: <ShowcaseInstrument/>, panel: <ShowcasePanel/> },
-    { id: 'decision', number: 3 as const, verb: { en: 'Compare the outcome', es: 'Comparar el resultado' }, headline: { en: 'Recovery reaches 84.2% in this case', es: 'La recuperación alcanza 84.2% en este caso' }, summary: { en: 'The finding follows the selected case record.', es: 'El hallazgo sigue el registro de caso seleccionado.' }, href: '/story/decision', accent: 3 as const, stage: <ShowcaseInstrument/>, panel: <ShowcasePanel/> },
+    { id: 'phase', number: 2 as const, verb: { en: 'Inspect the mill', es: 'Inspeccionar el molino' }, headline: { en: '12.4 MW limits the grind response', es: '12,4 MW limita la respuesta de molienda' }, summary: { en: 'The state is linked to the equipment selection.', es: 'El estado está vinculado con la selección del equipo.' }, href: '/story/phase', accent: 2 as const, stage: <ShowcaseInstrument/>, panel: <ShowcasePanel/> },
+    { id: 'decision', number: 3 as const, verb: { en: 'Compare the outcome', es: 'Comparar el resultado' }, headline: { en: 'Recovery reaches 84.2% in this case', es: 'La recuperación alcanza 84,2% en este caso' }, summary: { en: 'The finding follows the selected case record.', es: 'El hallazgo sigue el registro de caso seleccionado.' }, href: '/story/decision', accent: 3 as const, stage: <ShowcaseInstrument/>, panel: <ShowcasePanel/> },
   ];
   return <LinkedViewProvider initial={{ cursor: 30 }}><StoryFrame className="caos-story-fixture" steps={steps} activeId={steps.some((item) => item.id === step) ? step : 'measure'} onStepChange={(next) => navigate(`/story/${next}`)} onExit={() => navigate('/app?case=c-mid&view=circuit')}/></LinkedViewProvider>;
 }

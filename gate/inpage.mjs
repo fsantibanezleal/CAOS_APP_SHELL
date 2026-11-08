@@ -1583,6 +1583,8 @@ export function installLib() {
     const callouts = [...(stage?.querySelectorAll('[data-caos-callout]') ?? [])].filter(visible).map((element) => ({
       id: element.getAttribute('data-caos-callout'), value: element.getAttribute('data-callout-value'), unit: element.getAttribute('data-callout-unit'),
       state: element.getAttribute('data-callout-state'), source: element.getAttribute('data-callout-source'),
+      // the state as a reader sees it besides the colour (ADR-0082 rule 8): the visible text of the state label, empty when hidden or absent
+      stateLabel: (() => { const label = element.querySelector('[data-callout-state-label]'); return label && visible(label) ? (label.innerText ?? label.textContent ?? '').trim() : ''; })(),
       anchor: { x: Number(element.getAttribute('data-callout-anchor-x')), y: Number(element.getAttribute('data-callout-anchor-y')) }, box: box(element),
     }));
     const links = [...(story?.querySelectorAll('[data-story-link]') ?? [])].filter(visible).map((element) => ({ id: element.getAttribute('data-story-link'), href: element.getAttribute('href'), active: element.getAttribute('aria-selected') === 'true' }));
