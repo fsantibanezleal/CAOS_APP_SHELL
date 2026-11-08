@@ -306,6 +306,8 @@ const PLANTS = [
   { id: 'showcase-overlap-mobile', check: 'G21', re: /callouts \w+ and \w+ overlap/, mode: /^390x844 light en story$/, opts: { ...SHOWCASE, sizes: '390x844,1280x800' } },
   { id: 'showcase-overlap-es', check: 'G21', re: /callouts power and recovery overlap/, mode: /^1280x800 light es story$/, opts: { ...SHOWCASE, langs: 'en,es' } },
   { id: 'showcase-state-colour-only', check: 'G21', re: /callout feed shows its state by colour alone/, opts: SHOWCASE },
+  // shell 0.25.0 (issue 207): 14 long-named variants as chips scroll the rail (the same list in `layout: 'select'` is the legit page below)
+  { id: 'variants-long-chips', check: 'ADR-0071.6', re: /the rail scrolls: \d+px of content in \d+px/, opts: { routes: '/app' } },
 ];
 
 /** Legitimate pages that the gate once failed (ADR-0017 2.1 allows them): each must pass every check, in both languages. */
@@ -329,6 +331,8 @@ const LEGIT = [
   // lies over the comma and used to take its hit test)
   { id: 'legit-long-document', opts: { routes: '/methodology' } },
   { id: 'legit-math-comma', opts: { routes: '/methodology' } },
+  // shell 0.25.0 (issue 207, known defect 61): 14 long-named variants in `layout: 'select'` keep the rail whole in both languages (G5, ADR-0071.6)
+  { id: 'legit-variants-select', opts: { routes: '/app' } },
 ];
 
 /** A static server with an SPA fallback: every unknown path answers index.html with 200 (the G4 plant). */

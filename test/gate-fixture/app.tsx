@@ -385,6 +385,25 @@ const VARIANTS = [
   { id: 'base', label: { en: 'Baseline', es: 'Base' }, note: { en: 'Contact rate as published.', es: 'Tasa de contacto publicada.' } },
   { id: 'stress', label: { en: 'Stress', es: 'Estrés' }, note: { en: 'Contact rate 30% higher.', es: 'Tasa de contacto 30% mayor.' } },
 ];
+// shell 0.25.0 (issue 207, known defect 61): a one-of-N choice of 14 methods named by their names. `variants-long-chips` draws it as chips (the rail
+// scrolls: ADR-0071.6); `legit-variants-select` draws the same list with `layout: 'select'` and passes every check in both languages.
+const LONG_VARIANTS = [
+  ...VARIANTS,
+  ...[
+    ['Ordinary least squares regression with a ridge penalty', 'Regresion de minimos cuadrados con penalizacion de cresta'],
+    ['Lasso regression with a cross-validated penalty', 'Regresion lasso con penalizacion validada por cruce'],
+    ['Elastic net regression over a grid of mixing weights', 'Regresion de red elastica sobre una malla de pesos'],
+    ['Principal component regression on the leading modes', 'Regresion sobre componentes principales de los modos'],
+    ['Partial least squares with the number of components chosen', 'Minimos cuadrados parciales con numero de componentes'],
+    ['Gradient boosted trees with monotone constraints', 'Arboles con refuerzo de gradiente y restricciones'],
+    ['Random forest with out-of-bag error estimates', 'Bosque aleatorio con error fuera de bolsa'],
+    ['Gaussian process regression with an anisotropic kernel', 'Regresion de proceso gaussiano con nucleo anisotropico'],
+    ['Support vector regression with a radial kernel', 'Regresion de vectores de soporte con nucleo radial'],
+    ['Neural network with two hidden layers and early stopping', 'Red neuronal con dos capas ocultas y parada temprana'],
+    ['Physics-informed model with the heat equation as constraint', 'Modelo informado por fisica con la ecuacion de calor'],
+    ['Kalman smoother on the state-space form of the process', 'Suavizador de Kalman en la forma de espacio de estados'],
+  ].map(([en, es], i) => ({ id: `long${i}`, label: { en, es }, note: { en: `Method ${i + 3} of 14.`, es: `Metodo ${i + 3} de 14.` } })),
+];
 
 // -------------------------------------------------------------------------------------------------- the views
 function LiveValues({ sim }: { sim: Sim }) {
@@ -1154,7 +1173,13 @@ function Workbench() {
         caseId={shownCase}
         cases={{ cases: shownCases, selectedId: caseId, onSelect: setCaseId, layout: 'select', deepLink: true }}
         controls={controls}
-        variants={PLANT === 'no-controls' ? undefined : { variants: VARIANTS, activeId: variant, onSelect: setVariant, lane: 'live' }}
+        variants={
+          PLANT === 'no-controls'
+            ? undefined
+            : PLANT === 'variants-long-chips' || PLANT === 'legit-variants-select'
+              ? { variants: LONG_VARIANTS, activeId: variant, onSelect: setVariant, lane: 'live', layout: PLANT === 'legit-variants-select' ? 'select' : 'chips' }
+              : { variants: VARIANTS, activeId: variant, onSelect: setVariant, lane: 'live' }
+        }
         rail={rail}
         groups={[
           { id: 'model', label: { en: 'Model', es: 'Modelo' }, content: <ModelView sim={sim} /> },
