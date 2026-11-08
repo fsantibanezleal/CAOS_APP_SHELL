@@ -284,6 +284,14 @@ normalized scene anchor for each item. Its deterministic layout measures the sta
 and supports a reserved header band when a diagram must remain clear. The product reprojects anchors as its camera or
 view changes and computes every displayed value and its provenance from its own data.
 
+Since 0.24.0 every card shows its state as a word in the page language with a glyph of its own shape (alarm, warning,
+normal, selected, inactive; `data-callout-state-label`), so a state is never carried by the border colour alone. The layer
+measures its cards and lays them out on their real heights; in the header placement the cards follow their anchors' x
+(the order with the fewest crossing leaders when that order would cross), and the layer reports the band it occupies: the
+CSS custom property `--caos-callout-band` (px) on the layer and the optional `onLayout({ bandHeight })` callback. A product
+that keeps its drawing clear of the header band reserves that height, never a nominal card size. `layoutCalloutHeader` and
+`layoutSceneCallouts` are exported, with the `CalloutHeights` type, so a product can test its geometry before rendering.
+
 `LinkedViewProvider` creates one selection/cursor store for a scene and its panel. `useLinkedView` exposes `selectedId`,
 `cursor`, `seriesId` and the `select`, `scrub` and `showSeries` actions. Components pass an origin (`scene`, `panel`,
 `series` or `external`) so a product can reflect selection in both directions without maintaining duplicate state.

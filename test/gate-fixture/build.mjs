@@ -71,6 +71,20 @@ export function makePlant(cleanDir, plantDir, plant) {
     writeFileSync(join(plantDir, 'assets', 'app.css'), readFileSync(join(plantDir, 'assets', 'app.css'), 'utf8') +
       '\n[data-caos-callout="feed"] { left: calc(22% - 92px) !important; top: calc(45% - 34px) !important; }\n');
   }
+  // shell 0.24.0 (known defects 58 and 59): a card that covers another only on a phone, a card widened for the longer Spanish text
+  // only in Spanish, and a callout whose state label is hidden (its state shown by the colour of its border alone)
+  if (plant === 'showcase-overlap-mobile') {
+    writeFileSync(join(plantDir, 'assets', 'app.css'), readFileSync(join(plantDir, 'assets', 'app.css'), 'utf8') +
+      '\n@media (max-width: 500px) { [data-caos-callout="recovery"] { left: 50% !important; top: 8px !important; transform: translateX(-50%); } }\n');
+  }
+  if (plant === 'showcase-overlap-es') {
+    writeFileSync(join(plantDir, 'assets', 'app.css'), readFileSync(join(plantDir, 'assets', 'app.css'), 'utf8') +
+      '\nhtml[lang="es"] [data-caos-callout="power"] { width: 320px !important; }\n');
+  }
+  if (plant === 'showcase-state-colour-only') {
+    writeFileSync(join(plantDir, 'assets', 'app.css'), readFileSync(join(plantDir, 'assets', 'app.css'), 'utf8') +
+      '\n[data-callout-state-label] { display: none !important; }\n');
+  }
   // the plants of the executive view that are defects of an illustration file
   const svg = (name, edit) => writeFileSync(join(plantDir, 'executive', `${name}.svg`), edit(readFileSync(join(plantDir, 'executive', `${name}.svg`), 'utf8')));
   if (plant === 'exec-illustration-missing') rmSync(join(plantDir, 'executive', 'proposal.svg'));

@@ -150,3 +150,69 @@ test('SHW-057: StoryFrame exposes the requested mobile stage floor on its root',
     assert.throws(() => render(invalid), RangeError);
   }
 });
+
+test('SHW-059: every scene callout shows its state as a word with a non-colour glyph (known defect 58)', async () => {
+  // English here; the Spanish words are read in test/calloutsEs.test.tsx (the shell reads the stored language when it loads)
+  const { SceneCallouts } = await import('../src/workbench/SceneCallouts');
+  const states = ['normal', 'warning', 'alarm', 'selected', 'inactive'] as const;
+  const items: SceneCalloutDef[] = states.map((state, index) => ({ id: state, eyebrow: 'Feed', value: String(100 + index), unit: 't/h', state, anchor: { x: (index + 1) / 6, y: .5 }, source: 'Live trace' }));
+  const words = ['normal', 'warning', 'alarm', 'selected', 'inactive'];
+  const html = renderToStaticMarkup(createElement(SceneCallouts, { items, placement: 'header' }));
+  const glyphs = new Set<string>();
+  for (const [index, state] of states.entries()) {
+    const card = new RegExp(`data-caos-callout="${state}"[\\s\\S]*?</article>`).exec(html)?.[0] ?? '';
+    assert.match(card, /data-callout-state-label=""/, `the ${state} callout carries a data-callout-state-label: ${card}`);
+    const label = /data-callout-state-glyph=""[^>]*>([^<]+)<\/span>([^<]*)<\/span>/.exec(card);
+    assert.ok(label, `the ${state} label is a glyph and a word: ${card}`);
+    const [, glyph, word] = label;
+    assert.equal(word!.trim(), words[index], `the ${state} callout reads "${words[index]}"`);
+    assert.ok(!/[\p{L}\p{N}]/u.test(glyph!), `the ${state} label has a non-letter glyph (got ${glyph})`);
+    glyphs.add(glyph!);
+  }
+  assert.equal(glyphs.size, states.length, 'each state has a glyph of its own shape, not only a colour');
+});
+
+test('SHW-059: a callout without a recognised state gets no state label (it already fails G21)', async () => {
+  const { SceneCallouts } = await import('../src/workbench/SceneCallouts');
+  const item = { id: 'odd', eyebrow: 'Feed', value: '1', unit: 't/h', state: 'unknown' as unknown as SceneCalloutDef['state'], anchor: { x: .5, y: .5 }, source: 'Trace' };
+  const html = renderToStaticMarkup(createElement(SceneCallouts, { items: [item] }));
+  assert.match(html, /data-callout-state="unknown"/);
+  assert.doesNotMatch(html, /data-callout-state-label/);
+});
+
+test('SHW-060: layoutCalloutHeader lays the cards out on measured heights, ordered by anchor x, stable for equal x (known defect 60)', () => {
+  // declared in reverse x; the middle card grew when its source wrapped (104 px; the nominal card is 68 or 54 px)
+  const items: SceneCalloutDef[] = [
+    { id: 'right', eyebrow: 'Throw', value: '38', unit: 'mm', state: 'normal', anchor: { x: .85, y: .6 }, source: 'Liner survey' },
+    { id: 'middle', eyebrow: 'Nip angle', value: '21.5', unit: 'deg', state: 'warning', anchor: { x: .5, y: .55 }, source: 'Derived from the measured open and closed side settings of the last survey' },
+    { id: 'left', eyebrow: 'CSS', value: '152', unit: 'mm', state: 'selected', anchor: { x: .15, y: .5 }, source: 'Liner survey' },
+  ];
+  const heights = { right: 68, middle: 104, left: 68 };
+  for (const [width, height, compact] of [[1080, 620, false], [360, 388, true]] as const) {
+    const boxes = layoutCalloutHeader(items, width, height, compact, heights);
+    assert.deepEqual(boxes.map((box) => box.id), ['left', 'middle', 'right'], `${width}px: boxes in anchor x order`);
+    assert.equal(boxes.find((box) => box.id === 'middle')!.height, 104, `${width}px: the grown card is laid out at its measured height`);
+    for (const [i, box] of boxes.entries()) {
+      assert.ok(box.left >= 0 && box.left + box.width <= width, `${width}px: ${box.id} stays inside the layer`);
+      for (const other of boxes.slice(i + 1)) assert.ok(!(box.left < other.left + other.width && box.left + box.width > other.left && box.top < other.top + other.height && box.top + box.height > other.top), `${width}px: ${box.id} and ${other.id} do not overlap at their measured heights`);
+    }
+    const firstRow = boxes.filter((box) => box.top === boxes[0]!.top);
+    for (let i = 1; i < firstRow.length; i += 1) assert.ok(firstRow[i]!.left > firstRow[i - 1]!.left, `${width}px: a row reads left to right in anchor order`);
+  }
+  // the nominal heights stay the default: the existing call is unchanged
+  assert.ok(layoutCalloutHeader(items, 1080, 620).every((box) => box.height === 68));
+  // equal anchor x keeps the declaration order
+  const tie = layoutCalloutHeader([{ ...items[0]!, id: 'p', anchor: { x: .4, y: .5 } }, { ...items[0]!, id: 'q', anchor: { x: .4, y: .5 } }, { ...items[0]!, id: 'r', anchor: { x: .1, y: .5 } }], 1080, 620);
+  assert.deepEqual(tie.map((box) => box.id), ['r', 'p', 'q']);
+});
+
+test('SHW-061: layoutSceneCallouts places an anchored card at its measured height, the nominal one by default', () => {
+  const items: SceneCalloutDef[] = [
+    { id: 'a', eyebrow: 'Mill feed', value: '725.9', unit: 't/h', state: 'normal', anchor: { x: 0.24, y: 0.47 }, source: 'Live circuit trace' },
+    { id: 'b', eyebrow: 'Power', value: '12.4', unit: 'MW', state: 'warning', anchor: { x: 0.52, y: 0.48 }, source: 'Plant power limit' },
+  ];
+  const boxes = layoutSceneCallouts(items, 1080, 620, false, { b: 96 });
+  assert.equal(boxes[0]!.height, 68);
+  assert.equal(boxes[1]!.height, 96);
+  assert.ok(!(boxes[0]!.left < boxes[1]!.left + boxes[1]!.width && boxes[0]!.left + boxes[0]!.width > boxes[1]!.left && boxes[0]!.top < boxes[1]!.top + 96 && boxes[0]!.top + 68 > boxes[1]!.top), 'the grown card does not overlap the other');
+});
