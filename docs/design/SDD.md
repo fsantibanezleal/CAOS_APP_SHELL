@@ -460,3 +460,5 @@ UNVERIFIED: ADR-0065 is named in the brief's ADR list, but nothing in the shell'
 Version 0.23.000 adds a bounded `StoryFrame.mobileStageMinHeight` option for mobile stories whose interactive drawing needs more room. The option accepts integer CSS-pixel values from 300 through 900, defaults to 300, and keeps the evidence panel after the stage in normal document flow.
 
 Version 0.23.001 fixes the gate's document walk (`G.readDocument`, known defect 55, issue 196): its budget scales with the document (the samples of every visited scrollport's grid, 30 seconds plus 500 ms per granted sample, under the absolute ceilings of 20,000 samples and 15 minutes) instead of a fixed 600 samples and 30 seconds, and a comma right after an inline KaTeX subscript is hit-tested through the math's non-painting struts. The gate report lists every walked state's cost (`docWalks`). No product change; CEFOP_DinHot, pinned at 0.19.6 for this defect, can move.
+
+Version 0.23.002 keeps the StoryFrame step row at its natural height under a panel taller than the layout (`.caos-story-stepper` is `flex: none`; known defect 57, SHW-058). No product change.
