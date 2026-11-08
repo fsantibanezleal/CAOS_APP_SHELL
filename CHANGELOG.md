@@ -1,3 +1,13 @@
+## [0.23.002] - 2026-11-07
+
+### Fixed
+
+- A story panel taller than the layout no longer shrinks the step row (known defect 57, SHW-058). `.caos-story` is a flex column and `.caos-story-layout` takes its content as its flex basis, so a tall evidence panel overflowed the column and every item shrank in proportion; the step row scrolls on x, so its automatic minimum height is 0, and it lost height (51.5 px to 10.7 px in the plant, 4 to 6 px on CAOS_ChancaDEM's story, where gate G5 failed it as cut tabs). The row is now `flex: none`. A browser test measures the row under a short and a 3,000 px panel at 1024, 1280 and 1440 px.
+
+### Adoption
+
+- No product change. A product that bounded its own story panel to keep the row whole may keep that bound or drop it.
+
 ## [0.23.001] - 2026-11-07
 
 ### Fixed
