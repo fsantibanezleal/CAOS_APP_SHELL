@@ -19,7 +19,9 @@ alone has an accessible name; a decorative one is `aria-hidden`.
 ## Numbers
 
 Every number on screen goes through `formatNumber(value, lang, options)` (or `useFormat()`), never `toFixed` or
-`toLocaleString()` without a locale (the template's guard fails both):
+`toLocaleString()` without a locale (the template's guard fails both). Since 0.26.0 it keeps one `Intl.NumberFormat` per
+locale and options instead of building one per call (known defect 68), so a table of thousands of cells costs one formatter
+per format; the text is the same:
 
 - a decimal point in English and a decimal comma in Spanish (`es-CL`: `1.234,57`); the gate fails a Spanish page that
   shows a decimal point (G11), outside code, formulas, versions and anything marked `translate="no"`;

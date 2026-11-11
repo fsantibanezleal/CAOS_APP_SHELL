@@ -105,18 +105,27 @@ test('below 1280 px the filling card has no minimum height of its own', async ()
   }
 });
 
-test('a filling PlotCard header never collapses under a dense wrapped header and its control row', async () => {
-  const page = await browser.newPage({ viewport: { width: 390, height: 480 } });
-  try {
-    await page.goto(`${address}/?n=1&lang=es&overflow=1&note=0&w=360&h=220`);
-    const geometry = await page.evaluate(() => {
-      const card = document.querySelector('.caos-plot.fill')!;
-      const head = card.querySelector('.caos-plot-head')!.getBoundingClientRect();
-      const actions = card.querySelector('.caos-plot-actions')!.getBoundingClientRect();
-      const body = card.querySelector('.caos-plot-body')!.getBoundingClientRect();
-      return { head: head.height, actionsBottom: actions.bottom, bodyTop: body.top };
-    });
-    assert.ok(geometry.head >= 40, `the wrapped title and badges keep their header height (${geometry.head}px)`);
-    assert.ok(geometry.actionsBottom <= geometry.bodyTop + 0.5, `the body begins after the wrapped badges (${geometry.actionsBottom} <= ${geometry.bodyTop})`);
-  } finally { await page.close(); }
+// Known defect 63 (issue 211, CEFOP_DinHot): a filling card whose content is taller than the card squeezed its header to the
+// 1.5rem min-height, and the wrapped badges ran out of it under the body. The card here is 180 px tall: below 900 px the body
+// alone takes 260 px (the phone clamp), at 1280 px it keeps the 146 px stage floor under a header of two or three lines.
+test('SHW-064 a filling PlotCard header keeps its wrapped title and badges when the content is taller than the card (known defect 63)', async () => {
+  for (const [vw, vh, cw] of [[390, 480, 360], [1280, 800, 400]] as const) for (const lang of ['en', 'es'] as const) {
+    const page = await browser.newPage({ viewport: { width: vw, height: vh } });
+    try {
+      await page.goto(`${address}/?n=1&lang=${lang}&overflow=1&note=0&w=${cw}&h=220`);
+      const g = await page.evaluate(() => {
+        const card = document.querySelector('.caos-plot.fill')!;
+        const head = card.querySelector('.caos-plot-head')!.getBoundingClientRect();
+        const body = card.querySelector('.caos-plot-body')!.getBoundingClientRect();
+        const parts = [...card.querySelectorAll('.caos-plot-head .caos-plot-title, .caos-plot-head .badge')].map((e) => e.getBoundingClientRect());
+        return { head: { top: head.top, bottom: head.bottom, height: head.height }, bodyTop: body.top, partsBottom: Math.max(...parts.map((r) => r.bottom)), partsTop: Math.min(...parts.map((r) => r.top)), card: card.getBoundingClientRect().height, content: card.scrollHeight };
+      });
+      const where = `${vw}x${vh} ${lang}`;
+      assert.ok(g.content > g.card + 40, `${where}: the plant holds content taller than its card (${g.content} in ${g.card} px)`);
+      // a header of two lines or more is at least 40 px; 0.25.0 squeezed it to 24
+      assert.ok(g.head.height >= 40, `${where}: the header keeps its wrapped height (${g.head.height} px)`);
+      assert.ok(g.partsBottom <= g.head.bottom + 0.5 && g.partsTop >= g.head.top - 0.5, `${where}: the title and every badge lie inside the header (${g.partsTop} to ${g.partsBottom} in ${g.head.top} to ${g.head.bottom})`);
+      assert.ok(g.partsBottom <= g.bodyTop + 0.5, `${where}: the body begins under the badges (${g.partsBottom} <= ${g.bodyTop})`);
+    } finally { await page.close(); }
+  }
 });

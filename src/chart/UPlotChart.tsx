@@ -7,6 +7,7 @@ import { CHART_ROLE, ChartDataTable, ChartSummary, ResetZoomButton, ZOOM_HINT } 
 import {
   axisTitleFits,
   chartSummary,
+  type ChartTimeZone,
   countOverlaps,
   dateNames,
   defaultChartName,
@@ -97,6 +98,10 @@ export interface UPlotChartProps {
   x: ChartAxis & {
     values: number[];
     time?: boolean;
+    /** The time zone a time axis (`time: true`) reads its epoch seconds in, on the axis, in the readout, the data table and the
+     * summary (0.26.0, known defect 43): `'UTC'` by default, so a document day passed as UTC midnight reads as that day for every
+     * reader, east or west of UTC; `'local'` reads them in the reader's time zone (real local instants). */
+    timeZone?: ChartTimeZone;
     log?: boolean;
     /** Named ticks (0.18.0): the axis ticks exactly at these values, no other, each labelled with its text in the page
      * language (a categorical axis: protocols, blast ids). The readout names an x that sits on one by its label. A tick
@@ -672,6 +677,8 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
   const xSpan = xs.length > 0 ? Math.max(Math.abs(xs[xs.length - 1] - xs[0]), x.range ? Math.abs(x.range[1] - x.range[0]) : 0) : 0;
   // named ticks (not on a time axis); an empty list leaves uPlot its own
   const ticks = !x.time && x.ticks && x.ticks.length > 0 ? x.ticks : undefined;
+  // the time zone of a time axis: UTC unless the caller asks for the reader's own (0.26.0, known defect 43)
+  const timeZone: ChartTimeZone = x.timeZone === 'local' ? 'local' : 'UTC';
   // a log axis reaching below uPlot's tick table ticks at powers of ten (known shell defect 31)
   const tiny = useMemo(
     () => ({
@@ -720,7 +727,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
   // Everything that changes the plot's structure, by value.
   const structure = JSON.stringify({
     s: series.map((s, i) => [pick(s.label, lang), seriesStyle(s, i), s.width ?? 2, s.mode ?? 'line', s.size ?? 9, isOverlay(s), Boolean(s.dots)]),
-    x: [xLabel, xUnit, Boolean(x.time), Boolean(x.log), x.format ?? null, tiny.x, xExt, ticks ? ticks.map((t) => [t.value, pick(t.label, lang)]) : null],
+    x: [xLabel, xUnit, Boolean(x.time), timeZone, Boolean(x.log), x.format ?? null, tiny.x, xExt, ticks ? ticks.map((t) => [t.value, pick(t.label, lang)]) : null],
     oe: ext,
     p: range,
     pick: Boolean(onPick),
@@ -757,6 +764,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
     const font = `11px ${family}`;
     const surface = resolveToken('--color-surface', '#fff');
     const repeats = { x: 0, y: 0 };
+    const timeLabels: string[] = [];
     // One notation per axis (known shell defect 19): the labels of an axis are formatted together.
     const declareTicks = (axis: 'x' | 'y', labels: string[], repeated = repeatedLabels(labels)) => {
       repeats[axis] = repeated;
@@ -804,7 +812,21 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
       width,
       height: h,
       // the month and weekday names of a time axis in the page language: uPlot's own are English (0.19.1, SHC-099)
-      ...(x.time ? { fmtDate: ((names: uPlot.DateNames) => (tpl: string) => uPlot.fmtDate(tpl, names))(dateNames(lang)) } : {}),
+      // in UTC by default (0.26.0, known defect 43): the dates uPlot formats are built in UTC, so a UTC midnight is its own day west of UTC.
+      // Every label the axis writes is kept and declared once drawn (`data-x-time-labels`), for the shell's own test.
+      ...(x.time
+        ? {
+            fmtDate: ((names: uPlot.DateNames) => (tpl: string) => {
+              const f = uPlot.fmtDate(tpl, names);
+              return (d: Date) => {
+                const text = f(d);
+                timeLabels.push(text.replace(/\s+/g, ' ').trim());
+                return text;
+              };
+            })(dateNames(lang)),
+            ...(timeZone === 'UTC' ? { tzDate: (ts: number) => uPlot.tzDate(new Date(ts * 1000), 'Etc/UTC') } : {}),
+          }
+        : {}),
       legend: { show: false },
       cursor: {
         ...(scatter ? { dataIdx: (u: uPlot, sIdx: number, closest: number) => (sIdx === 0 ? closest : (nearest(u) ?? closest)) } : {}),
@@ -1027,6 +1049,11 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
         ],
         draw: [
           (u: uPlot) => {
+            // the labels a time axis wrote since the last draw (uPlot formats them only when the scale or the size changes)
+            if (timeLabels.length) {
+              hostRef.current?.setAttribute('data-x-time-labels', timeLabels.filter((l) => l).join('|'));
+              timeLabels.length = 0;
+            }
             if (range) {
               // the identity line of a parity plot: where a prediction equals the observation
               const ctx = u.ctx;
@@ -1209,7 +1236,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
 
   // an x as text: a date in the page language on a time axis (epoch seconds read as numbers were meaningless), else a formatted number
   const timeSpan = xs.length > 1 ? Math.abs(xs[xs.length - 1] - xs[0]) : 0;
-  const xValue = (v: number): string => (x.time ? formatTime(v, lang, timeSpan) : formatNumber(v, lang, x.format ?? { digits: 4 }));
+  const xValue = (v: number): string => (x.time ? formatTime(v, lang, timeSpan, timeZone) : formatNumber(v, lang, x.format ?? { digits: 4 }));
   const read =
     cursor !== null && readout
       ? readout(order ? order[cursor] : cursor)
@@ -1283,7 +1310,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
     });
     return { head, rows, summary, thinned: kept.length < xs.length };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [drawn, xs, ys, baseEntries, overlays, series, lang, ticks, xSpan, xTitle, yTitle, xLabel, yUnit, name, xFormatKey, yFormatKey, x.time, timeSpan]);
+  }, [drawn, xs, ys, baseEntries, overlays, series, lang, ticks, xSpan, xTitle, yTitle, xLabel, yUnit, name, xFormatKey, yFormatKey, x.time, timeSpan, timeZone]);
 
   // the table of marks: every vertical and horizontal mark with its position, whole (0.19.0)
   const marksId = `${ids}-marks`;
@@ -1293,7 +1320,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
     const ys2 = (yMarks ?? []).map((m, k) => [m.label ? pick(m.label, lang) : referenceLineName(lang, unnamed.indexOf(k) + 1, unnamed.length), `${yText(m.y)}${yUnit ? `${NBSP}${yUnit}` : ''}`]);
     return [...xs2, ...ys2];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [marks, yMarks, lang, xLabel, xUnit, yUnit, ticks, xSpan, xFormatKey, yFormatKey, x.time, timeSpan]);
+  }, [marks, yMarks, lang, xLabel, xUnit, yUnit, ticks, xSpan, xFormatKey, yFormatKey, x.time, timeSpan, timeZone]);
 
   const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
     // a key that reaches the plot from a draggable line's handle is the handle's

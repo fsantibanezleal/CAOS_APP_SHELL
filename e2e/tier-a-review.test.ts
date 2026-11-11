@@ -164,7 +164,8 @@ test('M3: on a time axis the table, the summary and the readout print dates in t
     const { page } = await open(`form=time&lang=${lang}`);
     try {
       const expect = await page.evaluate(
-        ([l]) => new Intl.DateTimeFormat(l === 'es' ? 'es-CL' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(1704067200 * 1000)),
+        // a time axis reads its epochs in UTC by default since 0.26.0 (known defect 43): 1704067200 is 2024-01-01 in every time zone
+        ([l]) => new Intl.DateTimeFormat(l === 'es' ? 'es-CL' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(1704067200 * 1000)),
         [lang],
       );
       const first = await page.locator('table[data-chart-table] tbody tr').first().locator('th, td').allTextContents();
