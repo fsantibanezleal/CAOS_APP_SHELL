@@ -37,7 +37,7 @@ before(async () => {
     const withNote = url.searchParams.get('note') !== '0';
     const colW = Number(url.searchParams.get('w') ?? 640);
     const card = (i: number) =>
-      `<figure class="caos-plot fill" data-plot="c${i}"><figcaption class="caos-plot-head"><span class="caos-plot-title">${TITLES[lang]}</span>` +
+      `<figure class="caos-plot fill" data-plot="c${i}"${url.searchParams.has('overflow') ? ' style="flex:none;height:180px"' : ''}><figcaption class="caos-plot-head"><span class="caos-plot-title">${TITLES[lang]}</span>` +
       '<span class="caos-plot-actions"><span class="badge">' + (lang === 'es' ? 'En vivo' : 'Live') + '</span><span class="badge">' + (lang === 'es' ? 'Precalculado y en vivo' : 'Precomputed and live') + '</span></span></figcaption>' +
       '<div class="caos-plot-body"><div style="height:100%;background:#8884"></div></div>' +
       (withNote ? `<p class="caos-plot-note">${NOTES[lang]}</p>` : '') + '</figure>';
@@ -103,4 +103,20 @@ test('below 1280 px the filling card has no minimum height of its own', async ()
   } finally {
     await page.close();
   }
+});
+
+test('a filling PlotCard header never collapses under a dense wrapped header and its control row', async () => {
+  const page = await browser.newPage({ viewport: { width: 390, height: 480 } });
+  try {
+    await page.goto(`${address}/?n=1&lang=es&overflow=1&note=0&w=360&h=220`);
+    const geometry = await page.evaluate(() => {
+      const card = document.querySelector('.caos-plot.fill')!;
+      const head = card.querySelector('.caos-plot-head')!.getBoundingClientRect();
+      const actions = card.querySelector('.caos-plot-actions')!.getBoundingClientRect();
+      const body = card.querySelector('.caos-plot-body')!.getBoundingClientRect();
+      return { head: head.height, actionsBottom: actions.bottom, bodyTop: body.top };
+    });
+    assert.ok(geometry.head >= 40, `the wrapped title and badges keep their header height (${geometry.head}px)`);
+    assert.ok(geometry.actionsBottom <= geometry.bodyTop + 0.5, `the body begins after the wrapped badges (${geometry.actionsBottom} <= ${geometry.bodyTop})`);
+  } finally { await page.close(); }
 });

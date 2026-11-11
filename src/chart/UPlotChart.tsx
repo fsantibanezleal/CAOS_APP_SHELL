@@ -687,6 +687,8 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
   // new value (and a new label) is redrawn, never rebuilt (a rebuild would drop the handle the reader holds)
   const yMarksRef = useRef(yMarks);
   yMarksRef.current = yMarks;
+  const marksRef = useRef(marks);
+  marksRef.current = marks;
   const liveRef = useRef<number[]>([]);
   liveRef.current = (yMarks ?? []).map((m) => m.y);
   const overlaysRef = useRef(overlays);
@@ -723,7 +725,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
     p: range,
     pick: Boolean(onPick),
     y: [yLabel, yUnit, Boolean(y.log), y.range ?? null, y.format ?? null, tiny.y],
-    m: (marks ?? []).map((m) => [m.x, pick(m.label, lang)]),
+    m: (marks ?? []).map((m) => pick(m.label, lang)),
     ym: (yMarks ?? []).map((m) => (m.drag ? ['drag', m.drag, Boolean(m.label)] : [m.y, m.label ? pick(m.label, lang) : null, m.tone ?? 'warn'])),
     theme,
     lang,
@@ -1095,7 +1097,8 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
               el.setAttribute('aria-valuenow', String(Number(v.toPrecision(12))));
               el.setAttribute('aria-valuetext', label ? `${label}: ${shown}` : shown);
             });
-            const cut = [...ycut, ...(marks?.length ? drawMarks(u, marks.map((m) => ({ x: m.x, label: pick(m.label, lang) })), markStyle, boxes) : [])];
+            const currentMarks = marksRef.current ?? [];
+            const cut = [...ycut, ...(currentMarks.length ? drawMarks(u, currentMarks.map((m) => ({ x: m.x, label: pick(m.label, lang) })), markStyle, boxes) : [])];
             // what was placed, in CSS pixels from the canvas' corner, and how many labels overlap: declared for the gate (G20) and the shell's own tests
             const pr = uPlot.pxRatio || 1;
             const rounded = (v: number) => Math.round((v / pr) * 10) / 10;
@@ -1183,10 +1186,11 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
 
   // a line moved or relabelled by the caller, and overlays given anew, are drawn again without a rebuild
   const overlaysKey = JSON.stringify(overlays.map(({ s, i }) => [i, s.x, s.values, s.size ?? 9, seriesStyle(s, i).color]));
+  const marksKey = JSON.stringify((marks ?? []).map((m) => [m.x, pick(m.label, lang)]));
   const linesKey = JSON.stringify((yMarks ?? []).map((m) => [m.y, m.label ? pick(m.label, lang) : null, m.tone ?? 'warn']));
   useEffect(() => {
     uRef.current?.redraw(false);
-  }, [linesKey, overlaysKey]);
+  }, [linesKey, overlaysKey, marksKey]);
 
   // a press on the key dims the other series: their style is changed on the plot and it is drawn again, never rebuilt, so the
   // cursor and a line the reader holds survive

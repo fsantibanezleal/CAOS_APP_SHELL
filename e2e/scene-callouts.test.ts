@@ -28,6 +28,9 @@ const ENTRY = `
   ];
   const items = q.get('set') === 'wrapped' ? WRAPPED : FIXTURE;
   (window as any).__bands = [];
+  (window as any).__bandFrames = [];
+  function recordBand() { const layer = document.querySelector('[data-caos-callout-layer]'); if (layer) (window as any).__bandFrames.push(getComputedStyle(layer).getPropertyValue('--caos-callout-band').trim()); requestAnimationFrame(recordBand); }
+  requestAnimationFrame(recordBand);
   function Stage() {
     return <div style={{ position: 'relative', width: '100%', height: '100%' }}><SceneCallouts items={items as any} placement="header" onLayout={(info: { bandHeight: number }) => (window as any).__bands.push(info.bandHeight)} /></div>;
   }
@@ -122,6 +125,41 @@ test('SHW-061 header cards with wrapped sources never cover one another, their l
       assert.match(facts.band, /^\d+(\.\d+)?px$/, `${width} ${lang}: the layer sets --caos-callout-band in px (got "${facts.band}")`);
       assert.ok(Math.abs(Number.parseFloat(facts.band) - facts.measured) <= 1, `${width} ${lang}: --caos-callout-band ${facts.band} is the measured band ${facts.measured.toFixed(1)} px`);
       assert.ok(typeof facts.reported === 'number' && Math.abs(facts.reported - facts.measured) <= 1, `${width} ${lang}: onLayout reports the measured band (${facts.reported} for ${facts.measured.toFixed(1)} px)`);
+    }
+    await page.close();
+  } finally { await h.close(); }
+});
+
+test('SHW-065 only publishes the settled callout band during mount and measurement', async () => {
+  const h = await startHarness(ENTRY);
+  try {
+    const page = await h.browser.newPage({ viewport: { width: 390, height: 844 } });
+    await page.goto(`${h.address}?set=wrapped&lang=es`);
+    await settled(page);
+    await page.waitForTimeout(100);
+    const bands = await page.evaluate(() => ({ callbacks: (window as any).__bands as number[], frames: (window as any).__bandFrames as string[] }));
+    assert.ok(bands.callbacks.length > 0, 'the settled layout reports its band');
+    assert.equal(new Set(bands.callbacks.map((band) => Math.round(band))).size, 1, `callbacks contain only one settled band: ${bands.callbacks.join(', ')}`);
+    assert.equal(new Set(bands.frames.filter((band) => Number.parseFloat(band) > 0)).size, 1, `the CSS variable exposes only one settled band: ${bands.frames.join(', ')}`);
+    await page.close();
+  } finally { await h.close(); }
+});
+
+test('SHW-066 every callout value occupies its own row below the eyebrow', async () => {
+  const h = await startHarness(ENTRY);
+  try {
+    const page = await h.browser.newPage();
+    for (const width of [390, 1280]) for (const lang of ['en', 'es'] as const) {
+      await page.setViewportSize({ width, height: width < 760 ? 844 : 800 });
+      await page.goto(`${h.address}?set=wrapped&lang=${lang}`);
+      await settled(page);
+      const rows = await page.locator('.caos-scene-callout').evaluateAll((cards) => cards.map((card) => {
+        const eyebrow = card.querySelector('.caos-callout-eyebrow')!.getBoundingClientRect();
+        const value = card.querySelector('strong')!.getBoundingClientRect();
+        return { eyebrowBottom: eyebrow.bottom, valueTop: value.top };
+      }));
+      assert.equal(rows.length, 3);
+      for (const [i, row] of rows.entries()) assert.ok(row.valueTop >= row.eyebrowBottom - 0.5, `${width} ${lang}: value ${i + 1} begins below its eyebrow`);
     }
     await page.close();
   } finally { await h.close(); }
