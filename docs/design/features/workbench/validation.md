@@ -1,5 +1,19 @@
 # Validation: workbench and showcase primitives
 
+## SHW-064 to SHW-066, SHC-104, SHC-105, SHG-092 and SHG-093: seven open known defects (0.26.0)
+
+Each row has a test that fails on 0.25.0 (the 0.25.0 source with the 0.26.0 tests, run in a copy of tag v0.25.000) for the reason the product found.
+
+| Row | Defect | Test, red on 0.25.0 | Why it was red | 0.26.0 |
+|---|---|---|---|---|
+| SHW-064 | 63: a filling `PlotCard` header shrank under content taller than the card | `e2e/fill-floor.test.ts` SHW-064 | the header was 24 px (its 1.5rem min-height) at 390 x 480 in en, its two-line title and badges under the body | the header keeps its natural height (at least 40 px), title and badges inside it, the body under them, at 390 and 1280 px in en and es |
+| SHC-104 | 64: a moving mark rebuilt the chart every frame | `e2e/moving-mark.test.ts` SHC-104 | ArrowRight while the mark moved left the readout on its hint ("Hover the chart to read the values") | the readout moves on ArrowRight and holds through one second of a mark moving every frame; the canvas is the same; a series change rebuilds |
+| SHW-065 | 65: the header band swung through transient layouts | `e2e/scene-callouts.test.ts` SHW-065 | a stage that opened at 0 px reported 363.97 px and then the settled 86.75 px | one settled band per layout, in `onLayout` and on every frame of `--caos-callout-band`, for a stage opening at 0 px, cards out of layout for 400 ms, a story step mounted at 2560 x 1440 and a resize |
+| SHW-066 | 67: the value shared the eyebrow's row | `e2e/scene-callouts.test.ts` SHW-066 | at 164 px the value began at 100.5 px while its eyebrow ended at 127.7 px (four lines beside the value) | the value is under the eyebrow; the eyebrow is at least 70% of the card's content box and two lines at most; nothing cut at 164 and 184 px in en and es |
+| SHG-092 | 66: a deck whose cards all fit kept `data-deck-mode="carousel"` | `e2e/card-deck.test.ts` (five cards at 1800 px), gate plant `legit-deck-fits-wide` | the mode was `carousel`; the walk at 1600 x 900 threw "document carousel has no traversal control" in en and es, then four floors read as unvisited | the deck is a row; the walk passes |
+| SHG-093 | 50: G18 reported a control clipped by its own scrolling panel under the HUD | gate plants `legit-focus-hud-clipped` and `surface-focus-hud-covers` | the legit page failed G18 "the HUD covers the control "Planted control under the HUD"" at 1280 x 800 | the clipped control is not reported; the visible one still is |
+| SHC-105 | 43: a time axis read UTC days in the reader's time zone | `e2e/time-zone.test.ts` SHC-105 (America/Santiago) | the readout read "Day Jan 2, 2022" (en) and "Day 2 ene 2022" (es) for 2022-01-03 | the readout, the data table and the axis name 3 January; `'local'` still reads the 2nd |
+
 ## SHW-063 and SHC-103: the variant select, the chart readout under a scrolled page (0.25.0)
 
 CEFOP_DinHot's full gate of its release build (shell 0.23.2) found two gaps; each has tests that fail on 0.24.0 for the reason the gate gave.

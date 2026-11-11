@@ -1508,6 +1508,25 @@ export function installLib() {
   G.figureImages = () => [...document.querySelectorAll('figure img')].filter((i) => /\.svg(\?|#|$)/i.test(i.getAttribute('src') || '')).map((i, k) => ({ name: `figure ${k + 1}`, src: i.currentSrc || i.src }));
 
   // ---- G18: Focus mode for the App (shell 0.14.0)
+  /** The box of `el` cut by the padding box of every ancestor up to `stop` (inclusive) that clips its overflow (overflow other than
+   * visible on either axis), as {left, top, right, bottom}; null when nothing of it is left. */
+  const clippedBox = (el, stop) => {
+    const b = el.getBoundingClientRect();
+    let left = b.left, top = b.top, right = b.right, bottom = b.bottom;
+    for (let a = el.parentElement; a; a = a.parentElement) {
+      const cs = getComputedStyle(a);
+      const clipX = cs.overflowX !== 'visible', clipY = cs.overflowY !== 'visible';
+      if (clipX || clipY) {
+        const r = a.getBoundingClientRect();
+        const l = r.left + a.clientLeft, t = r.top + a.clientTop;
+        if (clipX) { left = Math.max(left, l); right = Math.min(right, l + a.clientWidth); }
+        if (clipY) { top = Math.max(top, t); bottom = Math.min(bottom, t + a.clientHeight); }
+        if (right - left <= 1 || bottom - top <= 1) return null;
+      }
+      if (a === stop) break;
+    }
+    return { left, top, right, bottom };
+  };
   /** The App or Focus mode as the reader meets it: which one, the case and the group, the URL, the page and the rail. */
   G.focusFacts = () => {
     const shell = document.querySelector('[data-focus-shell]');
@@ -1534,7 +1553,10 @@ export function installLib() {
       for (const el of c.querySelectorAll(controlSel)) {
         if (covered.length >= 4) break;
         if (!visible(el)) continue;
-        const r = el.getBoundingClientRect();
+        // the part of the control a reader can see: its box cut by the clip of every overflow ancestor up to the instrument
+        // (shell 0.26.0, known defect 50: a control that its own scrolling panel has not scrolled to lies under the HUD's box, unseen)
+        const r = clippedBox(el, c);
+        if (!r) continue;
         const hit = chrome.find(([e]) => {
           const b = e.getBoundingClientRect();
           return r.left < b.right - 1 && r.right > b.left + 1 && r.top < b.bottom - 1 && r.bottom > b.top + 1;

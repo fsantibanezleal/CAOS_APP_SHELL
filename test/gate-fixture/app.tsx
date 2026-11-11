@@ -1309,6 +1309,29 @@ function Console() {
         document.body.style.minHeight = '';
       };
     }
+    // shell 0.26.0 (known defect 50, CEFOP_DinHot): a control under the HUD tile's box that its own scrolling panel clips out of sight
+    // is not covered by the HUD (`legit-focus-hud-clipped`); the same control in a panel that does not clip it is (`surface-focus-hud-covers`).
+    // The panel ends 8 px above the tile, and the control lies 60 px down its content, inside the tile's box, at every size.
+    if (PLANT === 'legit-focus-hud-clipped' || PLANT === 'surface-focus-hud-covers') {
+      const place = () => {
+        const inst = document.querySelector('.caos-focus-instrument') as HTMLElement | null;
+        const tile = document.querySelector('.caos-focus-stage > .caos-focus-hud > div') as HTMLElement | null;
+        const here = document.querySelector('[data-plant-hud]') as HTMLElement | null;
+        if (!inst || !tile) { here?.remove(); return; }
+        const i = inst.getBoundingClientRect(), t = tile.getBoundingClientRect();
+        const panel = here ?? document.createElement('div');
+        if (!here) {
+          panel.setAttribute('data-plant-hud', '');
+          panel.innerHTML = '<div style="height:60px"></div><button type="button" class="btn" style="height:24px">Planted control under the HUD</button><div style="height:40px"></div>';
+          inst.append(panel);
+        }
+        const style = `position:absolute;z-index:1;left:${t.left - i.left}px;top:${t.top - i.top - 60}px;width:${Math.max(120, t.width)}px;height:52px;overflow:${PLANT === 'legit-focus-hud-clipped' ? 'auto' : 'visible'}`;
+        if (panel.getAttribute('style') !== style) panel.setAttribute('style', style);
+      };
+      const stop = plantDom(place);
+      window.addEventListener('resize', place);
+      return () => { stop(); window.removeEventListener('resize', place); document.querySelector('[data-plant-hud]')?.remove(); };
+    }
     if (PLANT === 'surface-focus-chrome-covers') return styled('.caos-focus-instrument > .caos-surface-focus { padding-top: 0.4rem !important; }');
     if (PLANT === 'surface-focus-no-exit') return styled('[data-focus-exit] { display: none !important; }');
     if (PLANT === 'surface-focus-stage-small') return styled('.caos-focus-shell { grid-template-columns: minmax(0, 1fr) 62vw !important; }');

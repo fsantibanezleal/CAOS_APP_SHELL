@@ -1,22 +1,32 @@
-## [0.26.000] - 2026-11-10
+## [0.26.000] - 2026-11-11
 
-Five shared component defects found in CAOS products (known defects 63 to 67, issues 211 to 214).
+Seven open known defects of shell 0.25.0, each with a test that fails on 0.25.0 (known defects 63 to 67, found by CEFOP_DinHot and CAOS_ChancaDEM, issues 211 to 214; known defect 50, found by CEFOP_DinHot; known defect 43, found by CAOS_Contraste).
+
+### Added
+
+- `UPlotChart` `x.timeZone?: 'UTC' | 'local'` for a time axis (default `'UTC'`; known defect 43, SHC-105). The axis, the readout, the data table and the summary read the epoch seconds in that time zone; `formatTime` takes the same argument (default `'UTC'`). A time axis declares the labels it drew in `data-x-time-labels`.
+- Gate plants: `surface-focus-hud-covers` (a visible control under the Focus HUD fails G18) and `legit-focus-hud-clipped` (the same control clipped out of sight by its own scrolling panel passes); `legit-deck-fits-wide` (the executive view's five-card deck walked at 1600 x 900).
 
 ### Fixed
 
-- A filling `PlotCard` keeps its wrapped title, actions and lane badges at their measured height; the body starts below them (defect 63).
-- A moving x mark redraws on the existing `UPlotChart` instance, preserving the reader's crosshair and readout (defect 64).
-- A header `SceneCallouts` layer publishes its measured band only after the layout settles, never from intermediate card measurements (defect 65).
-- `CardDeck` declares a static row when all cards fit and no traversal controls are drawn, so it no longer claims to be a carousel without controls (defect 66).
-- A scene callout places its value on a separate row below the eyebrow, so long labels no longer get squeezed beside the value (defect 67).
-- The browser test runner runs one test file at a time; uncapped and two-file runs timed out at local browser navigation, while the six-case deck suite passed serially.
+- A filling `PlotCard` keeps its header at its natural height when its content is taller than the card (known defect 63, SHW-064, issue 211). `.caos-plot-head` is `flex: none`; on 0.25.0 it shrank to its 1.5rem min-height (24 px) and its wrapped badges ran under the body.
+- A `marks` entry that moves redraws the chart instead of rebuilding it (known defect 64, SHC-104, issue 212). The mark's x left the chart's structure key and is read by the draw hook; the keyboard crosshair and its readout work while a mark moves every frame (on 0.25.0 ArrowRight left the readout on its hint) and a change of the series still rebuilds.
+- The header `SceneCallouts` band is reported only for a settled layout (known defect 65, SHW-065, issue 213). A card's height counts only when it was measured at the width the card is drawn with now, and the layout must hold for one frame; `onLayout` fires once per real change and `--caos-callout-band` holds the last settled band, unset before the first. On 0.25.0 a stage that opened at 0 px reported 364 px and then the settled 87 px.
+- A `CardDeck` whose cards all fit is a row (known defect 66, SHG-092, issue 214): `data-deck-mode="row"` without the carousel role, name and keys, so the document walk no longer throws "document carousel has no traversal control" at 1600 px and wider. A deck that hides cards keeps its controls and its carousel mode.
+- A scene callout draws its value on its own row under the eyebrow (known defect 67, SHW-066); the trend glyph keeps its column. On 0.25.0 a 7-character value left a 22-character eyebrow a column of about 55 px at 164 px, four lines tall.
+- G18 judges a Focus instrument control covered by the Focus chrome on the part of its box a reader can see, the box cut by the clip of every overflow ancestor up to the instrument (known defect 50, SHG-093). On 0.25.0 a control that its own scrolling panel had not scrolled to, lying under the HUD tile's box, was reported.
+- A time axis of UTC days reads the right day west of UTC (known defect 43, SHC-105): on 0.25.0, in America/Santiago, 2022-01-03 read "Jan 2, 2022" and "2 ene 2022" in the readout and the data table.
+- The browser test runner runs one test file at a time (`--test-concurrency=1`): concurrent files timed out at local browser navigation.
 
 - G20 starts its keyboard check at Home so a prior hover on the first chart point cannot cause an erroneous movement failure.
 
 ### Adoption
 
-- Defects 63, 64, 66 and 67 require no product API change. Remove local layout or pause workarounds that addressed these defects.
-- Defect 65: read `--caos-callout-band` or `onLayout` after the shell reports the settled band; remove product delays used to mask transient values.
+- Known defect 65: drop any product-side hold of the band (a delay or a "band held for N ms" check before mounting or padding a drawing; CEFOP_DinHot 33d10c5, CAOS_ChancaDEM 5d28228). Read `--caos-callout-band` with a fallback (`var(--caos-callout-band, 0px)`), since it is unset until the first settled layout.
+- Known defect 67: eyebrows may be long again; the value no longer shares their row. A card is one value row taller than on 0.25.0, which the measured band already reserves.
+- Known defect 43: a time axis now reads its epochs as UTC by default, so a document day passed as UTC midnight reads as that day everywhere. A product that passed the reader's local midnight to work around it (CAOS_Contraste `daySeconds`) passes UTC midnight again; a product that plots real local instants and wants the reader's time zone sets `x.timeZone: 'local'`.
+- Known defect 50: no product change; a product that moved a control to keep it off the HUD's box (CEFOP_DinHot) may put it back.
+- Known defects 63, 64 and 66: no product change. A product may remove a workaround it kept for them (DinHot's pause of the bead on the reader's key, dd10e08; its hold card trimmed to fit, 30ae0c4, may stay).
 
 ## [0.25.000] - 2026-11-08
 

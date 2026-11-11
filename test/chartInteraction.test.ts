@@ -283,12 +283,16 @@ test('leastLabelSpan: the least span at which an axis of significant digits stil
 });
 
 test('formatTime: a date in the page language, with the time of day only when the span is under three days (M3)', () => {
-  const en = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(1704067200 * 1000));
-  const es = new Intl.DateTimeFormat('es-CL', { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(1704067200 * 1000));
+  // read in UTC by default since 0.26.0 (known defect 43): 1704067200 is 2024-01-01 00:00 UTC in every time zone
+  const en = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(1704067200 * 1000));
+  const es = new Intl.DateTimeFormat('es-CL', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(1704067200 * 1000));
   assert.equal(formatTime(1704067200, 'en', 30 * 86400), en);
   assert.equal(formatTime(1704067200, 'es', 30 * 86400), es);
   assert.ok(formatTime(1704067200, 'en', 3600).length > en.length, 'the time of day shows on a short span');
   assert.ok(!/1,704/.test(formatTime(1704067200, 'en', 1)));
+  assert.equal(en, 'Jan 1, 2024');
+  // 'local' reads the epoch in the process's time zone, as 0.25.0 did for every chart
+  assert.equal(formatTime(1704067200, 'en', 30 * 86400, 'local'), new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(1704067200 * 1000)));
 });
 
 test('brushRange: the dragged range, in order, inside the full range and never narrower than the least span', () => {
