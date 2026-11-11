@@ -314,11 +314,16 @@ export function dateNames(lang: Lang): { MMMM: string[]; MMM: string[]; WWWW: st
   return { MMMM: month('long'), MMM: month('short'), WWWW: weekday('long'), WWW: weekday('short') };
 }
 
-/** A time of an axis (epoch seconds) in the page language: the date, with the time of day when the span shown is under three days. */
-export function formatTime(seconds: number, lang: Lang, spanSeconds: number): string {
+/** The time zone a time axis reads its epochs in (0.26.0, known defect 43): `'UTC'` (the default) for calendar days and
+ * instants every reader must see alike, `'local'` for the reader's own time zone. */
+export type ChartTimeZone = 'UTC' | 'local';
+
+/** A time of an axis (epoch seconds) in the page language: the date, with the time of day when the span shown is under three days,
+ * read in UTC by default (a document day passed as UTC midnight is that day in every time zone) or in the reader's time zone. */
+export function formatTime(seconds: number, lang: Lang, spanSeconds: number, timeZone: ChartTimeZone = 'UTC'): string {
   const short = spanSeconds < 3 * 86400;
   const opts: Intl.DateTimeFormatOptions = short ? { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' } : { year: 'numeric', month: 'short', day: 'numeric' };
-  return new Intl.DateTimeFormat(lang === 'es' ? 'es-CL' : 'en-US', opts).format(new Date(seconds * 1000));
+  return new Intl.DateTimeFormat(lang === 'es' ? 'es-CL' : 'en-US', timeZone === 'UTC' ? { ...opts, timeZone: 'UTC' } : opts).format(new Date(seconds * 1000));
 }
 
 /** The range a brush from `a` to `b` selects: in order, inside `full`, and never narrower than `least` (widened around its middle, slid back inside). */

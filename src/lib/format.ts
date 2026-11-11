@@ -19,6 +19,21 @@ export interface FormatOptions {
 
 const LOCALE: Record<Lang, string> = { en: 'en-US', es: 'es-CL' };
 
+/** One `Intl.NumberFormat` per locale and options (0.26.0, known defect 68): building one per call cost CEFOP_DinHot 255 ms of a
+ * 1.6 s story sample, since a chart's accessible table and a product's screen-reader table format every point and cell. The
+ * options are written in a fixed key order, so the same options always find the same formatter; the text is unchanged. */
+const FORMATTERS = new Map<string, Intl.NumberFormat>();
+const FORMAT_KEYS = ['notation', 'minimumFractionDigits', 'maximumFractionDigits', 'maximumSignificantDigits', 'useGrouping'] as const;
+function numberFormat(locale: string, options: Intl.NumberFormatOptions): Intl.NumberFormat {
+  const key = `${locale}|${FORMAT_KEYS.map((k) => String(options[k] ?? '')).join('|')}`;
+  let nf = FORMATTERS.get(key);
+  if (!nf) {
+    nf = new Intl.NumberFormat(locale, options);
+    FORMATTERS.set(key, nf);
+  }
+  return nf;
+}
+
 /** The no-break space (U+00A0) that joins a value to its unit or sign. */
 export const NBSP = ' ';
 
@@ -50,12 +65,12 @@ export function formatNumber(value: number | null | undefined, lang: Lang, opts:
   const grouping = opts.grouping === false ? { useGrouping: false } : {};
   const nf =
     opts.decimals !== undefined
-      ? new Intl.NumberFormat(LOCALE[lang], { minimumFractionDigits: opts.decimals, maximumFractionDigits: opts.decimals, ...grouping })
+      ? numberFormat(LOCALE[lang], { minimumFractionDigits: opts.decimals, maximumFractionDigits: opts.decimals, ...grouping })
       : scientific
-        ? new Intl.NumberFormat(LOCALE[lang], { notation: 'scientific', maximumSignificantDigits: digits })
+        ? numberFormat(LOCALE[lang], { notation: 'scientific', maximumSignificantDigits: digits })
         : Math.abs(v) >= 10 ** (digits - 1)
-          ? new Intl.NumberFormat(LOCALE[lang], { maximumFractionDigits: 0, ...grouping })
-          : new Intl.NumberFormat(LOCALE[lang], { maximumSignificantDigits: digits, ...grouping });
+          ? numberFormat(LOCALE[lang], { maximumFractionDigits: 0, ...grouping })
+          : numberFormat(LOCALE[lang], { maximumSignificantDigits: digits, ...grouping });
   // A no-break space joins the number and its sign, so a label that wraps never leaves "%" alone on a line (known
   // shell defect 22).
   return opts.percent ? `${nf.format(v)}${NBSP}%` : nf.format(v);

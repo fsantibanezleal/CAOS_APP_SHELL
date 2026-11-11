@@ -125,13 +125,18 @@ export function layoutCalloutHeader(items: SceneCalloutDef[], width: number, hei
  * The layer measures its cards and lays them out on their real heights. In the header placement it sets
  * `--caos-callout-band` (px) on the layer and calls `onLayout` with the band height: the distance from the top of the
  * layer to the bottom of the lowest card, which a product reserves above its drawing instead of a nominal band.
+ * Since 0.26.0 the band is reported only for a settled layout (known defect 65): every card measured at the width it is
+ * drawn with now (a height taken in an earlier layout, a 0 px stage or a card out of layout, is not used for the band), and
+ * the layout unchanged for one frame. Until the first such layout the property is not set; after it, it holds the last
+ * settled band until the next one, so a product that pads its drawing by it never sees a transient value.
  */
 export function SceneCallouts({ items, className, placement = 'anchored', onLayout }: { items: SceneCalloutDef[]; className?: string; placement?: 'anchored' | 'header'; onLayout?: (info: { bandHeight: number }) => void }) {
   const lang = useShellLang();
   const host = useRef<HTMLDivElement | null>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
-  const [heights, setHeights] = useState<Record<string, number>>({});
-  const [settled, setSettled] = useState<{ signature: string; bandHeight: number } | null>(null);
+  // each card's measured border box: its height, and the width it was drawn with when it was measured
+  const [cards, setCards] = useState<Record<string, { height: number; width: number }>>({});
+  const [band, setBand] = useState<number | null>(null);
   useEffect(() => {
     const node = host.current;
     if (!node) return;
@@ -140,25 +145,28 @@ export function SceneCallouts({ items, className, placement = 'anchored', onLayo
     return () => observer.disconnect();
   }, []);
   const ids = items.map((item) => item.id).join('\u0000');
-  useEffect(() => { setHeights({}); setSettled(null); }, [ids, placement]);
   useEffect(() => {
     const node = host.current;
     if (!node) return;
-    // the border box, unaffected by the transforms of a story's stage transition
-    const observer = new ResizeObserver((entries) => setHeights((previous) => {
+    setCards({});
+    // the border box, unaffected by the transforms of a story's stage transition; a card out of layout (0 px) is not measured
+    const observer = new ResizeObserver((entries) => setCards((previous) => {
       let next = previous;
       for (const entry of entries) {
         const id = (entry.target as HTMLElement).dataset.caosCallout;
-        const measured = entry.borderBoxSize?.[0]?.blockSize ?? (entry.target as HTMLElement).offsetHeight;
-        if (id === undefined || !(measured > 0) || Math.abs((previous[id] ?? -1) - measured) <= 0.25) continue;
+        const height = entry.borderBoxSize?.[0]?.blockSize ?? (entry.target as HTMLElement).offsetHeight;
+        const width = entry.borderBoxSize?.[0]?.inlineSize ?? (entry.target as HTMLElement).offsetWidth;
+        const was = id === undefined ? undefined : previous[id];
+        if (id === undefined || !(height > 0) || !(width > 0) || (was && Math.abs(was.height - height) <= 0.25 && Math.abs(was.width - width) <= 0.25)) continue;
         if (next === previous) next = { ...previous };
-        next[id] = measured;
+        next[id] = { height, width };
       }
       return next;
     }));
     node.querySelectorAll<HTMLElement>('[data-caos-callout]').forEach((card) => observer.observe(card));
     return () => observer.disconnect();
   }, [ids, placement]);
+  const heights = useMemo(() => Object.fromEntries(Object.entries(cards).map(([id, c]) => [id, c.height])), [cards]);
   const compact = size.width < 640;
   const boxes = useMemo(() => {
     if (placement === 'anchored') return layoutSceneCallouts(items, size.width, size.height, compact, heights);
@@ -166,20 +174,25 @@ export function SceneCallouts({ items, className, placement = 'anchored', onLayo
   }, [items, placement, size, compact, heights]);
   const nominalH = placement === 'anchored' ? (compact ? 56 : 68) : (compact ? 54 : 68);
   const bandHeight = placement === 'header' && boxes.length ? Math.max(...boxes.map((box) => box.top + box.height)) : 0;
-  const measured = items.every((item) => heights[item.id] !== undefined);
+  // every card measured at the width it is laid out with now: a height from another layout is stale
+  const measured = boxes.length === items.length && boxes.every((box) => { const c = cards[box.id]; return c !== undefined && Math.abs(c.width - box.width) <= 0.5; });
   const layoutSignature = JSON.stringify([size.width, size.height, boxes.map(({ id, left, top, width, height }) => [id, left, top, width, height])]);
   const report = useRef(onLayout);
   report.current = onLayout;
+  const reported = useRef<number | null>(null);
+  // a layout that holds for one frame is settled: the band is set and reported once per real change
   useEffect(() => {
     if (placement !== 'header' || size.width <= 0 || !measured) return undefined;
-    const frame = requestAnimationFrame(() => setSettled({ signature: layoutSignature, bandHeight }));
+    const frame = requestAnimationFrame(() => {
+      setBand(bandHeight);
+      if (reported.current === null || Math.abs(reported.current - bandHeight) > 0.01) {
+        reported.current = bandHeight;
+        report.current?.({ bandHeight });
+      }
+    });
     return () => cancelAnimationFrame(frame);
   }, [placement, size.width, measured, layoutSignature, bandHeight]);
-  const settledBand = settled?.signature === layoutSignature ? settled.bandHeight : 0;
-  useEffect(() => {
-    if (placement === 'header' && settled?.signature === layoutSignature) report.current?.({ bandHeight: settled.bandHeight });
-  }, [placement, settled, layoutSignature]);
-  const style = placement === 'header' ? ({ '--caos-callout-band': `${settledBand}px` } as CSSProperties) : undefined;
+  const style = placement === 'header' && band !== null ? ({ '--caos-callout-band': `${band}px` } as CSSProperties) : undefined;
   return <div ref={host} className={['caos-callout-layer', className].filter(Boolean).join(' ')} style={style} aria-label={lang === 'es' ? 'Valores fijados a los componentes' : 'Values anchored to components'} data-caos-callout-layer="" data-placement={placement}>
     <svg className="caos-callout-leaders" aria-hidden="true" viewBox={`0 0 ${Math.max(1, size.width)} ${Math.max(1, size.height)}`} preserveAspectRatio="none">{boxes.map((box) => <line key={box.id} x1={box.anchorX} y1={box.anchorY} x2={box.left + box.width / 2} y2={box.top + box.height / 2} data-caos-callout-leader={box.id}/>)}</svg>
     {boxes.map((box) => { const item = items.find((candidate) => candidate.id === box.id)!; const state = Object.prototype.hasOwnProperty.call(STATE_LABELS, item.state) ? STATE_LABELS[item.state] : null; return <article key={box.id} className="caos-scene-callout" data-caos-callout={item.id} data-callout-value={item.value} data-callout-unit={pick(item.unit, lang)} data-callout-state={item.state} data-callout-source={pick(item.source, lang)} data-callout-anchor-x={item.anchor.x} data-callout-anchor-y={item.anchor.y} style={{ left: box.left, top: box.top, width: box.width, minHeight: nominalH }}>

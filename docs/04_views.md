@@ -223,6 +223,16 @@ A page that cannot carry an area or a floor for a stated reason declares a **wai
 | `.caos-table` | tabular figures, a sticky header, numbers right-aligned, `.caos-col-text` for words | its rows; cells wrap at 760 px and below |
 | `Callout`, `Figure`, `Equation` | notes, figures with captions, equations with captions | the document's column; a caption keeps its measure |
 
+A `PlotCard` header keeps its natural height whatever its body asks for (0.26.0): a filling card whose content is taller than the card
+no longer squeezes its wrapped title and badges under the body.
+
+`UPlotChart` on a time axis (`x.time: true`) reads its epoch seconds in `x.timeZone` (0.26.0): `'UTC'` by default, so a document day
+passed as UTC midnight (`Date.UTC(y, m, d) / 1000`) reads as that day on the axis, in the readout, the data table and the summary for
+every reader, east or west of UTC; `'local'` reads them in the reader's own time zone, for real local instants (a sensor log taken on
+site). Before 0.26.0 every time axis read the reader's time zone, so a UTC day read one day early west of UTC. A `marks` entry whose
+x changes (a "now" line while a trace plays) is drawn on the same chart, never rebuilt: the reader's crosshair and readout stay.
+
+
 ## Small cards: `FlipCard` and `CardDeck` (0.14.0)
 
 **The rule of use.** A flip card is for a SMALL card (a title of about eight words, a back of about forty) in a place where the reader
@@ -248,7 +258,8 @@ flip cards with `flip`. Up to `carouselAbove` cards they are a **row**; above it
 (at least one; `perPageFor`), previous and next buttons, a swipe on touch, the arrow keys, Home and End while it has focus, and a
 position ("2 of 5" / "2 de 5", "1 to 3 of 5" when several show). No autoplay. The carousel pages through its cards (it does not
 scroll a strip), so neither the page nor its panel scrolls sideways (ADR-0071); the cards the window hides are not in sight or in
-the tab order but stay in the markup; reduced motion removes the slide; when every card fits, the controls are not drawn.
+the tab order but stay in the markup; reduced motion removes the slide; when every card fits, the controls are not drawn and the deck is a row
+(`data-deck-mode="row"`, without the carousel role and keys) until the page narrows again (0.26.0).
 
 ```tsx
 <CardDeck flip ariaLabel="Who bears it" cards={bearers.map((b) => ({ id: b.id, title: b.who, label: b.who, body: <p>{b.cost}</p> }))} />
@@ -291,6 +302,14 @@ measures its cards and lays them out on their real heights; in the header placem
 CSS custom property `--caos-callout-band` (px) on the layer and the optional `onLayout({ bandHeight })` callback. A product
 that keeps its drawing clear of the header band reserves that height, never a nominal card size. `layoutCalloutHeader` and
 `layoutSceneCallouts` are exported, with the `CalloutHeights` type, so a product can test its geometry before rendering.
+
+Since 0.26.0 the band is reported only for a settled layout: every card measured at the width it is drawn with now, and the
+layout unchanged for one frame. A height measured in an earlier layout (a stage still 0 px wide when a story step mounts, a card
+out of layout) is never turned into a band, so `onLayout` fires once per real change and `--caos-callout-band` never shows a
+transient value; the property is unset until the first settled layout (read it with a fallback, `var(--caos-callout-band, 0px)`)
+and then holds the last settled band. A product that held the band itself until it stopped moving drops that hold. The card
+draws its value on its own row under the eyebrow (the trend glyph keeps its column), so the eyebrow has the card's whole width
+and need not be shortened to fit beside the value.
 
 `LinkedViewProvider` creates one selection/cursor store for a scene and its panel. `useLinkedView` exposes `selectedId`,
 `cursor`, `seriesId` and the `select`, `scrub` and `showSeries` actions. Components pass an origin (`scene`, `panel`,

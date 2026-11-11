@@ -75,6 +75,9 @@ export const DEFAULTS = {
  * reader (and the CI runner) gets. Applied before the first frame, so a drawing that measures its text measures it. */
 const WIDE_FONT = ':root, :root[data-theme] { --font-sans: Verdana, "DejaVu Sans", sans-serif !important; }';
 
+/** G21's 30 fps floor as a fifth-percentile frame interval, with 1 ms for vsync quantisation: at 60 Hz a frame held for two vsyncs
+ * is 33.3 ms and 0.1 ms of timestamp jitter reads it as 29.94 or 30.03 fps (0.26.0). */
+export const G21_P05_INTERVAL_MS = 1000 / 30 + 1;
 const RATE_LIMIT = 5; // frames or mutations per second at rest above which a loop is reported (G8)
 
 async function loadKeys() {
@@ -579,7 +582,10 @@ export async function runGate(o) {
           if (!frameFacts || frameFacts.median === null || frameFacts.p05 === null) fail('G21', { route: first.route, mode }, 'story animation frame rate could not be measured');
           else {
             if (frameFacts.median < 55) fail('G21', { route: first.route, mode }, `story median is ${frameFacts.median.toFixed(1)} fps; ADR-0082 floor is 55 fps`);
-            if (frameFacts.p05 < 30) fail('G21', { route: first.route, mode }, `story fifth-percentile frame rate is ${frameFacts.p05.toFixed(1)} fps; ADR-0082 floor is 30 fps`);
+            // the 30 fps floor is judged on the frame interval with 1 ms of tolerance (0.26.0): at 60 Hz a frame held for two vsyncs is
+            // 33.3 ms, which reads 29.94 or 30.03 fps on 0.1 ms of timestamp jitter; a frame of three vsyncs (50 ms) still fails
+            const interval = frameFacts.p05Interval ?? 1000 / frameFacts.p05;
+            if (interval > G21_P05_INTERVAL_MS) fail('G21', { route: first.route, mode }, `story fifth-percentile frame interval is ${interval.toFixed(1)} ms (${(1000 / interval).toFixed(1)} fps); ADR-0082 floor is 30 fps, judged as an interval of at most ${G21_P05_INTERVAL_MS.toFixed(1)} ms (1000/30 + 1 ms of vsync tolerance)`);
           }
           const interactions = await page.evaluate(() => window.__caosGate.storyPerformanceFacts().events);
           if (!interactions.length) fail('G21', { route: first.route, mode }, 'browser interaction latency was not measurable');
