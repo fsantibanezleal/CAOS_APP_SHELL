@@ -1,11 +1,11 @@
 ## [0.26.000] - 2026-11-11
 
-Seven open known defects of shell 0.25.0, each with a test that fails on 0.25.0 (known defects 63 to 67, found by CEFOP_DinHot and CAOS_ChancaDEM, issues 211 to 214; known defect 50, found by CEFOP_DinHot; known defect 43, found by CAOS_Contraste).
+Eight open known defects of shell 0.25.0 and G21's frame-rate tolerance, each with a test that fails on 0.25.0 (known defects 63 to 67, found by CEFOP_DinHot and CAOS_ChancaDEM, issues 211 to 214; known defects 50 and 68, found by CEFOP_DinHot; known defect 43, found by CAOS_Contraste).
 
 ### Added
 
 - `UPlotChart` `x.timeZone?: 'UTC' | 'local'` for a time axis (default `'UTC'`; known defect 43, SHC-105). The axis, the readout, the data table and the summary read the epoch seconds in that time zone; `formatTime` takes the same argument (default `'UTC'`). A time axis declares the labels it drew in `data-x-time-labels`.
-- Gate plants: `surface-focus-hud-covers` (a visible control under the Focus HUD fails G18) and `legit-focus-hud-clipped` (the same control clipped out of sight by its own scrolling panel passes); `legit-deck-fits-wide` (the executive view's five-card deck walked at 1600 x 900).
+- Gate plants: `showcase-legit-p05-33ms` and `showcase-p05-50ms` (G21's frame-rate floor on a fifth-percentile interval of 33.4 and 50 ms); `surface-focus-hud-covers` (a visible control under the Focus HUD fails G18) and `surface-legit-focus-hud-clipped` (the same control clipped out of sight by its own scrolling panel passes); `legit-deck-fits-wide` (the executive view's five-card deck walked at 1600 x 900).
 
 ### Fixed
 
@@ -17,7 +17,8 @@ Seven open known defects of shell 0.25.0, each with a test that fails on 0.25.0 
 - G18 judges a Focus instrument control covered by the Focus chrome on the part of its box a reader can see, the box cut by the clip of every overflow ancestor up to the instrument (known defect 50, SHG-093). On 0.25.0 a control that its own scrolling panel had not scrolled to, lying under the HUD tile's box, was reported.
 - A time axis of UTC days reads the right day west of UTC (known defect 43, SHC-105): on 0.25.0, in America/Santiago, 2022-01-03 read "Jan 2, 2022" and "2 ene 2022" in the readout and the data table.
 - The browser test runner runs one test file at a time (`--test-concurrency=1`): concurrent files timed out at local browser navigation.
-
+- `formatNumber` keeps one `Intl.NumberFormat` per locale and options instead of building one per call (known defect 68, SHN-010): on CEFOP_DinHot's story step at 1280 x 800 it took 255 ms self time of a 1.6 s G21 sample, through the accessible tables that format every point and cell. The text is byte-identical for every branch in en and es.
+- G21 judges the story's 30 fps floor as a fifth-percentile frame interval of at most 1000/30 + 1 ms (SHG-094). Frame intervals are quantised to the display's vsync: a frame held for two vsyncs at 60 Hz is 33.3 ms, and 0.1 ms of timestamp jitter read the same frame pattern as 29.94 fps (fail) or 30.03 fps (pass). A 33.4 ms interval passes; a 50 ms one (three vsyncs) still fails, and the message names the interval and the rate.
 - G20 starts its keyboard check at Home so a prior hover on the first chart point cannot cause an erroneous movement failure.
 
 ### Adoption
@@ -26,6 +27,8 @@ Seven open known defects of shell 0.25.0, each with a test that fails on 0.25.0 
 - Known defect 67: eyebrows may be long again; the value no longer shares their row. A card is one value row taller than on 0.25.0, which the measured band already reserves.
 - Known defect 43: a time axis now reads its epochs as UTC by default, so a document day passed as UTC midnight reads as that day everywhere. A product that passed the reader's local midnight to work around it (CAOS_Contraste `daySeconds`) passes UTC midnight again; a product that plots real local instants and wants the reader's time zone sets `x.timeZone: 'local'`.
 - Known defect 50: no product change; a product that moved a control to keep it off the HUD's box (CEFOP_DinHot) may put it back.
+- Known defect 68: no product change; a product that cached its own formatters to work around it may drop the cache.
+- G21 tolerance: no product change; a product whose G21 failed only on the jitter step (a fifth-percentile rate of 29.9 fps from 33.4 ms frames) now passes.
 - Known defects 63, 64 and 66: no product change. A product may remove a workaround it kept for them (DinHot's pause of the bead on the reader's key, dd10e08; its hold card trimmed to fit, 30ae0c4, may stay).
 
 ## [0.25.000] - 2026-11-08

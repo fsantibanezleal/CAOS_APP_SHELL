@@ -43,6 +43,22 @@ declare global {
   }
 }
 const PLANT = window.__PLANT__ ?? '';
+// shell 0.26.0 (G21's frame-rate tolerance): the animation-frame clock of the page steps 16.7 ms nine frames in ten and, on the tenth,
+// 33.4 ms (`showcase-legit-p05-33ms`: a frame held for two vsyncs plus 0.1 ms of jitter, 29.94 fps, which passes) or 50 ms
+// (`showcase-p05-50ms`: three vsyncs, 20 fps, which fails). The fifth-percentile interval of G21's sample is that long frame.
+if (PLANT === 'showcase-legit-p05-33ms' || PLANT === 'showcase-p05-50ms') {
+  const long = PLANT === 'showcase-p05-50ms' ? 50 : 33.4;
+  const raf = window.requestAnimationFrame.bind(window);
+  let lastReal = -1, frame = 0, clock = -1;
+  window.requestAnimationFrame = (cb: FrameRequestCallback) => raf((real) => {
+    if (real !== lastReal) {
+      lastReal = real;
+      frame += 1;
+      clock = clock < 0 ? real : clock + (frame % 10 === 0 ? long : 16.7);
+    }
+    cb(clock);
+  });
+}
 // shell 0.25.0 (issue 208): these plants put a chart in the middle of a long Experiments page, so the document walk scrolls it under the pointer
 const POINTER_PLANT = PLANT === 'legit-chart-pointer-redispatch' || PLANT === 'chart-readout-scroll-move' || PLANT === 'legit-chart-in-document';
 /** The surface App (shell 0.16.0): the plant `surface` is its clean run, `surface-*` its defects; `/console` is its route. */
@@ -1310,9 +1326,9 @@ function Console() {
       };
     }
     // shell 0.26.0 (known defect 50, CEFOP_DinHot): a control under the HUD tile's box that its own scrolling panel clips out of sight
-    // is not covered by the HUD (`legit-focus-hud-clipped`); the same control in a panel that does not clip it is (`surface-focus-hud-covers`).
+    // is not covered by the HUD (`surface-legit-focus-hud-clipped`); the same control in a panel that does not clip it is (`surface-focus-hud-covers`).
     // The panel ends 8 px above the tile, and the control lies 60 px down its content, inside the tile's box, at every size.
-    if (PLANT === 'legit-focus-hud-clipped' || PLANT === 'surface-focus-hud-covers') {
+    if (PLANT === 'surface-legit-focus-hud-clipped' || PLANT === 'surface-focus-hud-covers') {
       const place = () => {
         const inst = document.querySelector('.caos-focus-instrument') as HTMLElement | null;
         const tile = document.querySelector('.caos-focus-stage > .caos-focus-hud > div') as HTMLElement | null;
@@ -1325,7 +1341,7 @@ function Console() {
           panel.innerHTML = '<div style="height:60px"></div><button type="button" class="btn" style="height:24px">Planted control under the HUD</button><div style="height:40px"></div>';
           inst.append(panel);
         }
-        const style = `position:absolute;z-index:1;left:${t.left - i.left}px;top:${t.top - i.top - 60}px;width:${Math.max(120, t.width)}px;height:52px;overflow:${PLANT === 'legit-focus-hud-clipped' ? 'auto' : 'visible'}`;
+        const style = `position:absolute;z-index:1;left:${t.left - i.left}px;top:${t.top - i.top - 60}px;width:${Math.max(120, t.width)}px;height:52px;overflow:${PLANT === 'surface-legit-focus-hud-clipped' ? 'auto' : 'visible'}`;
         if (panel.getAttribute('style') !== style) panel.setAttribute('style', style);
       };
       const stop = plantDom(place);

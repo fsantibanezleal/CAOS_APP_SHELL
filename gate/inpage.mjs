@@ -31,7 +31,8 @@ export function installLib() {
     const tick = (now) => { times.push(now); if (now - start < duration) requestAnimationFrame(tick); else {
       const deltas = times.slice(1).map((time, index) => time - times[index]).filter((delta) => delta > 0).sort((a, b) => a - b);
       const percentile = (q) => deltas.length ? deltas[Math.min(deltas.length - 1, Math.floor(q * (deltas.length - 1)))] : null;
-      resolve({ frames: deltas.length, median: percentile(.5) ? 1000 / percentile(.5) : null, p05: percentile(.95) ? 1000 / percentile(.95) : null });
+      // the fifth-percentile frame is the 95th percentile interval, also returned in ms (`p05Interval`): G21 judges it (0.26.0)
+      resolve({ frames: deltas.length, median: percentile(.5) ? 1000 / percentile(.5) : null, p05: percentile(.95) ? 1000 / percentile(.95) : null, p05Interval: percentile(.95) });
     } };
     requestAnimationFrame(tick);
   });

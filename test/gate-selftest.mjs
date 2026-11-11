@@ -306,6 +306,8 @@ const PLANTS = [
   { id: 'showcase-overlap-mobile', check: 'G21', re: /callouts \w+ and \w+ overlap/, mode: /^390x844 light en story$/, opts: { ...SHOWCASE, sizes: '390x844,1280x800' } },
   { id: 'showcase-overlap-es', check: 'G21', re: /callouts power and recovery overlap/, mode: /^1280x800 light es story$/, opts: { ...SHOWCASE, langs: 'en,es' } },
   { id: 'showcase-state-colour-only', check: 'G21', re: /callout feed shows its state by colour alone/, opts: SHOWCASE },
+  // shell 0.26.0: a fifth-percentile frame of three vsyncs (50 ms, 20 fps) fails the 30 fps floor (the 33.4 ms one is the legit page below)
+  { id: 'showcase-p05-50ms', check: 'G21', re: /story fifth-percentile frame interval is 50\.0 ms \(20\.0 fps\)/, opts: SHOWCASE },
   // shell 0.25.0 (issues 207 and 208): 14 long-named variants as chips scroll the rail (the same list in `layout: 'select'` is the legit page below);
   // a product script that moves a chart's crosshair on every scroll makes the document walk see the readout change
   { id: 'variants-long-chips', check: 'ADR-0071.6', re: /the rail scrolls: \d+px of content in \d+px/, opts: { routes: '/app' } },
@@ -343,9 +345,11 @@ const LEGIT = [
   { id: 'legit-chart-in-document', opts: { routes: '/experiments' } },
   { id: 'legit-chart-pointer-redispatch', opts: { routes: '/experiments' } },
   // shell 0.26.0 (known defect 50, CEFOP_DinHot): a control under the HUD tile's box that its own scrolling panel clips out of sight is not covered
-  { id: 'legit-focus-hud-clipped', opts: { ...SURF, sizes: '390x844,1280x800' } },
+  { id: 'surface-legit-focus-hud-clipped', opts: { ...SURF, sizes: '390x844,1280x800' } },
   // shell 0.26.0 (issue 214, known defect 66): the executive view's five-card deck fits a 1600 px page; the document walk at that size reads it as a row
   { id: 'legit-deck-fits-wide', opts: { routes: '/introduction', sizes: '1600x900' } },
+  // shell 0.26.0: a fifth-percentile frame of two vsyncs plus 0.1 ms of jitter (33.4 ms, 29.94 fps) passes G21's floor (1000/30 + 1 ms)
+  { id: 'showcase-legit-p05-33ms', opts: SHOWCASE },
 ];
 
 /** A static server with an SPA fallback: every unknown path answers index.html with 200 (the G4 plant). */
