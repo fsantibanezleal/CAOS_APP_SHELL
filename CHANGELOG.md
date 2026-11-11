@@ -1,3 +1,21 @@
+## [0.26.000] - 2026-11-10
+
+Five shared component defects found in CAOS products (known defects 63 to 67, issues 211 to 214).
+
+### Fixed
+
+- A filling `PlotCard` keeps its wrapped title, actions and lane badges at their measured height; the body starts below them (defect 63).
+- A moving x mark redraws on the existing `UPlotChart` instance, preserving the reader's crosshair and readout (defect 64).
+- A header `SceneCallouts` layer publishes its measured band only after the layout settles, never from intermediate card measurements (defect 65).
+- `CardDeck` declares a static row when all cards fit and no traversal controls are drawn, so it no longer claims to be a carousel without controls (defect 66).
+- A scene callout places its value on a separate row below the eyebrow, so long labels no longer get squeezed beside the value (defect 67).
+- The browser test runner runs one test file at a time; uncapped and two-file runs timed out at local browser navigation, while the six-case deck suite passed serially.
+
+### Adoption
+
+- Defects 63, 64, 66 and 67 require no product API change. Remove local layout or pause workarounds that addressed these defects.
+- Defect 65: read `--caos-callout-band` or `onLayout` after the shell reports the settled band; remove product delays used to mask transient values.
+
 ## [0.25.000] - 2026-11-08
 
 Two gaps that CEFOP_DinHot's full gate found on its release build (shell 0.23.2; CAOS_APP_SHELL#207, #208; known defects 61 and 62).

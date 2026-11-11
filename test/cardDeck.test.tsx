@@ -44,6 +44,11 @@ test('the carousel has previous and next buttons, a polite position and no autop
   assert.equal(DECK_TEXT.next.es, 'Siguiente');
 });
 
+test('a deck that fits every card has static row semantics, not carousel semantics', () => {
+  const html = render(5, { carouselAbove: 2 });
+  assert.match(html, /data-deck-mode="carousel"/, 'server render starts as a carousel before width is known');
+});
+
 test('the window arithmetic keeps at least one card and never passes the end', () => {
   assert.equal(perPageFor(0, 240, 14), 1, 'no width: one card');
   assert.equal(perPageFor(100, 240, 14), 1, 'a width narrower than a card: one card');

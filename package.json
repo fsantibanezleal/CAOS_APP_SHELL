@@ -1,6 +1,6 @@
 {
   "name": "@fasl-work/caos-app-shell",
-  "version": "0.25.0",
+  "version": "0.26.0",
   "description": "Shared web-app shell, workbench primitives, content primitives, design system and measured gate for the CAOS / Faena public apps (ADR-0016, ADR-0017, ADR-0071).",
   "license": "MIT",
   "author": "Felipe Santibáñez-Leal",
@@ -50,7 +50,7 @@
   "scripts": {
     "build": "tsup",
     "test": "node --import tsx --test \"test/**/*.test.ts\" \"test/**/*.test.tsx\"",
-    "test:browser": "node --import tsx --test \"e2e/**/*.test.ts\"",
+    "test:browser": "node --import tsx --test --test-concurrency=1 \"e2e/**/*.test.ts\"",
     "prepare": "npm run build",
     "prepublishOnly": "npm run build",
     "prebuild": "node scripts/reserved-classes.mjs",
