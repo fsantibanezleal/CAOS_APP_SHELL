@@ -11,6 +11,8 @@ Five shared component defects found in CAOS products (known defects 63 to 67, is
 - A scene callout places its value on a separate row below the eyebrow, so long labels no longer get squeezed beside the value (defect 67).
 - The browser test runner runs one test file at a time; uncapped and two-file runs timed out at local browser navigation, while the six-case deck suite passed serially.
 
+- G20 starts its keyboard check at Home so a prior hover on the first chart point cannot cause an erroneous movement failure.
+
 ### Adoption
 
 - Defects 63, 64, 66 and 67 require no product API change. Remove local layout or pause workarounds that addressed these defects.

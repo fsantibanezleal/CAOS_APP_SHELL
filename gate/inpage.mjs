@@ -2114,11 +2114,17 @@ export function installLib() {
         let zeroDead = false;
         const readout = host.querySelector('.caos-chart-readout, .caos-bars-readout');
         if (readout && points > 0) {
-          const rest = (readout.textContent || '').trim();
-          key('ArrowRight');
+          // Pointer hover can already read the first point before keyboard navigation starts.
+          key('Home');
           await pause(80);
-          const moved = (readout.textContent || '').trim();
-          if (!moved || moved === rest) problems.push('the arrow keys do not move the crosshair (the readout does not change on ArrowRight)');
+          const first = (readout.textContent || '').trim();
+          if (!first) problems.push('the Home key does not read the first chart point');
+          if (points > 1) {
+            key('ArrowRight');
+            await pause(80);
+            const moved = (readout.textContent || '').trim();
+            if (!moved || moved === first) problems.push('the arrow keys do not move the crosshair (the readout does not change on ArrowRight)');
+          }
           key('End');
           key('Home');
           await pause(40);
