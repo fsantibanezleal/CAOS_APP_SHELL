@@ -37,7 +37,9 @@ jobs:
     # proves itself with 247 plants, G20 driving every chart; 0.18.0 took about 17), and CI minutes are paid
     # (Felipe, 2026-10-15). Every release runs both suites on the device first (npm run test:browser, npm run test:gate).
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    # Ubuntu 26's apt mirrors failed DNS resolution twice while Playwright installed system dependencies.
+    # Pin the browser job to the qualified 24.04 runner; the other jobs remain on ubuntu-latest.
+    runs-on: ubuntu-24.04
     # G15 takes about 53 minutes; setup and build precede it on main.
     timeout-minutes: 75
     steps:
