@@ -154,14 +154,14 @@ export function CardDeck({ cards, flip = false, carouselAbove = 4, ariaLabel, cl
       ref={rootRef}
       className="caos-deck"
       data-card-deck=""
-      data-deck-mode={carousel ? 'carousel' : 'row'}
+      data-deck-mode={controls ? 'carousel' : 'row'}
       data-deck-per={carousel ? Math.min(per, n) : n}
       data-deck-flip={flip ? '' : undefined}
       data-deck-moved={moved ? '' : undefined}
-      role={carousel ? 'group' : undefined}
-      aria-roledescription={carousel ? 'carousel' : undefined}
-      aria-label={carousel ? ariaLabel : undefined}
-      onKeyDown={carousel ? onKeyDown : undefined}
+      role={controls ? 'group' : undefined}
+      aria-roledescription={controls ? 'carousel' : undefined}
+      aria-label={controls ? ariaLabel : undefined}
+      onKeyDown={controls ? onKeyDown : undefined}
     >
       <ul
         className={['caos-deck-track', className].filter(Boolean).join(' ')}

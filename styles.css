@@ -653,7 +653,7 @@ svg.lucide { flex: none; }
 
 /* PlotCard: the frame every chart or table sits in. */
 .caos-plot { margin: 0; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 0.25rem 0.6rem 0.2rem; min-width: 0; }
-.caos-plot-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-2); margin-bottom: 0.2rem; font-style: normal; text-align: left; min-height: 1.5rem; min-width: 0; }
+.caos-plot-head { display: flex; flex: 0 0 auto; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-2); margin-bottom: 0.2rem; font-style: normal; text-align: left; min-height: 1.5rem; min-width: 0; }
 .caos-plot-head .badge { font-size: 0.68rem; padding: 0.05rem 0.45rem; }
 .caos-plot-title { min-width: 0; overflow-wrap: anywhere; font-size: var(--text-sm); color: var(--color-fg-subtle); font-weight: 600; }
 .caos-plot-actions { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.3rem; min-width: 0; max-width: 100%; }
@@ -1020,7 +1020,7 @@ svg.lucide { flex: none; }
 .caos-scene3d-legend { position: absolute; inset-inline-end: var(--space-3); inset-block-end: var(--space-3); z-index: 2; max-width: min(24rem, calc(100% - 2 * var(--space-3))); padding: var(--space-2) var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-fg); }
 .caos-callout-leaders { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
 .caos-callout-leaders line { stroke: var(--color-fg-faint); stroke-width: 1.1; stroke-dasharray: 2 4; opacity: .52; }
-.caos-scene-callout { position: absolute; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-content: center; gap: .05rem .4rem; padding: .35rem .5rem; color: var(--color-fg); background: color-mix(in srgb, var(--color-surface) 94%, transparent); border: 1px solid var(--color-border); border-left: 3px solid var(--color-accent); border-radius: var(--radius-md); box-shadow: var(--color-shadow); backdrop-filter: blur(8px); }
+.caos-scene-callout { position: absolute; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto auto auto; align-content: center; gap: .05rem .4rem; padding: .35rem .5rem; color: var(--color-fg); background: color-mix(in srgb, var(--color-surface) 94%, transparent); border: 1px solid var(--color-border); border-left: 3px solid var(--color-accent); border-radius: var(--radius-md); box-shadow: var(--color-shadow); backdrop-filter: blur(8px); }
 .caos-scene-callout[data-callout-state="alarm"] { border-left-color: var(--color-bad); }
 .caos-scene-callout[data-callout-state="warning"] { border-left-color: var(--color-warn); }
 .caos-scene-callout[data-callout-state="normal"] { border-left-color: var(--color-good); }
@@ -1028,7 +1028,7 @@ svg.lucide { flex: none; }
 /* The eyebrow wraps instead of ending in an ellipsis (0.24.0): the cards are laid out on their measured heights, so a longer
    Spanish eyebrow ("Alimentación del molino" in a 164 px card) is read whole and the card grows. */
 .caos-callout-eyebrow { min-width: 0; color: var(--color-fg); font: 700 .68rem/1.25 var(--font-mono); letter-spacing: .05em; overflow-wrap: anywhere; }
-.caos-scene-callout > strong { overflow: hidden; font: 700 .92rem var(--font-mono); font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
+.caos-scene-callout > strong { grid-column: 1; grid-row: 2; min-width: 0; overflow: hidden; font: 700 .92rem var(--font-mono); font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
 .caos-scene-callout > strong small,.caos-callout-source { color: var(--color-fg); font-size: .68rem; font-weight: 500; }
 .caos-callout-trend { grid-column: 2; grid-row: 1 / span 2; align-self: center; font-size: 1.1rem; font-weight: 800; }
 .caos-callout-trend.trend-up { color: var(--color-bad); }

@@ -67,11 +67,13 @@ for (const lo of ['1e-5', '1e-22', '1e-23', '1e-124', '1e-300']) {
     await page.waitForSelector('.caos-chart[data-drawn="1"] canvas', { timeout: 10000 });
     await page.waitForTimeout(300);
     assert.deepEqual(errors, [], `page errors at ${lo}: ${errors.join(' | ')}`);
-    // the readout row formats the cursor's year without a group separator
-    await page.hover('.u-over', { position: { x: 60, y: 60 } });
-    await page.waitForTimeout(200);
+    // Use the keyboard crosshair so every tested log range reads the same data point.
+    // A fixed pointer y can be far from every series when the log span changes by hundreds of decades.
+    await page.keyboard.press('Tab');
+    assert.equal(await page.evaluate(() => document.activeElement?.hasAttribute('data-chart-focus')), true);
+    await page.keyboard.press('ArrowRight');
     const read = await page.locator('.caos-chart-readout').textContent();
-    assert.match(read ?? '', /Year 200\d/, `the readout: ${read}`);
+    assert.match(read ?? '', /^Year 2000 · Reference test /, `the keyboard readout: ${read}`);
     await page.close();
   });
 }

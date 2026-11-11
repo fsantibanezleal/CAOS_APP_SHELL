@@ -131,6 +131,7 @@ export function SceneCallouts({ items, className, placement = 'anchored', onLayo
   const host = useRef<HTMLDivElement | null>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [heights, setHeights] = useState<Record<string, number>>({});
+  const [settled, setSettled] = useState<{ signature: string; bandHeight: number } | null>(null);
   useEffect(() => {
     const node = host.current;
     if (!node) return;
@@ -139,6 +140,7 @@ export function SceneCallouts({ items, className, placement = 'anchored', onLayo
     return () => observer.disconnect();
   }, []);
   const ids = items.map((item) => item.id).join('\u0000');
+  useEffect(() => { setHeights({}); setSettled(null); }, [ids, placement]);
   useEffect(() => {
     const node = host.current;
     if (!node) return;
@@ -165,12 +167,19 @@ export function SceneCallouts({ items, className, placement = 'anchored', onLayo
   const nominalH = placement === 'anchored' ? (compact ? 56 : 68) : (compact ? 54 : 68);
   const bandHeight = placement === 'header' && boxes.length ? Math.max(...boxes.map((box) => box.top + box.height)) : 0;
   const measured = items.every((item) => heights[item.id] !== undefined);
+  const layoutSignature = JSON.stringify([size.width, size.height, boxes.map(({ id, left, top, width, height }) => [id, left, top, width, height])]);
   const report = useRef(onLayout);
   report.current = onLayout;
   useEffect(() => {
-    if (placement === 'header' && size.width > 0 && measured) report.current?.({ bandHeight });
-  }, [placement, size.width, measured, bandHeight]);
-  const style = placement === 'header' ? ({ '--caos-callout-band': `${bandHeight}px` } as CSSProperties) : undefined;
+    if (placement !== 'header' || size.width <= 0 || !measured) return undefined;
+    const frame = requestAnimationFrame(() => setSettled({ signature: layoutSignature, bandHeight }));
+    return () => cancelAnimationFrame(frame);
+  }, [placement, size.width, measured, layoutSignature, bandHeight]);
+  const settledBand = settled?.signature === layoutSignature ? settled.bandHeight : 0;
+  useEffect(() => {
+    if (placement === 'header' && settled?.signature === layoutSignature) report.current?.({ bandHeight: settled.bandHeight });
+  }, [placement, settled, layoutSignature]);
+  const style = placement === 'header' ? ({ '--caos-callout-band': `${settledBand}px` } as CSSProperties) : undefined;
   return <div ref={host} className={['caos-callout-layer', className].filter(Boolean).join(' ')} style={style} aria-label={lang === 'es' ? 'Valores fijados a los componentes' : 'Values anchored to components'} data-caos-callout-layer="" data-placement={placement}>
     <svg className="caos-callout-leaders" aria-hidden="true" viewBox={`0 0 ${Math.max(1, size.width)} ${Math.max(1, size.height)}`} preserveAspectRatio="none">{boxes.map((box) => <line key={box.id} x1={box.anchorX} y1={box.anchorY} x2={box.left + box.width / 2} y2={box.top + box.height / 2} data-caos-callout-leader={box.id}/>)}</svg>
     {boxes.map((box) => { const item = items.find((candidate) => candidate.id === box.id)!; const state = Object.prototype.hasOwnProperty.call(STATE_LABELS, item.state) ? STATE_LABELS[item.state] : null; return <article key={box.id} className="caos-scene-callout" data-caos-callout={item.id} data-callout-value={item.value} data-callout-unit={pick(item.unit, lang)} data-callout-state={item.state} data-callout-source={pick(item.source, lang)} data-callout-anchor-x={item.anchor.x} data-callout-anchor-y={item.anchor.y} style={{ left: box.left, top: box.top, width: box.width, minHeight: nominalH }}>

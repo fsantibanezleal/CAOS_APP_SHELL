@@ -104,6 +104,16 @@ test('the arrow keys move the carousel, the position reads "n of m" in both lang
   await page.close();
 });
 
+test('when all five cards fit at wide desktop, the deck is static and declares no carousel', async () => {
+  const page = await h.browser.newPage({ viewport: { width: 1800, height: 900 } });
+  await page.goto(`${h.address}?n=5`);
+  await page.waitForFunction(() => document.querySelector('[data-card-deck]')?.getAttribute('data-deck-per') === '5');
+  assert.equal(await page.locator('[data-card-deck]').getAttribute('data-deck-mode'), 'row');
+  assert.equal(await page.locator('[data-card-deck]').getAttribute('aria-roledescription'), null);
+  assert.equal(await page.locator('[data-deck-prev]').count(), 0);
+  await page.close();
+});
+
 test('a swipe on touch moves the carousel and a vertical drag does not', async () => {
   const ctx = await h.browser.newContext({ viewport: { width: 390, height: 800 }, hasTouch: true });
   const page = await ctx.newPage();
