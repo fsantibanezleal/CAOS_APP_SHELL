@@ -162,3 +162,38 @@ test('SHC-106 a UPlotChart narrower than its Spanish hint holds the hint whole o
 test('SHC-106 a BarChart narrower than its Spanish hint holds the hint whole on two lines, never cut', { timeout: 60_000 }, () => holdsHint('bars', null));
 test("SHC-106 a filling UPlotChart's plot settles under the pointer: its readout grows to the tallest it reached and stays until the width or the language changes", { timeout: 90_000 }, () => settles('fill'));
 test("SHC-106 a filling BarChart's plot settles under the pointer: its readout grows to the tallest it reached and stays until the width or the language changes", { timeout: 90_000 }, () => settles('barsfill'));
+
+// SHC-107 (known defect 70, found by CEFOP_DinHot's G20 at 390 px on 0.26.1): in a filling chart, a keyboard reading longer than the hint grows
+// the readout, the plot shrinks by that much, and UPlotChart rebuilds its uPlot instance on the new size; the rebuild dropped the keyboard's
+// crosshair, so Home and End read the hint. The keyboard's stand now survives a rebuild (a resize, a theme or a language change).
+async function keysRead(form: 'fill' | 'barsfill', first: RegExp, second: RegExp, last: RegExp) {
+  const { page, context, errors } = await open(form, 'es');
+  try {
+    const rest = (await readoutOf(page)).text;
+    const target = page.locator('[data-chart-focus]').first();
+    await target.focus();
+    const read = async (key: string) => {
+      await page.keyboard.press(key);
+      await page.waitForTimeout(400);
+      return (await readoutOf(page)).text;
+    };
+    const home = await read('Home');
+    assert.notEqual(home, rest, 'Home read the hint: the keyboard crosshair was dropped');
+    assert.match(home, first);
+    assert.match(await read('ArrowRight'), second);
+    const end = await read('End');
+    assert.notEqual(end, rest, 'End read the hint: the keyboard crosshair was dropped');
+    assert.match(end, last);
+    const h = await plotHeight(page);
+    for (const key of ['ArrowLeft', 'ArrowLeft', 'Home', 'End']) {
+      assert.notEqual(await read(key), rest, `${key} read the hint`);
+      assert.equal(await plotHeight(page), h, `the plot's height changed on ${key} after the readout reached its tallest`);
+    }
+    assert.deepEqual(errors, []);
+  } finally {
+    await context.close();
+  }
+}
+
+test("SHC-107 a filling UPlotChart keeps the keyboard's crosshair when the readout's growth resizes the plot", { timeout: 90_000 }, () => keysRead('fill', /^Step 1:/, /^Step 2:/, /^Step 8:/));
+test("SHC-107 a filling BarChart keeps the keyboard's bar when the readout's growth resizes the chart", { timeout: 90_000 }, () => keysRead('barsfill', /Batch 1/, /Batch 2/, /Batch 8/));
