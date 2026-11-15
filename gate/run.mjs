@@ -49,6 +49,7 @@ import { decodePng, paintedBox, unionArea } from './png.mjs';
 import { servePages } from './serve.mjs';
 import { installLib } from './inpage.mjs';
 import { DOC_ROUTES, FLIP_LIMITS, analyseSvgAnimation, animationFailures, docFloorFailures } from './areas.mjs';
+import { launchOptions } from './launch.mjs';
 
 export const DEFAULTS = {
   sizes: '390x844,768x1024,1280x800,1600x900,2560x1440',
@@ -148,7 +149,8 @@ export async function runGate(o) {
   const artifacts = new Map();
   const artifactChecks = [];
 
-  const browser = await chromium.launch();
+  // a loopback target is reached with no proxy, so proxy auto-detection does not stall each context (known defect 69, SHG-095)
+  const browser = await chromium.launch(launchOptions(base));
   const openContext = async ([w, h], theme, lang, wide = false) => {
     const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1 });
     if (wide) {

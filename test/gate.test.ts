@@ -7,6 +7,7 @@ import { after, before, test } from 'node:test';
 import { decodePng, paintedBox, unionArea } from '../gate/png.mjs';
 import { servePages } from '../gate/serve.mjs';
 import { ANIMATION_MAX_SECONDS, analyseSvgAnimation, animationFailures, mergeSections } from '../gate/areas.mjs';
+import { isLoopback, launchOptions } from '../gate/launch.mjs';
 
 test('document traversal metrics retain stable identities when observed again', () => {
   const metric = { dense: 2, denseKeys: ['first', 'second'], equations: 1, equationKeys: ['balance'],
@@ -196,5 +197,16 @@ test('--spa-fallback edge paths, as documented: a directory without an index, a 
     assert.equal((await get('/missing.js?v=2')).status, 404);
   } finally {
     await spa.close();
+  }
+});
+
+test('SHG-095 the gate reaches a loopback target with no proxy and keeps the proxy resolution of a remote one (known defect 69)', () => {
+  for (const url of ['http://127.0.0.1:4173/', 'http://127.4.5.6/app', 'http://localhost:8080/', 'http://LOCALHOST/', 'http://app.localhost:3000/', 'http://[::1]:5000/']) {
+    assert.equal(isLoopback(url), true, url);
+    assert.deepEqual(launchOptions(url), { args: ['--no-proxy-server'] }, url);
+  }
+  for (const url of ['https://dinhot.fasl-work.com/', 'https://fsantibanezleal.github.io/CAOS_PRODUCT_TEMPLATE/', 'http://10.0.0.5/', 'http://127.0.0.1.example.com/', 'http://localhost.example.com/']) {
+    assert.equal(isLoopback(url), false, url);
+    assert.deepEqual(launchOptions(url), {}, url);
   }
 });
