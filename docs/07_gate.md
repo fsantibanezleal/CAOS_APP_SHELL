@@ -9,6 +9,10 @@ npx caos-shell-gate --serve frontend/dist --expect-brand "Contraste"        # th
 npx caos-shell-gate --url https://contraste.fasl-work.com --expect-brand "Contraste"   # the deployed origin
 ```
 
+A target on the loopback (the gate's own server under `--serve`, or a `--url` on localhost) is reached with no proxy
+(`--no-proxy-server`), so a machine that auto-detects its proxy does not hold each browser context about 21 s (0.26.1, known defect
+69); a remote `--url` keeps the machine's proxy resolution.
+
 ## The walk
 
 Every route (read from the header's route row unless `--routes` is given), every tab and sub-tab, every case (all of

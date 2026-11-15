@@ -232,6 +232,11 @@ every reader, east or west of UTC; `'local'` reads them in the reader's own time
 site). Before 0.26.0 every time axis read the reader's time zone, so a UTC day read one day early west of UTC. A `marks` entry whose
 x changes (a "now" line while a trace plays) is drawn on the same chart, never rebuilt: the reader's crosshair and readout stay.
 
+The readout under a `UPlotChart` or a `BarChart` (the hint at rest, the values under the cursor, a caller's `readout`) wraps and is
+never cut (0.26.1). A chart narrower than its text reads it on two lines or more, and the gate's document walk reads it whole. Before
+0.26.1 it was cut with an ellipsis, and a chart whose hint was cut did not count toward an area's chart floor. At one width, language
+and zoom the readout keeps the tallest height it has reached, so a filling chart's plot keeps its height while the pointer moves over it.
+
 
 ## Small cards: `FlipCard` and `CardDeck` (0.14.0)
 

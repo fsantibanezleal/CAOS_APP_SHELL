@@ -1,3 +1,21 @@
+## [0.26.001] - 2026-11-15
+
+Two open known defects of 0.26.0, both found while gating CEFOP_DinHot 0.02.003, each with a test that fails on 0.26.0 (known defect 45, issue 224; known defect 69, found by CAOS_ChancaDEM).
+
+### Fixed
+
+- The readout of `UPlotChart` and `BarChart` wraps and never cuts its text (known defect 45, SHC-106, issue 224). On 0.26.0 it printed one line and cut the rest with an ellipsis. In a chart narrower than its text the reader lost the end, and the gate's document walk counted no chart whose text it could not read whole. The Spanish hint at rest, "Pase el cursor sobre el gráfico para leer los valores", is 345 px wide, and a `PlotCard`'s plot body is 329 px at 390 px. CEFOP_DinHot's two robustness charts counted 0 at 390 in Spanish (ADR-0017.2, "0 charts, the floor is 1"). The bar chart's English hint is cut the same way in a 280 px card. While the chart keeps its width, its language and its zoom, the readout keeps the tallest height it has reached (`useReadoutHeight`, internal). A filling chart's plot takes the height the readout leaves, so a readout that grew and shrank with the pointer would resize the plot under it, and at the plot's lower edge the pointer would fall out of the plot and back in. A new width, language or zoom measures it afresh.
+- The gate launches Chromium with no proxy when its target is on the loopback, so proxy auto-detection no longer holds the first request of every browser context (known defect 69, SHG-095). On the default device each context waited 21.1 to 22.3 s, against 11 ms with no proxy. A remote `--url` keeps the machine's proxy resolution (`gate/launch.mjs`).
+
+### Added
+
+- Gate plants `legit-chart-narrow-hint` and `legit-bars-narrow-hint`: a robustness area whose only chart, a line chart or a bar chart, is 280 px wide counts toward the floor at 390 px in both languages (red on 0.26.0: 0 charts).
+
+### Adoption
+
+- Known defect 45: no product change. A chart's readout may take two lines or more in a narrow chart, and a filling chart's plot is that much shorter. A product that shortened a `hint` or a `readout` text to fit one line may write it whole again.
+- Known defect 69: no product change. A product's own browser checks keep their `--no-proxy-server` (the template's and CAOS_ChancaDEM's); the gate no longer needs it from the product.
+
 ## [0.26.000] - 2026-11-11
 
 Eight open known defects of shell 0.25.0 and G21's frame-rate tolerance, each with a test that fails on 0.25.0 (known defects 63 to 67, found by CEFOP_DinHot and CAOS_ChancaDEM, issues 211 to 214; known defects 50 and 68, found by CEFOP_DinHot; known defect 43, found by CAOS_Contraste).
