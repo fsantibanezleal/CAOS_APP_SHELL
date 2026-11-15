@@ -717,7 +717,8 @@ svg.lucide { flex: none; }
 .caos-bars-host > .caos-bars { flex: none; }
 .caos-bars-host.fill > .caos-bars-foot, .caos-bars-host.fill > .caos-chart-axis-title { flex: none; }
 .caos-bars-foot { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
-.caos-bars-readout { flex: 1 1 0; min-width: 0; margin: 0.15rem 0 0; font-family: var(--font-mono); font-size: 0.74rem; line-height: 1.3; color: var(--color-fg-subtle); min-height: 1.3em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* the bar readout wraps like the line chart's (SHC-106, known defect 45) */
+.caos-bars-readout { flex: 1 1 0; min-width: 0; margin: 0.15rem 0 0; font-family: var(--font-mono); font-size: 0.74rem; line-height: 1.3; color: var(--color-fg-subtle); min-height: 1.3em; white-space: normal; overflow-wrap: anywhere; }
 .caos-bars[data-chart-focus] { outline-offset: -2px; border-radius: var(--radius-sm); touch-action: pan-y; }
 .caos-bars[data-chart-focus][data-zoomed] { touch-action: none; }
 .caos-bars-brush { fill: var(--color-accent); fill-opacity: 0.16; stroke: var(--color-accent); stroke-width: 1; pointer-events: none; }

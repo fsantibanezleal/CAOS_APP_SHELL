@@ -33,6 +33,7 @@ import { createZoom, type ZoomControls } from './uplotZoom';
 import { resolveToken, type ShellColorToken } from '../lib/tokens';
 import { useThemeStore } from '../lib/theme';
 import { useStageSize } from '../workbench/Stage';
+import { useReadoutHeight } from './readoutHeight';
 
 export interface ChartSeries {
   /** What identifies the series to the solo key (0.18.0): the solo follows the series with this id when the list of series
@@ -1260,6 +1261,9 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
   // a mark label the drawing had to cut is read whole here, in the plot's title and in the table of marks
   const cutTexts = cutKey ? cutKey.split(CUT_SEP) : [];
   const readFull = cutTexts.length ? [read, ...cutTexts].join(' · ') : read;
+  // the readout wraps; its height only grows at one width, language and zoom, so a filling plot keeps its height under the pointer (SHC-106)
+  const readoutRef = useRef<HTMLParagraphElement | null>(null);
+  useReadoutHeight(readoutRef, `${box.width}|${lang}|${zoomed ? 1 : 0}`, readFull);
 
   // ---- Tier A: the keyboard, the data table and the summary ----
   const xText = (v: number): string => tickLabelAt(ticks, v, lang, xSpan) ?? xValue(v);
@@ -1398,7 +1402,7 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
   };
   const moved = [xBelow ? 'x' : '', yAbove ? 'y' : ''].filter(Boolean).join('');
   const readoutEl = (
-    <p className="caos-chart-readout" aria-live="polite" title={readFull}>
+    <p ref={readoutRef} className="caos-chart-readout" aria-live="polite" title={readFull}>
       {readFull}
     </p>
   );

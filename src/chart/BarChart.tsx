@@ -4,6 +4,7 @@ import { useShellLang } from '../lib/lang';
 import { type BiText, pick } from '../lib/text';
 import type { Tone } from '../workbench/Readouts';
 import { useStageSize } from '../workbench/Stage';
+import { useReadoutHeight } from './readoutHeight';
 import { CHART_ROLE, ChartDataTable, ChartSummary, ResetZoomButton } from './ChartA11y';
 import {
   allIntegers,
@@ -532,6 +533,9 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
     cursor !== null && cursor < n
       ? [`${fullName(data[cursor])}: ${valueLabels[cursor]}${data[cursor].value === null || data[cursor].value === undefined || !unit ? '' : `${NBSP}${unit}`}`, pick(data[cursor].hint, lang), endsText[cursor]].filter(Boolean).join(' · ')
       : rest;
+  // the readout wraps; its height only grows at one width, language and zoom, so a filling chart keeps its height under the pointer (SHC-106)
+  const readoutRef = useRef<HTMLParagraphElement | null>(null);
+  useReadoutHeight(readoutRef, `${width}|${lang}|${zoomed ? 1 : 0}|${drawn ? 1 : 0}`, read);
 
   // ---- the gestures ----
   const along = (e: { clientX: number; clientY: number }): number | null => {
@@ -817,7 +821,7 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
       {drawn && a11y && <ChartDataTable id={tableId} caption={name} head={a11y.head} rows={a11y.rows} />}
       {drawn && (
         <div className="caos-bars-foot">
-          <p className="caos-bars-readout" aria-live="polite" title={read}>
+          <p ref={readoutRef} className="caos-bars-readout" aria-live="polite" title={read}>
             {read}
           </p>
           {zoomed && zoomable && <ResetZoomButton lang={lang} onReset={resetZoom} />}
