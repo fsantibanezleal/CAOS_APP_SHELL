@@ -350,6 +350,10 @@ const LEGIT = [
   { id: 'legit-deck-fits-wide', opts: { routes: '/introduction', sizes: '1600x900' } },
   // shell 0.26.0: a fifth-percentile frame of two vsyncs plus 0.1 ms of jitter (33.4 ms, 29.94 fps) passes G21's floor (1000/30 + 1 ms)
   { id: 'showcase-legit-p05-33ms', opts: SHOWCASE },
+  // shell 0.26.1 (SHC-106, issue 224, known defect 45; CEFOP_DinHot): a robustness chart narrower than its Spanish hint counts toward the area's
+  // floor at 390 px; on 0.26.0 the readout cut the hint and the document walk counted 0 charts
+  { id: 'legit-chart-narrow-hint', opts: { routes: '/benchmark', sizes: '390x844' } },
+  { id: 'legit-bars-narrow-hint', opts: { routes: '/benchmark', sizes: '390x844' } },
 ];
 
 /** A static server with an SPA fallback: every unknown path answers index.html with 200 (the G4 plant). */

@@ -2,7 +2,8 @@
 // in plain, truthful filler about the fixture itself (a test product that exists to exercise the gate). The self-test
 // plants one defect per floor through `plant` (`window.__PLANT__`); clean, every floor holds in both languages.
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
-import { Callout, DocSection, Equation, ExecutiveView, Figure, Glossary, InlineMath, SubTabs, Tabs, pick, type BiText } from '../../src/index';
+import { BarChart, Callout, DocSection, Equation, ExecutiveView, Figure, Glossary, InlineMath, PlotCard, SubTabs, Tabs, pick, type BiText } from '../../src/index';
+import { UPlotChart } from '../../src/chart';
 import executiveData from './executive/executive.json';
 import { SECTION_TITLES } from '../../src/content/executive';
 
@@ -761,11 +762,40 @@ function Benchmark({ lang, plant, status }: { lang: Lang; plant: string; status:
         {table(lbl('Fixture', 'Prueba'), lbl('Expected', 'Esperado'))}
       </DocSection>
       <DocSection title={{ en: 'The robustness', es: 'La robustez' }} area="robustness" refs={REFS}>
-        <svg className="fig-svg" data-chart="" viewBox="0 0 320 140" role="img" aria-label={lbl('Peak day against the contact rate', 'Día del pico contra la tasa de contacto')}>
-          <polyline points="40,110 120,80 200,60 280,30" fill="none" stroke="var(--color-accent)" strokeWidth="2" />
-          <text x="40" y="132" fontSize="11" fill="var(--color-fg-subtle)">{lbl('contact rate', 'tasa de contacto')}</text>
-          <text x="40" y="16" fontSize="11" fill="var(--color-fg-subtle)">{lbl('peak day', 'día del pico')}</text>
-        </svg>
+        {plant === 'legit-chart-narrow-hint' || plant === 'legit-bars-narrow-hint' ? (
+          // shell 0.26.1 (SHC-106, issue 224, known defect 45; CEFOP_DinHot): the area's one chart is narrower than its Spanish hint at rest; the
+          // readout wraps, so the document walk reads the hint whole and the chart counts toward the floor
+          <div style={{ maxWidth: 280 }}>
+            <PlotCard title={{ en: 'Peak day against the contact rate', es: 'Día del pico contra la tasa de contacto' }} lane="offline" provenance="synthetic">
+              {plant === 'legit-chart-narrow-hint' ? (
+                <UPlotChart
+                  height={200}
+                  title={{ en: 'Peak day against the contact rate', es: 'Día del pico contra la tasa de contacto' }}
+                  x={{ values: [0.2, 0.3, 0.4, 0.5], label: { en: 'Contact rate', es: 'Tasa de contacto' }, format: { decimals: 1 } }}
+                  y={{ label: { en: 'Peak day', es: 'Día del pico' }, format: { decimals: 0 } }}
+                  series={[{ label: { en: 'Peak day', es: 'Día del pico' }, values: [60, 48, 41, 36] }]}
+                />
+              ) : (
+                <BarChart
+                  title={{ en: 'Peak day by contact rate', es: 'Día del pico por tasa de contacto' }}
+                  axis={{ label: { en: 'Peak day', es: 'Día del pico' }, format: { decimals: 0 } }}
+                  data={[
+                    { id: 'low', label: { en: 'Low rate', es: 'Tasa baja' }, value: 60 },
+                    { id: 'mid', label: { en: 'Middle rate', es: 'Tasa media' }, value: 48 },
+                    { id: 'high', label: { en: 'High rate', es: 'Tasa alta' }, value: 41 },
+                    { id: 'top', label: { en: 'Top rate', es: 'Tasa máxima' }, value: 36 },
+                  ]}
+                />
+              )}
+            </PlotCard>
+          </div>
+        ) : (
+          <svg className="fig-svg" data-chart="" viewBox="0 0 320 140" role="img" aria-label={lbl('Peak day against the contact rate', 'Día del pico contra la tasa de contacto')}>
+            <polyline points="40,110 120,80 200,60 280,30" fill="none" stroke="var(--color-accent)" strokeWidth="2" />
+            <text x="40" y="132" fontSize="11" fill="var(--color-fg-subtle)">{lbl('contact rate', 'tasa de contacto')}</text>
+            <text x="40" y="16" fontSize="11" fill="var(--color-fg-subtle)">{lbl('peak day', 'día del pico')}</text>
+          </svg>
+        )}
       </DocSection>
       <DocSection title={{ en: 'The live panel', es: 'El panel en vivo' }} area="live" refs={REFS}>
         {plant === 'floor-live-button' ? (
