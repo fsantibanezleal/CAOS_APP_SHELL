@@ -1179,6 +1179,11 @@ export function UPlotChart({ x, y, series, marks, yMarks, onYMarkChange, height 
         setZoomed(false);
       }
     }
+    // the keyboard's stand survives a rebuild (SHC-107, known defect 70): a filling chart is rebuilt when its readout grows and the plot
+    // shrinks (SHC-106), and a resize, a theme or a language change rebuilds any chart; the crosshair and its reading are put back on the
+    // new instance. The stand is cleared on blur, so a stand here belongs to a chart that holds the focus.
+    const stand = kbRef.current;
+    if (stand !== null && stand < (data[0]?.length ?? 0)) ctl.place(stand);
     // an axis title that the built chart cannot hold moves above it (the estimate that chose the layout was too generous)
     if (!yAbove && yTitle) {
       const pr = uPlot.pxRatio || 1;

@@ -236,6 +236,8 @@ The readout under a `UPlotChart` or a `BarChart` (the hint at rest, the values u
 never cut (0.26.1). A chart narrower than its text reads it on two lines or more, and the gate's document walk reads it whole. Before
 0.26.1 it was cut with an ellipsis, and a chart whose hint was cut did not count toward an area's chart floor. At one width, language
 and zoom the readout keeps the tallest height it has reached, so a filling chart's plot keeps its height while the pointer moves over it.
+When a chart is rebuilt while the keyboard stands on a point (the readout grew, the window was resized, the theme or the language
+changed), the crosshair and its reading are put back on that point (0.26.2).
 
 
 ## Small cards: `FlipCard` and `CardDeck` (0.14.0)
