@@ -34,7 +34,7 @@ before(async () => {
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
   const port = (server.address() as {port:number}).port;
   address = `http://127.0.0.1:${port}`;
-  browser = await chromium.launch();
+  browser = await chromium.launch({ args: ['--no-proxy-server'] });
 });
 after(async () => { await browser?.close(); await new Promise<void>(resolve => server?.close(() => resolve())); });
 

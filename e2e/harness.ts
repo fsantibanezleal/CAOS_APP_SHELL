@@ -46,7 +46,7 @@ export async function startHarness(entry: string, files: Record<string, { type: 
   });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const address = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ args: ['--no-proxy-server'] });
   return {
     browser,
     address,

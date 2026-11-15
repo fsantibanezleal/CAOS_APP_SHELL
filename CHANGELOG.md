@@ -1,3 +1,16 @@
+## [0.26.002] - 2026-11-15
+
+A defect of 0.26.1 itself, found by CEFOP_DinHot's gate on it, with a test that fails on 0.26.1 (known defect 70).
+
+### Fixed
+
+- A filling `UPlotChart` keeps the keyboard's crosshair when its readout grows (known defect 70, SHC-107). Since 0.26.1 the readout wraps. A keyboard reading longer than the hint grows the readout, so the plot of a filling chart shrinks, and `UPlotChart` rebuilds its uPlot instance on a new size. The rebuild put back a zoom but not the keyboard's position, so Home and End read the hint, and DinHot's Pareto view at 390 px failed G20 ("the arrow keys do not move the crosshair"). The keyboard's position is now placed again on the new instance; this also covers a resize, theme change or language change while the reader is on a point. `BarChart` kept its bar already, and its test now proves it.
+- The browser test suite launches Chromium with no proxy (known defect 69 in the shell's own tests): every `e2e/` page is served on the loopback, and on a machine that auto-detects its proxy a new context's first navigation could exceed its 30 s limit.
+
+### Adoption
+
+- No product change. A product on 0.26.1 moves to 0.26.2.
+
 ## [0.26.001] - 2026-11-15
 
 Two open known defects of 0.26.0, both found while gating CEFOP_DinHot 0.02.003, each with a test that fails on 0.26.0 (known defect 45, issue 224; known defect 69, found by CAOS_ChancaDEM).

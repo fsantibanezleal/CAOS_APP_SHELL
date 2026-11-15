@@ -4,7 +4,7 @@ import { after, before, test } from 'node:test';
 import { chromium } from 'playwright';
 import { readJsonArtifact } from '../gate/artifacts.mjs';
 let browser: Awaited<ReturnType<typeof chromium.launch>>;
-before(async () => { browser = await chromium.launch(); });
+before(async () => { browser = await chromium.launch({ args: ['--no-proxy-server'] }); });
 after(async () => { await browser?.close(); });
 
 test('JSON artifact verification survives navigation cancellation without excusing invalid resources', {timeout:20000}, async () => {
