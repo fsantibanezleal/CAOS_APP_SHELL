@@ -7,6 +7,7 @@
 
 ### Fixed
 
+- Filling bar charts measure their drawing slot before paint when zoom controls or readouts change its height, preserving the full plot without transient overflow.
 - Same-document Back and Forward restore the Focus frame and uncontrolled Surface view from the visited URL, preserve replace-only history, and call the Focus observer once per transition.
 - Stage size comes from the layout border box, so a temporary parent transform cannot leave a permanently undersized scientific drawing after a guided-story transition.
 - Scene callouts remain hidden until the stage has positive measured dimensions. Their card observations and settled band calculation start with the measured frame, preserving the existing startup and resize controls.

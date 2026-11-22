@@ -13,18 +13,30 @@ export interface StageSize {
  * zero or at a guessed size).
  */
 export function useStageSize(): [(el: HTMLElement | null) => void, StageSize] {
+  const [ref, size] = useStageMeasurement();
+  return [ref, size];
+}
+
+/** Internal measurement with a synchronous refresh after an instrument changes its own layout. */
+export function useStageMeasurement(): [(el: HTMLElement | null) => void, StageSize, () => void] {
   const [size, setSize] = useState<StageSize>({ width: 0, height: 0 });
   const roRef = useRef<ResizeObserver | null>(null);
+  const element = useRef<HTMLElement | null>(null);
+  const measure = useCallback((width: number, height: number) => {
+    const next = { width: Math.round(width), height: Math.round(height) };
+    setSize((prev) => prev.width === next.width && prev.height === next.height ? prev : next);
+  }, []);
+  const refresh = useCallback(() => {
+    const el = element.current;
+    if (el) measure(el.offsetWidth, el.offsetHeight);
+  }, [measure]);
   const ref = useCallback((el: HTMLElement | null) => {
     roRef.current?.disconnect();
     roRef.current = null;
+    element.current = el;
     if (!el) return;
     // ResizeObserver tracks layout, so reading a transformed DOMRect here could preserve an entry animation's scale after it ends.
-    const measure = (width: number, height: number) => {
-      const next = { width: Math.round(width), height: Math.round(height) };
-      setSize((prev) => prev.width === next.width && prev.height === next.height ? prev : next);
-    };
-    measure(el.offsetWidth, el.offsetHeight);
+    refresh();
     if (typeof ResizeObserver !== 'undefined') {
       roRef.current = new ResizeObserver(([entry]) => {
         const box = entry?.borderBoxSize?.[0];
@@ -34,9 +46,9 @@ export function useStageSize(): [(el: HTMLElement | null) => void, StageSize] {
       });
       roRef.current.observe(el, { box: 'border-box' });
     }
-  }, []);
+  }, [measure, refresh]);
   useEffect(() => () => roRef.current?.disconnect(), []);
-  return [ref, size];
+  return [ref, size, refresh];
 }
 
 /**

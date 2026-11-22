@@ -1,9 +1,9 @@
-import { type CSSProperties, type FocusEvent, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { type CSSProperties, type FocusEvent, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { type FormatOptions, formatNumber, formatTicks, NBSP, NOT_AVAILABLE } from '../lib/format';
 import { useShellLang } from '../lib/lang';
 import { type BiText, pick } from '../lib/text';
 import type { Tone } from '../workbench/Readouts';
-import { useStageSize } from '../workbench/Stage';
+import { useStageMeasurement } from '../workbench/Stage';
 import { useReadoutHeight } from './readoutHeight';
 import { CHART_ROLE, ChartDataTable, ChartSummary, ResetZoomButton } from './ChartA11y';
 import {
@@ -136,7 +136,7 @@ interface Geometry {
  */
 export function BarChart({ title, data, axis, orientation = 'horizontal', values = true, height, onSelect, zoomOff, legend }: BarChartProps) {
   const lang = useShellLang();
-  const [measureRef, box] = useStageSize();
+  const [measureRef, box, refreshBox] = useStageMeasurement();
   const innerRef = useRef<HTMLDivElement | null>(null);
   const setInner = useCallback(
     (el: HTMLDivElement | null) => {
@@ -536,6 +536,10 @@ export function BarChart({ title, data, axis, orientation = 'horizontal', values
   // the readout wraps; its height only grows at one width, language and zoom, so a filling chart keeps its height under the pointer (SHC-106)
   const readoutRef = useRef<HTMLParagraphElement | null>(null);
   useReadoutHeight(readoutRef, `${width}|${lang}|${zoomed ? 1 : 0}|${drawn ? 1 : 0}`, read);
+  // The reset control and wrapped readout can shrink the flex slot in this commit. Fit the SVG before painting the old size.
+  useLayoutEffect(() => {
+    if (fill) refreshBox();
+  }, [drawn, fill, lang, legend, read, refreshBox, width, zoomed]);
 
   // ---- the gestures ----
   const along = (e: { clientX: number; clientY: number }): number | null => {
