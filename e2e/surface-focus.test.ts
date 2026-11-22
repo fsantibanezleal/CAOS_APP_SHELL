@@ -118,6 +118,41 @@ after(async () => {
 });
 
 const q = (page: Page) => new URL(page.url()).searchParams;
+
+test('same-document history restores a SurfacePage stage only on its own view', async () => {
+  const page = await h.browser.newPage();
+  try {
+    await page.goto(`${h.address}/?view=notes`);
+    await page.locator('[data-probe="notes"]').waitFor();
+    const length = await page.evaluate(() => {
+      history.pushState({ receipt: 'engine' }, '', '?view=engine#engine');
+      return history.length;
+    });
+    await page.getByRole('tab', { name: 'Engine' }).click();
+    await page.getByRole('tab', { name: 'Table' }).click();
+    await page.locator('[data-focus-enter]').click();
+    await page.locator('[data-focus-shell] [data-probe="table"]').waitFor();
+
+    await page.goBack();
+    await page.locator('[data-probe="notes"]').waitFor({ timeout: 3000 });
+    assert.equal(await page.locator('[data-focus-shell]').count(), 0);
+    assert.equal(q(page).get('view'), 'notes');
+    assert.equal(await page.locator('[data-focus-enter]').isVisible(), false);
+
+    await page.goForward();
+    await page.locator('[data-focus-shell] [data-probe="table"]').waitFor({ timeout: 3000 });
+    assert.equal(q(page).get('view'), 'engine');
+    assert.equal(q(page).get('focus'), '1');
+    await page.keyboard.press('Escape');
+    await page.locator('[data-probe="table"]').waitFor();
+    assert.equal(await page.locator('[data-focus-shell]').count(), 0);
+    assert.equal(q(page).get('focus'), null);
+    assert.deepEqual(await page.evaluate(() => [history.length, history.state, location.hash]), [length, { receipt: 'engine' }, '#engine']);
+    assert.deepEqual(await page.evaluate(() => (window as unknown as { __focusEvents: boolean[] }).__focusEvents), [true, false, true, false]);
+  } finally {
+    await page.close();
+  }
+});
 const inFocus = (page: Page) => page.locator('[data-focus-shell]').count();
 const probe = (page: Page) => page.evaluate(() => [...document.querySelectorAll('[data-probe]')].map((e) => e.textContent).join('|'));
 const noScroll = (page: Page) => page.evaluate(() => ({ w: document.documentElement.scrollWidth <= innerWidth, h: document.documentElement.scrollHeight <= innerHeight + 1 }));

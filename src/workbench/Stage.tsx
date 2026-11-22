@@ -13,24 +13,42 @@ export interface StageSize {
  * zero or at a guessed size).
  */
 export function useStageSize(): [(el: HTMLElement | null) => void, StageSize] {
+  const [ref, size] = useStageMeasurement();
+  return [ref, size];
+}
+
+/** Internal measurement with a synchronous refresh after an instrument changes its own layout. */
+export function useStageMeasurement(): [(el: HTMLElement | null) => void, StageSize, () => void] {
   const [size, setSize] = useState<StageSize>({ width: 0, height: 0 });
   const roRef = useRef<ResizeObserver | null>(null);
+  const element = useRef<HTMLElement | null>(null);
+  const measure = useCallback((width: number, height: number) => {
+    const next = { width: Math.round(width), height: Math.round(height) };
+    setSize((prev) => prev.width === next.width && prev.height === next.height ? prev : next);
+  }, []);
+  const refresh = useCallback(() => {
+    const el = element.current;
+    if (el) measure(el.offsetWidth, el.offsetHeight);
+  }, [measure]);
   const ref = useCallback((el: HTMLElement | null) => {
     roRef.current?.disconnect();
     roRef.current = null;
+    element.current = el;
     if (!el) return;
-    const measure = () => {
-      const r = el.getBoundingClientRect();
-      setSize((prev) => (prev.width === Math.round(r.width) && prev.height === Math.round(r.height) ? prev : { width: Math.round(r.width), height: Math.round(r.height) }));
-    };
-    measure();
+    // ResizeObserver tracks layout, so reading a transformed DOMRect here could preserve an entry animation's scale after it ends.
+    refresh();
     if (typeof ResizeObserver !== 'undefined') {
-      roRef.current = new ResizeObserver(measure);
-      roRef.current.observe(el);
+      roRef.current = new ResizeObserver(([entry]) => {
+        const box = entry?.borderBoxSize?.[0];
+        if (!box) return measure(el.offsetWidth, el.offsetHeight);
+        const horizontal = getComputedStyle(el).writingMode.startsWith('horizontal');
+        measure(horizontal ? box.inlineSize : box.blockSize, horizontal ? box.blockSize : box.inlineSize);
+      });
+      roRef.current.observe(el, { box: 'border-box' });
     }
-  }, []);
+  }, [measure, refresh]);
   useEffect(() => () => roRef.current?.disconnect(), []);
-  return [ref, size];
+  return [ref, size, refresh];
 }
 
 /**

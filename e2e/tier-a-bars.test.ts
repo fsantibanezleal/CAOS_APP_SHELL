@@ -20,7 +20,7 @@ before(async () => {
     useLangStore.getState().setLang(q.get('lang') === 'es' ? 'es' : 'en');
     const form = q.get('form') ?? 'h';
     const names = ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon', 'Zeta', 'Eta', 'Theta'];
-    const data = names.map((n, i) => ({ id: n.toLowerCase(), label: n, value: [12, 7, 19, 3, 15, 9, 21, 5][i], hint: i === 2 ? 'the best case' : undefined }));
+    const data = names.map((n, i) => ({ id: n.toLowerCase(), label: n, value: [12, 7, 19, 3, 15, 9, 21, 5][i], hint: i === 2 ? (q.has('longHint') ? 'The best case in the retained comparison, with population totals measured over the same reporting interval and checked against the independent case inventory before release.' : 'the best case') : undefined }));
     const axis = { label: 'Peak', unit: 'people', format: { decimals: 0 } };
     const box = (child: React.ReactNode, h?: number) => (<div><div style={{ width: 640, maxWidth: '100%', ...(h ? { height: h } : {}) }}>{child}</div><div style={{ height: 2400 }}>after the chart</div></div>);
     const forms: Record<string, () => React.ReactNode> = {
@@ -395,6 +395,60 @@ test('zoom on bars: a chart of two bars cannot be zoomed, and a filling chart ke
     assert.equal(Math.round(h1), Math.round(h0));
     const overflow = await page.locator('.caos-bars').evaluate((el) => el.scrollHeight - el.clientHeight);
     assert.ok(overflow <= 1, `the drawing fits the box: ${overflow}`);
+  } finally {
+    await page.close();
+  }
+});
+
+test('a filling bar drawing fits immediately after zoom and a wrapping readout', async () => {
+  const page = await t.browser.newPage();
+  try {
+    await page.addInitScript(() => {
+      const NativeObserver = ResizeObserver;
+      window.ResizeObserver = class extends NativeObserver {
+        constructor(callback: ResizeObserverCallback) {
+          super((entries, observer) => {
+            const rest = entries.filter(entry => !entry.target.matches('.caos-bars.fill') || !document.documentElement.hasAttribute('data-delay-bar-observer'));
+            if (rest.length) callback(rest, observer);
+          });
+        }
+      };
+    });
+    await page.goto(`${t.address}/?form=fill&longHint`);
+    await page.waitForFunction(() => {
+      const plot = document.querySelector('.caos-bars.fill');
+      return plot?.querySelector('svg') && Math.abs(plot.scrollHeight - plot.clientHeight) <= 1;
+    });
+    const dimensions = () => page.locator('.caos-bars.fill').evaluate(plot => ({
+      box: plot.clientHeight,
+      drawing: plot.querySelector('svg')!.getBoundingClientRect().height,
+      overflow: plot.scrollHeight - plot.clientHeight,
+    }));
+    await page.evaluate(() => document.documentElement.setAttribute('data-delay-bar-observer', ''));
+    await page.focus('[data-chart-focus]');
+    const start = await dimensions();
+    await page.keyboard.press('+');
+    assert.equal(await zoomed(page), true);
+    assert.ok((await windowOf(page))[1] - (await windowOf(page))[0] < 8);
+    const zoom = await dimensions();
+    assert.ok(zoom.box < start.box && zoom.overflow <= 1 && Math.abs(zoom.drawing - zoom.box) <= 1, JSON.stringify({ start, zoom }));
+    await page.keyboard.press('0');
+    assert.equal(await zoomed(page), false);
+    await page.keyboard.press('Home');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    assert.match(await readout(page), /Gamma: 19 people · The best case/);
+    const wrapped = await dimensions();
+    assert.ok(wrapped.box < start.box && wrapped.overflow <= 1 && Math.abs(wrapped.drawing - wrapped.box) <= 1, JSON.stringify({ start, wrapped }));
+    assert.equal(await page.locator('.caos-bars-host').evaluate(host => host.getBoundingClientRect().height), 300);
+    await page.locator('.caos-bars-host').evaluate(host => {
+      document.documentElement.removeAttribute('data-delay-bar-observer');
+      host.parentElement!.style.height = '140px';
+    });
+    const short = await dimensions();
+    assert.ok(short.overflow > 1, 'rows that genuinely need more space still scroll');
+    await page.locator('.caos-bars.fill').evaluate(plot => { plot.scrollTop = 20; });
+    assert.ok(await page.locator('.caos-bars.fill').evaluate(plot => plot.scrollTop) > 0);
   } finally {
     await page.close();
   }

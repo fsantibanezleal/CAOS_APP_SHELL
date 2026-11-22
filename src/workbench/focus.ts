@@ -8,6 +8,7 @@ export const FOCUS_TEXT = {
   enterViewLabel: { en: 'Open this view in focus mode', es: 'Abrir esta vista en modo enfoque' },
   exit: { en: 'Back to the App', es: 'Volver a la App' },
   stage: { en: 'Focus stage', es: 'Escenario de enfoque' },
+  controls: { en: 'Controls', es: 'Controles' },
 } as const;
 
 /** The query parameter that holds Focus mode (`?focus=1`), beside `?case=` and `?view=`. */
@@ -15,6 +16,10 @@ export const FOCUS_PARAM = 'focus';
 
 /** What a product may say about the Focus mode of its App (`CaseWorkbench.focus`; `true` means all defaults). */
 export interface CaseFocusConfig {
+  /** Render a visualization in Focus while retaining the App's selected group and sub-view. */
+  stage?: ReactNode;
+  /** Keep the right-hand parameter column accessible through an overlay, initially closed. Default: docked. */
+  railLayout?: 'docked' | 'disclosure';
   /** The stage's heading (default: the name of the selected case). */
   title?: BiText;
   /** One line under it (default: the name of the open group). */

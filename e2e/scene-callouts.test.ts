@@ -156,7 +156,8 @@ const SWING = `
     const [w, setW] = useState('0px');
     const [hidden, setHidden] = useState(hide);
     (window as any).__narrow = () => setW('420px');
-    useEffect(() => { const t = setTimeout(() => setW('100%'), 300); const u = setTimeout(() => setHidden(false), 700); return () => { clearTimeout(t); clearTimeout(u); }; }, []);
+    (window as any).__show = () => setW('100%');
+    useEffect(() => { if (q.get('mode') === 'static-zero') return; const t = setTimeout(() => setW('100%'), 300); const u = setTimeout(() => setHidden(false), 700); return () => { clearTimeout(t); clearTimeout(u); }; }, []);
     return <div data-cards-hidden={hidden ? '' : undefined} style={{ position: 'relative', width: w, height: 600 }}>{hidden && <style>{'[data-cards-hidden] .caos-scene-callout { display: none; }'}</style>}{layer}</div>;
   }
   function Story() {
@@ -168,6 +169,23 @@ const SWING = `
   }
   createRoot(document.getElementById('root')!).render(<MemoryRouter>{q.get('mode') === 'story' ? <Story /> : <Growing hide={q.get('mode') === 'hidden'} />}</MemoryRouter>);
 `;
+
+test('SHW-069 a zero-size callout layer shows no cards or leaders before measurement', async () => {
+  const h = await startHarness(SWING);
+  try {
+    const page = await h.browser.newPage({ viewport: { width: 390, height: 844 } });
+    await page.goto(`${h.address}?mode=static-zero`);
+    const layer = page.locator('[data-caos-callout-layer]');
+    await layer.waitFor({ state: 'attached' });
+    assert.equal(await layer.evaluate(el => el.clientWidth), 0);
+    const visibleMarks = await layer.locator('[data-caos-callout], [data-caos-callout-leader]').evaluateAll(marks => marks.filter(el => getComputedStyle(el).visibility === 'visible').length);
+    assert.equal(visibleMarks, 0);
+    await page.evaluate(() => (window as any).__show());
+    await settled(page);
+    assert.equal(await page.locator('[data-caos-callout]').count(), 3);
+    assert.equal(await page.locator('[data-caos-callout-leader]').count(), 3);
+  } finally { await h.close(); }
+});
 
 test('SHW-065 a header layer reports only its settled band when its stage opens at 0 px or a story step mounts it (known defect 65)', async () => {
   const h = await startHarness(SWING);
