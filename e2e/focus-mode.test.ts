@@ -21,6 +21,7 @@ before(async () => {
     };
     const query = new URLSearchParams(location.search);
     const disclose = query.has('disclosure');
+    const override = query.has('override');
     function Drawing({ scale }) {
       return <Stage label={{ en: 'Scale response', es: 'Respuesta de escala' }}>{({ width, height }) => (
         <svg data-response="" role="img" aria-label="Scale response" width={width} height={height} viewBox={\`0 0 \${width} \${height}\`}>
@@ -41,6 +42,7 @@ before(async () => {
             cases={{ cases: CASES, selectedId: caseId, onSelect: setCaseId, layout: 'select', deepLink: true }}
             controls={{ scale }}
             focus={{
+              stage: override ? <Drawing scale={scale} /> : undefined,
               railLayout: disclose ? 'disclosure' : undefined,
               title: new URLSearchParams(location.search).get('short') ? undefined : LONG_TITLE,
               hud: new URLSearchParams(location.search).get('hud') ? [{ label: { en: 'Alpha', es: 'Alfa' }, value: '1' }, { label: { en: 'Beta', es: 'Beta' }, value: '2' }] : undefined,
@@ -185,6 +187,23 @@ test('Escape returns from Focus, and ?focus=1 opens it directly on the case and 
   assert.equal(q(page).get('focus'), null);
   assert.equal(q(page).get('case'), 'c-high');
   assert.equal(q(page).get('view'), 'validation');
+  await page.close();
+});
+
+test('a visualization stage override leaves the App group and sub-view intact through Focus', async () => {
+  const page = await h.browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await page.goto(`${h.address}/?case=c-mid&view=validation&override`);
+  await page.getByRole('tab', { name: 'Table' }).click();
+  await page.locator('[data-focus-enter]').click();
+  assert.equal(q(page).get('case'), 'c-mid');
+  assert.equal(q(page).get('view'), 'validation');
+  assert.equal(await page.locator('[data-focus-group]').getAttribute('data-focus-group'), 'validation');
+  assert.equal(await page.locator('[data-focus-shell] svg[data-response]').count(), 1, 'the visualization fills the stage');
+  assert.equal(await page.locator('[data-focus-shell] [data-probe="table"]').count(), 0, 'the saved group content is not substituted for the visualization');
+  await page.locator('[data-focus-exit]').click();
+  assert.equal(q(page).get('focus'), null);
+  assert.equal(q(page).get('view'), 'validation');
+  assert.match(await probe(page), /TABLE c-mid/, 'Focus returns to the same App group and sub-view');
   await page.close();
 });
 

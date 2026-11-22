@@ -3,6 +3,7 @@
 ### Changed
 
 - `CaseFocusConfig.railLayout: 'disclosure'` gives Focus a full-width stage and a localized Controls button that opens the existing right-hand parameter column. Hidden controls remain mounted, preserve their state and leave the keyboard sequence. The default docked layout and Escape return behavior remain supported.
+- `CaseFocusConfig.stage` lets products keep the App on its selected context while Focus displays a separate visualization; case, group, sub-view and return state remain unchanged.
 
 ### Fixed
 

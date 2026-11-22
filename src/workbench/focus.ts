@@ -16,6 +16,8 @@ export const FOCUS_PARAM = 'focus';
 
 /** What a product may say about the Focus mode of its App (`CaseWorkbench.focus`; `true` means all defaults). */
 export interface CaseFocusConfig {
+  /** Render a visualization in Focus while retaining the App's selected group and sub-view. */
+  stage?: ReactNode;
   /** Keep the right-hand parameter column accessible through an overlay, initially closed. Default: docked. */
   railLayout?: 'docked' | 'disclosure';
   /** The stage's heading (default: the name of the selected case). */
