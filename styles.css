@@ -798,6 +798,7 @@ svg.lucide { flex: none; }
 .caos-focus-actions { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; align-items: center; padding: 4px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: color-mix(in oklab,var(--color-surface) 90%,transparent); backdrop-filter: blur(6px); }
 .caos-focus-actions button { border: 0; border-radius: 4px; padding: 6px 9px; background: var(--color-surface-2); color: var(--color-fg); font-size: 0.75rem; font-weight: 700; cursor: pointer; }
 .caos-focus-rail { min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; border-left: 1px solid var(--color-border); background: var(--color-surface); }
+.caos-focus-disclosure { position: absolute; z-index: 1; inset-block: var(--caos-focus-clear-top, 6.6rem) 0; inset-inline-end: 0; width: min(var(--rail-w), 100%); border-block-start: 1px solid var(--color-border); }
 @media (max-width: 900px) {
   .caos-focus-shell { grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,54dvh) minmax(0,46dvh); }
   .caos-focus-rail { border-left: 0; border-top: 1px solid var(--color-border); }

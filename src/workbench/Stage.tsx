@@ -19,14 +19,20 @@ export function useStageSize(): [(el: HTMLElement | null) => void, StageSize] {
     roRef.current?.disconnect();
     roRef.current = null;
     if (!el) return;
-    const measure = () => {
-      const r = el.getBoundingClientRect();
-      setSize((prev) => (prev.width === Math.round(r.width) && prev.height === Math.round(r.height) ? prev : { width: Math.round(r.width), height: Math.round(r.height) }));
+    // ResizeObserver tracks layout, so reading a transformed DOMRect here could preserve an entry animation's scale after it ends.
+    const measure = (width: number, height: number) => {
+      const next = { width: Math.round(width), height: Math.round(height) };
+      setSize((prev) => prev.width === next.width && prev.height === next.height ? prev : next);
     };
-    measure();
+    measure(el.offsetWidth, el.offsetHeight);
     if (typeof ResizeObserver !== 'undefined') {
-      roRef.current = new ResizeObserver(measure);
-      roRef.current.observe(el);
+      roRef.current = new ResizeObserver(([entry]) => {
+        const box = entry?.borderBoxSize?.[0];
+        if (!box) return measure(el.offsetWidth, el.offsetHeight);
+        const horizontal = getComputedStyle(el).writingMode.startsWith('horizontal');
+        measure(horizontal ? box.inlineSize : box.blockSize, horizontal ? box.blockSize : box.inlineSize);
+      });
+      roRef.current.observe(el, { box: 'border-box' });
     }
   }, []);
   useEffect(() => () => roRef.current?.disconnect(), []);

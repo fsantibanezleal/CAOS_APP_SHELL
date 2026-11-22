@@ -11,7 +11,7 @@ before(async () => {
   h = await startHarness(`
     import { useState } from 'react';
     import { createRoot } from 'react-dom/client';
-    import { CaseWorkbench, SubTabs, Knob, useLangStore, useThemeStore } from './src/index';
+    import { CaseWorkbench, Stage, SubTabs, Knob, useLangStore, useThemeStore } from './src/index';
     window.__setLang = (l) => useLangStore.getState().setLang(l);
     const CASES = [{ id: 'c-low', name: 'Low' }, { id: 'c-mid', name: 'Mid' }, { id: 'c-high', name: 'High' }];
     // a title that wraps to two or three lines in the stage label (Contraste C10 at 1280px, shell 0.14.3)
@@ -19,6 +19,15 @@ before(async () => {
       en: 'Portfolio credit capital: ASRF, Vasicek fit, copula MC with a long tail and a second line of context',
       es: 'Capital de credito de cartera: ASRF, ajuste Vasicek, copula MC con cola larga y una segunda linea de contexto',
     };
+    const query = new URLSearchParams(location.search);
+    const disclose = query.has('disclosure');
+    function Drawing({ scale }) {
+      return <Stage label={{ en: 'Scale response', es: 'Respuesta de escala' }}>{({ width, height }) => (
+        <svg data-response="" role="img" aria-label="Scale response" width={width} height={height} viewBox={\`0 0 \${width} \${height}\`}>
+          <path data-scale={scale} fill="none" stroke="currentColor" d={\`M 20 \${height - 20} Q \${width / 2} \${height / scale} \${width - 20} 20\`} />
+        </svg>
+      )}</Stage>;
+    }
     function App() {
       const [caseId, setCaseId] = useState(new URLSearchParams(location.search).get('case') ?? 'c-low');
       const [scale, setScale] = useState(1);
@@ -32,13 +41,14 @@ before(async () => {
             cases={{ cases: CASES, selectedId: caseId, onSelect: setCaseId, layout: 'select', deepLink: true }}
             controls={{ scale }}
             focus={{
+              railLayout: disclose ? 'disclosure' : undefined,
               title: new URLSearchParams(location.search).get('short') ? undefined : LONG_TITLE,
               hud: new URLSearchParams(location.search).get('hud') ? [{ label: { en: 'Alpha', es: 'Alfa' }, value: '1' }, { label: { en: 'Beta', es: 'Beta' }, value: '2' }] : undefined,
               onChange: (on) => { window.__focusEvents = [...(window.__focusEvents ?? []), on]; },
             }}
-            rail={<Knob id="scale" label={{ en: 'Scale', es: 'Escala' }} value={scale} min={0.5} max={2} step={0.1} onChange={setScale} />}
+            rail={<><Knob id="scale" label={{ en: 'Scale', es: 'Escala' }} value={scale} min={0.5} max={2} step={0.1} onChange={setScale} />{query.has('longRail') && <div style={{ minHeight: '500px', display: 'grid', alignItems: 'end' }}><label><input type="checkbox" /> Final parameter</label></div>}</>}
             groups={[
-              { id: 'model', label: { en: 'Model', es: 'Modelo' }, content: <p data-probe="model">MODEL {caseId} {scale}</p> },
+              { id: 'model', label: { en: 'Model', es: 'Modelo' }, content: disclose ? <Drawing scale={scale} /> : <p data-probe="model">MODEL {caseId} {scale}</p> },
               {
                 id: 'validation', label: { en: 'Validation', es: 'Validación' },
                 content: (
@@ -67,6 +77,62 @@ const q = (page: Page) => new URL(page.url()).searchParams;
 const inFocus = (page: Page) => page.locator('[data-focus-shell]').count();
 const probe = (page: Page) => page.evaluate(() => [...document.querySelectorAll('[data-probe]')].map((e) => e.textContent).join('|'));
 const noScroll = (page: Page) => page.evaluate(() => ({ w: document.documentElement.scrollWidth <= innerWidth, h: document.documentElement.scrollHeight <= innerHeight + 1 }));
+
+test('disclosed controls preserve the actual Focus drawing and operate the same case', async () => {
+  for (const [width, height] of [[1280, 800], [1600, 900], [390, 560]]) {
+    const page = await h.browser.newPage({ viewport: { width, height } });
+    try {
+      await page.goto(`${h.address}/?case=c-mid&short&disclosure&longRail`);
+      await page.locator('[data-focus-enter]').click();
+      const toggle = page.getByRole('button', { name: 'Controls', exact: true });
+      await toggle.waitFor({ timeout: 2500 });
+      const rail = page.locator('[data-focus-shell] [data-rail]');
+      const response = page.locator('[data-focus-shell] svg[data-response]');
+      await response.waitFor();
+      const before = await response.boundingBox();
+      assert.ok(before);
+      if (width >= 1280) assert.ok(before.width * before.height / (width * height) >= 0.8, JSON.stringify(before));
+      assert.equal(await toggle.getAttribute('aria-expanded'), 'false');
+      assert.equal(await toggle.getAttribute('aria-controls'), await rail.getAttribute('id'));
+      assert.equal(await rail.isVisible(), false);
+      assert.equal(await page.getByRole('slider').count(), 0);
+      await page.locator('[data-focus-exit]').press('Tab');
+      assert.equal(await toggle.evaluate(el => document.activeElement === el), true);
+      await toggle.press('Enter');
+      assert.equal(await toggle.getAttribute('aria-expanded'), 'true');
+      assert.equal(await rail.isVisible(), true);
+      assert.equal(await toggle.evaluate(el => document.activeElement === el), true);
+      await toggle.press('Tab');
+      assert.equal(await rail.evaluate(el => el.contains(document.activeElement)), true);
+      const [box, chrome] = await Promise.all([rail.boundingBox(), toggle.boundingBox()]);
+      assert.ok(box && chrome && box.x + box.width >= width - 1 && box.y > chrome.y + chrome.height);
+      assert.deepEqual(await response.boundingBox(), before);
+      const path = response.locator('path');
+      const originalPath = await path.getAttribute('d');
+      await rail.getByRole('slider').press('ArrowRight');
+      assert.equal(await path.getAttribute('data-scale'), '1.1');
+      assert.notEqual(await path.getAttribute('d'), originalPath);
+      assert.equal(await rail.evaluate(el => el.scrollHeight > el.clientHeight), width === 390);
+      await rail.getByRole('checkbox', { name: 'Final parameter' }).check();
+      if (width === 390) assert.ok(await rail.evaluate(el => el.scrollTop) > 0);
+      assert.deepEqual(await noScroll(page), { w: true, h: true });
+      await toggle.click();
+      assert.equal(await rail.isVisible(), false);
+      assert.equal(await toggle.evaluate(el => document.activeElement === el), true);
+      await page.evaluate(() => (window as any).__setLang('es'));
+      await page.getByRole('button', { name: 'Controles', exact: true }).click();
+      assert.equal(await rail.getByRole('slider').inputValue(), '1.1');
+      assert.equal(await rail.getByRole('checkbox', { name: 'Final parameter' }).isChecked(), true);
+      await rail.getByRole('slider').press('Escape');
+      assert.equal(await inFocus(page), 0);
+      assert.equal(q(page).get('case'), 'c-mid');
+      assert.equal(await page.locator('[data-focus-enter]').evaluate(el => document.activeElement === el), true);
+      assert.equal(await page.getByRole('slider').inputValue(), '1.1');
+    } finally {
+      await page.close();
+    }
+  }
+});
 
 test('Focus opens the selected case in the full viewport, keeps the rail, and the exit button returns to the same case, group and sub-view', async () => {
   const page = await h.browser.newPage({ viewport: { width: 1280, height: 800 } });

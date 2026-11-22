@@ -1,3 +1,18 @@
+## [0.26.003] - 2026-11-22
+
+### Changed
+
+- `CaseFocusConfig.railLayout: 'disclosure'` gives Focus a full-width stage and a localized Controls button that opens the existing right-hand parameter column. Hidden controls remain mounted, preserve their state and leave the keyboard sequence. The default docked layout and Escape return behavior remain supported.
+
+### Fixed
+
+- Stage size comes from the layout border box, so a temporary parent transform cannot leave a permanently undersized scientific drawing after a guided-story transition.
+- Scene callouts remain hidden until the stage has positive measured dimensions. Their card observations and settled band calculation start with the measured frame, preserving the existing startup and resize controls.
+
+### Adoption
+
+- Products that need a full-width Focus drawing may set `focus.railLayout` to `'disclosure'`. Re-run the complete installed-package gate and inspect the scientific subject and control interactions in each supported viewport.
+
 ## [0.26.002] - 2026-11-15
 
 A defect of 0.26.1 itself, found by CEFOP_DinHot's gate on it, with a test that fails on 0.26.1 (known defect 70).

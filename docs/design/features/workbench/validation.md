@@ -56,3 +56,9 @@ so it narrows neither the eyebrow nor the value. The eyebrow now wraps, which th
 The layout keeps the anchor x order unless that order makes two leaders cross; then the slot order with the fewest
 crossings is taken, the anchor order winning every tie. At 390 with three cards in two rows the anchor order alone
 crosses two leaders (the third card sits centred under the first row while its anchor is at the right).
+
+## Focus rail and stage measurement
+
+- SHF-041, SHF-042, SHW-067. A `CaseWorkbench` opens Focus on a plotted response by its visible entry button at 1280 × 800, 1600 × 900 and 390 × 560. In desktop Focus, the test measures the response SVG itself against the 80% floor. The English and Spanish disclosures use the same rail, keep the plotted dimensions steady and let a keyboard edit change the plotted path. The short phone case scrolls the rail to a final control and keeps the page fixed. Reopening retains the control's local state. Escape returns focus and the edited case and values to the App. The standard docked workbench and SurfacePage Focus suites exercise default compatibility.
+- SHW-068. A Stage mounts under a scale and translation and resizes while its ancestor remains scaled. The test checks the untransformed layout size, the actual SVG `viewBox`, and subpixel rounding after the transform is removed. The previous observer read 431 × 265 in a layout that rounds to 434 × 266, and the SVG stayed undersized after the transform ended.
+- SHW-069. A real callout layer holds at zero width until the browser makes it visible. The regression requires no visible card or leader at zero width, then three correctly sized cards and leaders. The previous implementation exposed all six elements before measurement. Existing language, clipping, wrapping, overlap and settled-band tests continue to exercise the visible state.

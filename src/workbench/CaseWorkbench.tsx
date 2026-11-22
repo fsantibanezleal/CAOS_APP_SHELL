@@ -183,6 +183,7 @@ export function CaseWorkbench(props: CaseWorkbenchProps) {
             exitLabel={FOCUS_TEXT.exit[lang]}
             stageLabel={FOCUS_TEXT.stage[lang]}
             landmark={false}
+            railLayout={focusCfg.railLayout}
             stage={
               <div className="caos-cw caos-cw-focus" {...instrumentData} data-focus-group={open?.id} data-focus-param={focusCfg.param ?? FOCUS_PARAM} data-instrument="">
                 <div className="tabs">
