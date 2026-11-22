@@ -56,6 +56,7 @@ the values belong to the product, and the sub-tab the reader had open in each ta
 | Leave | the exit button ("Back to the App" / "Volver a la App") or Escape; the App returns on the same case, group and sub-view, `focus` leaves the URL and keyboard focus returns to the Focus button |
 | Keyboard | on opening, keyboard focus moves to the exit button; the page behind the frame (header, footer, skip link) is `inert` while Focus is open, so Tab stays in the frame, and the frame is a `div` (`FocusShell landmark={false}`), never a second `main` |
 | Callback | `onChange(on)` for a product that records it |
+| Parameter column | `focus={{ railLayout: 'disclosure' }}` gives the stage the full frame width and exposes the same right-hand controls through a localized Controls button. The button reports `aria-expanded` and `aria-controls`. Closing the column preserves its control state and removes its controls from keyboard navigation. The default is `'docked'`. |
 | Viewport | the page never scrolls, the stage takes at least half of the viewport at 1280 px and more, the rail does not scroll there, one tab row at most |
 
 A product with a simulation or dynamic scenarios MUST offer it (ADR-0070); `caos-shell-gate --require-focus` fails an App without the

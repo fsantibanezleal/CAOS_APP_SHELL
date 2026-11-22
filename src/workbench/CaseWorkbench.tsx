@@ -183,19 +183,22 @@ export function CaseWorkbench(props: CaseWorkbenchProps) {
             exitLabel={FOCUS_TEXT.exit[lang]}
             stageLabel={FOCUS_TEXT.stage[lang]}
             landmark={false}
+            railLayout={focusCfg.railLayout}
             stage={
               <div className="caos-cw caos-cw-focus" {...instrumentData} data-focus-group={open?.id} data-focus-param={focusCfg.param ?? FOCUS_PARAM} data-instrument="">
-                <div className="tabs">
-                  {open && (
-                    <div className="tabpanel" role="tabpanel" tabIndex={0} aria-label={open.label} data-panel={open.id}>
-                      <PanelPathContext.Provider value={`${placeAbove}/${open.id}`}>
-                        <PanelBoundary panel={open.id}>
-                          <DocRefsScope>{open.content}</DocRefsScope>
-                        </PanelBoundary>
-                      </PanelPathContext.Provider>
-                    </div>
-                  )}
-                </div>
+                {focusCfg.stage ?? (
+                  <div className="tabs">
+                    {open && (
+                      <div className="tabpanel" role="tabpanel" tabIndex={0} aria-label={open.label} data-panel={open.id}>
+                        <PanelPathContext.Provider value={`${placeAbove}/${open.id}`}>
+                          <PanelBoundary panel={open.id}>
+                            <DocRefsScope>{open.content}</DocRefsScope>
+                          </PanelBoundary>
+                        </PanelPathContext.Provider>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             }
             rail={

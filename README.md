@@ -148,6 +148,10 @@ const config: ShellConfig = {
 `sortOrder`, `parityRange`), `/keys` (the storage keys, no React), `/styles.css`, `/chart.css`,
 `/reserved-classes.json`. Bin: `caos-shell-gate`.
 
+### Focus parameter disclosure
+
+`CaseWorkbench` accepts `focus={{ railLayout: 'disclosure' }}` when the scientific drawing needs the full Focus width. The shared Controls button opens the existing parameter column on the right, and closing it preserves the control values. The selected case and group follow the existing Focus URL and return-state contract. See [Focus mode](docs/04_views.md) for its keyboard and accessibility behavior.
+
 ### Authenticated workbenches
 
 `WorkbenchShell` is the shared frame for products whose authenticated UI needs a desktop sidebar and

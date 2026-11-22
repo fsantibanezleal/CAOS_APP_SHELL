@@ -192,7 +192,10 @@ export function SceneCallouts({ items, className, placement = 'anchored', onLayo
     });
     return () => cancelAnimationFrame(frame);
   }, [placement, size.width, measured, layoutSignature, bandHeight]);
-  const style = placement === 'header' && band !== null ? ({ '--caos-callout-band': `${band}px` } as CSSProperties) : undefined;
+  // Keep the cards in layout for observation, but do not expose their placeholder geometry before the host is measured.
+  const ready = size.width > 0 && size.height > 0;
+  const style: CSSProperties = ready ? {} : { visibility: 'hidden' };
+  if (placement === 'header' && band !== null) Object.assign(style, { '--caos-callout-band': `${band}px` });
   return <div ref={host} className={['caos-callout-layer', className].filter(Boolean).join(' ')} style={style} aria-label={lang === 'es' ? 'Valores fijados a los componentes' : 'Values anchored to components'} data-caos-callout-layer="" data-placement={placement}>
     <svg className="caos-callout-leaders" aria-hidden="true" viewBox={`0 0 ${Math.max(1, size.width)} ${Math.max(1, size.height)}`} preserveAspectRatio="none">{boxes.map((box) => <line key={box.id} x1={box.anchorX} y1={box.anchorY} x2={box.left + box.width / 2} y2={box.top + box.height / 2} data-caos-callout-leader={box.id}/>)}</svg>
     {boxes.map((box) => { const item = items.find((candidate) => candidate.id === box.id)!; const state = Object.prototype.hasOwnProperty.call(STATE_LABELS, item.state) ? STATE_LABELS[item.state] : null; return <article key={box.id} className="caos-scene-callout" data-caos-callout={item.id} data-callout-value={item.value} data-callout-unit={pick(item.unit, lang)} data-callout-state={item.state} data-callout-source={pick(item.source, lang)} data-callout-anchor-x={item.anchor.x} data-callout-anchor-y={item.anchor.y} style={{ left: box.left, top: box.top, width: box.width, minHeight: nominalH }}>

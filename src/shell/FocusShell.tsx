@@ -1,4 +1,6 @@
-import { useLayoutEffect, useRef, type ReactNode } from 'react';
+import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useShellLang } from '../lib/lang';
+import { FOCUS_TEXT } from '../workbench/focus';
 import { LanguageToggle } from './LanguageToggle';
 import { ThemeToggle } from './ThemeToggle';
 
@@ -6,6 +8,8 @@ export interface FocusShellProps {
   stage: ReactNode;
   /** The parameter column on the right. Null or omitted: no column, and the stage is the whole frame (a view of a surface with no rail). */
   rail?: ReactNode;
+  /** Dock the rail beside the stage, or put it behind an initially closed Controls disclosure. */
+  railLayout?: 'docked' | 'disclosure';
   title: string;
   description: string;
   hud: Array<{ label: string; value: string }>;
@@ -71,9 +75,14 @@ function measureChrome(stage: HTMLElement): void {
  * its controls clear of the chrome with `padding-top: var(--caos-focus-clear-top, 4.6rem)`. Before the first measurement and in
  * a non-browser render the properties are unset and the CSS fallbacks apply.
  */
-export function FocusShell({ stage, rail, title, description, hud, onExit, exitLabel, stageLabel, landmark = true }: FocusShellProps) {
+export function FocusShell({ stage, rail, railLayout = 'docked', title, description, hud, onExit, exitLabel, stageLabel, landmark = true }: FocusShellProps) {
   const Root = landmark ? 'main' : 'div';
   const stageRef = useRef<HTMLElement | null>(null);
+  const lang = useShellLang();
+  const railId = useId();
+  const [railOpen, setRailOpen] = useState(false);
+  const hasRail = rail !== null && rail !== undefined;
+  const disclosed = hasRail && railLayout === 'disclosure';
   // after every render (the text, the group or the HUD may have changed) and on every size change of the chrome or the window;
   // values are written only when they change, so a page at rest is not mutated (G8)
   useLayoutEffect(() => {
@@ -96,16 +105,20 @@ export function FocusShell({ stage, rail, title, description, hud, onExit, exitL
     };
   }, []);
   return (
-    <Root className={rail === null || rail === undefined ? 'caos-focus-shell caos-focus-norail' : 'caos-focus-shell'} data-focus-shell="">
+    <Root className={hasRail && !disclosed ? 'caos-focus-shell' : 'caos-focus-shell caos-focus-norail'} data-focus-shell="">
       <section ref={stageRef} className="caos-focus-stage" aria-label={stageLabel}>
         <div className="caos-focus-instrument">{stage}</div>
         <div className="caos-focus-label"><strong>{title}</strong><span>{description}</span></div>
         <div className="caos-focus-hud" aria-label="HUD">
           {hud.map(item => <div key={item.label}><strong>{item.value}</strong><span>{item.label}</span></div>)}
         </div>
-        <div className="caos-focus-actions"><LanguageToggle /><ThemeToggle /><button type="button" data-focus-exit="" onClick={onExit}>{exitLabel}</button></div>
+        <div className="caos-focus-actions">
+          <LanguageToggle /><ThemeToggle /><button type="button" data-focus-exit="" onClick={onExit}>{exitLabel}</button>
+          {disclosed && <button type="button" aria-expanded={railOpen} aria-controls={railId} onClick={() => setRailOpen(open => !open)}>{FOCUS_TEXT.controls[lang]}</button>}
+        </div>
+        {disclosed && <aside id={railId} className="caos-focus-rail caos-focus-disclosure" aria-label={FOCUS_TEXT.controls[lang]} data-rail="" hidden={!railOpen}>{rail}</aside>}
       </section>
-      {rail !== null && rail !== undefined && <aside className="caos-focus-rail" data-rail="">{rail}</aside>}
+      {hasRail && !disclosed && <aside className="caos-focus-rail" data-rail="">{rail}</aside>}
     </Root>
   );
 }
