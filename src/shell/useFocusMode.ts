@@ -17,7 +17,7 @@ export interface FocusModeOptions {
    * `?focus=1` left in the URL is removed. Default true.
    */
   enabled?: boolean;
-  /** Whether a `?focus=1` in the URL at the first render may open Focus (a surface checks the view the link names). Default true. */
+  /** Whether a `?focus=1` in the initial or visited URL may open Focus (a surface checks the view the link names). Default true. */
   initialAllowed?: () => boolean;
 }
 
@@ -49,6 +49,8 @@ export function useFocusMode(cfg: FocusModeConfig | null, options: FocusModeOpti
   const turned = useRef<'in' | 'out' | null>(null);
   const onChangeRef = useRef(cfg?.onChange);
   onChangeRef.current = cfg?.onChange;
+  const allowedRef = useRef(options.initialAllowed);
+  allowedRef.current = options.initialAllowed;
   const setFocus = useCallback(
     (next: boolean) => {
       turned.current = next ? 'in' : 'out';
@@ -60,6 +62,19 @@ export function useFocusMode(cfg: FocusModeConfig | null, options: FocusModeOpti
     [param],
   );
   const show = cfg !== null && on && enabled;
+  useEffect(() => {
+    if (cfg === null) return undefined;
+    const restore = () => {
+      const next = readCaseParam(window.location.search, param) === '1' && (allowedRef.current?.() ?? true);
+      if (next === on) return;
+      turned.current = next ? 'in' : 'out';
+      setOn(next);
+      onChangeRef.current?.(next);
+    };
+    // Unlike an explicit toggle, visiting an existing entry must leave that entry and its neighbors intact.
+    window.addEventListener('popstate', restore);
+    return () => window.removeEventListener('popstate', restore);
+  }, [cfg === null, on, param]);
   // A link that asked for Focus where Focus is not available (or Focus left on when its view became unavailable) is cleaned up:
   // the parameter goes and nothing opens. This is not a closing, so the keyboard stays where it is and `onChange` is not called.
   useEffect(() => {

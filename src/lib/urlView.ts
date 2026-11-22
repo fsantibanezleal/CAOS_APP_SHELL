@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { readCaseParam, withCaseParam } from '../case/caseModel';
 
 /** Writes one query parameter with replaceState, keeping the router's history state (React Router keeps its entry
@@ -32,6 +32,13 @@ export function useUrlView(
   const [own, setOwn] = useState<string | null>(() =>
     param && typeof window !== 'undefined' ? readCaseParam(window.location.search, param) : null,
   );
+  const controlled = value !== undefined;
+  useEffect(() => {
+    if (!param || controlled) return undefined;
+    const restore = () => setOwn(readCaseParam(window.location.search, param));
+    window.addEventListener('popstate', restore);
+    return () => window.removeEventListener('popstate', restore);
+  }, [controlled, param]);
   const open = value ?? (own && ids.includes(own) ? own : ids[0]);
   const select = (id: string) => {
     if (value === undefined) {

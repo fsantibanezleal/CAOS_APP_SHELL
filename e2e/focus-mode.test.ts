@@ -43,6 +43,7 @@ before(async () => {
             controls={{ scale }}
             focus={{
               stage: override ? <Drawing scale={scale} /> : undefined,
+              param: query.get('focusKey') ?? undefined,
               railLayout: disclose ? 'disclosure' : undefined,
               title: new URLSearchParams(location.search).get('short') ? undefined : LONG_TITLE,
               hud: new URLSearchParams(location.search).get('hud') ? [{ label: { en: 'Alpha', es: 'Alfa' }, value: '1' }, { label: { en: 'Beta', es: 'Beta' }, value: '2' }] : undefined,
@@ -205,6 +206,81 @@ test('a visualization stage override leaves the App group and sub-view intact th
   assert.equal(q(page).get('view'), 'validation');
   assert.match(await probe(page), /TABLE c-mid/, 'Focus returns to the same App group and sub-view');
   await page.close();
+});
+
+test('same-document Back and Forward keep Focus, URL and the selected view in sync', async () => {
+  for (const override of [false, true]) {
+    const page = await h.browser.newPage({ viewport: { width: 1280, height: 800 } });
+    try {
+      await page.goto(`${h.address}/?case=c-mid&view=validation${override ? '&override' : ''}#before`);
+      await page.getByRole('tab', { name: 'Table' }).click();
+      const entries = await page.evaluate(() => {
+        history.pushState({ receipt: 'selected' }, '', `${location.pathname}${location.search}&frame=9#visited`);
+        return history.length;
+      });
+      const expectFrame = async (active: boolean) => {
+        await page.locator(active ? '[data-focus-exit]' : '[data-focus-enter]').waitFor({ timeout: 3000 });
+        assert.equal(await inFocus(page), active ? 1 : 0);
+        assert.equal(q(page).get('case'), 'c-mid');
+        assert.equal(q(page).get('view'), 'validation');
+        if (active && override) {
+          assert.equal(await page.locator('[data-focus-shell] svg[data-response]').count(), 1);
+          assert.equal(await page.locator('[data-focus-group]').getAttribute('data-focus-group'), 'validation');
+        } else {
+          assert.match(await probe(page), /TABLE c-mid/);
+        }
+        const selector = active ? '[data-focus-exit]' : '[data-focus-enter]';
+        assert.equal(await page.locator(selector).evaluate(el => el === document.activeElement), true);
+        assert.equal(await page.locator('header[inert]').count(), active ? 1 : 0);
+      };
+
+      await page.locator('[data-focus-enter]').click();
+      await expectFrame(true);
+      assert.equal(q(page).get('focus'), '1');
+      await page.goBack();
+      assert.equal(q(page).get('focus'), null);
+      assert.equal(new URL(page.url()).hash, '#before');
+      await expectFrame(false);
+      await page.goForward();
+      assert.equal(q(page).get('focus'), '1');
+      await expectFrame(true);
+      await page.keyboard.press('Escape');
+      await expectFrame(false);
+      assert.equal(q(page).get('focus'), null);
+      assert.equal(q(page).get('frame'), '9');
+      assert.equal(new URL(page.url()).hash, '#visited');
+      assert.deepEqual(await page.evaluate(() => [history.length, history.state]), [entries, { receipt: 'selected' }]);
+      await page.goBack();
+      await page.goForward();
+      assert.equal(await inFocus(page), 0, 'Escape replaced the Forward destination itself');
+      assert.deepEqual(await page.evaluate(() => (window as unknown as { __focusEvents: boolean[] }).__focusEvents), [true, false, true, false]);
+    } finally {
+      await page.close();
+    }
+  }
+});
+
+test('history reads only the configured Focus parameter with value 1', async () => {
+  const page = await h.browser.newPage();
+  try {
+    await page.goto(`${h.address}/?focusKey=inspect&inspect=2&focus=1`);
+    await page.locator('[data-focus-enter]').waitFor();
+    await page.evaluate(() => history.pushState(null, '', `${location.pathname}${location.search}#inspect`));
+    await page.locator('[data-focus-enter]').click();
+    await page.locator('[data-focus-exit]').waitFor();
+    assert.equal(q(page).get('inspect'), '1');
+    await page.goBack();
+    await page.locator('[data-focus-enter]').waitFor({ timeout: 3000 });
+    assert.equal(q(page).get('inspect'), '2');
+    await page.goForward();
+    await page.locator('[data-focus-exit]').waitFor({ timeout: 3000 });
+    await page.keyboard.press('Escape');
+    await page.locator('[data-focus-enter]').waitFor();
+    assert.equal(q(page).get('focus'), '1', 'the default parameter belongs to the product when configured differently');
+    assert.equal(q(page).get('inspect'), null);
+  } finally {
+    await page.close();
+  }
 });
 
 test('Focus never scrolls the page and the stage keeps one tab row, at phone and desktop, in both languages and themes', async () => {
